@@ -65,11 +65,43 @@ test("documents the plain safe-area template", async () => {
   if (!app.includes('id="ascii_palette_toggle"') || !app.includes("Ascii Palette")) {
     throw new Error("The Settings section must include the Ascii Palette option.");
   }
+  if (!app.includes('id="arguments_toggle"') || !app.includes("Arguments")) {
+    throw new Error("The Settings section must include the Arguments option.");
+  }
+  if (!app.includes('id="arguments_title"') || !app.includes("randomSeed")) {
+    throw new Error("The Arguments window must document the randomSeed URL argument.");
+  }
+  if (!app.includes('className="argument_code"') || !app.includes("window.location.assign") || !app.includes("withUrlArgument")) {
+    throw new Error("Argument examples must be clickable URL actions that preserve and update query arguments.");
+  }
   if (!app.includes("class PromptWindow extends Component")) {
     throw new Error("The Ascii Palette overlay must be implemented as a PromptWindow React class.");
   }
   if (!app.includes('className="window"') || !app.includes('className="window_backdrop"')) {
     throw new Error("The Ascii Palette overlay must include a Window and WindowBackdrop.");
+  }
+  if (!app.includes('className="palette_grid"') || !app.includes('className="palette_index"') || !app.includes('className="palette_glyph"')) {
+    throw new Error("The Ascii Palette overlay must render a compact index and glyph grid.");
+  }
+  if (!app.includes('"in-maps"') || !app.includes('"customized"') || !app.includes("Sort by index") || !app.includes("Sort alphabetically")) {
+    throw new Error("The palette overlay must provide map/customized filters and index/alphabet sorting controls.");
+  }
+  if (!app.includes("paletteViewState") || !app.includes("setPaletteViewState") || app.includes("sessionStorage")) {
+    throw new Error("Palette filter and sort choices must last for the page session without surviving refresh.");
+  }
+  if (!app.includes("HexColorPicker") || !app.includes('type="range"') || !app.includes("Confirm") || !app.includes("Reset") || !app.includes("Cancel")) {
+    throw new Error("The palette glyph editor must include a color picker, alpha range, Confirm, Reset, and Cancel controls.");
+  }
+  const confirmStart = app.indexOf("confirmEdit = async");
+  const confirmEnd = app.indexOf("acknowledgeWarning", confirmStart);
+  if (!app.slice(confirmStart, confirmEnd).includes("this.cancelEdit()") || !app.includes("{asciiPaletteOpen ? (")) {
+    throw new Error("Confirming a glyph must close only its editor and keep the main palette window open.");
+  }
+  if (!app.includes("getPaletteEditorPosition") || !app.includes("innerHeight") || !styles.includes("max-height: calc(100vh - 32px)")) {
+    throw new Error("The palette editor must remain completely onscreen at every glyph position.");
+  }
+  if (!app.includes("Hide warning") || !app.includes("Local palette change") || !app.includes("PALETTE_WARNING_KEY")) {
+    throw new Error("The deployed palette persistence warning must include the Hide warning choice.");
   }
   if (!app.includes('aria-label="Close Ascii Palette"') || !app.includes(">\n              X\n")) {
     throw new Error("The Ascii Palette overlay must provide an X close control.");
@@ -77,11 +109,20 @@ test("documents the plain safe-area template", async () => {
   if (!app.includes('className="window_backdrop" aria-hidden="true" onClick={onClose}') || !app.includes("event.stopPropagation()")) {
     throw new Error("Clicks outside the Ascii Palette window must close it without closing from inside the window.");
   }
-  if (!styles.includes(".window_backdrop") || !styles.includes("background: #000")) {
+  if (!app.includes("event.stopPropagation();\n                    this.selectEntry(entry, event);")) {
+    throw new Error("Clicking a palette glyph must stay inside the palette window and open its editor.");
+  }
+  if (!styles.includes(".window_backdrop") || !styles.includes("z-index: 0") || !styles.includes("background: #000")) {
     throw new Error("The Ascii Palette overlay must fully block and darken the app behind it.");
   }
   if (!styles.includes(".window") || !styles.includes("inset: 100px")) {
     throw new Error("The Ascii Palette window must use a 100px margin on every side.");
+  }
+  if (!styles.includes(".prompt_title") || !styles.includes("font-size: 16pt")) {
+    throw new Error("Prompt titles must use the larger prompt title style.");
+  }
+  if (!styles.includes(".prompt_body") || !styles.includes(".prompt_button")) {
+    throw new Error("Prompts must define shared body and button styles.");
   }
   if (!app.includes('id="settings_title"') || !app.includes('className="corner_title"')) {
     throw new Error("The Settings heading must use the bold corner title style.");

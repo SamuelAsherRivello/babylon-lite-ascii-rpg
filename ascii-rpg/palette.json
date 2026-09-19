@@ -1,0 +1,1573 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "code": 32,
+      "unicode": null,
+      "glyph": " ",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 33,
+      "unicode": null,
+      "glyph": "!",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 34,
+      "unicode": null,
+      "glyph": "\"",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 35,
+      "unicode": null,
+      "glyph": "#",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 36,
+      "unicode": null,
+      "glyph": "$",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 37,
+      "unicode": null,
+      "glyph": "%",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 38,
+      "unicode": null,
+      "glyph": "&",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 39,
+      "unicode": null,
+      "glyph": "'",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 40,
+      "unicode": null,
+      "glyph": "(",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 41,
+      "unicode": null,
+      "glyph": ")",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 42,
+      "unicode": null,
+      "glyph": "*",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 43,
+      "unicode": null,
+      "glyph": "+",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 44,
+      "unicode": null,
+      "glyph": ",",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 45,
+      "unicode": null,
+      "glyph": "-",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 46,
+      "unicode": null,
+      "glyph": ".",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 47,
+      "unicode": null,
+      "glyph": "/",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 48,
+      "unicode": null,
+      "glyph": "0",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 49,
+      "unicode": null,
+      "glyph": "1",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 50,
+      "unicode": null,
+      "glyph": "2",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 51,
+      "unicode": null,
+      "glyph": "3",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 52,
+      "unicode": null,
+      "glyph": "4",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 53,
+      "unicode": null,
+      "glyph": "5",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 54,
+      "unicode": null,
+      "glyph": "6",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 55,
+      "unicode": null,
+      "glyph": "7",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 56,
+      "unicode": null,
+      "glyph": "8",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 57,
+      "unicode": null,
+      "glyph": "9",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 58,
+      "unicode": null,
+      "glyph": ":",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 59,
+      "unicode": null,
+      "glyph": ";",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 60,
+      "unicode": null,
+      "glyph": "<",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 61,
+      "unicode": null,
+      "glyph": "=",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 62,
+      "unicode": null,
+      "glyph": ">",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 63,
+      "unicode": null,
+      "glyph": "?",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 64,
+      "unicode": null,
+      "glyph": "@",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 65,
+      "unicode": null,
+      "glyph": "A",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 66,
+      "unicode": null,
+      "glyph": "B",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 67,
+      "unicode": null,
+      "glyph": "C",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 68,
+      "unicode": null,
+      "glyph": "D",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 69,
+      "unicode": null,
+      "glyph": "E",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 70,
+      "unicode": null,
+      "glyph": "F",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 71,
+      "unicode": null,
+      "glyph": "G",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 72,
+      "unicode": null,
+      "glyph": "H",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 73,
+      "unicode": null,
+      "glyph": "I",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 74,
+      "unicode": null,
+      "glyph": "J",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 75,
+      "unicode": null,
+      "glyph": "K",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 76,
+      "unicode": null,
+      "glyph": "L",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 77,
+      "unicode": null,
+      "glyph": "M",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 78,
+      "unicode": null,
+      "glyph": "N",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 79,
+      "unicode": null,
+      "glyph": "O",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 80,
+      "unicode": null,
+      "glyph": "P",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 81,
+      "unicode": null,
+      "glyph": "Q",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 82,
+      "unicode": null,
+      "glyph": "R",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 83,
+      "unicode": null,
+      "glyph": "S",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 84,
+      "unicode": null,
+      "glyph": "T",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 85,
+      "unicode": null,
+      "glyph": "U",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 86,
+      "unicode": null,
+      "glyph": "V",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 87,
+      "unicode": null,
+      "glyph": "W",
+      "color": "#909090",
+      "alpha": 1
+    },
+    {
+      "code": 88,
+      "unicode": null,
+      "glyph": "X",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 89,
+      "unicode": null,
+      "glyph": "Y",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 90,
+      "unicode": null,
+      "glyph": "Z",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 91,
+      "unicode": null,
+      "glyph": "[",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 92,
+      "unicode": null,
+      "glyph": "\\",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 93,
+      "unicode": null,
+      "glyph": "]",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 94,
+      "unicode": null,
+      "glyph": "^",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 95,
+      "unicode": null,
+      "glyph": "_",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 96,
+      "unicode": null,
+      "glyph": "`",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 97,
+      "unicode": null,
+      "glyph": "a",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 98,
+      "unicode": null,
+      "glyph": "b",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 99,
+      "unicode": null,
+      "glyph": "c",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 100,
+      "unicode": null,
+      "glyph": "d",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 101,
+      "unicode": null,
+      "glyph": "e",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 102,
+      "unicode": null,
+      "glyph": "f",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 103,
+      "unicode": null,
+      "glyph": "g",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 104,
+      "unicode": null,
+      "glyph": "h",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 105,
+      "unicode": null,
+      "glyph": "i",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 106,
+      "unicode": null,
+      "glyph": "j",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 107,
+      "unicode": null,
+      "glyph": "k",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 108,
+      "unicode": null,
+      "glyph": "l",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 109,
+      "unicode": null,
+      "glyph": "m",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 110,
+      "unicode": null,
+      "glyph": "n",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 111,
+      "unicode": null,
+      "glyph": "o",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 112,
+      "unicode": null,
+      "glyph": "p",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 113,
+      "unicode": null,
+      "glyph": "q",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 114,
+      "unicode": null,
+      "glyph": "r",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 115,
+      "unicode": null,
+      "glyph": "s",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 116,
+      "unicode": null,
+      "glyph": "t",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 117,
+      "unicode": null,
+      "glyph": "u",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 118,
+      "unicode": null,
+      "glyph": "v",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 119,
+      "unicode": null,
+      "glyph": "w",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 120,
+      "unicode": null,
+      "glyph": "x",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 121,
+      "unicode": null,
+      "glyph": "y",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 122,
+      "unicode": null,
+      "glyph": "z",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 123,
+      "unicode": null,
+      "glyph": "{",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 124,
+      "unicode": null,
+      "glyph": "|",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 125,
+      "unicode": null,
+      "glyph": "}",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 126,
+      "unicode": null,
+      "glyph": "~",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 127,
+      "unicode": null,
+      "glyph": "⌂",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 128,
+      "unicode": null,
+      "glyph": "Ç",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 129,
+      "unicode": null,
+      "glyph": "ü",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 130,
+      "unicode": null,
+      "glyph": "é",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 131,
+      "unicode": null,
+      "glyph": "â",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 132,
+      "unicode": null,
+      "glyph": "ä",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 133,
+      "unicode": null,
+      "glyph": "à",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 134,
+      "unicode": null,
+      "glyph": "å",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 135,
+      "unicode": null,
+      "glyph": "ç",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 136,
+      "unicode": null,
+      "glyph": "ê",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 137,
+      "unicode": null,
+      "glyph": "ë",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 138,
+      "unicode": null,
+      "glyph": "è",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 139,
+      "unicode": null,
+      "glyph": "ï",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 140,
+      "unicode": null,
+      "glyph": "î",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 141,
+      "unicode": null,
+      "glyph": "ì",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 142,
+      "unicode": null,
+      "glyph": "Ä",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 143,
+      "unicode": null,
+      "glyph": "Å",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 144,
+      "unicode": null,
+      "glyph": "É",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 145,
+      "unicode": null,
+      "glyph": "æ",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 146,
+      "unicode": null,
+      "glyph": "Æ",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 147,
+      "unicode": null,
+      "glyph": "ô",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 148,
+      "unicode": null,
+      "glyph": "ö",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 149,
+      "unicode": null,
+      "glyph": "ò",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 150,
+      "unicode": null,
+      "glyph": "û",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 151,
+      "unicode": null,
+      "glyph": "ù",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 152,
+      "unicode": null,
+      "glyph": "ÿ",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 153,
+      "unicode": null,
+      "glyph": "Ö",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 154,
+      "unicode": null,
+      "glyph": "Ü",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 155,
+      "unicode": null,
+      "glyph": "ø",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 156,
+      "unicode": null,
+      "glyph": "£",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 157,
+      "unicode": null,
+      "glyph": "Ø",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 158,
+      "unicode": null,
+      "glyph": "×",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 159,
+      "unicode": null,
+      "glyph": "ƒ",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 160,
+      "unicode": null,
+      "glyph": "á",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 161,
+      "unicode": null,
+      "glyph": "í",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 162,
+      "unicode": null,
+      "glyph": "ó",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 163,
+      "unicode": null,
+      "glyph": "ú",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 164,
+      "unicode": null,
+      "glyph": "ñ",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 165,
+      "unicode": null,
+      "glyph": "Ñ",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 166,
+      "unicode": null,
+      "glyph": "ª",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 167,
+      "unicode": null,
+      "glyph": "º",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 168,
+      "unicode": null,
+      "glyph": "¿",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 169,
+      "unicode": null,
+      "glyph": "⌐",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 170,
+      "unicode": null,
+      "glyph": "¬",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 171,
+      "unicode": null,
+      "glyph": "½",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 172,
+      "unicode": null,
+      "glyph": "¼",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 173,
+      "unicode": null,
+      "glyph": "¡",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 174,
+      "unicode": null,
+      "glyph": "«",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 175,
+      "unicode": null,
+      "glyph": "»",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 176,
+      "unicode": null,
+      "glyph": "░",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 177,
+      "unicode": null,
+      "glyph": "▒",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 178,
+      "unicode": null,
+      "glyph": "▓",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 179,
+      "unicode": null,
+      "glyph": "│",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 180,
+      "unicode": null,
+      "glyph": "┤",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 181,
+      "unicode": null,
+      "glyph": "╡",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 182,
+      "unicode": null,
+      "glyph": "╢",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 183,
+      "unicode": null,
+      "glyph": "╖",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 184,
+      "unicode": null,
+      "glyph": "╕",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 185,
+      "unicode": null,
+      "glyph": "╣",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 186,
+      "unicode": null,
+      "glyph": "║",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 187,
+      "unicode": null,
+      "glyph": "╗",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 188,
+      "unicode": null,
+      "glyph": "╝",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 189,
+      "unicode": null,
+      "glyph": "╜",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 190,
+      "unicode": null,
+      "glyph": "╛",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 191,
+      "unicode": null,
+      "glyph": "┐",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 192,
+      "unicode": null,
+      "glyph": "└",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 193,
+      "unicode": null,
+      "glyph": "┴",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 194,
+      "unicode": null,
+      "glyph": "┬",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 195,
+      "unicode": null,
+      "glyph": "├",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 196,
+      "unicode": null,
+      "glyph": "─",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 197,
+      "unicode": null,
+      "glyph": "┼",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 198,
+      "unicode": null,
+      "glyph": "╞",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 199,
+      "unicode": null,
+      "glyph": "╟",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 200,
+      "unicode": null,
+      "glyph": "╚",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 201,
+      "unicode": null,
+      "glyph": "╔",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 202,
+      "unicode": null,
+      "glyph": "╩",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 203,
+      "unicode": null,
+      "glyph": "╦",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 204,
+      "unicode": null,
+      "glyph": "╠",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 205,
+      "unicode": null,
+      "glyph": "═",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 206,
+      "unicode": null,
+      "glyph": "╬",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 207,
+      "unicode": null,
+      "glyph": "╧",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 208,
+      "unicode": null,
+      "glyph": "╨",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 209,
+      "unicode": null,
+      "glyph": "╤",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 210,
+      "unicode": null,
+      "glyph": "╥",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 211,
+      "unicode": null,
+      "glyph": "╙",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 212,
+      "unicode": null,
+      "glyph": "╘",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 213,
+      "unicode": null,
+      "glyph": "╒",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 214,
+      "unicode": null,
+      "glyph": "╓",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 215,
+      "unicode": null,
+      "glyph": "╫",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 216,
+      "unicode": null,
+      "glyph": "╪",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 217,
+      "unicode": null,
+      "glyph": "┘",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 218,
+      "unicode": null,
+      "glyph": "┌",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 219,
+      "unicode": null,
+      "glyph": "█",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 220,
+      "unicode": null,
+      "glyph": "▄",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 221,
+      "unicode": null,
+      "glyph": "▌",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 222,
+      "unicode": null,
+      "glyph": "▐",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 223,
+      "unicode": null,
+      "glyph": "▀",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 224,
+      "unicode": null,
+      "glyph": "α",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 225,
+      "unicode": null,
+      "glyph": "ß",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 226,
+      "unicode": null,
+      "glyph": "Γ",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 227,
+      "unicode": null,
+      "glyph": "π",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 228,
+      "unicode": null,
+      "glyph": "Σ",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 229,
+      "unicode": null,
+      "glyph": "σ",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 230,
+      "unicode": null,
+      "glyph": "µ",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 231,
+      "unicode": null,
+      "glyph": "τ",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 232,
+      "unicode": null,
+      "glyph": "Φ",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 233,
+      "unicode": null,
+      "glyph": "Θ",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 234,
+      "unicode": null,
+      "glyph": "Ω",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 235,
+      "unicode": null,
+      "glyph": "δ",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 236,
+      "unicode": null,
+      "glyph": "∞",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 237,
+      "unicode": null,
+      "glyph": "φ",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 238,
+      "unicode": null,
+      "glyph": "ε",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 239,
+      "unicode": null,
+      "glyph": "∩",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 240,
+      "unicode": null,
+      "glyph": "≡",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 241,
+      "unicode": null,
+      "glyph": "±",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 242,
+      "unicode": null,
+      "glyph": "≥",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 243,
+      "unicode": null,
+      "glyph": "≤",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 244,
+      "unicode": null,
+      "glyph": "⌠",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 245,
+      "unicode": null,
+      "glyph": "⌡",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 246,
+      "unicode": null,
+      "glyph": "÷",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 247,
+      "unicode": null,
+      "glyph": "≈",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 248,
+      "unicode": null,
+      "glyph": "°",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 249,
+      "unicode": null,
+      "glyph": "∙",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 250,
+      "unicode": null,
+      "glyph": "·",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 251,
+      "unicode": null,
+      "glyph": "√",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 252,
+      "unicode": null,
+      "glyph": "ⁿ",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 253,
+      "unicode": null,
+      "glyph": "²",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": 254,
+      "unicode": null,
+      "glyph": "■",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+2022",
+      "glyph": "•",
+      "color": "#292929",
+      "alpha": 1
+    }
+  ]
+}

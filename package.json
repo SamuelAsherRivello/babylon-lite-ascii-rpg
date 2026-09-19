@@ -6,11 +6,12 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node --test --test-isolation=none ascii-rpg/test/page.test.mjs ascii-rpg/test/openspec-skills.test.mjs ascii-rpg/test/player-grid.test.mjs ascii-rpg/test/world-grid.test.mjs"
+    "test": "node --test --test-isolation=none ascii-rpg/test/page.test.mjs ascii-rpg/test/openspec-skills.test.mjs ascii-rpg/test/player-grid.test.mjs ascii-rpg/test/world-grid.test.mjs ascii-rpg/test/palette.test.mjs ascii-rpg/test/url-arguments.test.mjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^6.1.1",
     "react": "^19.3.0",
+    "react-colorful": "^5.8.1",
     "react-dom": "^19.3.0"
   },
   "devDependencies": {

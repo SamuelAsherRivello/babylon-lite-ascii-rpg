@@ -106,6 +106,7 @@ body {
 .window_backdrop {
   position: fixed;
   inset: 0;
+  z-index: 0;
   background: #000;
 }
 
@@ -117,6 +118,8 @@ body {
   border: 1px solid #f5f5f5;
   background: #2f2f2f;
   color: #f5f5f5;
+  overflow: auto;
+  pointer-events: auto;
 }
 
 .window_header {
@@ -127,15 +130,40 @@ body {
   border-bottom: 1px solid #f5f5f5;
 }
 
-.window h1 {
+.prompt_title {
   margin: 0;
+  color: #f5f5f5;
+  font-size: 16pt;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.prompt_body {
+  padding: 12px 16px;
+}
+
+.prompt_body h2 {
+  margin: 0 0 0.5rem;
   color: #f5f5f5;
   font-size: 10pt;
   font-weight: 700;
   line-height: 1.4;
 }
 
-.window_close {
+.window_list {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.window_list li + li {
+  margin-top: 0.5rem;
+}
+
+.argument_block + .argument_block {
+  margin-top: 1rem;
+}
+
+.argument_code {
   appearance: none;
   border: 0;
   padding: 0;
@@ -143,10 +171,184 @@ body {
   color: #f5f5f5;
   cursor: pointer;
   font: inherit;
+}
+
+.argument_code code {
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.argument_code:focus-visible {
+  outline: 2px solid #f5f5f5;
+  outline-offset: 3px;
+}
+
+.prompt_button {
+  appearance: none;
+  border: 1px solid #f5f5f5;
+  padding: 0.2rem 0.45rem;
+  background: transparent;
+  color: #f5f5f5;
+  cursor: pointer;
+  font: inherit;
   line-height: 1;
 }
 
-.window_close:focus-visible {
+.prompt_button:focus-visible {
   outline: 2px solid #f5f5f5;
   outline-offset: 3px;
+}
+
+.palette_grid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 0.5rem;
+  padding: 12px 16px;
+}
+
+.palette_controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 12px 16px 0;
+}
+
+.palette_filter_group,
+.palette_sort_group {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.palette_control_button {
+  border: 1px solid #777;
+  padding: 0.25rem 0.55rem;
+  background: #1b1b1b;
+  color: #f5f5f5;
+  cursor: pointer;
+  font: inherit;
+}
+
+.palette_control_button[aria-pressed="true"] {
+  border-color: #f5f5f5;
+  background: #555;
+}
+
+.palette_cell {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+  border: 1px solid #555;
+  padding: 0.35rem 0.5rem;
+  background: #1b1b1b;
+  color: #f5f5f5;
+  cursor: pointer;
+  font: inherit;
+}
+
+.palette_cell:hover,
+.palette_cell:focus-visible {
+  border-color: #f5f5f5;
+}
+
+.palette_index {
+  color: #999;
+  font-size: 8pt;
+}
+
+.palette_glyph {
+  min-width: 1.5rem;
+  font: 18pt/1.2 monospace;
+  text-align: center;
+}
+
+.palette_editor {
+  position: fixed;
+  z-index: 2;
+  box-sizing: border-box;
+  width: 286px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  padding: 12px;
+  border: 1px solid #f5f5f5;
+  background: #2f2f2f;
+  box-shadow: 0 4px 16px #000;
+}
+
+.palette_preview {
+  margin-bottom: 0.5rem;
+  background: #1b1b1b;
+  font: 32pt/1.2 monospace;
+  text-align: center;
+}
+
+.palette_editor .react-colorful {
+  width: 100%;
+  height: 160px;
+}
+
+.palette_alpha_control {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 0.75rem;
+}
+
+.palette_editor_actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 0.75rem;
+}
+
+.palette_editor_actions button {
+  border: 1px solid #f5f5f5;
+  padding: 0.25rem 0.5rem;
+  background: transparent;
+  color: #f5f5f5;
+  cursor: pointer;
+  font: inherit;
+}
+
+.palette_warning,
+.palette_error {
+  margin: 12px 16px;
+  border: 1px solid #f5f5f5;
+  padding: 0.75rem;
+  background: #1b1b1b;
+}
+
+.palette_warning h2 {
+  margin: 0 0 0.5rem;
+  font-size: 10pt;
+}
+
+.palette_warning p {
+  margin: 0 0 0.75rem;
+}
+
+.palette_warning label {
+  display: block;
+  margin-bottom: 0.75rem;
+}
+
+.palette_warning button {
+  border: 1px solid #f5f5f5;
+  padding: 0.25rem 0.5rem;
+  background: transparent;
+  color: #f5f5f5;
+  cursor: pointer;
+  font: inherit;
+}
+
+.palette_error {
+  border-color: #ff8f8f;
+  color: #ffb5b5;
 }

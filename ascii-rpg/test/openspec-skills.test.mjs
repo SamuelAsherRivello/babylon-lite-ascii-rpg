@@ -5,21 +5,19 @@ import test from "node:test";
 const repositoryRoot = new URL("../../", import.meta.url);
 const skillsRoot = new URL(".agents/skills/", repositoryRoot);
 
-test("documents the bundled OpenSpec Codex skills without a checklist update", async () => {
+test("documents the bundled OpenSpec Codex skills without the completed template checklist", async () => {
   const agents = await readFile(new URL("AGENTS.md", repositoryRoot), "utf8");
-  const checklist = await readFile(
-    new URL("AGENTS_TEMPLATE_USAGE_CHECKLIST.md", repositoryRoot),
-    "utf8",
-  );
-  const guidance = `${agents}\n${checklist}`;
 
-  assert.doesNotMatch(guidance, /openspec update/);
-  assert.match(checklist, /bundled.*\.agents\/skills\/openspec-\*/s);
-  assert.match(checklist, /OpenSpec 1\.13\.1/);
-  assert.match(guidance, /openspec doctor --json/);
-  assert.match(guidance, /generatedBy.*1\.13\.1/is);
-  assert.match(guidance, /\$openspec-\*/);
-  assert.match(guidance, /reopen Codex/i);
+  await assert.rejects(
+    readFile(new URL("AGENTS_TEMPLATE_USAGE_CHECKLIST.md", repositoryRoot)),
+    { code: "ENOENT" },
+  );
+  assert.doesNotMatch(agents, /AGENTS_TEMPLATE_USAGE_CHECKLIST/);
+  assert.doesNotMatch(agents, /openspec update/);
+  assert.match(agents, /openspec doctor --json/);
+  assert.match(agents, /OpenSpec 1\.13\.1/);
+  assert.match(agents, /\$openspec-\*/);
+  assert.match(agents, /reopen Codex/i);
 });
 
 test("keeps OpenSpec skill folders discoverable by Codex", async () => {

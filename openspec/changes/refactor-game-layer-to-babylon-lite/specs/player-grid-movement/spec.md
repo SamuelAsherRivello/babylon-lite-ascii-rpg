@@ -1,18 +1,14 @@
-# player-grid-movement Specification
+# Spec Delta
 
-## Purpose
-Provides the first playable ASCII-RPG space: a resizable screen-sized logical
-world with a grid-aligned player that responds consistently to keyboard input.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Full-screen logical rendering
 
-The game SHALL render into the full browser viewport with no outer margins.
-The logical viewport dimensions SHALL be the current screen dimensions divided
-by the configured `upscale` value, which defaults to `1.0`. The game SHALL
-support a default grid-cell width of `32` logical units and a default grid-cell
-height of `32` logical units.
+The game SHALL render through the Babylon Lite game layer into the full browser
+viewport with no outer margins. The logical viewport dimensions SHALL be the
+current screen dimensions divided by the configured `upscale` value, which
+defaults to `1.0`. The game SHALL support a default grid-cell width of `32`
+logical units and a default grid-cell height of `32` logical units.
 
 #### Scenario: Default one-to-one rendering
 
@@ -34,30 +30,34 @@ height of `32` logical units.
 
 ### Requirement: Grid-aligned player rendering
 
-The game SHALL render one player glyph as the letter `P`. The glyph SHALL use
-one grid cell at the default font resolution of `1.0`, its visual center SHALL
-align with the center of the player's current logical grid cell, and its color
-and alpha SHALL be resolved from the ASCII palette.
+The game SHALL render one player glyph as the letter `P` through the Babylon
+Lite game layer. The glyph SHALL use one grid cell at the default font
+resolution of `1.0`, its visual center SHALL align with the center of the
+player's current logical grid cell, and its color and alpha SHALL come from
+the active palette.
 
 #### Scenario: Initial player placement
 
 - **WHEN** a new game view is shown
 - **THEN** a `P` SHALL be visible in the center grid cell of the logical
-  viewport and SHALL use the palette style for `P`
+  viewport when that cell is walkable, otherwise in a valid connected
+  walkable start cell
 
 #### Scenario: Player cell movement
 
-- **WHEN** the player moves by one cardinal or diagonal step
+- **WHEN** the player moves by one cardinal or diagonal step into a walkable
+  destination cell
 - **THEN** the `P` SHALL render in the destination grid cell with its center
-  aligned to that cell's center and its palette style unchanged
+  aligned to that cell's center and with the active palette style for `P`
 
 ### Requirement: Keyboard grid movement
 
-The game SHALL accept WASD and arrow keys as equivalent cardinal directions:
-`W`/Up for north, `A`/Left for west, `S`/Down for south, and `D`/Right for
-east. A movement step SHALL advance one grid cell only when the destination is
-inside the world and walkable. Pressing or holding two orthogonal directions
-SHALL produce one diagonal grid-cell step in the combined direction.
+The Babylon Lite game layer SHALL accept WASD and arrow keys as equivalent
+cardinal directions: `W`/Up for north, `A`/Left for west, `S`/Down for south,
+and `D`/Right for east. A movement step SHALL advance one grid cell only when
+the destination is inside the world and walkable. Pressing or holding two
+orthogonal directions SHALL produce one diagonal grid-cell step in the
+combined direction.
 
 #### Scenario: Cardinal key press
 
@@ -85,10 +85,10 @@ SHALL produce one diagonal grid-cell step in the combined direction.
 
 ### Requirement: Held-key repeat timing
 
-The game SHALL repeat movement for a held mapped key or key combination. The
-first movement SHALL occur immediately on the initial press, the next movement
-SHALL occur after `0.25` seconds, and subsequent movements SHALL occur every
-`0.125` seconds until the relevant keys are released.
+The Babylon Lite game layer SHALL repeat movement for a held mapped key or key
+combination. The first movement SHALL occur immediately on the initial press,
+the next movement SHALL occur after `0.25` seconds, and subsequent movements
+SHALL occur every `0.125` seconds until the relevant keys are released.
 
 #### Scenario: Held cardinal key
 
@@ -109,9 +109,9 @@ SHALL occur after `0.25` seconds, and subsequent movements SHALL occur every
 
 ### Requirement: Screen-sized world boundaries
 
-The world SHALL be independent of the viewport, but the renderer SHALL show
-only cells within the current logical viewport and the player SHALL not move
-outside the world or to a non-walkable cell.
+The world SHALL be independent of the viewport, but the Babylon Lite renderer
+SHALL show only cells within the current logical viewport and the player SHALL
+not move outside the world or to a non-walkable cell.
 
 #### Scenario: Movement at a world edge
 
