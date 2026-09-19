@@ -6,19 +6,25 @@ import {
   DEFAULT_UPSCALE,
   INITIAL_REPEAT_DELAY_MS,
   REPEAT_INTERVAL_MS,
-  clampCell,
   createViewport,
   getCellCenter,
-  getCenterCell,
   getCombinedDirection,
   getDirectionForKey,
-  moveCell,
+  moveWorldCell,
 } from "./player-grid.js";
+import {
+  clearCharacter,
+  createWorld,
+  getRandomSeedFromSearch,
+  getVisibleGlyph,
+  setCharacter,
+} from "./world-grid.js";
+import { getPalette, subscribeToPalette } from "./palette-store.js";
+import { getPaletteStyle } from "./palette.js";
 
-const PLAYER_GLYPH = "P";
 const PLAYER_FONT_FAMILY = "monospace";
 
-function drawPlayer(canvas, viewport, playerCell) {
+export function drawWorld(canvas, viewport, world, palette = getPalette()) {
   const context = canvas.getContext("2d");
   if (!context) {
     return;
@@ -27,13 +33,27 @@ function drawPlayer(canvas, viewport, playerCell) {
   canvas.width = Math.max(1, Math.ceil(viewport.logicalWidth));
   canvas.height = Math.max(1, Math.ceil(viewport.logicalHeight));
   context.clearRect(0, 0, canvas.width, canvas.height);
-  context.fillStyle = "#f5f5f5";
   context.font = `${viewport.gridHeight * viewport.fontResolution}px ${PLAYER_FONT_FAMILY}`;
   context.textAlign = "center";
   context.textBaseline = "middle";
 
-  const center = getCellCenter(playerCell, viewport);
-  context.fillText(PLAYER_GLYPH, center.x, center.y);
+  const visibleRows = Math.min(viewport.rows, world.rows);
+  const visibleColumns = Math.min(viewport.columns, world.columns);
+  for (let y = 0; y < visibleRows; y += 1) {
+    for (let x = 0; x < visibleColumns; x += 1) {
+      const glyph = getVisibleGlyph(world, { x, y });
+      if (!glyph) {
+        continue;
+      }
+
+      const style = getPaletteStyle(palette, glyph);
+      context.fillStyle = style.color;
+      context.globalAlpha = style.alpha;
+      const center = getCellCenter({ x, y }, viewport);
+      context.fillText(glyph, center.x, center.y);
+    }
+  }
+  context.globalAlpha = 1;
 }
 
 export function GameCanvas() {
@@ -54,11 +74,17 @@ export function GameCanvas() {
       gridWidth: DEFAULT_GRID_WIDTH,
       gridHeight: DEFAULT_GRID_HEIGHT,
     });
-    let playerCell = getCenterCell(viewport);
+    let world = createWorld({
+      rows: Math.max(3, viewport.rows),
+      columns: Math.max(3, viewport.columns),
+      seed: getRandomSeedFromSearch(window.location.search),
+    });
+    let playerCell = world.playerStart;
+    let palette = getPalette();
     let repeatTimer = null;
 
     const redraw = () => {
-      drawPlayer(canvas, viewport, playerCell);
+      drawWorld(canvas, viewport, world, palette);
     };
 
     const movePlayer = () => {
@@ -67,7 +93,14 @@ export function GameCanvas() {
         return;
       }
 
-      playerCell = moveCell(playerCell, direction, viewport);
+      const nextCell = moveWorldCell(playerCell, direction, world);
+      if (nextCell.x === playerCell.x && nextCell.y === playerCell.y) {
+        return;
+      }
+
+      clearCharacter(world, playerCell);
+      playerCell = nextCell;
+      setCharacter(world, playerCell);
       redraw();
     };
 
@@ -126,7 +159,6 @@ export function GameCanvas() {
         gridWidth: DEFAULT_GRID_WIDTH,
         gridHeight: DEFAULT_GRID_HEIGHT,
       });
-      playerCell = clampCell(playerCell, viewport);
       redraw();
     };
 
@@ -134,11 +166,16 @@ export function GameCanvas() {
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
     window.addEventListener("resize", handleResize);
+    const unsubscribePalette = subscribeToPalette((nextPalette) => {
+      palette = nextPalette;
+      redraw();
+    });
 
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
       window.removeEventListener("resize", handleResize);
+      unsubscribePalette();
       if (repeatTimer !== null) {
         window.clearTimeout(repeatTimer);
       }
