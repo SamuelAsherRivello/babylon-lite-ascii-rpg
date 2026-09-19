@@ -13,13 +13,15 @@ test("builds for the GitHub Pages project path", () => {
 test("documents the plain safe-area template", async () => {
   const page = await readFile(new URL("index.html", appRoot), "utf8");
   const app = await readFile(new URL("src/App.jsx", appRoot), "utf8");
+  const main = await readFile(new URL("src/main.jsx", appRoot), "utf8");
+  const gameLayer = await readFile(new URL("src/game-layer.js", appRoot), "utf8");
   const styles = await readFile(new URL("src/style.css", appRoot), "utf8");
 
   if (!page.includes("<title>Ascii RPG</title>")) {
     throw new Error("The browser title must identify the project.");
   }
-  if (!page.includes('id="content_layer"')) {
-    throw new Error("The page needs a dedicated application content layer.");
+  if (!page.includes('id="game_layer"')) {
+    throw new Error("The page needs a dedicated Babylon Lite game layer.");
   }
   if (!page.includes('id="ui_layer"')) {
     throw new Error("The page needs a separate HTML UI layer.");
@@ -56,11 +58,23 @@ test("documents the plain safe-area template", async () => {
   if (!app.includes("v{versionNumber}")) {
     throw new Error("The version corner must display versions in v0.0.0 format.");
   }
+  if (!app.includes('id="time"') || !app.includes("Time: {formatWorldTime(worldTime)}")) {
+    throw new Error("The upper-left corner must display the subscribed world time.");
+  }
   if (!app.includes("Settings")) {
     throw new Error("The page must include a lower-left Settings section.");
   }
   if (!styles.includes(".corner_body") || !styles.includes(".corner_title")) {
     throw new Error("The page must define shared corner body and title text styles.");
+  }
+  if (main.includes("GameCanvas") || main.includes('createRoot(document.getElementById("game_layer"))')) {
+    throw new Error("React must mount only UI and must not own the Babylon Lite game canvas.");
+  }
+  if (!main.includes("startGameLayer") || !gameLayer.includes("@babylonjs/lite")) {
+    throw new Error("The game layer must start Babylon Lite outside React.");
+  }
+  if (!gameLayer.includes("navigator.gpu") || !gameLayer.includes("container.replaceChildren()")) {
+    throw new Error("A WebGPU startup failure must leave the game layer unloaded without a canvas fallback.");
   }
   if (!app.includes('id="ascii_palette_toggle"') || !app.includes("Ascii Palette")) {
     throw new Error("The Settings section must include the Ascii Palette option.");
