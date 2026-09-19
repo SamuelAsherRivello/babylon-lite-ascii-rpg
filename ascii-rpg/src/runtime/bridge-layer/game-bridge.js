@@ -14,6 +14,10 @@ export function sendFontSnapshot(fontId) {
   gameController?.setFont(fontId);
 }
 
+export function sendZoomSnapshot(zoom) {
+  gameController?.setZoom(zoom);
+}
+
 export function getTimeSnapshot() {
   return timeSnapshot;
 }

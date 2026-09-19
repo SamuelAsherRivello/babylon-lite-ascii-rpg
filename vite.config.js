@@ -3,13 +3,13 @@ import { fileURLToPath } from "node:url";
 import { rename, writeFile } from "node:fs/promises";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
-import { serializeFontConfig, validateFontId } from "./ascii-rpg/src/font.js";
-import { serializePalette, validatePaletteEntries } from "./ascii-rpg/src/palette.js";
+import { serializeFontConfig, validateFontId } from "./ascii-rpg/src/runtime/bridge-layer/font.js";
+import { serializePalette, validatePaletteEntries } from "./ascii-rpg/src/runtime/bridge-layer/palette.js";
 
 const repositoryRoot = dirname(fileURLToPath(import.meta.url));
 
 function palettePersistencePlugin() {
-  const palettePath = `${repositoryRoot}/ascii-rpg/palette.json`;
+  const palettePath = `${repositoryRoot}/ascii-rpg/src/runtime/game-layer-babylon-lite/data/palette_data.json`;
 
   return {
     name: "ascii-palette-persistence",
@@ -48,9 +48,9 @@ function palettePersistencePlugin() {
           for await (const chunk of request) chunks.push(chunk);
           const payload = JSON.parse(Buffer.concat(chunks).toString("utf8"));
           validateFontId(payload.fontId);
-          const temporaryPath = `${repositoryRoot}/ascii-rpg/font.json.tmp`;
+          const temporaryPath = `${repositoryRoot}/ascii-rpg/src/runtime/game-layer-babylon-lite/data/font_data.json.tmp`;
           await writeFile(temporaryPath, serializeFontConfig(payload.fontId), "utf8");
-          await rename(temporaryPath, `${repositoryRoot}/ascii-rpg/font.json`);
+          await rename(temporaryPath, `${repositoryRoot}/ascii-rpg/src/runtime/game-layer-babylon-lite/data/font_data.json`);
           response.statusCode = 200;
           response.setHeader("Content-Type", "application/json");
           response.end(JSON.stringify({ ok: true }));
@@ -79,7 +79,7 @@ export default defineConfig({
       allow: [repositoryRoot],
     },
     watch: {
-      ignored: ["**/palette.json", "**/font.json"],
+      ignored: ["**/palette_data.json", "**/font_data.json"],
     },
   },
 });

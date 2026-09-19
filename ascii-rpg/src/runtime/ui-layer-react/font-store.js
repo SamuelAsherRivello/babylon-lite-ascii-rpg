@@ -1,10 +1,10 @@
-import bundledFont from "../font.json";
+import bundledFont from "../game-layer-babylon-lite/data/font_data.json";
 import {
   createFontConfig,
   DEFAULT_FONT_ID,
   FONT_STORAGE_KEY,
   validateFontId,
-} from "./font.js";
+} from "../bridge-layer/font.js";
 
 const channelName = "babylon-lite-ascii-rpg.font";
 const listeners = new Set();
@@ -57,7 +57,7 @@ export function restoreFontPreview(broadcast = true) {
 }
 
 async function loadRemoteFont() {
-  const response = await fetch(`/font.json?font=${Date.now()}`);
+  const response = await fetch(`/data/font_data.json?font=${Date.now()}`);
   if (!response.ok) throw new Error("Unable to reload the font configuration.");
   return createFontConfig(await response.json()).fontId;
 }

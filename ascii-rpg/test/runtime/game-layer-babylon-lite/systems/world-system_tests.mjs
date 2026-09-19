@@ -9,8 +9,8 @@ import {
   getVisibleGlyph,
   isWalkableCell,
   setCharacter,
-} from "../src/world-grid.js";
-import { moveWorldCell } from "../src/player-grid.js";
+} from "../../../../src/runtime/game-layer-babylon-lite/systems/world-system.js";
+import { moveWorldCell } from "../../../../src/runtime/game-layer-babylon-lite/characters/player/player-grid.js";
 
 test("creates a repeatable bordered world with layered terrain", () => {
   const first = createWorld({ rows: 12, columns: 20, seed: "cave" });

@@ -7,12 +7,16 @@ import {
   disposeEngine,
   disposeSpriteAtlas,
   disposeSpriteRenderer,
+  removeSpriteRendererLayer,
   registerSpriteRenderer,
   startEngine,
   updateSprite2DIndex,
 } from "@babylonjs/lite";
 import {
   DEFAULT_FONT_RESOLUTION,
+  DEFAULT_ZOOM,
+  MAX_ZOOM,
+  MIN_ZOOM,
   DEFAULT_GRID_HEIGHT,
   DEFAULT_GRID_WIDTH,
   DEFAULT_UPSCALE,
@@ -23,20 +27,22 @@ import {
   getCombinedDirection,
   getDirectionForKey,
   moveWorldCell,
-} from "./player-grid.js";
-import { getFontOption, validateFontId } from "./font.js";
-import { getPaletteStyle, validatePaletteEntries } from "./palette.js";
+} from "./characters/player/player-grid.js";
+import { getFontOption, validateFontId } from "../bridge-layer/font.js";
+import { getPaletteStyle, validatePaletteEntries } from "../bridge-layer/palette.js";
 import {
   clearCharacter,
   createWorld,
   getRandomSeedFromSearch,
   getVisibleGlyph,
   setCharacter,
-} from "./world-grid.js";
-import { createTimeSystem } from "./time-system.js";
+} from "./systems/world-system.js";
+import { createTimeSystem } from "./systems/time-system.js";
 
 const GLYPHS = ["W", "•", "P"];
 const GLYPH_SIZE = 64;
+const WORLD_ROWS = 512;
+const WORLD_COLUMNS = 512;
 
 function colorToLinearRgba({ color, alpha }) {
   const hex = color.slice(1);
@@ -62,11 +68,12 @@ function createGlyphFrame(glyph, fontFamily) {
   };
 }
 
-function createViewportForWindow() {
+function createViewportForWindow(zoom = DEFAULT_ZOOM) {
   return createViewport({
     screenWidth: window.innerWidth,
     screenHeight: window.innerHeight,
     upscale: DEFAULT_UPSCALE,
+    zoom,
     fontResolution: DEFAULT_FONT_RESOLUTION,
     gridWidth: DEFAULT_GRID_WIDTH,
     gridHeight: DEFAULT_GRID_HEIGHT,
@@ -98,8 +105,8 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   const heldKeys = new Set();
   let viewport = createViewportForWindow();
   let world = createWorld({
-    rows: Math.max(3, viewport.rows),
-    columns: Math.max(3, viewport.columns),
+    rows: WORLD_ROWS,
+    columns: WORLD_COLUMNS,
     seed: getRandomSeedFromSearch(window.location.search),
   });
   const worldSeed = world.options.seed;
@@ -107,6 +114,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   const timeSystem = createTimeSystem();
   let palette = initialPalette.map((entry) => ({ ...entry }));
   let fontId = initialFontId;
+  let zoom = DEFAULT_ZOOM;
   const spriteIndexes = [];
 
   const clearRepeat = () => {
@@ -119,10 +127,21 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   const renderWorld = () => {
     const visibleRows = Math.min(viewport.rows, world.rows);
     const visibleColumns = Math.min(viewport.columns, world.columns);
+    const maxCameraStartX = Math.max(0, world.columns - visibleColumns);
+    const maxCameraStartY = Math.max(0, world.rows - visibleRows);
+    const cameraStartX = Math.min(
+      Math.max(playerCell.x - Math.floor(visibleColumns / 2), 0),
+      maxCameraStartX,
+    );
+    const cameraStartY = Math.min(
+      Math.max(playerCell.y - Math.floor(visibleRows / 2), 0),
+      maxCameraStartY,
+    );
     let sprite = 0;
     for (let y = 0; y < visibleRows; y += 1) {
       for (let x = 0; x < visibleColumns; x += 1) {
-        const glyph = getVisibleGlyph(world, { x, y });
+        const worldCell = { x: cameraStartX + x, y: cameraStartY + y };
+        const glyph = getVisibleGlyph(world, worldCell);
         const style = getPaletteStyle(palette, glyph);
         const center = getCellCenter({ x, y }, viewport);
         const props = {
@@ -143,6 +162,20 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     for (; sprite < spriteIndexes.length; sprite += 1) {
       updateSprite2DIndex(layer, spriteIndexes[sprite], { visible: false });
     }
+  };
+
+  const rebuildLayer = () => {
+    const nextLayer = createSprite2DLayer(atlas, { capacity: Math.max(1, viewport.rows * viewport.columns) });
+    if (renderer && layer) removeSpriteRendererLayer(renderer, layer);
+    layer = nextLayer;
+    if (renderer) renderer.layers[0] = nextLayer;
+    spriteIndexes.length = 0;
+  };
+
+  const rebuildViewport = () => {
+    viewport = createViewportForWindow(zoom);
+    if (renderer) rebuildLayer();
+    renderWorld();
   };
 
   const movePlayer = () => {
@@ -185,14 +218,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   };
 
   const handleResize = () => {
-    viewport = createViewportForWindow();
-    world = createWorld({
-      rows: Math.max(3, viewport.rows),
-      columns: Math.max(3, viewport.columns),
-      seed: worldSeed,
-    });
-    playerCell = world.playerStart;
-    renderWorld();
+    rebuildViewport();
   };
 
   try {
@@ -237,6 +263,11 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       fontId = nextFontId;
       renderWorld();
       disposeSpriteAtlas(previousAtlas);
+    },
+    setZoom(nextZoom) {
+      if (!Number.isFinite(nextZoom)) return;
+      zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.round(nextZoom)));
+      rebuildViewport();
     },
     getTime() {
       return timeSystem.getTime();

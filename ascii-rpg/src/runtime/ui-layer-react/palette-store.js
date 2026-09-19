@@ -1,12 +1,13 @@
-import bundledPalette from "../palette.json";
+import bundledPalette from "../game-layer-babylon-lite/data/palette_data.json";
 import {
   createPalette,
   createDefaultPalette,
   getPaletteStyle,
   getPaletteEntryId,
   isPaletteEntryCustomized,
+  PALETTE_STORAGE_KEY,
   validatePaletteEntries,
-} from "./palette.js";
+} from "../bridge-layer/palette.js";
 
 const channelName = "babylon-lite-ascii-rpg.palette";
 
@@ -61,7 +62,7 @@ function notifyPaletteChange() {
 }
 
 async function loadRemotePalette() {
-  const response = await fetch(`/palette.json?palette=${Date.now()}`);
+  const response = await fetch(`/data/palette_data.json?palette=${Date.now()}`);
   if (!response.ok) throw new Error("Unable to reload the palette file.");
   return createPalette(await response.json());
 }

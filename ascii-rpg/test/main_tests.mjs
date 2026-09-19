@@ -12,10 +12,10 @@ test("builds for the GitHub Pages project path", () => {
 
 test("documents the plain safe-area template", async () => {
   const page = await readFile(new URL("index.html", appRoot), "utf8");
-  const app = await readFile(new URL("src/App.jsx", appRoot), "utf8");
+  const app = await readFile(new URL("src/runtime/ui-layer-react/App.jsx", appRoot), "utf8");
   const main = await readFile(new URL("src/main.jsx", appRoot), "utf8");
-  const gameLayer = await readFile(new URL("src/game-layer.js", appRoot), "utf8");
-  const styles = await readFile(new URL("src/style.css", appRoot), "utf8");
+  const gameLayer = await readFile(new URL("src/runtime/game-layer-babylon-lite/index.js", appRoot), "utf8");
+  const styles = await readFile(new URL("src/runtime/ui-layer-react/style.css", appRoot), "utf8");
 
   if (!page.includes("<title>Ascii RPG</title>")) {
     throw new Error("The browser title must identify the project.");

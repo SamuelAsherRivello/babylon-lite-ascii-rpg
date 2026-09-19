@@ -11,7 +11,7 @@ import {
   sortPaletteEntries,
   serializePalette,
   validatePaletteEntries,
-} from "../src/palette.js";
+} from "../../../src/runtime/bridge-layer/palette.js";
 
 test("creates every visible Code Page 437 entry plus the bullet", () => {
   const palette = createDefaultPalette();

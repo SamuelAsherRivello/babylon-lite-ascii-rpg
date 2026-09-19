@@ -1,6 +1,6 @@
 import { Component, useEffect, useState, useSyncExternalStore } from "react";
 import { HexColorPicker } from "react-colorful";
-import versionText from "../../version.txt?raw";
+import versionText from "../../../../version.txt?raw";
 import {
   commitFont,
   getFontId,
@@ -9,7 +9,7 @@ import {
   restoreFontPreview,
   subscribeToFont,
 } from "./font-store.js";
-import { DEFAULT_FONT_ID, FONT_OPTIONS, getFontOption } from "./font.js";
+import { DEFAULT_FONT_ID, FONT_OPTIONS, getFontOption } from "../bridge-layer/font.js";
 import { commitPalette, getPalette, subscribeToPalette } from "./palette-store.js";
 import {
   filterPaletteEntries,
@@ -18,13 +18,16 @@ import {
   getPaletteEntryId,
   PALETTE_WARNING_KEY,
   sortPaletteEntries,
-} from "./palette.js";
+} from "../bridge-layer/palette.js";
 import { withUrlArgument } from "./url-arguments.js";
-import { getTimeSnapshot, sendPaletteSnapshot, subscribeToTime } from "./game-bridge.js";
-import { formatWorldTime } from "./time-system.js";
-import { FLOOR_GLYPH, PLAYER_GLYPH, WALL_GLYPH } from "./world-grid.js";
+import { getTimeSnapshot, sendPaletteSnapshot, sendZoomSnapshot, subscribeToTime } from "../bridge-layer/game-bridge.js";
+import { formatWorldTime } from "../game-layer-babylon-lite/systems/time-system.js";
+import { FLOOR_GLYPH, PLAYER_GLYPH, WALL_GLYPH } from "../game-layer-babylon-lite/systems/world-system.js";
 
 const fullscreenStorageKey = "babylon-lite-ascii-rpg.fullscreen";
+const minZoom = 1;
+const maxZoom = 10;
+const defaultZoom = 5;
 const repositoryUrl = "https://github.com/SamuelAsherRivello/babylon-lite-ascii-rpg";
 const uiMarginPixels = 20;
 const mapGlyphs = new Set([WALL_GLYPH, FLOOR_GLYPH, PLAYER_GLYPH]);
@@ -404,6 +407,7 @@ export function App() {
   const [fullscreenPreferred, setFullscreenPreferred] = useState(() => {
     return localStorage.getItem(fullscreenStorageKey) === "true";
   });
+  const [zoom, setZoom] = useState(defaultZoom);
   const [asciiPaletteOpen, setAsciiPaletteOpen] = useState(false);
   const [argumentsOpen, setArgumentsOpen] = useState(false);
   const [paletteError, setPaletteError] = useState("");
@@ -455,6 +459,14 @@ export function App() {
     } catch {
       setFullscreenPreferred(false);
     }
+  };
+
+  const changeZoom = (amount) => {
+    setZoom((currentZoom) => {
+      const nextZoom = Math.min(maxZoom, Math.max(minZoom, currentZoom + amount));
+      if (nextZoom !== currentZoom) sendZoomSnapshot(nextZoom);
+      return nextZoom;
+    });
   };
 
   const commitPaletteEntry = async (entryId, draft) => {
@@ -534,6 +546,12 @@ export function App() {
           >
             Arguments
           </button>
+          <div id="zoom_control" className="corner_body zoom_control" aria-label="Zoom">
+            <span>Zoom</span>
+            <button type="button" aria-label="Zoom in" onClick={() => changeZoom(1)} disabled={zoom >= maxZoom}>+</button>
+            <span aria-live="polite">{zoom}</span>
+            <button type="button" aria-label="Zoom out" onClick={() => changeZoom(-1)} disabled={zoom <= minZoom}>-</button>
+          </div>
         </section>
       </div>
       <div className="corner corner_bottom_right">
