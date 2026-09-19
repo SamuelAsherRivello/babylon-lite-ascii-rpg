@@ -79,6 +79,18 @@ export function getCenterCell(viewport) {
   };
 }
 
+export function getViewOriginForPlayer(playerCell, viewport, world) {
+  const visibleColumns = Math.min(viewport.columns, world.columns);
+  const visibleRows = Math.min(viewport.rows, world.rows);
+  const maxX = Math.max(0, world.columns - visibleColumns);
+  const maxY = Math.max(0, world.rows - visibleRows);
+
+  return {
+    x: Math.min(Math.max(playerCell.x - Math.floor(visibleColumns / 2), 0), maxX),
+    y: Math.min(Math.max(playerCell.y - Math.floor(visibleRows / 2), 0), maxY),
+  };
+}
+
 export function clampCell(cell, viewport) {
   return {
     x: Math.min(Math.max(cell.x, 0), viewport.columns - 1),

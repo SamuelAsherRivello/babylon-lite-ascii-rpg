@@ -26,6 +26,7 @@ import {
   getCellCenter,
   getCombinedDirection,
   getDirectionForKey,
+  getViewOriginForPlayer,
   moveWorldCell,
 } from "./characters/player/player-grid.js";
 import { getFontOption, validateFontId } from "../bridge-layer/font.js";
@@ -111,11 +112,29 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   });
   const worldSeed = world.options.seed;
   let playerCell = world.playerStart;
+  let viewOrigin = { x: 0, y: 0 };
   const timeSystem = createTimeSystem();
   let palette = initialPalette.map((entry) => ({ ...entry }));
   let fontId = initialFontId;
   let zoom = DEFAULT_ZOOM;
   const spriteIndexes = [];
+
+  const clampViewOrigin = () => {
+    const visibleColumns = Math.min(viewport.columns, world.columns);
+    const visibleRows = Math.min(viewport.rows, world.rows);
+    const maxX = Math.max(0, world.columns - visibleColumns);
+    const maxY = Math.max(0, world.rows - visibleRows);
+    viewOrigin = {
+      x: Math.min(Math.max(viewOrigin.x, 0), maxX),
+      y: Math.min(Math.max(viewOrigin.y, 0), maxY),
+    };
+  };
+
+  const centerViewOnPlayer = () => {
+    viewOrigin = getViewOriginForPlayer(playerCell, viewport, world);
+  };
+
+  centerViewOnPlayer();
 
   const clearRepeat = () => {
     if (repeatTimer !== null) {
@@ -127,20 +146,10 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   const renderWorld = () => {
     const visibleRows = Math.min(viewport.rows, world.rows);
     const visibleColumns = Math.min(viewport.columns, world.columns);
-    const maxCameraStartX = Math.max(0, world.columns - visibleColumns);
-    const maxCameraStartY = Math.max(0, world.rows - visibleRows);
-    const cameraStartX = Math.min(
-      Math.max(playerCell.x - Math.floor(visibleColumns / 2), 0),
-      maxCameraStartX,
-    );
-    const cameraStartY = Math.min(
-      Math.max(playerCell.y - Math.floor(visibleRows / 2), 0),
-      maxCameraStartY,
-    );
     let sprite = 0;
     for (let y = 0; y < visibleRows; y += 1) {
       for (let x = 0; x < visibleColumns; x += 1) {
-        const worldCell = { x: cameraStartX + x, y: cameraStartY + y };
+        const worldCell = { x: viewOrigin.x + x, y: viewOrigin.y + y };
         const glyph = getVisibleGlyph(world, worldCell);
         const style = getPaletteStyle(palette, glyph);
         const center = getCellCenter({ x, y }, viewport);
@@ -172,8 +181,13 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     spriteIndexes.length = 0;
   };
 
-  const rebuildViewport = () => {
+  const rebuildViewport = ({ centerOnPlayer = false } = {}) => {
     viewport = createViewportForWindow(zoom);
+    if (centerOnPlayer) {
+      centerViewOnPlayer();
+    } else {
+      clampViewOrigin();
+    }
     if (renderer) rebuildLayer();
     renderWorld();
   };
@@ -267,7 +281,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     setZoom(nextZoom) {
       if (!Number.isFinite(nextZoom)) return;
       zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.round(nextZoom)));
-      rebuildViewport();
+      rebuildViewport({ centerOnPlayer: true });
     },
     getTime() {
       return timeSystem.getTime();
