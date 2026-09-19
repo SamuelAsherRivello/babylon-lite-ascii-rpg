@@ -72,6 +72,21 @@ test("toggles index and alphabet palette ordering", () => {
   assert.equal(alphabetAscending[0].glyph, " ");
 });
 
+test("groups digits, accented Latin letters, and punctuation", () => {
+  const palette = createPalette();
+  const grouped = sortPaletteEntries(palette, "group", "ascending").map((entry) => entry.glyph);
+  const digits = grouped.slice(0, 10);
+  const aStart = grouped.indexOf("A");
+  const bStart = grouped.indexOf("B");
+  const punctuationStart = grouped.findIndex((glyph) => !/[0-9A-Za-zÀ-ÿ]/u.test(glyph));
+
+  assert.deepEqual(digits, ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]);
+  assert.deepEqual(grouped.slice(aStart, bStart), ["A", "Ä", "Å", "Æ", "a", "à", "á", "â", "ä", "å", "æ"]);
+  assert.equal(grouped[bStart], "B");
+  assert.equal(grouped[punctuationStart], " ");
+  assert.ok(grouped.slice(punctuationStart).includes("•"));
+});
+
 test("ships blue defaults for the water glyphs", async () => {
   const data = JSON.parse(await readFile(new URL(
     "../../../src/runtime/game-layer-babylon-lite/data/palette_data.json",

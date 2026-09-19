@@ -7,6 +7,8 @@ export const DEFAULT_GRID_WIDTH = 32;
 export const DEFAULT_GRID_HEIGHT = 32;
 export const INITIAL_REPEAT_DELAY_MS = 250;
 export const REPEAT_INTERVAL_MS = 125;
+export const CAMERA_DEADZONE_WIDTH_RATIO = 0.2;
+export const CAMERA_DEADZONE_HEIGHT_RATIO = 0.2;
 
 const keyDirections = new Map([
   ["w", { x: 0, y: -1 }],
@@ -89,6 +91,64 @@ export function getViewOriginForPlayer(playerCell, viewport, world) {
     x: Math.min(Math.max(playerCell.x - Math.floor(visibleColumns / 2), 0), maxX),
     y: Math.min(Math.max(playerCell.y - Math.floor(visibleRows / 2), 0), maxY),
   };
+}
+
+function getVisibleDimensions(viewport, world) {
+  return {
+    columns: Math.min(viewport.columns, world.columns),
+    rows: Math.min(viewport.rows, world.rows),
+  };
+}
+
+function clampViewOrigin(origin, viewport, world) {
+  const { columns, rows } = getVisibleDimensions(viewport, world);
+  return {
+    x: Math.min(Math.max(origin.x, 0), Math.max(0, world.columns - columns)),
+    y: Math.min(Math.max(origin.y, 0), Math.max(0, world.rows - rows)),
+  };
+}
+
+export function getViewOriginForDeadzone(playerCell, viewport, world, previousOrigin) {
+  const { columns, rows } = getVisibleDimensions(viewport, world);
+  const centerX = Math.floor(columns / 2);
+  const centerY = Math.floor(rows / 2);
+  const halfWidth = Math.floor(columns * CAMERA_DEADZONE_WIDTH_RATIO);
+  const halfHeight = Math.floor(rows * CAMERA_DEADZONE_HEIGHT_RATIO);
+  const current = clampViewOrigin(previousOrigin, viewport, world);
+  const localX = playerCell.x - current.x;
+  const localY = playerCell.y - current.y;
+  let x = current.x;
+  let y = current.y;
+  if (localX < centerX - halfWidth) x = playerCell.x - (centerX - halfWidth);
+  if (localX > centerX + halfWidth) x = playerCell.x - (centerX + halfWidth);
+  if (localY < centerY - halfHeight) y = playerCell.y - (centerY - halfHeight);
+  if (localY > centerY + halfHeight) y = playerCell.y - (centerY + halfHeight);
+  return clampViewOrigin({ x, y }, viewport, world);
+}
+
+export function getViewOriginForCamera(mode, playerCell, viewport, world, previousOrigin, direction = { x: 0, y: 0 }) {
+  if (mode === "lock") {
+    const current = clampViewOrigin(previousOrigin, viewport, world);
+    const { columns, rows } = getVisibleDimensions(viewport, world);
+    const localX = playerCell.x - current.x;
+    const localY = playerCell.y - current.y;
+    let x = current.x;
+    let y = current.y;
+    if (localX < 0) x = playerCell.x - (columns - 1);
+    if (localX >= columns) x = playerCell.x;
+    if (localY < 0) y = playerCell.y - (rows - 1);
+    if (localY >= rows) y = playerCell.y;
+    const candidate = clampViewOrigin({ x, y }, viewport, world);
+    const candidateLocalX = playerCell.x - candidate.x;
+    const candidateLocalY = playerCell.y - candidate.y;
+    const wrappedX = direction.x !== 0 && (localX < 0 || localX >= columns);
+    const wrappedY = direction.y !== 0 && (localY < 0 || localY >= rows);
+    if ((wrappedX && candidateLocalX !== (direction.x < 0 ? columns - 1 : 0))
+      || (wrappedY && candidateLocalY !== (direction.y < 0 ? rows - 1 : 0))) return null;
+    return candidate;
+  }
+  if (mode === "deadzone") return getViewOriginForDeadzone(playerCell, viewport, world, previousOrigin);
+  return getViewOriginForPlayer(playerCell, viewport, world);
 }
 
 export function clampCell(cell, viewport) {

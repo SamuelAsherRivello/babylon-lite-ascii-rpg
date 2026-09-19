@@ -1,4 +1,4 @@
-import { Component, useEffect, useState, useSyncExternalStore } from "react";
+import { Component, Fragment, useEffect, useState, useSyncExternalStore } from "react";
 import { HexColorPicker } from "react-colorful";
 import versionText from "../../../../version.txt?raw";
 import {
@@ -13,15 +13,36 @@ import { DEFAULT_FONT_ID, FONT_OPTIONS, getFontOption } from "../bridge-layer/fo
 import { commitPalette, getPalette, subscribeToPalette } from "./palette-store.js";
 import {
   filterPaletteEntries,
-  DEFAULT_PALETTE_ALPHA,
   DEFAULT_PALETTE_COLOR,
+  getPaletteGroup,
   getPaletteEntryId,
   PALETTE_WARNING_KEY,
   sortPaletteEntries,
 } from "../bridge-layer/palette.js";
 import { withUrlArgument } from "./url-arguments.js";
-import { getTimeSnapshot, sendPaletteSnapshot, sendZoomSnapshot, subscribeToTime } from "../bridge-layer/game-bridge.js";
+import {
+  getTimeSnapshot,
+  sendAmbientLightSnapshot,
+  sendCameraModeSnapshot,
+  sendPlayerLightingSnapshot,
+  sendPaletteSnapshot,
+  sendTorchLightingSnapshot,
+  sendZoomSnapshot,
+  subscribeToTime,
+} from "../bridge-layer/game-bridge.js";
+import {
+  CAMERA_MODE_LABELS,
+  CAMERA_STORAGE_KEY,
+  DEFAULT_CAMERA_MODE,
+  getNextCameraMode,
+  normalizeCameraMode,
+} from "../bridge-layer/camera.js";
 import { formatWorldTime } from "../game-layer-babylon-lite/systems/time-system.js";
+import {
+  AMBIENT_LIGHT_STEP,
+  LIGHTING_PROFILES,
+  LIGHTING_SOURCE_STATES,
+} from "../game-layer-babylon-lite/lighting.js";
 import {
   DEEP_WATER_GLYPH,
   FLOOR_GLYPH,
@@ -32,6 +53,10 @@ import {
 } from "../game-layer-babylon-lite/systems/world-system.js";
 
 const fullscreenStorageKey = "babylon-lite-ascii-rpg.fullscreen";
+const zoomStorageKey = "babylon-lite-ascii-rpg.zoom";
+const ambientLightStorageKey = "babylon-lite-ascii-rpg.ambient-light";
+const torchLightingStorageKey = "babylon-lite-ascii-rpg.torch-lighting";
+const playerLightingStorageKey = "babylon-lite-ascii-rpg.player-lighting";
 const minZoom = 1;
 const maxZoom = 10;
 const defaultZoom = 5;
@@ -49,6 +74,23 @@ const paletteEditorWidth = 286;
 const paletteEditorHeight = 340;
 const paletteEditorMargin = 16;
 const defaultPaletteViewState = { filter: "all", sortBy: "index", sortDirection: "ascending" };
+
+function getStoredZoom() {
+  const storedZoom = Number.parseInt(localStorage.getItem(zoomStorageKey), 10);
+  return Number.isInteger(storedZoom) ? Math.min(maxZoom, Math.max(minZoom, storedZoom)) : defaultZoom;
+}
+
+function getStoredAmbientLight() {
+  const stored = Number.parseFloat(localStorage.getItem(ambientLightStorageKey));
+  return Number.isFinite(stored) ? Math.min(1, Math.max(0, stored)) : 0.6;
+}
+
+function getStoredSourceIndex(storageKey) {
+  const storedIndex = Number.parseInt(localStorage.getItem(storageKey), 10);
+  return Number.isInteger(storedIndex) && storedIndex >= 0 && storedIndex < LIGHTING_SOURCE_STATES.length
+    ? storedIndex
+    : storageKey === torchLightingStorageKey ? 1 : 3;
+}
 
 export function getPaletteEditorPosition(anchor, viewport = { width: window.innerWidth, height: window.innerHeight }) {
   const availableHeight = Math.max(0, viewport.height - paletteEditorMargin * 2);
@@ -108,19 +150,15 @@ export class PromptWindow extends Component {
     const bounds = event.currentTarget.getBoundingClientRect();
     this.setState({
       selectedEntryId: getPaletteEntryId(entry),
-      draft: { color: entry.color, alpha: entry.alpha },
+      draft: { color: entry.color },
       anchor: { top: bounds.top, left: bounds.right },
     });
   };
 
   updateColor = (color) => this.setState((state) => ({ draft: { ...state.draft, color } }));
 
-  updateAlpha = (event) => this.setState((state) => ({
-    draft: { ...state.draft, alpha: Number(event.target.value) },
-  }));
-
   resetEdit = () => this.setState({
-    draft: { color: DEFAULT_PALETTE_COLOR, alpha: DEFAULT_PALETTE_ALPHA },
+    draft: { color: DEFAULT_PALETTE_COLOR },
   });
 
   cancelEdit = () => this.setState({ selectedEntryId: null, draft: null, anchor: null });
@@ -267,26 +305,40 @@ export class PromptWindow extends Component {
               >
                 Abc
               </button>
+              <button
+                className="palette_control_button"
+                type="button"
+                aria-label={`Sort by group ${sortBy === "group" ? sortDirection : "ascending"}`}
+                aria-pressed={sortBy === "group"}
+                onClick={() => this.toggleSort("group")}
+              >
+                Group
+              </button>
             </div>
           </div>
-          <div className="palette_grid">
-            {visibleEntries.map((entry) => {
+          <div className="palette_grid" data-grouped={sortBy === "group" ? "true" : "false"}>
+            {visibleEntries.map((entry, index) => {
               const entryId = getPaletteEntryId(entry);
+              const startsNewGroup = sortBy === "group"
+                && index > 0
+                && getPaletteGroup(entry) !== getPaletteGroup(visibleEntries[index - 1]);
               return (
-                <button
-                  className="palette_cell"
-                  key={entryId}
-                  type="button"
-                  onClick={(event) => {
+                <Fragment key={entryId}>
+                  {startsNewGroup ? <span className="palette_group_break" aria-hidden="true" /> : null}
+                  <button
+                    className="palette_cell"
+                    type="button"
+                    onClick={(event) => {
                     event.stopPropagation();
                     this.selectEntry(entry, event);
-                  }}
-                >
-                  <span className="palette_index">{entry.code ?? entry.unicode}</span>
-                  <span className="palette_glyph" style={{ color: entry.color, opacity: entry.alpha }}>
-                    {entry.glyph}
-                  </span>
-                </button>
+                    }}
+                  >
+                    <span className="palette_index">{entry.code ?? entry.unicode}</span>
+                    <span className="palette_glyph" style={{ color: entry.color }}>
+                      {entry.glyph}
+                    </span>
+                  </button>
+                </Fragment>
               );
             })}
           </div>
@@ -296,15 +348,10 @@ export class PromptWindow extends Component {
               style={{ top: `${editorPosition.top}px`, left: `${editorPosition.left}px` }}
               onClick={(event) => event.stopPropagation()}
             >
-              <div className="palette_preview" style={{ color: draft.color, opacity: draft.alpha }}>
+              <div className="palette_preview" style={{ color: draft.color }}>
                 {selectedEntry.glyph}
               </div>
               <HexColorPicker color={draft.color} onChange={this.updateColor} />
-              <label className="palette_alpha_control">
-                Alpha
-                <input type="range" min="0" max="1" step="0.01" value={draft.alpha} onChange={this.updateAlpha} />
-                <span>{draft.alpha.toFixed(2)}</span>
-              </label>
               <div className="palette_editor_actions">
                 <button type="button" onClick={this.confirmEdit}>Confirm</button>
                 <button type="button" onClick={this.resetEdit}>Reset</button>
@@ -359,8 +406,8 @@ const argumentBlocks = [
   {
     name: "RandomSeed",
     parameter: "randomSeed",
-    value: "value",
-    example: "?randomSeed=value",
+    value: "123",
+    example: "?randomSeed=123",
     description: "fixes the generated level seed.",
   },
 ];
@@ -421,7 +468,11 @@ export function App() {
   const [fullscreenPreferred, setFullscreenPreferred] = useState(() => {
     return localStorage.getItem(fullscreenStorageKey) === "true";
   });
-  const [zoom, setZoom] = useState(defaultZoom);
+  const [cameraMode, setCameraMode] = useState(() => normalizeCameraMode(localStorage.getItem(CAMERA_STORAGE_KEY)));
+  const [zoom, setZoom] = useState(getStoredZoom);
+  const [ambientLight, setAmbientLight] = useState(getStoredAmbientLight);
+  const [torchLightingIndex, setTorchLightingIndex] = useState(() => getStoredSourceIndex(torchLightingStorageKey));
+  const [playerLightingIndex, setPlayerLightingIndex] = useState(() => getStoredSourceIndex(playerLightingStorageKey));
   const [asciiPaletteOpen, setAsciiPaletteOpen] = useState(false);
   const [argumentsOpen, setArgumentsOpen] = useState(false);
   const [paletteError, setPaletteError] = useState("");
@@ -430,8 +481,29 @@ export function App() {
   const fontId = useSyncExternalStore(subscribeToFont, getFontId, getFontId);
   const savedFontId = useSyncExternalStore(subscribeToFont, getSavedFontId, getSavedFontId);
   const worldTime = useSyncExternalStore(subscribeToTime, getTimeSnapshot, getTimeSnapshot);
+  const [fps, setFps] = useState(0);
 
   const versionNumber = versionText.trim().replace(/^version=/, "").replace(/^v/, "");
+
+  useEffect(() => {
+    let frameCount = 0;
+    let sampleStart = performance.now();
+    let frameId = 0;
+
+    const updateFps = (timestamp) => {
+      frameCount += 1;
+      const elapsed = timestamp - sampleStart;
+      if (elapsed >= 1000) {
+        setFps(Math.round((frameCount * 1000) / elapsed));
+        frameCount = 0;
+        sampleStart = timestamp;
+      }
+      frameId = window.requestAnimationFrame(updateFps);
+    };
+
+    frameId = window.requestAnimationFrame(updateFps);
+    return () => window.cancelAnimationFrame(frameId);
+  }, []);
 
   useEffect(() => {
     const uiLayer = document.getElementById("ui_layer");
@@ -448,6 +520,31 @@ export function App() {
   useEffect(() => {
     localStorage.setItem(fullscreenStorageKey, fullscreenPreferred ? "true" : "false");
   }, [fullscreenPreferred]);
+
+  useEffect(() => {
+    localStorage.setItem(CAMERA_STORAGE_KEY, cameraMode);
+    sendCameraModeSnapshot(cameraMode);
+  }, [cameraMode]);
+
+  useEffect(() => {
+    localStorage.setItem(zoomStorageKey, String(zoom));
+    sendZoomSnapshot(zoom);
+  }, [zoom]);
+
+  useEffect(() => {
+    localStorage.setItem(ambientLightStorageKey, String(ambientLight));
+    sendAmbientLightSnapshot(ambientLight);
+  }, [ambientLight]);
+
+  useEffect(() => {
+    localStorage.setItem(torchLightingStorageKey, String(torchLightingIndex));
+    sendTorchLightingSnapshot(LIGHTING_SOURCE_STATES[torchLightingIndex]);
+  }, [torchLightingIndex]);
+
+  useEffect(() => {
+    localStorage.setItem(playerLightingStorageKey, String(playerLightingIndex));
+    sendPlayerLightingSnapshot(LIGHTING_SOURCE_STATES[playerLightingIndex]);
+  }, [playerLightingIndex]);
 
   useEffect(() => {
     const syncFullscreenState = () => {
@@ -483,6 +580,29 @@ export function App() {
     });
   };
 
+  const cycleCameraMode = () => setCameraMode((current) => getNextCameraMode(current));
+
+  const changeAmbientLight = (amount) => {
+    setAmbientLight((current) => Math.min(1, Math.max(0, Math.round((current + amount) * 100) / 100)));
+  };
+
+  const cycleLighting = (setter) => {
+    setter((currentIndex) => (currentIndex + 1) % LIGHTING_SOURCE_STATES.length);
+  };
+
+  const resetSettings = () => {
+    localStorage.clear();
+    window.location.reload();
+  };
+
+  const formatLightingProfile = (index) => {
+    const profile = LIGHTING_PROFILES[index];
+    const { radius, maximum, falloffExponent } = profile.config;
+    return `${profile.label} (${radius}, ${maximum}, ${falloffExponent})`;
+  };
+  const torchLightingLabel = `Lighting Torch - ${formatLightingProfile(torchLightingIndex)}`;
+  const playerLightingLabel = `Lighting Player - ${formatLightingProfile(playerLightingIndex)}`;
+
   const commitPaletteEntry = async (entryId, draft) => {
     const nextPalette = palette.map((entry) =>
       getPaletteEntryId(entry) === entryId ? { ...entry, ...draft } : entry,
@@ -515,6 +635,9 @@ export function App() {
         <div id="project_title" className="corner_body">
           Ascii RPG
         </div>
+        <div id="fps" className="corner_body">
+          FPS: {fps}
+        </div>
         <div id="time" className="corner_body">
           Time: {formatWorldTime(worldTime)}
         </div>
@@ -525,23 +648,10 @@ export function App() {
         </a>
       </div>
       <div className="corner corner_bottom_left">
-        <section id="settings" aria-labelledby="settings_title">
-          <div id="settings_title" className="corner_title">
-            Settings
+        <section className="hud_section" id="windows" aria-labelledby="windows_title">
+          <div id="windows_title" className="corner_title">
+            Windows
           </div>
-          <button
-            id="fullscreen_toggle"
-            className="corner_body settings_option"
-            type="button"
-            aria-pressed={fullscreenPreferred}
-            tabIndex={-1}
-            onClick={toggleFullscreen}
-          >
-            <span>Fullscreen</span>
-            <span id="fullscreen_checkbox" aria-hidden="true">
-              {fullscreenPreferred ? "☑" : "☐"}
-            </span>
-          </button>
           <button
             id="ascii_palette_toggle"
             className="corner_body settings_option"
@@ -560,12 +670,76 @@ export function App() {
           >
             Arguments
           </button>
+        </section>
+        <section className="hud_section" id="settings" aria-labelledby="settings_title">
+          <div id="settings_title" className="corner_title">
+            Settings
+          </div>
+          <button
+            id="fullscreen_toggle"
+            className="corner_body settings_option"
+            type="button"
+            aria-pressed={fullscreenPreferred}
+            tabIndex={-1}
+            onClick={toggleFullscreen}
+          >
+            <span>Fullscreen</span>
+            <span id="fullscreen_checkbox" aria-hidden="true">
+              {fullscreenPreferred ? "☑" : "☐"}
+            </span>
+          </button>
+          <button
+            id="camera_mode_toggle"
+            className="corner_body settings_option"
+            type="button"
+            aria-label="Camera mode"
+            tabIndex={-1}
+            onClick={cycleCameraMode}
+          >
+            {CAMERA_MODE_LABELS[cameraMode] ?? CAMERA_MODE_LABELS[DEFAULT_CAMERA_MODE]}
+          </button>
+          <button
+            id="lighting_torch_toggle"
+            className="corner_body settings_option"
+            type="button"
+            aria-label="Cycle torch lighting"
+            tabIndex={-1}
+            onClick={() => cycleLighting(setTorchLightingIndex)}
+          >
+            {torchLightingLabel}
+          </button>
+          <button
+            id="lighting_player_toggle"
+            className="corner_body settings_option"
+            type="button"
+            aria-label="Cycle player lighting"
+            tabIndex={-1}
+            onClick={() => cycleLighting(setPlayerLightingIndex)}
+          >
+            {playerLightingLabel}
+          </button>
+          <div id="ambient_light_control" className="corner_body zoom_control" aria-label="Light Ambient">
+            <span>Light Ambient</span>
+            <button type="button" aria-label="Increase ambient light" onClick={() => changeAmbientLight(AMBIENT_LIGHT_STEP)} disabled={ambientLight >= 1}>+</button>
+            <span aria-live="polite">{ambientLight.toFixed(1)}</span>
+            <button type="button" aria-label="Decrease ambient light" onClick={() => changeAmbientLight(-AMBIENT_LIGHT_STEP)} disabled={ambientLight <= 0}>-</button>
+          </div>
           <div id="zoom_control" className="corner_body zoom_control" aria-label="Zoom">
             <span>Zoom</span>
             <button type="button" aria-label="Zoom in" onClick={() => changeZoom(1)} disabled={zoom >= maxZoom}>+</button>
             <span aria-live="polite">{zoom}</span>
             <button type="button" aria-label="Zoom out" onClick={() => changeZoom(-1)} disabled={zoom <= minZoom}>-</button>
           </div>
+          <button
+            id="reset_settings"
+            className="corner_body settings_option"
+            type="button"
+            aria-label="Reset Settings"
+            tabIndex={-1}
+            onClick={resetSettings}
+          >
+            Reset Settings
+          </button>
         </section>
       </div>
       <div className="corner corner_bottom_right">

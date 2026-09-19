@@ -25,9 +25,10 @@ import {
   getCellCenter,
   getCombinedDirection,
   getDirectionForKey,
-  getViewOriginForPlayer,
+  getViewOriginForCamera,
   moveWorldCell,
 } from "./characters/player/player-grid.js";
+import { normalizeCameraMode } from "../bridge-layer/camera.js";
 import { getFontOption, validateFontId } from "../bridge-layer/font.js";
 import { getPaletteStyle, validatePaletteEntries } from "../bridge-layer/palette.js";
 import {
@@ -42,6 +43,13 @@ import { createTimeSystem } from "./systems/time-system.js";
 import { createGlyphVisualCache } from "./glyph-visual-cache.js";
 import { collectVisibleGlyphs, getVisibleRegion, getVisibleSlot, shouldUpdateVisibleSprite } from "./visible-region.js";
 import { colorToLinearRgba, reconcilePaletteColors } from "./palette-color-cache.js";
+import {
+  applyLightingToColor,
+  createLightingConfig,
+  DEFAULT_LIGHTING,
+  getLightingProfile,
+  getSceneLightingFactor,
+} from "./lighting.js";
 
 const GLYPHS = ["W", "•", "P", "T", "~", "≈", "▓"];
 const WORLD_ROWS = 512;
@@ -99,9 +107,15 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   let world = null;
   let playerCell = null;
   let viewOrigin = { x: 0, y: 0 };
+  let cameraMode = "center";
   const timeSystem = createTimeSystem();
   let palette = initialPalette.map((entry) => ({ ...entry }));
   let paletteColors = reconcilePaletteColors(null, palette).colors;
+  let lighting = {
+    ambient: DEFAULT_LIGHTING.ambient,
+    torchProfile: getLightingProfile("Med").config,
+    playerProfile: getLightingProfile("Med").config,
+  };
   let fontId = initialFontId;
   let zoom = DEFAULT_ZOOM;
   const spriteIndexes = [];
@@ -125,9 +139,9 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     };
   };
 
-  const centerViewOnPlayer = () => {
+  const resolveViewForPlayer = () => {
     if (!world || !playerCell) return;
-    viewOrigin = getViewOriginForPlayer(playerCell, viewport, world);
+    viewOrigin = getViewOriginForCamera(cameraMode, playerCell, viewport, world, viewOrigin);
   };
 
   const clearRepeat = () => {
@@ -152,12 +166,14 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     const glyph = getVisibleGlyph(world, cell);
     const frame = frames.get(glyph);
     if (frame === undefined) throw new Error(`Missing cached glyph frame: ${glyph}`);
-    const color = paletteColors.get(glyph) ?? colorToLinearRgba(getPaletteStyle(palette, glyph));
+    const baseColor = paletteColors.get(glyph) ?? colorToLinearRgba(getPaletteStyle(palette, glyph));
+    const lightingFactor = getSceneLightingFactor(cell, world.torches, playerCell, lighting);
     const previous = spriteStates[slot];
-    if (!shouldUpdateVisibleSprite(previous, glyph, frame, color)) {
+    if (!shouldUpdateVisibleSprite(previous, glyph, frame, baseColor, lightingFactor)) {
       metrics.skippedCells += 1;
       return;
     }
+    const color = applyLightingToColor(baseColor, lightingFactor);
     const center = getCellCenter({ x, y }, viewport);
     const props = {
       positionPx: [center.x, center.y],
@@ -166,7 +182,9 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     };
     if (spriteIndexes[slot] === undefined) spriteIndexes[slot] = addSprite2DIndex(layer, props);
     else updateSprite2DIndex(layer, spriteIndexes[slot], props);
-    spriteStates[slot] = { glyph, frame, color, visible: true };
+    spriteStates[slot] = {
+      glyph, frame, color, baseColor, lightingFactor, visible: true,
+    };
     metrics.submittedCells += 1;
   };
 
@@ -213,7 +231,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   const rebuildViewport = ({ centerOnPlayer = false, zoomChanged = false } = {}) => {
     viewport = createViewportForWindow(zoom);
     if (centerOnPlayer) {
-      centerViewOnPlayer();
+      resolveViewForPlayer();
     } else {
       clampViewOrigin();
     }
@@ -231,14 +249,17 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     const nextCell = moveWorldCell(playerCell, direction, world);
     if (nextCell.x === playerCell.x && nextCell.y === playerCell.y) return;
     const previousCell = playerCell;
+    const nextOrigin = getViewOriginForCamera(cameraMode, nextCell, viewport, world, viewOrigin, direction);
+    if (!nextOrigin) return;
     clearCharacter(world, playerCell);
     playerCell = nextCell;
     setCharacter(world, playerCell);
     timeSystem.advance();
-    const previousOrigin = viewOrigin;
-    centerViewOnPlayer();
-    if (previousOrigin.x !== viewOrigin.x || previousOrigin.y !== viewOrigin.y) renderWorld();
-    else renderChangedWorldCells([previousCell, playerCell]);
+    viewOrigin = nextOrigin;
+    // Player lighting is a moving source. Re-render the complete visible
+    // region after every move so cells behind the player lose its former light
+    // contribution instead of retaining a trail.
+    renderWorld();
   };
 
   const scheduleRepeat = (delay) => {
@@ -325,7 +346,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     generating = false;
     metrics.generationMs = performance.now() - generationStarted;
     playerCell = world.playerStart;
-    centerViewOnPlayer();
+    resolveViewForPlayer();
     const firstRender = renderWorld();
     metrics.firstVisibleRenderMs = firstRender.renderMs;
     metrics.totalReadyMs = performance.now() - generationStarted;
@@ -366,8 +387,10 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       for (let slot = 0; slot < spriteStates.length; slot += 1) {
         const state = spriteStates[slot];
         if (!state?.visible || !changed.has(state.glyph)) continue;
-        const color = paletteColors.get(state.glyph);
+        const baseColor = paletteColors.get(state.glyph);
+        const color = applyLightingToColor(baseColor, state.lightingFactor);
         updateSprite2DIndex(layer, spriteIndexes[slot], { color });
+        state.baseColor = baseColor;
         state.color = color;
         metrics.submittedCells += 1;
       }
@@ -405,6 +428,31 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
         skippedCells: result.skippedCells,
         cache: glyphCache.snapshot(),
       }));
+    },
+    setLighting(nextLighting) {
+      const legacyLighting = createLightingConfig(nextLighting);
+      lighting = { ...lighting, ambient: legacyLighting.ambient, torchProfile: legacyLighting };
+      renderWorld();
+    },
+    setAmbientLight(nextAmbient) {
+      if (!Number.isFinite(nextAmbient)) return;
+      lighting = { ...lighting, ambient: Math.min(1, Math.max(0, nextAmbient)) };
+      renderWorld();
+    },
+    setTorchLighting(profile) {
+      lighting = { ...lighting, torchProfile: getLightingProfile(profile).config };
+      renderWorld();
+    },
+    setPlayerLighting(profile) {
+      lighting = { ...lighting, playerProfile: getLightingProfile(profile).config };
+      renderWorld();
+    },
+    setCameraMode(nextMode) {
+      const selected = normalizeCameraMode(nextMode);
+      if (selected === cameraMode) return;
+      cameraMode = selected;
+      resolveViewForPlayer();
+      renderWorld();
     },
     getTime() {
       return timeSystem.getTime();

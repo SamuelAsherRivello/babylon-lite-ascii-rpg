@@ -8,9 +8,10 @@ export const DEEP_WATER_GLYPH = "▓";
 export const DEFAULT_WALL_FILL_PERCENT = 40;
 export const DEFAULT_SMOOTHING_ITERATIONS = 4;
 export const DEFAULT_MIN_WALKABLE_PERCENT = 0.3;
-export const DEFAULT_WATER_FILL_PERCENT = 20;
-export const MIN_WATER_LAKE_SIZE = 5;
-export const MAX_WATER_LAKE_SIZE = 20;
+export const DEFAULT_WATER_FILL_PERCENT = 50;
+export const MIN_WATER_LAKE_SIZE = 50;
+export const MAX_WATER_LAKE_SIZE = 240;
+export const OCCASIONAL_LARGE_WATER_LAKE_SIZE = 480;
 export const MAX_GENERATION_ATTEMPTS = 64;
 export const GENERATION_PASSES = Object.freeze([
   "ground",
@@ -201,14 +202,18 @@ function createLakeScratch(rows, columns) {
   };
 }
 
-function selectLakeCells(region, rows, columns, random, targetSize, scratch) {
+function selectLakeCells(region, rows, columns, random, targetSize, scratch, preferredStart = null) {
   const { reserved, regionKeys, selectedStamp, frontierStamp } = scratch;
   let start = null;
-  for (let attempt = 0; attempt < 100; attempt += 1) {
-    const candidate = region[Math.floor(random() * region.length)];
-    if (!reserved[cellIndex(candidate, columns)]) {
-      start = candidate;
-      break;
+  if (preferredStart && regionKeys[cellIndex(preferredStart, columns)] && !reserved[cellIndex(preferredStart, columns)]) {
+    start = preferredStart;
+  } else {
+    for (let attempt = 0; attempt < 100; attempt += 1) {
+      const candidate = region[Math.floor(random() * region.length)];
+      if (!reserved[cellIndex(candidate, columns)]) {
+        start = candidate;
+        break;
+      }
     }
   }
   if (!start) return [];
@@ -346,22 +351,34 @@ function assignWaterDepths(waterCells, rows, columns) {
   return depths;
 }
 
+function getWaterLakeTargetSize(random, regionLength) {
+  const upperBound = random() < 0.12 ? OCCASIONAL_LARGE_WATER_LAKE_SIZE : MAX_WATER_LAKE_SIZE;
+  return Math.min(
+    regionLength,
+    MIN_WATER_LAKE_SIZE + Math.floor(random() * (upperBound - MIN_WATER_LAKE_SIZE + 1)),
+  );
+}
+
+function getCenterPreferredStart(region, rows, columns) {
+  if (region.length === 0) return null;
+  return getCenterMostCell(region, rows, columns);
+}
+
 function createWaterPass({ region, rows, columns, random, waterFillPercent }) {
-  const targetCount = Math.min(region.length, Math.round(region.length * waterFillPercent / 100));
+  if (region.length === 0 || random() * 100 >= waterFillPercent) return { depths: new Map(), lakes: [] };
+
   const lakes = [];
   const scratch = createLakeScratch(rows, columns);
   for (const cell of region) scratch.regionKeys[cellIndex(cell, columns)] = 1;
   let selectedCount = 0;
   let failedLakeAttempts = 0;
+  const lakeCount = random() < 0.35 ? 2 : 1;
+  let preferredStart = getCenterPreferredStart(region, rows, columns);
 
-  while (selectedCount < targetCount && failedLakeAttempts < 5000) {
-    const remaining = targetCount - selectedCount;
-    const targetSize = Math.min(
-      remaining,
-      MIN_WATER_LAKE_SIZE + Math.floor(random() * (MAX_WATER_LAKE_SIZE - MIN_WATER_LAKE_SIZE + 1)),
-    );
+  while (lakes.length < lakeCount && failedLakeAttempts < 5000) {
+    const targetSize = getWaterLakeTargetSize(random, region.length - selectedCount);
     if (targetSize < MIN_WATER_LAKE_SIZE) break;
-    const lake = selectLakeCells(region, rows, columns, random, targetSize, scratch);
+    const lake = selectLakeCells(region, rows, columns, random, targetSize, scratch, preferredStart);
     if (lake.length < MIN_WATER_LAKE_SIZE) {
       failedLakeAttempts += 1;
       continue;
@@ -369,6 +386,7 @@ function createWaterPass({ region, rows, columns, random, waterFillPercent }) {
     lakes.push(lake);
     selectedCount += lake.length;
     reserveLakeCells(lake, scratch.reserved, columns);
+    preferredStart = null;
   }
 
   const depths = new Map();
@@ -634,25 +652,28 @@ async function getLargestRegionCooperative(grid, rows, columns, isBlocked, check
 }
 
 async function createWaterPassCooperative({ region, rows, columns, random, waterFillPercent, checkpoint, markPhase }) {
-  const targetCount = Math.min(region.length, Math.round(region.length * waterFillPercent / 100));
+  if (region.length === 0 || random() * 100 >= waterFillPercent) {
+    markPhase("water-lakes");
+    return { depths: new Map(), lakes: [] };
+  }
+
   const lakes = [];
   const scratch = createLakeScratch(rows, columns);
   for (const cell of region) scratch.regionKeys[cellIndex(cell, columns)] = 1;
   let selectedCount = 0;
   let failedLakeAttempts = 0;
-  while (selectedCount < targetCount && failedLakeAttempts < 5000) {
-    const remaining = targetCount - selectedCount;
-    const targetSize = Math.min(
-      remaining,
-      MIN_WATER_LAKE_SIZE + Math.floor(random() * (MAX_WATER_LAKE_SIZE - MIN_WATER_LAKE_SIZE + 1)),
-    );
+  const lakeCount = random() < 0.35 ? 2 : 1;
+  let preferredStart = getCenterPreferredStart(region, rows, columns);
+  while (lakes.length < lakeCount && failedLakeAttempts < 5000) {
+    const targetSize = getWaterLakeTargetSize(random, region.length - selectedCount);
     if (targetSize < MIN_WATER_LAKE_SIZE) break;
-    const lake = selectLakeCells(region, rows, columns, random, targetSize, scratch);
+    const lake = selectLakeCells(region, rows, columns, random, targetSize, scratch, preferredStart);
     if (lake.length < MIN_WATER_LAKE_SIZE) failedLakeAttempts += 1;
     else {
       lakes.push(lake);
       selectedCount += lake.length;
       reserveLakeCells(lake, scratch.reserved, columns);
+      preferredStart = null;
     }
     const pause = checkpoint();
     if (pause) await pause;

@@ -39,19 +39,19 @@ The default HTML template uses four reusable `corner` instances inside
 ## Branch workflow
 - Do all repository work on the `main` branch by default, including edits,
   tests, commits, pushes, and releases.
-- Use another branch only when the user explicitly requests that branch or
-  explicitly requests isolated branch/worktree work for the current task.
-- Do not create a feature branch merely as a routine precaution. Preserve the
-  user's requested branch choice when one is provided.
+- Never create a local or remote branch, including feature, integration,
+  temporary, or worktree branches.
+- Do not push to a newly created branch. If a workflow requires another branch,
+  stop and report that this repository prohibits branch creation.
 
 ## Working directories
 
 - Do all repository work on the `main` branch by default, including edits,
   tests, commits, pushes, and releases.
-- Use another branch only when the user explicitly requests that branch or
-  explicitly requests isolated branch/worktree work for the current task.
-- Do not create a feature branch merely as a routine precaution. Preserve the
-  user's requested branch choice when one is provided.
+- Never create a local or remote branch, including feature, integration,
+  temporary, or worktree branches.
+- Do not push to a newly created branch. If a workflow requires another branch,
+  stop and report that this repository prohibits branch creation.
 
 ## Working directories
 

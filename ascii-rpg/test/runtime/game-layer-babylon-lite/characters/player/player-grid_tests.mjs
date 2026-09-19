@@ -15,6 +15,7 @@ import {
   getCombinedDirection,
   getDirectionForKey,
   getViewOriginForPlayer,
+  getViewOriginForCamera,
   moveCell,
 } from "../../../../../src/runtime/game-layer-babylon-lite/characters/player/player-grid.js";
 
@@ -60,6 +61,48 @@ test("centers the viewport on zoom and clamps it to the world", () => {
   assert.deepEqual(getViewOriginForPlayer({ x: 50, y: 40 }, viewport, world), { x: 30, y: 29 });
   assert.deepEqual(getViewOriginForPlayer({ x: 0, y: 0 }, viewport, world), { x: 0, y: 0 });
   assert.deepEqual(getViewOriginForPlayer({ x: 99, y: 79 }, viewport, world), { x: 60, y: 58 });
+});
+
+test("camera center and deadzone resolve bounded origins", () => {
+  const viewport = createViewport({ screenWidth: 1280, screenHeight: 720, zoom: 5 });
+  const world = { columns: 100, rows: 80 };
+  assert.deepEqual(
+    getViewOriginForCamera("center", { x: 50, y: 40 }, viewport, world, { x: 0, y: 0 }),
+    { x: 30, y: 29 },
+  );
+  assert.deepEqual(
+    getViewOriginForCamera("deadzone", { x: 59, y: 50 }, viewport, world, { x: 30, y: 29 }),
+    { x: 31, y: 35 },
+  );
+  assert.deepEqual(
+    getViewOriginForCamera("deadzone", { x: 50, y: 40 }, viewport, world, { x: 30, y: 29 }),
+    { x: 30, y: 29 },
+  );
+});
+
+test("camera lock shifts the viewport to show a player entering from the opposite edge", () => {
+  const viewport = createViewport({ screenWidth: 640, screenHeight: 352, zoom: 5 });
+  const world = { columns: 100, rows: 80 };
+  assert.deepEqual(
+    getViewOriginForCamera("lock", { x: 60, y: 20 }, viewport, world, { x: 40, y: 20 }, { x: 1, y: 0 }),
+    { x: 60, y: 20 },
+  );
+  assert.deepEqual(
+    getViewOriginForCamera("lock", { x: 39, y: 20 }, viewport, world, { x: 40, y: 20 }, { x: -1, y: 0 }),
+    { x: 20, y: 20 },
+  );
+  assert.deepEqual(
+    getViewOriginForCamera("lock", { x: 50, y: 31 }, viewport, world, { x: 40, y: 20 }, { x: 0, y: 1 }),
+    { x: 40, y: 31 },
+  );
+  assert.deepEqual(
+    getViewOriginForCamera("lock", { x: 50, y: 19 }, viewport, world, { x: 40, y: 20 }, { x: 0, y: -1 }),
+    { x: 40, y: 9 },
+  );
+  assert.equal(
+    getViewOriginForCamera("lock", { x: -1, y: 20 }, viewport, world, { x: 0, y: 20 }, { x: -1, y: 0 }),
+    null,
+  );
 });
 
 test("maps WASD and arrow keys to the same directions", () => {

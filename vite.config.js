@@ -1,6 +1,6 @@
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { rename, writeFile } from "node:fs/promises";
+import { readFile, rename, writeFile } from "node:fs/promises";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import { serializeFontConfig, validateFontId } from "./ascii-rpg/src/runtime/bridge-layer/font.js";
@@ -15,6 +15,18 @@ function palettePersistencePlugin() {
     name: "ascii-palette-persistence",
     configureServer(server) {
       server.middlewares.use("/__ascii_palette", async (request, response, next) => {
+        if (request.method === "GET") {
+          try {
+            response.statusCode = 200;
+            response.setHeader("Content-Type", "application/json");
+            response.end(await readFile(palettePath, "utf8"));
+          } catch (error) {
+            response.statusCode = 500;
+            response.setHeader("Content-Type", "application/json");
+            response.end(JSON.stringify({ error: error.message }));
+          }
+          return;
+        }
         if (request.method !== "POST") {
           next();
           return;
@@ -38,6 +50,19 @@ function palettePersistencePlugin() {
         }
       });
       server.middlewares.use("/__ascii_font", async (request, response, next) => {
+        const fontPath = `${repositoryRoot}/ascii-rpg/src/runtime/game-layer-babylon-lite/data/font_data.json`;
+        if (request.method === "GET") {
+          try {
+            response.statusCode = 200;
+            response.setHeader("Content-Type", "application/json");
+            response.end(await readFile(fontPath, "utf8"));
+          } catch (error) {
+            response.statusCode = 500;
+            response.setHeader("Content-Type", "application/json");
+            response.end(JSON.stringify({ error: error.message }));
+          }
+          return;
+        }
         if (request.method !== "POST") {
           next();
           return;
@@ -48,9 +73,9 @@ function palettePersistencePlugin() {
           for await (const chunk of request) chunks.push(chunk);
           const payload = JSON.parse(Buffer.concat(chunks).toString("utf8"));
           validateFontId(payload.fontId);
-          const temporaryPath = `${repositoryRoot}/ascii-rpg/src/runtime/game-layer-babylon-lite/data/font_data.json.tmp`;
+          const temporaryPath = `${fontPath}.tmp`;
           await writeFile(temporaryPath, serializeFontConfig(payload.fontId), "utf8");
-          await rename(temporaryPath, `${repositoryRoot}/ascii-rpg/src/runtime/game-layer-babylon-lite/data/font_data.json`);
+          await rename(temporaryPath, fontPath);
           response.statusCode = 200;
           response.setHeader("Content-Type", "application/json");
           response.end(JSON.stringify({ ok: true }));

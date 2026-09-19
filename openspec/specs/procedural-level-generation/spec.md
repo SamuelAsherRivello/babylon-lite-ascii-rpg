@@ -147,26 +147,29 @@ position, the player glyph SHALL remain the visible character.
 - **THEN** the rendered cell SHALL show the terrain glyph with its configured
   style
 
-### Requirement: Organic nested water generation
+### Requirement: Sparse organic nested water generation
 
-The water pass SHALL place approximately 20% of the interior non-wall ground
-cells into multiple independent organic lakes. Each lake SHALL target roughly
-5-20 grid cells at the default grid scale. Within each water shape, the
+The water pass SHALL make water a roughly 50% generation event by default. When
+selected, it SHALL place one or two independent organic lakes, with the first
+lake biased toward the center of the generated playable region so a normal
+zoom-5 starting view has a meaningful chance of showing water. Each lake SHALL
+target roughly 50-240 grid cells at the default world scale, with occasional
+larger bodies up to roughly 480 cells. Within each water shape, the
 deepest cells SHALL occupy the center, medium-depth cells SHALL wrap the deep
 cells, and shallow cells SHALL form the outer water edge.
 
-#### Scenario: Water coverage is approximately twenty percent
+#### Scenario: Water appears in about half of default worlds
 
 - **WHEN** a default world is generated
-- **THEN** the number of water cells SHALL be approximately 20% of the
-  interior non-wall ground cells, within the documented implementation
-  tolerance
+- **THEN** water SHALL be present in approximately half of independently
+  seeded worlds
 
-#### Scenario: Water is split into small lakes
+#### Scenario: Water uses one or two sparse large bodies
 
 - **WHEN** a default world is generated
-- **THEN** each generated lake SHALL contain between 5 and 20 water cells,
-  except when the available cave geometry is too small to fit a complete lake
+- **THEN** the world SHALL contain zero, one, or two lakes, and each selected
+  lake SHALL contain roughly 50-240 water cells, with occasional bodies up to
+  roughly 480 cells, except when the available cave geometry is too small
 
 #### Scenario: Depth bands are nested
 

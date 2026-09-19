@@ -15,7 +15,10 @@ test("documents the plain safe-area template", async () => {
   const app = await readFile(new URL("src/runtime/ui-layer-react/App.jsx", appRoot), "utf8");
   const main = await readFile(new URL("src/main.jsx", appRoot), "utf8");
   const gameLayer = await readFile(new URL("src/runtime/game-layer-babylon-lite/index.js", appRoot), "utf8");
+  const camera = await readFile(new URL("src/runtime/bridge-layer/camera.js", appRoot), "utf8");
   const styles = await readFile(new URL("src/runtime/ui-layer-react/style.css", appRoot), "utf8");
+  const fontStore = await readFile(new URL("src/runtime/ui-layer-react/font-store.js", appRoot), "utf8");
+  const paletteStore = await readFile(new URL("src/runtime/ui-layer-react/palette-store.js", appRoot), "utf8");
 
   if (!page.includes("<title>Ascii RPG</title>")) {
     throw new Error("The browser title must identify the project.");
@@ -61,11 +64,21 @@ test("documents the plain safe-area template", async () => {
   if (!app.includes('id="time"') || !app.includes("Time: {formatWorldTime(worldTime)}")) {
     throw new Error("The upper-left corner must display the subscribed world time.");
   }
-  if (!app.includes("Settings")) {
-    throw new Error("The page must include a lower-left Settings section.");
+  if (!app.includes('id="fps"') || !app.includes("FPS: {fps}") || !app.includes("requestAnimationFrame(updateFps)")) {
+    throw new Error("The upper-left corner must display a once-per-second browser FPS counter.");
+  }
+  if (!app.includes('id="windows"') || !app.includes('id="windows_title"') || !app.includes("Windows")) {
+    throw new Error("The lower-left HUD must include a Windows section.");
+  }
+  if (!app.includes('id="settings"') || !app.includes('id="settings_title"') || !app.includes("Settings")) {
+    throw new Error("The lower-left HUD must include a Settings section.");
   }
   if (!styles.includes(".corner_body") || !styles.includes(".corner_title")) {
     throw new Error("The page must define shared corner body and title text styles.");
+  }
+  if (!app.includes('id="lighting_torch_toggle"') || !app.includes('id="lighting_player_toggle"') || !app.includes('id="ambient_light_control"')
+    || !app.includes("Light Ambient") || !app.includes("formatLightingProfile")) {
+    throw new Error("The Settings section must include torch, player, and ambient lighting controls.");
   }
   if (main.includes("GameCanvas") || main.includes('createRoot(document.getElementById("game_layer"))')) {
     throw new Error("React must mount only UI and must not own the Babylon Lite game canvas.");
@@ -76,14 +89,27 @@ test("documents the plain safe-area template", async () => {
   if (!gameLayer.includes("navigator.gpu") || !gameLayer.includes("container.replaceChildren()")) {
     throw new Error("A WebGPU startup failure must leave the game layer unloaded without a canvas fallback.");
   }
-  if (!app.includes('id="ascii_palette_toggle"') || !app.includes("Ascii Palette")) {
-    throw new Error("The Settings section must include the Ascii Palette option.");
+  const windowsStart = app.indexOf('id="windows"');
+  const settingsStart = app.indexOf('id="settings"');
+  if (windowsStart === -1 || settingsStart === -1 || windowsStart > settingsStart) {
+    throw new Error("The Windows section must appear before the Settings section.");
   }
-  if (!app.includes('id="arguments_toggle"') || !app.includes("Arguments")) {
-    throw new Error("The Settings section must include the Arguments option.");
+  const windowsMarkup = app.slice(windowsStart, settingsStart);
+  const settingsMarkup = app.slice(settingsStart);
+  if (!windowsMarkup.includes('id="ascii_palette_toggle"') || !windowsMarkup.includes("Ascii Palette")) {
+    throw new Error("The Windows section must include the Ascii Palette option.");
+  }
+  if (!windowsMarkup.includes('id="arguments_toggle"') || !windowsMarkup.includes("Arguments")) {
+    throw new Error("The Windows section must include the Arguments option.");
+  }
+  if (settingsMarkup.includes('id="ascii_palette_toggle"') || settingsMarkup.includes('id="arguments_toggle"')) {
+    throw new Error("Window launchers must not be duplicated in the Settings section.");
   }
   if (!app.includes('id="arguments_title"') || !app.includes("randomSeed")) {
     throw new Error("The Arguments window must document the randomSeed URL argument.");
+  }
+  if (!app.includes('value: "123"') || !app.includes("?randomSeed=123")) {
+    throw new Error("The randomSeed URL argument example must use 123 as its default.");
   }
   if (!app.includes('className="argument_code"') || !app.includes("window.location.assign") || !app.includes("withUrlArgument")) {
     throw new Error("Argument examples must be clickable URL actions that preserve and update query arguments.");
@@ -97,14 +123,14 @@ test("documents the plain safe-area template", async () => {
   if (!app.includes('className="palette_grid"') || !app.includes('className="palette_index"') || !app.includes('className="palette_glyph"')) {
     throw new Error("The Ascii Palette overlay must render a compact index and glyph grid.");
   }
-  if (!app.includes('"in-maps"') || !app.includes('"customized"') || !app.includes("Sort by index") || !app.includes("Sort alphabetically")) {
-    throw new Error("The palette overlay must provide map/customized filters and index/alphabet sorting controls.");
+  if (!app.includes('"in-maps"') || !app.includes('"customized"') || !app.includes("Sort by index") || !app.includes("Sort alphabetically") || !app.includes("Sort by group") || !app.includes(">\n                Group\n") || !app.includes("palette_group_break") || !styles.includes("grid-template-columns: repeat(10")) {
+    throw new Error("The palette overlay must provide map/customized filters and index/alphabet/group sorting controls.");
   }
   if (!app.includes("paletteViewState") || !app.includes("setPaletteViewState") || app.includes("sessionStorage")) {
     throw new Error("Palette filter and sort choices must last for the page session without surviving refresh.");
   }
-  if (!app.includes("HexColorPicker") || !app.includes('type="range"') || !app.includes("Confirm") || !app.includes("Reset") || !app.includes("Cancel")) {
-    throw new Error("The palette glyph editor must include a color picker, alpha range, Confirm, Reset, and Cancel controls.");
+  if (!app.includes("HexColorPicker") || app.includes("palette_alpha_control") || !app.includes("Confirm") || !app.includes("Reset") || !app.includes("Cancel")) {
+    throw new Error("The palette glyph editor must include a color picker, no alpha control, Confirm, Reset, and Cancel controls.");
   }
   const confirmStart = app.indexOf("confirmEdit = async");
   const confirmEnd = app.indexOf("acknowledgeWarning", confirmStart);
@@ -147,6 +173,24 @@ test("documents the plain safe-area template", async () => {
   if (!app.includes("Fullscreen")) {
     throw new Error("The Settings section must include the Fullscreen option line.");
   }
+  if (!app.includes('id="camera_mode_toggle"')
+    || !camera.includes("Camera Center")
+    || !camera.includes("Camera Deadzone")
+    || !camera.includes("Camera Lock")
+    || !app.includes("CAMERA_STORAGE_KEY")) {
+    throw new Error("The Settings section must include the persisted three-mode camera control.");
+  }
+  if (!app.includes('id="zoom_control"') || !app.includes('aria-label="Zoom in"') || !app.includes('aria-label="Zoom out"')) {
+    throw new Error("The Settings section must include bounded zoom controls.");
+  }
+  if (!app.includes('id="reset_settings"') || !app.includes("localStorage.clear()")) {
+    throw new Error("The Settings section must include a local-storage reset control.");
+  }
+  if (!app.includes("zoomStorageKey") || !app.includes("ambientLightStorageKey")
+    || !app.includes("localStorage.setItem(zoomStorageKey")
+    || !app.includes("localStorage.setItem(ambientLightStorageKey")) {
+    throw new Error("The Settings values must persist zoom and ambient lighting choices locally.");
+  }
   if (app.includes("Fullscreen (")) {
     throw new Error("The Fullscreen setting must not wrap the checkbox emoji in parentheses.");
   }
@@ -155,6 +199,15 @@ test("documents the plain safe-area template", async () => {
   }
   if (!app.includes("localStorage.setItem(fullscreenStorageKey")) {
     throw new Error("The fullscreen setting must persist its preference locally.");
+  }
+  if (!viteConfig.plugins.some((plugin) => plugin?.name === "ascii-palette-persistence")) {
+    throw new Error("Vite must provide the local disk persistence plugin for ASCII palette and font edits.");
+  }
+  if (!fontStore.includes("import.meta.env.DEV || typeof window === \"undefined\"")) {
+    throw new Error("Vite font state must come from the checked-in font file, not local storage.");
+  }
+  if (!paletteStore.includes("import.meta.env.DEV || typeof window === \"undefined\"")) {
+    throw new Error("Vite palette state must come from the checked-in palette file, not local storage.");
   }
   if (!app.includes("requestFullscreen") || !app.includes("exitFullscreen")) {
     throw new Error("The fullscreen setting must toggle the browser fullscreen API.");

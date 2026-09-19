@@ -26,8 +26,8 @@ React component.
   palette application into Babylon Lite-owned modules.
 - Preserve React ownership of HUD/menu/dialog UI, including the Ascii Palette
   window and its color picker.
-- Provide a narrow bridge where React sends confirmed palette snapshots and
-  deliberate UI commands or argument/settings changes to Babylon Lite.
+- Provide a narrow bridge where React sends confirmed full palette snapshots
+  and deliberate UI commands to Babylon Lite.
 - Remove the legacy React/canvas runtime fallback.
 
 **Non-Goals:**
@@ -67,11 +67,12 @@ React component.
 - **Palette split across layers:** React owns the Ascii Palette UI, including
   the grid/window, `react-colorful`, alpha control, Confirm/Cancel, warning UI,
   and persistence interactions. Babylon Lite owns applying the active palette
-  to world glyphs. Confirmed palette snapshots flow through the bridge and
-  trigger Babylon Lite render updates.
+  to world glyphs. React sends validated full palette snapshots through the
+  bridge; it never shares a mutable palette store with Babylon Lite.
 - **Bridge shape:** Expose a small game controller or event bridge with
-  commands such as `setPalette(snapshot)`, `setArguments(snapshot)`, and
-  `dispose()`. The bridge should not expose mutable world internals to React.
+  commands such as `setPalette(snapshot)` and `dispose()`. URL arguments are
+  read by Babylon Lite once at startup, not sent as a live bridge command. The
+  bridge should not expose mutable world internals to React.
 - **Startup failure:** If Babylon Lite or required browser rendering support
   cannot initialize, do not run the old canvas game. React UI may still mount,
   but the game world remains unloaded.
@@ -107,8 +108,8 @@ React component.
    and rendering into Babylon Lite-owned game modules.
 5. Wire React palette commits to the bridge so React keeps owning the editor
    while Babylon Lite updates rendered glyph styles.
-6. Preserve `?randomSeed=value` by passing startup arguments into the Babylon
-   Lite game layer.
+6. Preserve `?randomSeed=value`: React keeps writing it to the URL and Babylon
+   Lite reads it during startup.
 7. Remove the old React/canvas runtime fallback from production startup.
 8. Update focused unit tests for pure generator/movement/palette behavior and
    add browser verification for Babylon Lite startup, nonblank ASCII world

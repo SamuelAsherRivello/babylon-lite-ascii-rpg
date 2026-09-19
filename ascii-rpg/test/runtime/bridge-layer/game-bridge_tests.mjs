@@ -2,8 +2,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   getTimeSnapshot,
+  sendAmbientLightSnapshot,
+  sendCameraModeSnapshot,
   sendFontSnapshot,
+  sendPlayerLightingSnapshot,
   sendPaletteSnapshot,
+  sendTorchLightingSnapshot,
+  sendZoomSnapshot,
   sendTimeSnapshot,
   setGameController,
   subscribeToTime,
@@ -37,4 +42,36 @@ test("publishes time snapshots to subscribers", () => {
   unsubscribe();
   sendTimeSnapshot(3);
   assert.deepEqual(received, [2]);
+});
+
+test("forwards zoom changes to the game layer", () => {
+  let received = null;
+  setGameController({ setZoom(zoom) { received = zoom; } });
+
+  assert.equal(sendZoomSnapshot(7), undefined);
+  assert.equal(received, 7);
+});
+
+test("forwards camera mode changes and reapplies the latest mode to a new controller", () => {
+  let received = null;
+  setGameController({ setCameraMode(mode) { received = mode; } });
+  sendCameraModeSnapshot("deadzone");
+  assert.equal(received, "deadzone");
+
+  let restored = null;
+  setGameController({ setCameraMode(mode) { restored = mode; } });
+  assert.equal(restored, "deadzone");
+});
+
+test("forwards ambient and independent source profiles to the game layer", () => {
+  const received = {};
+  setGameController({
+    setAmbientLight(value) { received.ambient = value; },
+    setTorchLighting(profile) { received.torch = profile; },
+    setPlayerLighting(profile) { received.player = profile; },
+  });
+  sendAmbientLightSnapshot(0.75);
+  sendTorchLightingSnapshot("High");
+  sendPlayerLightingSnapshot("Off");
+  assert.deepEqual(received, { ambient: 0.75, torch: "High", player: "Off" });
 });

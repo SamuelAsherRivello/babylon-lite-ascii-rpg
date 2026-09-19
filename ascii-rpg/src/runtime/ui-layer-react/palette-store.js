@@ -12,7 +12,7 @@ import {
 const channelName = "babylon-lite-ascii-rpg.palette";
 
 function readLocalPalette() {
-  if (typeof window === "undefined") {
+  if (import.meta.env.DEV || typeof window === "undefined") {
     return null;
   }
 
@@ -62,10 +62,14 @@ function notifyPaletteChange() {
 }
 
 async function loadRemotePalette() {
-  const response = await fetch(`/data/palette_data.json?palette=${Date.now()}`);
+  const response = await fetch(`/__ascii_palette?palette=${Date.now()}`);
   if (!response.ok) throw new Error("Unable to reload the palette file.");
   return createPalette(await response.json());
 }
+
+export const paletteReady = import.meta.env.DEV && typeof window !== "undefined"
+  ? loadRemotePalette().then(replacePalette).catch(() => {})
+  : Promise.resolve();
 
 export async function commitPalette(entries) {
   validatePaletteEntries(entries);

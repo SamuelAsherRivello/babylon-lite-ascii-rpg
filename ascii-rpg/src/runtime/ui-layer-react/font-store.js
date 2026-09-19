@@ -11,7 +11,7 @@ const listeners = new Set();
 const fontChannel = typeof BroadcastChannel === "undefined" ? null : new BroadcastChannel(channelName);
 
 function readStoredFont() {
-  if (typeof window === "undefined") return null;
+  if (import.meta.env.DEV || typeof window === "undefined") return null;
   try {
     const stored = window.localStorage.getItem(FONT_STORAGE_KEY);
     return stored ? createFontConfig(JSON.parse(stored)).fontId : null;
@@ -57,10 +57,17 @@ export function restoreFontPreview(broadcast = true) {
 }
 
 async function loadRemoteFont() {
-  const response = await fetch(`/data/font_data.json?font=${Date.now()}`);
+  const response = await fetch(`/__ascii_font?font=${Date.now()}`);
   if (!response.ok) throw new Error("Unable to reload the font configuration.");
   return createFontConfig(await response.json()).fontId;
 }
+
+export const fontReady = import.meta.env.DEV && typeof window !== "undefined"
+  ? loadRemoteFont().then((fontId) => {
+    savedFontId = fontId;
+    setActiveFont(fontId);
+  }).catch(() => {})
+  : Promise.resolve();
 
 export async function commitFont(fontId) {
   validateFontId(fontId);

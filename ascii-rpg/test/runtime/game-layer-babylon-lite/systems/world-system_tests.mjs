@@ -56,10 +56,11 @@ test("runs ordered generation passes and creates nested deterministic water", ()
   assert.ok(shallow.length > 0);
   assert.ok(medium.length > 0);
   assert.ok(deep.length > 0);
-  assert.ok(water.length / nonWalls.length >= 0.1);
-  assert.ok(water.length / nonWalls.length <= 0.3);
-  assert.ok(first.waterLakes.length > 0);
-  assert.ok(first.waterLakes.every((lake) => lake.length >= 5 && lake.length <= 20));
+  assert.ok(water.length / nonWalls.length >= 0.05);
+  assert.ok(water.length / nonWalls.length <= 0.5);
+  assert.ok(first.waterLakes.length >= 1);
+  assert.ok(first.waterLakes.length <= 2);
+  assert.ok(first.waterLakes.every((lake) => lake.length >= 50 && lake.length <= 480));
   for (const lake of first.waterLakes) {
     const lakeKeys = new Set(lake.map((cell) => `${cell.x},${cell.y}`));
     for (const cell of lake) {
@@ -84,11 +85,11 @@ test("runs ordered generation passes and creates nested deterministic water", ()
 
 test("uses independent water coverage and depth walkability settings", () => {
   const dry = createWorld({ rows: 20, columns: 30, waterFillPercent: 0, seed: "dry-cave" });
-  const wet = createWorld({ rows: 20, columns: 30, waterFillPercent: 20, seed: "wet-cave" });
+  const wet = createWorld({ rows: 20, columns: 30, waterFillPercent: 100, seed: "wet-cave" });
 
   assert.equal(dry.options.waterFillPercent, 0);
   assert.equal(dry.waterCells.length, 0);
-  assert.equal(wet.options.waterFillPercent, 20);
+  assert.equal(wet.options.waterFillPercent, 100);
   assert.ok(wet.waterCells.length > 0);
   for (const cell of wet.terrain.flat()) {
     if (cell.glyph === SHALLOW_WATER_GLYPH) assert.equal(cell.walkable, true);
@@ -98,14 +99,27 @@ test("uses independent water coverage and depth walkability settings", () => {
   }
 });
 
-test("generates the production-sized world without collapsing lake coverage", () => {
+test("generates the production-sized world with sparse large-body water population", () => {
   const world = createWorld({ rows: 512, columns: 512, seed: "production-world" });
   const nonWalls = world.terrain.flat().filter((cell) => cell.glyph !== WALL_GLYPH).length;
   const coverage = world.waterCells.length / nonWalls;
 
-  assert.ok(coverage >= 0.15);
-  assert.ok(coverage <= 0.25);
-  assert.ok(world.waterLakes.every((lake) => lake.length >= 5 && lake.length <= 20));
+  assert.ok(coverage <= 0.01);
+  assert.ok(world.waterLakes.length <= 2);
+  assert.ok(world.waterLakes.every((lake) => lake.length >= 50 && lake.length <= 480));
+});
+
+test("makes water a roughly fifty-fifty world feature", () => {
+  const worlds = Array.from({ length: 100 }, (_, index) => createWorld({
+    rows: 40,
+    columns: 60,
+    seed: `water-frequency-${index}`,
+  }));
+  const waterWorlds = worlds.filter((world) => world.waterCells.length > 0);
+  const ratio = waterWorlds.length / worlds.length;
+
+  assert.ok(ratio >= 0.35 && ratio <= 0.65, `water appeared in ${waterWorlds.length}% of worlds`);
+  assert.ok(waterWorlds.every((world) => world.waterLakes.length >= 1 && world.waterLakes.length <= 2));
 });
 
 test("places three deterministic torches on wall-adjacent walkable cells", () => {

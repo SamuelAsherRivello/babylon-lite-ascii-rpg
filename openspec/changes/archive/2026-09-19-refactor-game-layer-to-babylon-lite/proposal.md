@@ -26,11 +26,11 @@ architecture where React is the UI layer and Babylon Lite is the game layer.
   - Babylon Lite owns rendering the game world with the confirmed palette
     values.
 - Establish a narrow React-to-Babylon Lite bridge for deliberate UI commands
-  and confirmed data snapshots, such as palette commits and arguments/settings
-  changes. Babylon Lite remains authoritative for game state and input.
+  and confirmed data snapshots, such as full validated palette commits. Babylon
+  Lite remains authoritative for game state and input.
 - Keep `?randomSeed=value` as a game argument, but move argument consumption
-  into the Babylon Lite game startup path while React may continue to describe
-  it in the Arguments UI.
+  into the Babylon Lite game startup path. React continues to write the URL
+  from the Arguments UI and describe the argument there.
 - Maintain the existing playable behavior: generated cave world, `W` walls,
   `•` floors, `P` player, grid movement, held-key repeat timing, wall
   collision, and character-over-terrain rendering precedence.

@@ -34,7 +34,9 @@ world glyphs.
 ### Requirement: Narrow UI-to-game communication
 
 React SHALL communicate with Babylon Lite through deliberate UI commands and
-confirmed data snapshots only. React SHALL NOT directly mutate game state,
+confirmed data snapshots only. Palette updates SHALL use complete, validated
+palette snapshots rather than mutable store access or individual glyph patches.
+React SHALL NOT directly mutate game state,
 movement state, world cells, renderer internals, or input state. Babylon Lite
 SHALL remain authoritative for runtime game state and input.
 
@@ -44,12 +46,12 @@ SHALL remain authoritative for runtime game state and input.
 - **THEN** React SHALL send the confirmed palette snapshot to Babylon Lite and
   Babylon Lite SHALL apply it to in-world glyph rendering
 
-#### Scenario: Argument command
+#### Scenario: Startup argument consumption
 
-- **WHEN** the game starts with a supported argument such as
-  `?randomSeed=value`
-- **THEN** Babylon Lite SHALL consume that argument for game startup while
-  React MAY describe the argument in UI
+- **WHEN** React changes a supported argument such as `?randomSeed=value`
+  through its Arguments UI
+- **THEN** React SHALL write the URL and Babylon Lite SHALL consume that
+  argument when the game starts; React SHALL NOT send it as a live game command
 
 ### Requirement: No legacy gameplay fallback
 

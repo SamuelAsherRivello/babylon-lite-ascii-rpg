@@ -6,6 +6,14 @@ export const PALETTE_WARNING_KEY = "babylon-lite-ascii-rpg.palette-warning-hidde
 const BULLET_GLYPH = "•";
 const BULLET_ID = "U+2022";
 
+const GROUP_LETTER_EXCEPTIONS = {
+  "Æ": "A",
+  "æ": "a",
+  "Ø": "O",
+  "ø": "o",
+  "ß": "s",
+};
+
 const CP437_EXTENDED_GLYPHS = [
   "⌂", "Ç", "ü", "é", "â", "ä", "à", "å", "ç", "ê", "ë", "è", "ï", "î", "ì", "Ä",
   "Å", "É", "æ", "Æ", "ô", "ö", "ò", "û", "ù", "ÿ", "Ö", "Ü", "ø", "£", "Ø", "×",
@@ -44,7 +52,7 @@ export function createDefaultPalette() {
 }
 
 export function isPaletteEntryCustomized(entry) {
-  return entry.color.toLowerCase() !== DEFAULT_PALETTE_COLOR || entry.alpha !== DEFAULT_PALETTE_ALPHA;
+  return entry.color.toLowerCase() !== DEFAULT_PALETTE_COLOR;
 }
 
 function isValidColor(color) {
@@ -54,6 +62,41 @@ function isValidColor(color) {
 function isValidIdentity(entry) {
   return (Number.isInteger(entry.code) && entry.code >= 32 && entry.code <= 254 && entry.unicode === null)
     || (entry.code === null && entry.unicode === BULLET_ID);
+}
+
+function getGroupLetter(glyph) {
+  const normalizedGlyph = GROUP_LETTER_EXCEPTIONS[glyph] ?? glyph;
+  const normalized = normalizedGlyph.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  return /^[A-Za-z]$/.test(normalized) ? normalized.toUpperCase() : null;
+}
+
+export function getPaletteGroup(entry) {
+  if (/^[0-9]$/.test(entry.glyph)) return "digits";
+  return getGroupLetter(entry.glyph) ?? "punctuation";
+}
+
+function getGroupSortKey(entry) {
+  const glyph = entry.glyph;
+  if (/^[0-9]$/.test(glyph)) return [0, Number(glyph), 0, "", entry.code ?? Number.MAX_SAFE_INTEGER];
+
+  const letter = getGroupLetter(glyph);
+  if (letter) {
+    const isUppercase = glyph === glyph.toUpperCase();
+    const accentKey = GROUP_LETTER_EXCEPTIONS[glyph]
+      ? `${isUppercase ? "Z" : "z"}${GROUP_LETTER_EXCEPTIONS[glyph]}`
+      : glyph.normalize("NFD");
+    return [1, letter, isUppercase ? 0 : 1, accentKey, entry.code ?? Number.MAX_SAFE_INTEGER];
+  }
+
+  return [2, "", 0, "", entry.code ?? Number.MAX_SAFE_INTEGER];
+}
+
+function compareGroupKeys(left, right) {
+  for (let index = 0; index < left.length; index += 1) {
+    if (left[index] < right[index]) return -1;
+    if (left[index] > right[index]) return 1;
+  }
+  return 0;
 }
 
 export function validatePaletteEntries(entries) {
@@ -121,7 +164,9 @@ export function sortPaletteEntries(entries, sortBy, direction = "ascending") {
   const multiplier = direction === "descending" ? -1 : 1;
   return [...entries].sort((left, right) => {
     let comparison;
-    if (sortBy === "alphabet") {
+    if (sortBy === "group") {
+      comparison = compareGroupKeys(getGroupSortKey(left), getGroupSortKey(right));
+    } else if (sortBy === "alphabet") {
       comparison = left.glyph.localeCompare(right.glyph, undefined, { sensitivity: "base" });
     } else {
       const leftIndex = left.code ?? Number.MAX_SAFE_INTEGER;
