@@ -22,7 +22,14 @@ import {
 import { withUrlArgument } from "./url-arguments.js";
 import { getTimeSnapshot, sendPaletteSnapshot, sendZoomSnapshot, subscribeToTime } from "../bridge-layer/game-bridge.js";
 import { formatWorldTime } from "../game-layer-babylon-lite/systems/time-system.js";
-import { FLOOR_GLYPH, PLAYER_GLYPH, WALL_GLYPH } from "../game-layer-babylon-lite/systems/world-system.js";
+import {
+  DEEP_WATER_GLYPH,
+  FLOOR_GLYPH,
+  MEDIUM_WATER_GLYPH,
+  PLAYER_GLYPH,
+  SHALLOW_WATER_GLYPH,
+  WALL_GLYPH,
+} from "../game-layer-babylon-lite/systems/world-system.js";
 
 const fullscreenStorageKey = "babylon-lite-ascii-rpg.fullscreen";
 const minZoom = 1;
@@ -30,7 +37,14 @@ const maxZoom = 10;
 const defaultZoom = 5;
 const repositoryUrl = "https://github.com/SamuelAsherRivello/babylon-lite-ascii-rpg";
 const uiMarginPixels = 20;
-const mapGlyphs = new Set([WALL_GLYPH, FLOOR_GLYPH, PLAYER_GLYPH]);
+const mapGlyphs = new Set([
+  WALL_GLYPH,
+  FLOOR_GLYPH,
+  PLAYER_GLYPH,
+  SHALLOW_WATER_GLYPH,
+  MEDIUM_WATER_GLYPH,
+  DEEP_WATER_GLYPH,
+]);
 const paletteEditorWidth = 286;
 const paletteEditorHeight = 340;
 const paletteEditorMargin = 16;
