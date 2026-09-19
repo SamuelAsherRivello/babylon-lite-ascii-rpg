@@ -14,8 +14,12 @@ export function getVisibleSlot(region, cell) {
   return y * region.columns + x;
 }
 
-export function shouldUpdateVisibleSprite(previous, glyph, frame, color) {
-  return !previous?.visible || previous.glyph !== glyph || previous.frame !== frame || previous.color !== color;
+export function shouldUpdateVisibleSprite(previous, glyph, frame, baseColor, lightingFactor) {
+  return !previous?.visible
+    || previous.glyph !== glyph
+    || previous.frame !== frame
+    || (previous.baseColor ?? previous.color) !== baseColor
+    || previous.lightingFactor !== lightingFactor;
 }
 
 export function collectVisibleGlyphs(world, region, getGlyph) {

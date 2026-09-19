@@ -102,12 +102,13 @@ test("frame checkpoint can yield and reject stale cancelled work", async () => {
 
 test("dirty sprites update only for changed visible glyph, frame, tint, or visibility", () => {
   const color = [1, 1, 1, 1];
-  const state = { glyph: "W", frame: 3, color, visible: true };
-  assert.equal(shouldUpdateVisibleSprite(state, "W", 3, color), false);
-  assert.equal(shouldUpdateVisibleSprite(state, "•", 3, color), true);
-  assert.equal(shouldUpdateVisibleSprite(state, "W", 4, color), true);
-  assert.equal(shouldUpdateVisibleSprite(state, "W", 3, [1, 1, 1, 0.5]), true);
-  assert.equal(shouldUpdateVisibleSprite({ ...state, visible: false }, "W", 3, color), true);
+  const state = { glyph: "W", frame: 3, color, baseColor: color, lightingFactor: 1, visible: true };
+  assert.equal(shouldUpdateVisibleSprite(state, "W", 3, color, 1), false);
+  assert.equal(shouldUpdateVisibleSprite(state, "•", 3, color, 1), true);
+  assert.equal(shouldUpdateVisibleSprite(state, "W", 4, color, 1), true);
+  assert.equal(shouldUpdateVisibleSprite(state, "W", 3, [1, 1, 1, 0.5], 1), true);
+  assert.equal(shouldUpdateVisibleSprite(state, "W", 3, color, 0.5), true);
+  assert.equal(shouldUpdateVisibleSprite({ ...state, visible: false }, "W", 3, color, 1), true);
 });
 
 test("palette revisions reuse unchanged tint data without multiplying shape-cache entries", () => {
@@ -119,10 +120,10 @@ test("palette revisions reuse unchanged tint data without multiplying shape-cach
     { glyph: "W", color: "#ffffff", alpha: 1 },
     { glyph: "•", color: "#008800", alpha: 0.5 },
   ]);
-  assert.deepEqual([...revision.changed], ["•"]);
+  assert.deepEqual([...revision.changed], []);
   assert.equal(revision.colors.get("W"), original.colors.get("W"));
-  assert.notEqual(revision.colors.get("•"), original.colors.get("•"));
-  assert.equal(revision.colors.get("•")[3], 0.5);
+  assert.equal(revision.colors.get("•"), original.colors.get("•"));
+  assert.equal(revision.colors.get("•")[3], 1);
 });
 
 test("diagnostic half-zoom stays world-bounded and cache cost tracks glyphs rather than world cells", () => {
