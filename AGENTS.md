@@ -20,7 +20,6 @@ If user directs you to use this template, then follow these steps:
    running setup, test, build, deployment, or release commands. Confirm the
    repository's documented delivery checks before presenting the project as
    ready.
-
 ## HTML template corner roles
 
 The default HTML template uses four reusable `corner` instances inside
@@ -30,7 +29,6 @@ The default HTML template uses four reusable `corner` instances inside
 - Upper right: project links.
 - Lower right: project version.
 - Lower left: project settings.
-
 ## Pull request workflow
 
 - Do not create pull requests for any workflow unless the user explicitly asks
@@ -39,6 +37,14 @@ The default HTML template uses four reusable `corner` instances inside
   workflow is not implicit approval to open a pull request.
 
 ## Branch workflow
+- Do all repository work on the `main` branch by default, including edits,
+  tests, commits, pushes, and releases.
+- Use another branch only when the user explicitly requests that branch or
+  explicitly requests isolated branch/worktree work for the current task.
+- Do not create a feature branch merely as a routine precaution. Preserve the
+  user's requested branch choice when one is provided.
+
+## Working directories
 
 - Do all repository work on the `main` branch by default, including edits,
   tests, commits, pushes, and releases.
@@ -62,6 +68,12 @@ repository root; keep the application's source and tests under
 `ascii-rpg/`.
 
 ## Browser test policy
+Do not create, update, or execute Playwright test files by default. Use the
+existing Node tests, build checks, and manual browser verification only when
+the user explicitly requests Playwright test work or when a later request
+explicitly overrides this policy.
+
+## OpenSpec skill discovery
 
 Do not create, update, or execute Playwright test files by default. Use the
 existing Node tests, build checks, and manual browser verification only when
