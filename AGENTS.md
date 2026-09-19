@@ -9,9 +9,7 @@ If user directs you to use this template, then follow these steps:
    create an authorized copy in its explicitly named destination. When the user
    says to use this repository only as inspiration, inspect it as a reference
    and copy no files unless they request that.
-2. Read this file, then read
-   `AGENTS_TEMPLATE_USAGE_CHECKLIST.md` before adding a stack or changing
-   project files.
+2. Read this file before adding a stack or changing project files.
 3. Confirm the project's purpose, target platforms, selected stack, deployment
    target, dependency policy, and whether an OpenSpec workflow is required. Ask
    only for an input that is material and not provided or discoverable.
@@ -19,8 +17,9 @@ If user directs you to use this template, then follow these steps:
    repository URL synchronized with the project repository. The repository root
    remains the npm project root.
 5. Inspect the resulting project's actual configuration before documenting or
-   running setup, test, build, deployment, or release commands. Complete the
-   checklist's delivery gate before presenting the project as ready.
+   running setup, test, build, deployment, or release commands. Confirm the
+   repository's documented delivery checks before presenting the project as
+   ready.
 
 ## HTML template corner roles
 
@@ -39,6 +38,15 @@ The default HTML template uses four reusable `corner` instances inside
 - Pushing a branch, committing changes, or completing an OpenSpec/template
   workflow is not implicit approval to open a pull request.
 
+## Branch workflow
+
+- Do all repository work on the `main` branch by default, including edits,
+  tests, commits, pushes, and releases.
+- Use another branch only when the user explicitly requests that branch or
+  explicitly requests isolated branch/worktree work for the current task.
+- Do not create a feature branch merely as a routine precaution. Preserve the
+  user's requested branch choice when one is provided.
+
 ## Working directories
 
 - **Repository root** is the npm project root. It contains `.git`, repository
@@ -52,6 +60,13 @@ The default HTML template uses four reusable `corner` instances inside
 Correct: run `git status`, dependency, build, test, and run commands from the
 repository root; keep the application's source and tests under
 `ascii-rpg/`.
+
+## Browser test policy
+
+Do not create, update, or execute Playwright test files by default. Use the
+existing Node tests, build checks, and manual browser verification only when
+the user explicitly requests Playwright test work or when a later request
+explicitly overrides this policy.
 
 ## OpenSpec skill discovery
 
