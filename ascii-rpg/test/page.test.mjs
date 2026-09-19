@@ -62,6 +62,27 @@ test("documents the plain safe-area template", async () => {
   if (!styles.includes(".corner_body") || !styles.includes(".corner_title")) {
     throw new Error("The page must define shared corner body and title text styles.");
   }
+  if (!app.includes('id="ascii_palette_toggle"') || !app.includes("Ascii Palette")) {
+    throw new Error("The Settings section must include the Ascii Palette option.");
+  }
+  if (!app.includes("class PromptWindow extends Component")) {
+    throw new Error("The Ascii Palette overlay must be implemented as a PromptWindow React class.");
+  }
+  if (!app.includes('className="window"') || !app.includes('className="window_backdrop"')) {
+    throw new Error("The Ascii Palette overlay must include a Window and WindowBackdrop.");
+  }
+  if (!app.includes('aria-label="Close Ascii Palette"') || !app.includes(">\n              X\n")) {
+    throw new Error("The Ascii Palette overlay must provide an X close control.");
+  }
+  if (!app.includes('className="window_backdrop" aria-hidden="true" onClick={onClose}') || !app.includes("event.stopPropagation()")) {
+    throw new Error("Clicks outside the Ascii Palette window must close it without closing from inside the window.");
+  }
+  if (!styles.includes(".window_backdrop") || !styles.includes("background: #000")) {
+    throw new Error("The Ascii Palette overlay must fully block and darken the app behind it.");
+  }
+  if (!styles.includes(".window") || !styles.includes("inset: 100px")) {
+    throw new Error("The Ascii Palette window must use a 100px margin on every side.");
+  }
   if (!app.includes('id="settings_title"') || !app.includes('className="corner_title"')) {
     throw new Error("The Settings heading must use the bold corner title style.");
   }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Component, useEffect, useState } from "react";
 import versionText from "../../version.txt?raw";
 
 const fullscreenStorageKey = "babylon-lite-ascii-rpg.fullscreen";
@@ -13,10 +13,42 @@ function GitHubMark() {
   );
 }
 
+export class PromptWindow extends Component {
+  render() {
+    const { onClose } = this.props;
+
+    return (
+      <div className="prompt_window" role="presentation">
+        <div className="window_backdrop" aria-hidden="true" onClick={onClose} />
+        <section
+          className="window"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="ascii_palette_title"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <div className="window_header">
+            <h1 id="ascii_palette_title">Ascii Palette</h1>
+            <button
+              className="window_close"
+              type="button"
+              aria-label="Close Ascii Palette"
+              onClick={onClose}
+            >
+              X
+            </button>
+          </div>
+        </section>
+      </div>
+    );
+  }
+}
+
 export function App() {
   const [fullscreenPreferred, setFullscreenPreferred] = useState(() => {
     return localStorage.getItem(fullscreenStorageKey) === "true";
   });
+  const [asciiPaletteOpen, setAsciiPaletteOpen] = useState(false);
 
   const versionNumber = versionText.trim().replace(/^version=/, "").replace(/^v/, "");
 
@@ -92,6 +124,15 @@ export function App() {
               {fullscreenPreferred ? "☑" : "☐"}
             </span>
           </button>
+          <button
+            id="ascii_palette_toggle"
+            className="corner_body settings_option"
+            type="button"
+            tabIndex={-1}
+            onClick={() => setAsciiPaletteOpen(true)}
+          >
+            Ascii Palette
+          </button>
         </section>
       </div>
       <div className="corner corner_bottom_right">
@@ -99,6 +140,7 @@ export function App() {
           v{versionNumber}
         </span>
       </div>
+      {asciiPaletteOpen ? <PromptWindow onClose={() => setAsciiPaletteOpen(false)} /> : null}
     </>
   );
 }
