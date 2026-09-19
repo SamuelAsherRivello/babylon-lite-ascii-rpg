@@ -76,9 +76,11 @@ test("documents the plain safe-area template", async () => {
   if (!styles.includes(".corner_body") || !styles.includes(".corner_title")) {
     throw new Error("The page must define shared corner body and title text styles.");
   }
-  if (!app.includes('id="lighting_torch_toggle"') || !app.includes('id="lighting_player_toggle"') || !app.includes('id="ambient_light_control"')
-    || !app.includes("Light Ambient") || !app.includes("formatLightingProfile")) {
-    throw new Error("The Settings section must include torch, player, and ambient lighting controls.");
+  if (!app.includes('id="lighting_torch_toggle"') || !app.includes('id="lighting_player_toggle"')
+    || !app.includes('id="shadow_torch_toggle"') || !app.includes('id="shadow_player_toggle"')
+    || !app.includes('id="ambient_light_control"') || !app.includes("Light Ambient")
+    || !app.includes("formatLightingProfile") || !app.includes("formatShadowProfile")) {
+    throw new Error("The Settings section must include independent torch and player lighting, shadow, and ambient controls.");
   }
   if (main.includes("GameCanvas") || main.includes('createRoot(document.getElementById("game_layer"))')) {
     throw new Error("React must mount only UI and must not own the Babylon Lite game canvas.");

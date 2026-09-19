@@ -46,9 +46,10 @@ import { colorToLinearRgba, reconcilePaletteColors } from "./palette-color-cache
 import {
   applyLightingToColor,
   createLightingConfig,
+  createSceneLightingFieldCache,
   DEFAULT_LIGHTING,
   getLightingProfile,
-  getSceneLightingFactor,
+  getShadowProfile,
 } from "./lighting.js";
 
 const GLYPHS = ["W", "•", "P", "T", "~", "≈", "▓"];
@@ -115,7 +116,10 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     ambient: DEFAULT_LIGHTING.ambient,
     torchProfile: getLightingProfile("Med").config,
     playerProfile: getLightingProfile("Med").config,
+    torchShadow: getShadowProfile("X High").config,
+    playerShadow: getShadowProfile("X High").config,
   };
+  const lightingFieldCache = createSceneLightingFieldCache();
   let fontId = initialFontId;
   let zoom = DEFAULT_ZOOM;
   const spriteIndexes = [];
@@ -160,14 +164,14 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     spriteStates.length = 0;
   };
 
-  const renderCell = (region, x, y, frames) => {
+  const renderCell = (region, x, y, frames, lightField) => {
     const slot = y * region.columns + x;
     const cell = { x: region.x + x, y: region.y + y };
     const glyph = getVisibleGlyph(world, cell);
     const frame = frames.get(glyph);
     if (frame === undefined) throw new Error(`Missing cached glyph frame: ${glyph}`);
     const baseColor = paletteColors.get(glyph) ?? colorToLinearRgba(getPaletteStyle(palette, glyph));
-    const lightingFactor = getSceneLightingFactor(cell, world.torches, playerCell, lighting);
+    const lightingFactor = lightField.getFactor(cell);
     const previous = spriteStates[slot];
     if (!shouldUpdateVisibleSprite(previous, glyph, frame, baseColor, lightingFactor)) {
       metrics.skippedCells += 1;
@@ -188,19 +192,28 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     metrics.submittedCells += 1;
   };
 
-  const renderWorld = () => {
+  const renderWorld = ({ refreshLighting = false } = {}) => {
     if (!world || !renderer) return { renderMs: 0, warmupMs: 0 };
     const started = performance.now();
     const submittedBefore = metrics.submittedCells;
     const skippedBefore = metrics.skippedCells;
     const region = getVisibleRegion(viewport, world, viewOrigin);
     viewOrigin = { x: region.x, y: region.y };
+    if (refreshLighting) {
+      // The player is a moving light source. Invalidate the cached lighting
+      // value before repainting so the old source position cannot remain in a
+      // sprite slot when the calculated factor happens to be unchanged.
+      for (let slot = 0; slot < region.count; slot += 1) {
+        if (spriteStates[slot]?.visible) spriteStates[slot].lightingFactor = undefined;
+      }
+    }
     const glyphs = collectVisibleGlyphs(world, region, getVisibleGlyph);
     const visual = glyphCache.ensure(zoom, viewport.gridWidth, glyphs);
     metrics.glyphWarmupMs += visual.warmupMs;
     if (visual.atlas !== atlas) rebuildLayer(visual.atlas);
+    const lightField = lightingFieldCache.get(world, region, world.torches, playerCell, lighting);
     for (let y = 0; y < region.rows; y += 1) {
-      for (let x = 0; x < region.columns; x += 1) renderCell(region, x, y, visual.frames);
+      for (let x = 0; x < region.columns; x += 1) renderCell(region, x, y, visual.frames, lightField);
     }
     for (let slot = region.count; slot < spriteIndexes.length; slot += 1) {
       if (spriteStates[slot]?.visible) {
@@ -225,7 +238,10 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     const glyphs = visibleCells.map((cell) => getVisibleGlyph(world, cell));
     const visual = glyphCache.ensure(zoom, viewport.gridWidth, glyphs);
     metrics.glyphWarmupMs += visual.warmupMs;
-    for (const cell of visibleCells) renderCell(region, cell.x - region.x, cell.y - region.y, visual.frames);
+    const lightField = lightingFieldCache.get(world, region, world.torches, playerCell, lighting);
+    for (const cell of visibleCells) {
+      renderCell(region, cell.x - region.x, cell.y - region.y, visual.frames, lightField);
+    }
   };
 
   const rebuildViewport = ({ centerOnPlayer = false, zoomChanged = false } = {}) => {
@@ -259,7 +275,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     // Player lighting is a moving source. Re-render the complete visible
     // region after every move so cells behind the player lose its former light
     // contribution instead of retaining a trail.
-    renderWorld();
+    renderWorld({ refreshLighting: true });
   };
 
   const scheduleRepeat = (delay) => {
@@ -445,6 +461,14 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     },
     setPlayerLighting(profile) {
       lighting = { ...lighting, playerProfile: getLightingProfile(profile).config };
+      renderWorld();
+    },
+    setTorchShadow(profile) {
+      lighting = { ...lighting, torchShadow: getShadowProfile(profile).config };
+      renderWorld();
+    },
+    setPlayerShadow(profile) {
+      lighting = { ...lighting, playerShadow: getShadowProfile(profile).config };
       renderWorld();
     },
     setCameraMode(nextMode) {

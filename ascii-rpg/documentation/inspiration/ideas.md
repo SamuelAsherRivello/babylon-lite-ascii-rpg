@@ -56,5 +56,6 @@
     - Save game (3 slots). ☐
 50. Traveling in a group of NPCs. ☐
 51. Vehicles. ☐
-52. Weather that affects gameplay. ☐
-53. Weapons and armor. ☐
+52. View toggles (env only, enemies only, items only). ☐
+53. Weather that affects gameplay. ☐
+54. Weapons and armor. ☐

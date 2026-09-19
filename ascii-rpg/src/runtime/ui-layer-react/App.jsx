@@ -1,4 +1,4 @@
-import { Component, Fragment, useEffect, useState, useSyncExternalStore } from "react";
+import { Component, Fragment, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { HexColorPicker } from "react-colorful";
 import versionText from "../../../../version.txt?raw";
 import {
@@ -25,8 +25,10 @@ import {
   sendAmbientLightSnapshot,
   sendCameraModeSnapshot,
   sendPlayerLightingSnapshot,
+  sendPlayerShadowSnapshot,
   sendPaletteSnapshot,
   sendTorchLightingSnapshot,
+  sendTorchShadowSnapshot,
   sendZoomSnapshot,
   subscribeToTime,
 } from "../bridge-layer/game-bridge.js";
@@ -42,6 +44,7 @@ import {
   AMBIENT_LIGHT_STEP,
   LIGHTING_PROFILES,
   LIGHTING_SOURCE_STATES,
+  SHADOW_PROFILES,
 } from "../game-layer-babylon-lite/lighting.js";
 import {
   DEEP_WATER_GLYPH,
@@ -57,6 +60,8 @@ const zoomStorageKey = "babylon-lite-ascii-rpg.zoom";
 const ambientLightStorageKey = "babylon-lite-ascii-rpg.ambient-light";
 const torchLightingStorageKey = "babylon-lite-ascii-rpg.torch-lighting";
 const playerLightingStorageKey = "babylon-lite-ascii-rpg.player-lighting";
+const torchShadowStorageKey = "babylon-lite-ascii-rpg.torch-shadow";
+const playerShadowStorageKey = "babylon-lite-ascii-rpg.player-shadow";
 const minZoom = 1;
 const maxZoom = 10;
 const defaultZoom = 5;
@@ -74,6 +79,22 @@ const paletteEditorWidth = 286;
 const paletteEditorHeight = 340;
 const paletteEditorMargin = 16;
 const defaultPaletteViewState = { filter: "all", sortBy: "index", sortDirection: "ascending" };
+const lightingValueHelp = "R Radius · M Maximum · F Falloff";
+const shadowValueHelp = "O Occlusion · B Bleed";
+const ambientValueHelp = "0 dark · 1 bright";
+const settingsHelp = Object.freeze({
+  fullscreen: "Toggle fullscreen.",
+  camera: "Cycle camera mode.",
+  torchLighting: `Cycle torch light. ${lightingValueHelp}`,
+  playerLighting: `Cycle player light. ${lightingValueHelp}`,
+  torchShadow: `Cycle torch shadows. ${shadowValueHelp}`,
+  playerShadow: `Cycle player shadows. ${shadowValueHelp}`,
+  ambientIncrease: `Brighten overall light. ${ambientValueHelp}`,
+  ambientDecrease: `Dim overall light. ${ambientValueHelp}`,
+  zoomIn: "Make map glyphs larger.",
+  zoomOut: "Make map glyphs smaller.",
+  reset: "Clear local storage and reload.",
+});
 
 function getStoredZoom() {
   const storedZoom = Number.parseInt(localStorage.getItem(zoomStorageKey), 10);
@@ -85,11 +106,11 @@ function getStoredAmbientLight() {
   return Number.isFinite(stored) ? Math.min(1, Math.max(0, stored)) : 0.6;
 }
 
-function getStoredSourceIndex(storageKey) {
+function getStoredSourceIndex(storageKey, defaultIndex) {
   const storedIndex = Number.parseInt(localStorage.getItem(storageKey), 10);
   return Number.isInteger(storedIndex) && storedIndex >= 0 && storedIndex < LIGHTING_SOURCE_STATES.length
     ? storedIndex
-    : storageKey === torchLightingStorageKey ? 1 : 3;
+    : defaultIndex;
 }
 
 export function getPaletteEditorPosition(anchor, viewport = { width: window.innerWidth, height: window.innerHeight }) {
@@ -112,6 +133,20 @@ function GitHubMark() {
     <svg aria-hidden="true" viewBox="0 0 16 16" width="20" height="20" fill="#f5f5f5">
       <path d="M8 0C3.58 0 0 3.64 0 8.13c0 3.59 2.29 6.64 5.47 7.71.4.08.55-.18.55-.4 0-.2-.01-.86-.01-1.56-2.01.38-2.53-.5-2.69-.96-.09-.24-.48-.96-.82-1.15-.28-.15-.68-.53-.01-.54.63-.01 1.08.59 1.23.83.72 1.23 1.87.88 2.33.67.07-.53.28-.88.51-1.08-1.78-.21-3.64-.91-3.64-4.04 0-.89.31-1.62.82-2.19-.08-.2-.36-1.04.08-2.16 0 0 .67-.22 2.2.84A7.5 7.5 0 0 1 8 3.82c.68 0 1.36.09 2 .28 1.53-1.06 2.2-.84 2.2-.84.44 1.12.16 1.96.08 2.16.51.57.82 1.29.82 2.19 0 3.14-1.87 3.83-3.65 4.04.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .22.15.48.55.4A8.02 8.02 0 0 0 16 8.13C16 3.64 12.42 0 8 0Z" />
     </svg>
+  );
+}
+
+function SettingTooltipTarget({ description, onShow, onHide, children }) {
+  return (
+    <span
+      className="setting_tooltip_target"
+      onPointerEnter={(event) => onShow(description, event.currentTarget)}
+      onPointerLeave={onHide}
+      onFocus={(event) => onShow(description, event.currentTarget)}
+      onBlur={onHide}
+    >
+      {children}
+    </span>
   );
 }
 
@@ -465,14 +500,19 @@ export function ArgumentsWindow({ onClose }) {
 }
 
 export function App() {
+  const [settingTooltip, setSettingTooltip] = useState(null);
+  const [settingTooltipPosition, setSettingTooltipPosition] = useState({ top: 0, left: 0 });
+  const settingTooltipRef = useRef(null);
   const [fullscreenPreferred, setFullscreenPreferred] = useState(() => {
     return localStorage.getItem(fullscreenStorageKey) === "true";
   });
   const [cameraMode, setCameraMode] = useState(() => normalizeCameraMode(localStorage.getItem(CAMERA_STORAGE_KEY)));
   const [zoom, setZoom] = useState(getStoredZoom);
   const [ambientLight, setAmbientLight] = useState(getStoredAmbientLight);
-  const [torchLightingIndex, setTorchLightingIndex] = useState(() => getStoredSourceIndex(torchLightingStorageKey));
-  const [playerLightingIndex, setPlayerLightingIndex] = useState(() => getStoredSourceIndex(playerLightingStorageKey));
+  const [torchLightingIndex, setTorchLightingIndex] = useState(() => getStoredSourceIndex(torchLightingStorageKey, 1));
+  const [playerLightingIndex, setPlayerLightingIndex] = useState(() => getStoredSourceIndex(playerLightingStorageKey, 3));
+  const [torchShadowIndex, setTorchShadowIndex] = useState(() => getStoredSourceIndex(torchShadowStorageKey, 4));
+  const [playerShadowIndex, setPlayerShadowIndex] = useState(() => getStoredSourceIndex(playerShadowStorageKey, 4));
   const [asciiPaletteOpen, setAsciiPaletteOpen] = useState(false);
   const [argumentsOpen, setArgumentsOpen] = useState(false);
   const [paletteError, setPaletteError] = useState("");
@@ -484,6 +524,35 @@ export function App() {
   const [fps, setFps] = useState(0);
 
   const versionNumber = versionText.trim().replace(/^version=/, "").replace(/^v/, "");
+
+  useLayoutEffect(() => {
+    if (!settingTooltip || !settingTooltipRef.current) return;
+
+    const placeTooltip = () => {
+      const anchor = settingTooltip.anchor.getBoundingClientRect();
+      const tooltip = settingTooltipRef.current.getBoundingClientRect();
+      const gap = 8;
+      const leftLimit = Math.max(gap, window.innerWidth - tooltip.width - gap);
+      const topLimit = Math.max(gap, window.innerHeight - tooltip.height - gap);
+      const top = anchor.top - tooltip.height - gap >= gap
+        ? anchor.top - tooltip.height - gap
+        : anchor.bottom + gap;
+      setSettingTooltipPosition({
+        left: Math.min(Math.max(anchor.left, gap), leftLimit),
+        top: Math.min(Math.max(top, gap), topLimit),
+      });
+    };
+
+    placeTooltip();
+    window.addEventListener("resize", placeTooltip);
+    return () => window.removeEventListener("resize", placeTooltip);
+  }, [settingTooltip]);
+
+  const showSettingTooltip = (description, anchor) => {
+    setSettingTooltip({ description, anchor });
+  };
+
+  const hideSettingTooltip = () => setSettingTooltip(null);
 
   useEffect(() => {
     let frameCount = 0;
@@ -547,6 +616,16 @@ export function App() {
   }, [playerLightingIndex]);
 
   useEffect(() => {
+    localStorage.setItem(torchShadowStorageKey, String(torchShadowIndex));
+    sendTorchShadowSnapshot(LIGHTING_SOURCE_STATES[torchShadowIndex]);
+  }, [torchShadowIndex]);
+
+  useEffect(() => {
+    localStorage.setItem(playerShadowStorageKey, String(playerShadowIndex));
+    sendPlayerShadowSnapshot(LIGHTING_SOURCE_STATES[playerShadowIndex]);
+  }, [playerShadowIndex]);
+
+  useEffect(() => {
     const syncFullscreenState = () => {
       setFullscreenPreferred(Boolean(document.fullscreenElement));
     };
@@ -598,10 +677,17 @@ export function App() {
   const formatLightingProfile = (index) => {
     const profile = LIGHTING_PROFILES[index];
     const { radius, maximum, falloffExponent } = profile.config;
-    return `${profile.label} (${radius}, ${maximum}, ${falloffExponent})`;
+    return `${profile.label} (R${radius} M${maximum} F${falloffExponent})`;
+  };
+  const formatShadowProfile = (index) => {
+    const profile = SHADOW_PROFILES[index];
+    const { occlusion, bleed } = profile.config;
+    return `${profile.label} (O${occlusion} B${bleed})`;
   };
   const torchLightingLabel = `Lighting Torch - ${formatLightingProfile(torchLightingIndex)}`;
   const playerLightingLabel = `Lighting Player - ${formatLightingProfile(playerLightingIndex)}`;
+  const torchShadowLabel = `Lighting Torch Shadow - ${formatShadowProfile(torchShadowIndex)}`;
+  const playerShadowLabel = `Lighting Player Shadow - ${formatShadowProfile(playerShadowIndex)}`;
 
   const commitPaletteEntry = async (entryId, draft) => {
     const nextPalette = palette.map((entry) =>
@@ -675,71 +761,120 @@ export function App() {
           <div id="settings_title" className="corner_title">
             Settings
           </div>
-          <button
-            id="fullscreen_toggle"
-            className="corner_body settings_option"
-            type="button"
-            aria-pressed={fullscreenPreferred}
-            tabIndex={-1}
-            onClick={toggleFullscreen}
-          >
-            <span>Fullscreen</span>
-            <span id="fullscreen_checkbox" aria-hidden="true">
-              {fullscreenPreferred ? "☑" : "☐"}
-            </span>
-          </button>
-          <button
-            id="camera_mode_toggle"
-            className="corner_body settings_option"
-            type="button"
-            aria-label="Camera mode"
-            tabIndex={-1}
-            onClick={cycleCameraMode}
-          >
-            {CAMERA_MODE_LABELS[cameraMode] ?? CAMERA_MODE_LABELS[DEFAULT_CAMERA_MODE]}
-          </button>
-          <button
-            id="lighting_torch_toggle"
-            className="corner_body settings_option"
-            type="button"
-            aria-label="Cycle torch lighting"
-            tabIndex={-1}
-            onClick={() => cycleLighting(setTorchLightingIndex)}
-          >
-            {torchLightingLabel}
-          </button>
-          <button
-            id="lighting_player_toggle"
-            className="corner_body settings_option"
-            type="button"
-            aria-label="Cycle player lighting"
-            tabIndex={-1}
-            onClick={() => cycleLighting(setPlayerLightingIndex)}
-          >
-            {playerLightingLabel}
-          </button>
+          <SettingTooltipTarget description={settingsHelp.fullscreen} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
+            <button
+              id="fullscreen_toggle"
+              className="corner_body settings_option"
+              type="button"
+              aria-pressed={fullscreenPreferred}
+              aria-description={settingsHelp.fullscreen}
+              tabIndex={-1}
+              onClick={toggleFullscreen}
+            >
+              <span>Fullscreen</span>
+              <span id="fullscreen_checkbox" aria-hidden="true">
+                {fullscreenPreferred ? "☑" : "☐"}
+              </span>
+            </button>
+          </SettingTooltipTarget>
+          <SettingTooltipTarget description={settingsHelp.camera} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
+            <button
+              id="camera_mode_toggle"
+              className="corner_body settings_option"
+              type="button"
+              aria-label="Camera mode"
+              aria-description={settingsHelp.camera}
+              tabIndex={-1}
+              onClick={cycleCameraMode}
+            >
+              {CAMERA_MODE_LABELS[cameraMode] ?? CAMERA_MODE_LABELS[DEFAULT_CAMERA_MODE]}
+            </button>
+          </SettingTooltipTarget>
+          <SettingTooltipTarget description={settingsHelp.torchLighting} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
+            <button
+              id="lighting_torch_toggle"
+              className="corner_body settings_option"
+              type="button"
+              aria-label="Cycle torch lighting"
+              aria-description={settingsHelp.torchLighting}
+              tabIndex={-1}
+              onClick={() => cycleLighting(setTorchLightingIndex)}
+            >
+              {torchLightingLabel}
+            </button>
+          </SettingTooltipTarget>
+          <SettingTooltipTarget description={settingsHelp.playerLighting} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
+            <button
+              id="lighting_player_toggle"
+              className="corner_body settings_option"
+              type="button"
+              aria-label="Cycle player lighting"
+              aria-description={settingsHelp.playerLighting}
+              tabIndex={-1}
+              onClick={() => cycleLighting(setPlayerLightingIndex)}
+            >
+              {playerLightingLabel}
+            </button>
+          </SettingTooltipTarget>
+          <SettingTooltipTarget description={settingsHelp.torchShadow} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
+            <button
+              id="shadow_torch_toggle"
+              className="corner_body settings_option"
+              type="button"
+              aria-label="Cycle torch shadow"
+              aria-description={settingsHelp.torchShadow}
+              tabIndex={-1}
+              onClick={() => cycleLighting(setTorchShadowIndex)}
+            >
+              {torchShadowLabel}
+            </button>
+          </SettingTooltipTarget>
+          <SettingTooltipTarget description={settingsHelp.playerShadow} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
+            <button
+              id="shadow_player_toggle"
+              className="corner_body settings_option"
+              type="button"
+              aria-label="Cycle player shadow"
+              aria-description={settingsHelp.playerShadow}
+              tabIndex={-1}
+              onClick={() => cycleLighting(setPlayerShadowIndex)}
+            >
+              {playerShadowLabel}
+            </button>
+          </SettingTooltipTarget>
           <div id="ambient_light_control" className="corner_body zoom_control" aria-label="Light Ambient">
             <span>Light Ambient</span>
-            <button type="button" aria-label="Increase ambient light" onClick={() => changeAmbientLight(AMBIENT_LIGHT_STEP)} disabled={ambientLight >= 1}>+</button>
+            <SettingTooltipTarget description={settingsHelp.ambientIncrease} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
+              <button type="button" aria-label="Increase ambient light" aria-description={settingsHelp.ambientIncrease} onClick={() => changeAmbientLight(AMBIENT_LIGHT_STEP)} disabled={ambientLight >= 1}>+</button>
+            </SettingTooltipTarget>
             <span aria-live="polite">{ambientLight.toFixed(1)}</span>
-            <button type="button" aria-label="Decrease ambient light" onClick={() => changeAmbientLight(-AMBIENT_LIGHT_STEP)} disabled={ambientLight <= 0}>-</button>
+            <SettingTooltipTarget description={settingsHelp.ambientDecrease} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
+              <button type="button" aria-label="Decrease ambient light" aria-description={settingsHelp.ambientDecrease} onClick={() => changeAmbientLight(-AMBIENT_LIGHT_STEP)} disabled={ambientLight <= 0}>-</button>
+            </SettingTooltipTarget>
           </div>
           <div id="zoom_control" className="corner_body zoom_control" aria-label="Zoom">
             <span>Zoom</span>
-            <button type="button" aria-label="Zoom in" onClick={() => changeZoom(1)} disabled={zoom >= maxZoom}>+</button>
+            <SettingTooltipTarget description={settingsHelp.zoomIn} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
+              <button type="button" aria-label="Zoom in" aria-description={settingsHelp.zoomIn} onClick={() => changeZoom(1)} disabled={zoom >= maxZoom}>+</button>
+            </SettingTooltipTarget>
             <span aria-live="polite">{zoom}</span>
-            <button type="button" aria-label="Zoom out" onClick={() => changeZoom(-1)} disabled={zoom <= minZoom}>-</button>
+            <SettingTooltipTarget description={settingsHelp.zoomOut} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
+              <button type="button" aria-label="Zoom out" aria-description={settingsHelp.zoomOut} onClick={() => changeZoom(-1)} disabled={zoom <= minZoom}>-</button>
+            </SettingTooltipTarget>
           </div>
-          <button
-            id="reset_settings"
-            className="corner_body settings_option"
-            type="button"
-            aria-label="Reset Settings"
-            tabIndex={-1}
-            onClick={resetSettings}
-          >
-            Reset Settings
-          </button>
+          <SettingTooltipTarget description={settingsHelp.reset} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
+            <button
+              id="reset_settings"
+              className="corner_body settings_option"
+              type="button"
+              aria-label="Reset Settings"
+              aria-description={settingsHelp.reset}
+              tabIndex={-1}
+              onClick={resetSettings}
+            >
+              Reset Settings
+            </button>
+          </SettingTooltipTarget>
         </section>
       </div>
       <div className="corner corner_bottom_right">
@@ -747,6 +882,16 @@ export function App() {
           v{versionNumber}
         </span>
       </div>
+      {settingTooltip ? (
+        <div
+          ref={settingTooltipRef}
+          className="settings_tooltip"
+          role="tooltip"
+          style={settingTooltipPosition}
+        >
+          {settingTooltip.description}
+        </div>
+      ) : null}
       {asciiPaletteOpen ? (
         <PromptWindow
           palette={palette}

@@ -4,6 +4,8 @@ let cameraModeSnapshot = "center";
 let ambientLightSnapshot = 0.5;
 let torchLightingSnapshot = "Med";
 let playerLightingSnapshot = "Med";
+let torchShadowSnapshot = "X High";
+let playerShadowSnapshot = "X High";
 let zoomSnapshot = null;
 let lightingSnapshot = null;
 const timeListeners = new Set();
@@ -14,6 +16,8 @@ export function setGameController(controller) {
   gameController?.setAmbientLight?.(ambientLightSnapshot);
   gameController?.setTorchLighting?.(torchLightingSnapshot);
   gameController?.setPlayerLighting?.(playerLightingSnapshot);
+  gameController?.setTorchShadow?.(torchShadowSnapshot);
+  gameController?.setPlayerShadow?.(playerShadowSnapshot);
   if (zoomSnapshot !== null) gameController?.setZoom?.(zoomSnapshot);
   if (lightingSnapshot !== null) gameController?.setLighting?.(lightingSnapshot);
 }
@@ -49,6 +53,16 @@ export function sendTorchLightingSnapshot(profile) {
 export function sendPlayerLightingSnapshot(profile) {
   playerLightingSnapshot = profile;
   gameController?.setPlayerLighting?.(profile);
+}
+
+export function sendTorchShadowSnapshot(profile) {
+  torchShadowSnapshot = profile;
+  gameController?.setTorchShadow?.(profile);
+}
+
+export function sendPlayerShadowSnapshot(profile) {
+  playerShadowSnapshot = profile;
+  gameController?.setPlayerShadow?.(profile);
 }
 
 export function sendCameraModeSnapshot(mode) {

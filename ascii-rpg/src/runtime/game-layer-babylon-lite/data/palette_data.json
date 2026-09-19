@@ -390,7 +390,7 @@
       "code": 87,
       "unicode": null,
       "glyph": "W",
-      "color": "#ff00f7",
+      "color": "#ad9746",
       "alpha": 1
     },
     {
@@ -1566,7 +1566,7 @@
       "code": null,
       "unicode": "U+2022",
       "glyph": "•",
-      "color": "#181818",
+      "color": "#4c4c4c",
       "alpha": 1
     }
   ]

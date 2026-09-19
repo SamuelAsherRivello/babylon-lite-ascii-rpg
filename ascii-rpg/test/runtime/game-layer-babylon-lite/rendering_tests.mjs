@@ -2,8 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createGlyphVisualCache, getGlyphRasterSize } from "../../../src/runtime/game-layer-babylon-lite/glyph-visual-cache.js";
 import { collectVisibleGlyphs, getVisibleRegion, getVisibleSlot, shouldUpdateVisibleSprite } from "../../../src/runtime/game-layer-babylon-lite/visible-region.js";
-import { createFrameCheckpoint } from "../../../src/runtime/game-layer-babylon-lite/systems/world-system.js";
+import { createFrameCheckpoint, getVisibleGlyph } from "../../../src/runtime/game-layer-babylon-lite/systems/world-system.js";
 import { reconcilePaletteColors } from "../../../src/runtime/game-layer-babylon-lite/palette-color-cache.js";
+import { applyLightingToColor, createSceneLightingFieldCache, LIGHTING_PRESETS } from "../../../src/runtime/game-layer-babylon-lite/lighting.js";
 
 function fakeAtlasApi() {
   const disposed = [];
@@ -109,6 +110,43 @@ test("dirty sprites update only for changed visible glyph, frame, tint, or visib
   assert.equal(shouldUpdateVisibleSprite(state, "W", 3, [1, 1, 1, 0.5], 1), true);
   assert.equal(shouldUpdateVisibleSprite(state, "W", 3, color, 0.5), true);
   assert.equal(shouldUpdateVisibleSprite({ ...state, visible: false }, "W", 3, color, 1), true);
+});
+
+test("visible light refresh clears old player light and glyph changes keep terrain intact", () => {
+  const terrain = Array.from({ length: 5 }, () =>
+    Array.from({ length: 7 }, () => ({ walkable: true, glyph: "•" })));
+  terrain[2][3] = { walkable: false, glyph: "W" };
+  const characters = Array.from({ length: 5 }, () => Array(7).fill(null));
+  const world = { terrain, characters };
+  const terrainSnapshot = JSON.stringify(terrain);
+  const region = { x: 0, y: 0, columns: 7, rows: 5 };
+  const torches = [{ x: 1, y: 2 }];
+  const settings = {
+    ambient: 0,
+    torchProfile: LIGHTING_PRESETS[3].config,
+    playerProfile: LIGHTING_PRESETS[3].config,
+  };
+  const cache = createSceneLightingFieldCache();
+  const oldField = cache.get(world, region, torches, { x: 5, y: 2 }, settings);
+  const nextField = cache.get(world, region, torches, { x: 2, y: 2 }, settings);
+  const shadowed = { x: 4, y: 2 };
+  assert.ok(oldField.getFactor(shadowed) > 0);
+  assert.equal(nextField.getFactor(shadowed), 0);
+  assert.ok(nextField.getFactor({ x: 3, y: 2 }) > 0);
+
+  const baseColor = [0.8, 0.6, 0.2, 1];
+  const previous = {
+    glyph: "•", frame: 0, baseColor, lightingFactor: oldField.getFactor(shadowed), visible: true,
+  };
+  assert.equal(shouldUpdateVisibleSprite(previous, "•", 0, baseColor, nextField.getFactor(shadowed)), true);
+  const changedCell = { x: 2, y: 1 };
+  const factor = nextField.getFactor(changedCell);
+  characters[1][2] = "T";
+  assert.equal(getVisibleGlyph(world, changedCell), "T");
+  assert.equal(shouldUpdateVisibleSprite({ ...previous, lightingFactor: factor }, "T", 0, baseColor, factor), true);
+  applyLightingToColor(baseColor, factor);
+  assert.deepEqual(baseColor, [0.8, 0.6, 0.2, 1]);
+  assert.equal(JSON.stringify(terrain), terrainSnapshot);
 });
 
 test("palette revisions reuse unchanged tint data without multiplying shape-cache entries", () => {

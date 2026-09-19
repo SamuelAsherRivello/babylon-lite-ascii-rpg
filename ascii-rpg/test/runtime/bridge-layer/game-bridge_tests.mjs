@@ -6,8 +6,10 @@ import {
   sendCameraModeSnapshot,
   sendFontSnapshot,
   sendPlayerLightingSnapshot,
+  sendPlayerShadowSnapshot,
   sendPaletteSnapshot,
   sendTorchLightingSnapshot,
+  sendTorchShadowSnapshot,
   sendZoomSnapshot,
   sendTimeSnapshot,
   setGameController,
@@ -63,15 +65,21 @@ test("forwards camera mode changes and reapplies the latest mode to a new contro
   assert.equal(restored, "deadzone");
 });
 
-test("forwards ambient and independent source profiles to the game layer", () => {
+test("forwards ambient and independent source lighting and shadow profiles to the game layer", () => {
   const received = {};
   setGameController({
     setAmbientLight(value) { received.ambient = value; },
     setTorchLighting(profile) { received.torch = profile; },
     setPlayerLighting(profile) { received.player = profile; },
+    setTorchShadow(profile) { received.torchShadow = profile; },
+    setPlayerShadow(profile) { received.playerShadow = profile; },
   });
   sendAmbientLightSnapshot(0.75);
   sendTorchLightingSnapshot("High");
   sendPlayerLightingSnapshot("Off");
-  assert.deepEqual(received, { ambient: 0.75, torch: "High", player: "Off" });
+  sendTorchShadowSnapshot("Low");
+  sendPlayerShadowSnapshot("X High");
+  assert.deepEqual(received, {
+    ambient: 0.75, torch: "High", player: "Off", torchShadow: "Low", playerShadow: "X High",
+  });
 });
