@@ -12,7 +12,7 @@ import {
   getCombinedDirection,
   getDirectionForKey,
   moveCell,
-} from "../src/player-grid.js";
+} from "../../../../../src/runtime/game-layer-babylon-lite/characters/player/player-grid.js";
 
 test("creates one-to-one and upscaled logical viewports", () => {
   const oneToOne = createViewport({ screenWidth: 1280, screenHeight: 720 });

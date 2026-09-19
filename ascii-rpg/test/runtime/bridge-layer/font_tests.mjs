@@ -7,7 +7,7 @@ import {
   getFontOption,
   serializeFontConfig,
   validateFontId,
-} from "../src/font.js";
+} from "../../../src/runtime/bridge-layer/font.js";
 
 test("defines exactly five stable font choices and a default", () => {
   assert.equal(FONT_OPTIONS.length, 5);

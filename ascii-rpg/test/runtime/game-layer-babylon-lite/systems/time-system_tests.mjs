@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createTimeSystem, formatWorldTime, INITIAL_WORLD_TIME } from "../src/time-system.js";
+import { createTimeSystem, formatWorldTime, INITIAL_WORLD_TIME } from "../../../../src/runtime/game-layer-babylon-lite/systems/time-system.js";
 
 test("starts world time at one and formats it with five digits", () => {
   const timeSystem = createTimeSystem();

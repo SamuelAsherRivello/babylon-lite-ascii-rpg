@@ -6,7 +6,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node --test --test-isolation=none ascii-rpg/test/page.test.mjs ascii-rpg/test/openspec-skills.test.mjs ascii-rpg/test/player-grid.test.mjs ascii-rpg/test/world-grid.test.mjs ascii-rpg/test/palette.test.mjs ascii-rpg/test/font.test.mjs ascii-rpg/test/url-arguments.test.mjs ascii-rpg/test/game-bridge.test.mjs ascii-rpg/test/time-system.test.mjs"
+    "test": "node --test --test-isolation=none ascii-rpg/test/main_tests.mjs ascii-rpg/test/openspec-skills_tests.mjs ascii-rpg/test/runtime/game-layer-babylon-lite/characters/player/player-grid_tests.mjs ascii-rpg/test/runtime/game-layer-babylon-lite/systems/world-system_tests.mjs ascii-rpg/test/runtime/bridge-layer/palette_tests.mjs ascii-rpg/test/runtime/bridge-layer/font_tests.mjs ascii-rpg/test/runtime/ui-layer-react/url-arguments_tests.mjs ascii-rpg/test/runtime/bridge-layer/game-bridge_tests.mjs ascii-rpg/test/runtime/game-layer-babylon-lite/systems/time-system_tests.mjs"
   },
   "dependencies": {
     "@babylonjs/lite": "^1.30.0",

@@ -7,7 +7,7 @@ import {
   sendTimeSnapshot,
   setGameController,
   subscribeToTime,
-} from "../src/game-bridge.js";
+} from "../../../src/runtime/bridge-layer/game-bridge.js";
 
 test("forwards confirmed palette snapshots without exposing game internals", () => {
   const palette = [{ glyph: "W", color: "#909090", alpha: 1 }];

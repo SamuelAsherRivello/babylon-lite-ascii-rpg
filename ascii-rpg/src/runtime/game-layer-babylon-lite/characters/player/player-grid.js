@@ -1,5 +1,8 @@
 export const DEFAULT_UPSCALE = 1.0;
 export const DEFAULT_FONT_RESOLUTION = 1.0;
+export const DEFAULT_ZOOM = 5;
+export const MIN_ZOOM = 1;
+export const MAX_ZOOM = 10;
 export const DEFAULT_GRID_WIDTH = 32;
 export const DEFAULT_GRID_HEIGHT = 32;
 export const INITIAL_REPEAT_DELAY_MS = 250;
@@ -41,11 +44,16 @@ export function createViewport({
   screenWidth,
   screenHeight,
   upscale = DEFAULT_UPSCALE,
+  zoom = DEFAULT_ZOOM,
   gridWidth = DEFAULT_GRID_WIDTH,
   gridHeight = DEFAULT_GRID_HEIGHT,
   fontResolution = DEFAULT_FONT_RESOLUTION,
 }) {
   const safeUpscale = upscale > 0 ? upscale : DEFAULT_UPSCALE;
+  const safeZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom));
+  const zoomScale = safeZoom / DEFAULT_ZOOM;
+  const scaledGridWidth = gridWidth * zoomScale;
+  const scaledGridHeight = gridHeight * zoomScale;
   const logicalWidth = screenWidth / safeUpscale;
   const logicalHeight = screenHeight / safeUpscale;
 
@@ -55,11 +63,12 @@ export function createViewport({
     logicalWidth,
     logicalHeight,
     upscale: safeUpscale,
+    zoom: safeZoom,
     fontResolution,
-    gridWidth,
-    gridHeight,
-    columns: Math.max(1, Math.floor(logicalWidth / gridWidth)),
-    rows: Math.max(1, Math.floor(logicalHeight / gridHeight)),
+    gridWidth: scaledGridWidth,
+    gridHeight: scaledGridHeight,
+    columns: Math.max(1, Math.floor(logicalWidth / scaledGridWidth)),
+    rows: Math.max(1, Math.floor(logicalHeight / scaledGridHeight)),
   };
 }
 
