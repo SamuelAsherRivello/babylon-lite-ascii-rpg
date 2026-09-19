@@ -2,17 +2,38 @@ html,
 body {
   height: 100%;
   margin: 0;
+  background: #2f2f2f;
+  color: #f5f5f5;
+  overflow: hidden;
+}
+
+#content_layer,
+#game_canvas {
+  position: fixed;
+  inset: 0;
+  display: block;
+  width: 100vw;
+  height: 100vh;
+}
+
+#content_layer {
+  z-index: 0;
+}
+
+#game_canvas {
+  image-rendering: pixelated;
 }
 
 #ui_layer {
   position: fixed;
   inset: var(--ui-margin-y, 20px) var(--ui-margin-x, 20px);
+  z-index: 1;
   pointer-events: none;
 }
 
 .corner {
   position: absolute;
-  color: black;
+  color: #f5f5f5;
   font-size: 10pt;
   pointer-events: auto;
 }
@@ -39,12 +60,12 @@ body {
 
 .corner a,
 .corner a:visited {
-  color: black;
+  color: #f5f5f5;
 }
 
 .corner_body,
 .corner_title {
-  color: black;
+  color: #f5f5f5;
   font-size: 10pt;
   line-height: 1.4;
 }
@@ -61,7 +82,7 @@ body {
   appearance: none;
   background: transparent;
   border: 0;
-  color: black;
+  color: #f5f5f5;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -71,6 +92,6 @@ body {
 }
 
 .settings_option:focus-visible {
-  outline: 2px solid black;
+  outline: 2px solid #f5f5f5;
   outline-offset: 3px;
 }

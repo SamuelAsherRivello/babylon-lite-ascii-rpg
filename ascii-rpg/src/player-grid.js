@@ -1,0 +1,95 @@
+export const DEFAULT_UPSCALE = 1.0;
+export const DEFAULT_FONT_RESOLUTION = 1.0;
+export const DEFAULT_GRID_WIDTH = 32;
+export const DEFAULT_GRID_HEIGHT = 32;
+export const INITIAL_REPEAT_DELAY_MS = 250;
+export const REPEAT_INTERVAL_MS = 125;
+
+const keyDirections = new Map([
+  ["w", { x: 0, y: -1 }],
+  ["arrowup", { x: 0, y: -1 }],
+  ["a", { x: -1, y: 0 }],
+  ["arrowleft", { x: -1, y: 0 }],
+  ["s", { x: 0, y: 1 }],
+  ["arrowdown", { x: 0, y: 1 }],
+  ["d", { x: 1, y: 0 }],
+  ["arrowright", { x: 1, y: 0 }],
+]);
+
+export function getDirectionForKey(key) {
+  return keyDirections.get(key.toLowerCase()) ?? null;
+}
+
+export function getCombinedDirection(keys) {
+  const direction = { x: 0, y: 0 };
+
+  for (const key of keys) {
+    const keyDirection = getDirectionForKey(key);
+    if (keyDirection) {
+      direction.x += keyDirection.x;
+      direction.y += keyDirection.y;
+    }
+  }
+
+  return {
+    x: Math.sign(direction.x),
+    y: Math.sign(direction.y),
+  };
+}
+
+export function createViewport({
+  screenWidth,
+  screenHeight,
+  upscale = DEFAULT_UPSCALE,
+  gridWidth = DEFAULT_GRID_WIDTH,
+  gridHeight = DEFAULT_GRID_HEIGHT,
+  fontResolution = DEFAULT_FONT_RESOLUTION,
+}) {
+  const safeUpscale = upscale > 0 ? upscale : DEFAULT_UPSCALE;
+  const logicalWidth = screenWidth / safeUpscale;
+  const logicalHeight = screenHeight / safeUpscale;
+
+  return {
+    screenWidth,
+    screenHeight,
+    logicalWidth,
+    logicalHeight,
+    upscale: safeUpscale,
+    fontResolution,
+    gridWidth,
+    gridHeight,
+    columns: Math.max(1, Math.floor(logicalWidth / gridWidth)),
+    rows: Math.max(1, Math.floor(logicalHeight / gridHeight)),
+  };
+}
+
+export function getCenterCell(viewport) {
+  return {
+    x: Math.floor(viewport.columns / 2),
+    y: Math.floor(viewport.rows / 2),
+  };
+}
+
+export function clampCell(cell, viewport) {
+  return {
+    x: Math.min(Math.max(cell.x, 0), viewport.columns - 1),
+    y: Math.min(Math.max(cell.y, 0), viewport.rows - 1),
+  };
+}
+
+export function moveCell(cell, direction, viewport) {
+  return clampCell(
+    {
+      x: cell.x + direction.x,
+      y: cell.y + direction.y,
+    },
+    viewport,
+  );
+}
+
+export function getCellCenter(cell, viewport) {
+  return {
+    x: cell.x * viewport.gridWidth + viewport.gridWidth / 2,
+    y: cell.y * viewport.gridHeight + viewport.gridHeight / 2,
+  };
+}
