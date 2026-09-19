@@ -10,6 +10,7 @@ import {
   TORCH_GLYPH,
   WALL_GLYPH,
   createWorld,
+  createWorldCooperative,
   getRandomSeedFromSearch,
   getVisibleGlyph,
   isWalkableCell,
@@ -195,4 +196,40 @@ test("blocks world movement into walls and outside bounds", () => {
   const walkableCell = { x: wallAdjacentCell.x, y: wallAdjacentCell.y };
   assert.deepEqual(moveWorldCell(walkableCell, { x: -1, y: 0 }, world), walkableCell);
   assert.equal(isWalkableCell(world, { x: 0, y: wallAdjacentCell.y }), false);
+});
+
+test("cooperative generation preserves completed seeded world data and ordered phases", async () => {
+  const options = { rows: 40, columns: 60, torchCount: 9, seed: "cooperative-equality" };
+  const synchronous = createWorld(options);
+  const phases = [];
+  let yields = 0;
+  const cooperative = await createWorldCooperative(options, {
+    sliceMs: 0,
+    yieldToFrame: async () => { yields += 1; },
+    onPhase: (phase) => phases.push(phase),
+  });
+  assert.deepEqual(cooperative, synchronous);
+  assert.deepEqual(phases, ["cave", "cave-region", "water-lakes", "water", "walkability-region", "terrain", "complete"]);
+  assert.ok(yields > 1);
+});
+
+test("aborted generation never publishes a partial world and a replacement can finish", async () => {
+  const options = { rows: 40, columns: 60, seed: "replacement" };
+  const controller = new AbortController();
+  let yielded = false;
+  const stale = createWorldCooperative(options, {
+    signal: controller.signal,
+    sliceMs: 0,
+    yieldToFrame: async () => {
+      yielded = true;
+      controller.abort();
+    },
+  });
+  await assert.rejects(stale, { name: "AbortError" });
+  assert.equal(yielded, true);
+  const replacement = await createWorldCooperative(options, {
+    sliceMs: 0,
+    yieldToFrame: async () => {},
+  });
+  assert.deepEqual(replacement, createWorld(options));
 });

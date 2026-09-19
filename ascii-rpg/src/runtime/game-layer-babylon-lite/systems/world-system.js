@@ -46,7 +46,7 @@ function assertDimensions(rows, columns) {
   }
 }
 
-function createGeneratedSeed() {
+export function createGeneratedSeed() {
   const randomPart = Math.floor(Math.random() * 0x100000000).toString(36);
   return `${Date.now().toString(36)}-${randomPart}`;
 }
@@ -68,9 +68,13 @@ function createRandom(seed) {
 }
 
 function createGrid(rows, columns, valueFactory) {
-  return Array.from({ length: rows }, (_, y) =>
-    Array.from({ length: columns }, (_, x) => valueFactory(x, y)),
-  );
+  const grid = new Array(rows);
+  for (let y = 0; y < rows; y += 1) {
+    const row = new Array(columns);
+    for (let x = 0; x < columns; x += 1) row[x] = valueFactory(x, y);
+    grid[y] = row;
+  }
+  return grid;
 }
 
 function isBorderCell(x, y, rows, columns) {
@@ -79,6 +83,10 @@ function isBorderCell(x, y, rows, columns) {
 
 function cellKey(cell) {
   return `${cell.x},${cell.y}`;
+}
+
+function cellIndex(cell, columns) {
+  return cell.y * columns + cell.x;
 }
 
 function countWalls(grid, x, y) {
@@ -98,10 +106,10 @@ function smoothGrid(grid, rows, columns) {
   });
 }
 
-function getRegion(grid, start, rows, columns, isBlocked = (cell) => cell) {
+function getRegion(grid, start, rows, columns, isBlocked, visited) {
   const region = [];
   const pending = [start];
-  const visited = new Set([cellKey(start)]);
+  visited[start.y * columns + start.x] = 1;
   let pendingIndex = 0;
 
   while (pendingIndex < pending.length) {
@@ -110,13 +118,13 @@ function getRegion(grid, start, rows, columns, isBlocked = (cell) => cell) {
     region.push(cell);
     for (const direction of CARDINAL_DIRECTIONS) {
       const next = { x: cell.x + direction.x, y: cell.y + direction.y };
-      const key = cellKey(next);
+      const index = next.y * columns + next.x;
       if (
         next.x > 0 && next.x < columns - 1 &&
         next.y > 0 && next.y < rows - 1 &&
-        !isBlocked(next) && !visited.has(key)
+        !isBlocked(next) && !visited[index]
       ) {
-        visited.add(key);
+        visited[index] = 1;
         pending.push(next);
       }
     }
@@ -125,15 +133,13 @@ function getRegion(grid, start, rows, columns, isBlocked = (cell) => cell) {
 }
 
 function getLargestRegion(grid, rows, columns, isBlocked = (cell) => grid[cell.y][cell.x]) {
-  const visited = new Set();
+  const visited = new Uint8Array(rows * columns);
   let largestRegion = [];
   for (let y = 1; y < rows - 1; y += 1) {
     for (let x = 1; x < columns - 1; x += 1) {
       const cell = { x, y };
-      const key = cellKey(cell);
-      if (isBlocked(cell) || visited.has(key)) continue;
-      const region = getRegion(grid, cell, rows, columns, isBlocked);
-      for (const member of region) visited.add(cellKey(member));
+      if (isBlocked(cell) || visited[y * columns + x]) continue;
+      const region = getRegion(grid, cell, rows, columns, isBlocked, visited);
       if (region.length > largestRegion.length) largestRegion = region;
     }
   }
@@ -173,49 +179,75 @@ function getCellNeighbors(cell, rows, columns) {
     ));
 }
 
-function countSelectedNeighbors(cell, selected, rows, columns) {
-  return getCellNeighbors(cell, rows, columns)
-    .filter((neighbor) => selected.has(cellKey(neighbor))).length;
+function countSelectedNeighbors(key, selectedStamp, stamp, rows, columns) {
+  const x = key % columns;
+  const y = Math.floor(key / columns);
+  let count = 0;
+  if (y > 1 && selectedStamp[key - columns] === stamp) count += 1;
+  if (x < columns - 2 && selectedStamp[key + 1] === stamp) count += 1;
+  if (y < rows - 2 && selectedStamp[key + columns] === stamp) count += 1;
+  if (x > 1 && selectedStamp[key - 1] === stamp) count += 1;
+  return count;
 }
 
-function selectLakeCells(region, regionKeys, rows, columns, random, targetSize, reserved) {
+function createLakeScratch(rows, columns) {
+  const count = rows * columns;
+  return {
+    reserved: new Uint8Array(count),
+    regionKeys: new Uint8Array(count),
+    selectedStamp: new Uint32Array(count),
+    frontierStamp: new Uint32Array(count),
+    stamp: 0,
+  };
+}
+
+function selectLakeCells(region, rows, columns, random, targetSize, scratch) {
+  const { reserved, regionKeys, selectedStamp, frontierStamp } = scratch;
   let start = null;
   for (let attempt = 0; attempt < 100; attempt += 1) {
     const candidate = region[Math.floor(random() * region.length)];
-    if (!reserved.has(cellKey(candidate))) {
+    if (!reserved[cellIndex(candidate, columns)]) {
       start = candidate;
       break;
     }
   }
   if (!start) return [];
 
-  const selected = new Set([cellKey(start)]);
+  const stamp = ++scratch.stamp;
+  const selected = [cellIndex(start, columns)];
+  selectedStamp[selected[0]] = stamp;
   const frontier = [];
-  const frontierIndexes = new Map();
-  const addFrontier = (cell) => {
-    for (const neighbor of getCellNeighbors(cell, rows, columns)) {
-      const key = cellKey(neighbor);
+  const addFrontier = (key) => {
+    const x = key % columns;
+    const y = Math.floor(key / columns);
+    const neighbors = [
+      y > 1 ? key - columns : -1,
+      x < columns - 2 ? key + 1 : -1,
+      y < rows - 2 ? key + columns : -1,
+      x > 1 ? key - 1 : -1,
+    ];
+    for (const neighbor of neighbors) {
       if (
-        regionKeys.has(key) &&
-        !selected.has(key) &&
-        !reserved.has(key) &&
-        !frontierIndexes.has(key)
+        neighbor >= 0 && regionKeys[neighbor] &&
+        selectedStamp[neighbor] !== stamp &&
+        !reserved[neighbor] &&
+        frontierStamp[neighbor] !== stamp
       ) {
-        frontierIndexes.set(key, frontier.length);
+        frontierStamp[neighbor] = stamp;
         frontier.push(neighbor);
       }
     }
   };
-  addFrontier(start);
+  addFrontier(selected[0]);
 
-  while (selected.size < targetSize && frontier.length > 0) {
+  while (selected.length < targetSize && frontier.length > 0) {
     const sampleCount = Math.min(8, frontier.length);
     let selectedIndex = Math.floor(random() * frontier.length);
     let selectedScore = -1;
     for (let sample = 0; sample < sampleCount; sample += 1) {
       const candidateIndex = Math.floor(random() * frontier.length);
       const candidate = frontier[candidateIndex];
-      const score = countSelectedNeighbors(candidate, selected, rows, columns) * 3 + random();
+      const score = countSelectedNeighbors(candidate, selectedStamp, stamp, rows, columns) * 3 + random();
       if (score > selectedScore) {
         selectedScore = score;
         selectedIndex = candidateIndex;
@@ -223,47 +255,57 @@ function selectLakeCells(region, regionKeys, rows, columns, random, targetSize, 
     }
 
     const next = frontier[selectedIndex];
-    const nextKey = cellKey(next);
+    const nextKey = next;
     const last = frontier.pop();
-    frontierIndexes.delete(nextKey);
+    frontierStamp[nextKey] = 0;
     if (selectedIndex < frontier.length) {
       frontier[selectedIndex] = last;
-      frontierIndexes.set(cellKey(last), selectedIndex);
     }
-    selected.add(nextKey);
-    addFrontier(next);
+    selectedStamp[nextKey] = stamp;
+    selected.push(nextKey);
+    addFrontier(nextKey);
   }
 
-  return [...selected].map((key) => {
-    const [x, y] = key.split(",").map(Number);
-    return { x, y };
+  return selected.map((key) => {
+    return { x: key % columns, y: Math.floor(key / columns) };
   });
 }
 
-function reserveLakeCells(lake, reserved) {
+function reserveLakeCells(lake, reserved, columns) {
   // Keep lakes independent in the data layer while allowing the aggregate
   // target to fill the available cave instead of consuming a second cell
   // for every water cell as a visual moat.
-  for (const cell of lake) reserved.add(cellKey(cell));
+  for (const cell of lake) reserved[cellIndex(cell, columns)] = 1;
+}
+
+function getInteriorNeighborIndexes(key, rows, columns) {
+  const x = key % columns;
+  const y = Math.floor(key / columns);
+  const neighbors = [];
+  if (y > 1) neighbors.push(key - columns);
+  if (x < columns - 2) neighbors.push(key + 1);
+  if (y < rows - 2) neighbors.push(key + columns);
+  if (x > 1) neighbors.push(key - 1);
+  return neighbors;
 }
 
 function assignWaterDepths(waterCells, rows, columns) {
   if (waterCells.length === 0) return new Map();
-  const waterKeys = new Set(waterCells.map(cellKey));
-  const boundary = waterCells.filter((cell) => getCellNeighbors(cell, rows, columns)
-    .some((neighbor) => !waterKeys.has(cellKey(neighbor))));
-  const distances = new Map(boundary.map((cell) => [cellKey(cell), 0]));
+  const waterKeys = new Set(waterCells.map((cell) => cellIndex(cell, columns)));
+  const boundary = waterCells.map((cell) => cellIndex(cell, columns))
+    .filter((key) => getInteriorNeighborIndexes(key, rows, columns)
+      .some((neighbor) => !waterKeys.has(neighbor)));
+  const distances = new Map(boundary.map((key) => [key, 0]));
   const pending = [...boundary];
   let pendingIndex = 0;
   while (pendingIndex < pending.length) {
-    const cell = pending[pendingIndex];
+    const cellKeyIndex = pending[pendingIndex];
     pendingIndex += 1;
-    const distance = distances.get(cellKey(cell));
-    for (const neighbor of getCellNeighbors(cell, rows, columns)) {
-      const key = cellKey(neighbor);
+    const distance = distances.get(cellKeyIndex);
+    for (const key of getInteriorNeighborIndexes(cellKeyIndex, rows, columns)) {
       if (waterKeys.has(key) && !distances.has(key)) {
         distances.set(key, distance + 1);
-        pending.push(neighbor);
+        pending.push(key);
       }
     }
   }
@@ -271,8 +313,8 @@ function assignWaterDepths(waterCells, rows, columns) {
   const center = getCenterMostCell(waterCells, rows, columns);
   const deepestDistance = Math.max(...distances.values());
   const ordered = [...waterCells].sort((left, right) => {
-    const leftDepth = distances.get(cellKey(left)) ?? 0;
-    const rightDepth = distances.get(cellKey(right)) ?? 0;
+    const leftDepth = distances.get(cellIndex(left, columns)) ?? 0;
+    const rightDepth = distances.get(cellIndex(right, columns)) ?? 0;
     const leftCenterDistance = Math.abs(left.x - center.x) + Math.abs(left.y - center.y);
     const rightCenterDistance = Math.abs(right.x - center.x) + Math.abs(right.y - center.y);
     return rightDepth - leftDepth
@@ -282,7 +324,7 @@ function assignWaterDepths(waterCells, rows, columns) {
   const depths = new Map();
   if (deepestDistance >= 2) {
     ordered.forEach((cell) => {
-      const distance = distances.get(cellKey(cell)) ?? 0;
+      const distance = distances.get(cellIndex(cell, columns)) ?? 0;
       const depth = distance === deepestDistance
         ? "deep"
         : distance === deepestDistance - 1 ? "medium" : "shallow";
@@ -292,12 +334,11 @@ function assignWaterDepths(waterCells, rows, columns) {
     // Very thin 5-20-cell lakes cannot express three literal graph-distance
     // rings. Keep their center deepest, make its immediate lake neighbors
     // middle depth, and leave any remaining boundary cells shallow.
-    const deepKeys = new Set([cellKey(ordered[0])]);
-    const mediumKeys = new Set(getCellNeighbors(ordered[0], rows, columns)
-      .map(cellKey)
+    const deepKeys = new Set([cellIndex(ordered[0], columns)]);
+    const mediumKeys = new Set(getInteriorNeighborIndexes(cellIndex(ordered[0], columns), rows, columns)
       .filter((key) => waterKeys.has(key)));
     ordered.forEach((cell) => {
-      const key = cellKey(cell);
+      const key = cellIndex(cell, columns);
       const depth = deepKeys.has(key) ? "deep" : mediumKeys.has(key) ? "medium" : "shallow";
       depths.set(cellKey(cell), depth);
     });
@@ -308,8 +349,8 @@ function assignWaterDepths(waterCells, rows, columns) {
 function createWaterPass({ region, rows, columns, random, waterFillPercent }) {
   const targetCount = Math.min(region.length, Math.round(region.length * waterFillPercent / 100));
   const lakes = [];
-  const reserved = new Set();
-  const regionKeys = new Set(region.map(cellKey));
+  const scratch = createLakeScratch(rows, columns);
+  for (const cell of region) scratch.regionKeys[cellIndex(cell, columns)] = 1;
   let selectedCount = 0;
   let failedLakeAttempts = 0;
 
@@ -320,14 +361,14 @@ function createWaterPass({ region, rows, columns, random, waterFillPercent }) {
       MIN_WATER_LAKE_SIZE + Math.floor(random() * (MAX_WATER_LAKE_SIZE - MIN_WATER_LAKE_SIZE + 1)),
     );
     if (targetSize < MIN_WATER_LAKE_SIZE) break;
-    const lake = selectLakeCells(region, regionKeys, rows, columns, random, targetSize, reserved);
+    const lake = selectLakeCells(region, rows, columns, random, targetSize, scratch);
     if (lake.length < MIN_WATER_LAKE_SIZE) {
       failedLakeAttempts += 1;
       continue;
     }
     lakes.push(lake);
     selectedCount += lake.length;
-    reserveLakeCells(lake, reserved);
+    reserveLakeCells(lake, scratch.reserved, columns);
   }
 
   const depths = new Map();
@@ -399,6 +440,27 @@ function selectTorchCells(terrain, start, rows, columns, random, torchCount) {
   return candidates.slice(0, torchCount);
 }
 
+async function selectTorchCellsCooperative(terrain, start, rows, columns, random, torchCount, checkpoint) {
+  const candidates = [];
+  for (let y = 1; y < rows - 1; y += 1) {
+    for (let x = 1; x < columns - 1; x += 1) {
+      if (isTorchCandidate(terrain, x, y, rows, columns, start)) candidates.push({ x, y });
+    }
+    const pause = checkpoint();
+    if (pause) await pause;
+  }
+  if (candidates.length < torchCount) return null;
+  for (let index = candidates.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(random() * (index + 1));
+    [candidates[index], candidates[swapIndex]] = [candidates[swapIndex], candidates[index]];
+    if ((index & 1023) === 0) {
+      const pause = checkpoint();
+      if (pause) await pause;
+    }
+  }
+  return candidates.slice(0, torchCount);
+}
+
 function isSameCell(first, second) {
   return first.x === second.x && first.y === second.y;
 }
@@ -431,9 +493,10 @@ export function createWorld({
     const caveRegion = getLargestRegion(walls, rows, columns);
     if (caveRegion.length < minimumWalkableCells) continue;
 
-    const caveRegionKeys = new Set(caveRegion.map(cellKey));
+    const caveRegionKeys = new Uint8Array(rows * columns);
+    for (const cell of caveRegion) caveRegionKeys[cellIndex(cell, columns)] = 1;
     const terrainKinds = ground.map((row, y) => row.map((kind, x) => (
-      walls[y][x] || !caveRegionKeys.has(`${x},${y}`) ? "wall" : kind
+      walls[y][x] || !caveRegionKeys[y * columns + x] ? "wall" : kind
     )));
     const region = caveRegion.filter((cell) => terrainKinds[cell.y][cell.x] !== "wall");
     const waterPass = createWaterPass({ region, rows, columns, random, waterFillPercent });
@@ -445,10 +508,11 @@ export function createWorld({
     const walkability = createWalkabilityPass(terrainKinds, rows, columns);
     const walkableRegion = getLargestRegion(walkability, rows, columns, (cell) => !walkability[cell.y][cell.x]);
     if (walkableRegion.length < minimumWalkableCells) continue;
-    const walkableRegionKeys = new Set(walkableRegion.map(cellKey));
+    const walkableRegionKeys = new Uint8Array(rows * columns);
+    for (const cell of walkableRegion) walkableRegionKeys[cellIndex(cell, columns)] = 1;
     for (let y = 1; y < rows - 1; y += 1) {
       for (let x = 1; x < columns - 1; x += 1) {
-        if (walkability[y][x] && !walkableRegionKeys.has(`${x},${y}`)) {
+        if (walkability[y][x] && !walkableRegionKeys[y * columns + x]) {
           terrainKinds[y][x] = "wall";
           walkability[y][x] = false;
         }
@@ -484,6 +548,260 @@ export function createWorld({
     };
   }
 
+  throw new Error("Unable to generate a connected walkable world with the requested settings.");
+}
+
+function generationAbortError() {
+  const error = new Error("World generation was cancelled.");
+  error.name = "AbortError";
+  return error;
+}
+
+export function createFrameCheckpoint({
+  signal,
+  sliceMs = 12,
+  yieldToFrame = () => globalThis.scheduler?.yield?.() ?? new Promise((resolve) => setTimeout(resolve, 0)),
+  onYield,
+} = {}) {
+  let sliceStart = performance.now();
+  return () => {
+    if (signal?.aborted) throw generationAbortError();
+    if (performance.now() - sliceStart < sliceMs) return null;
+    const waitingSince = performance.now();
+    return Promise.resolve(yieldToFrame()).then(() => {
+      if (signal?.aborted) throw generationAbortError();
+      sliceStart = performance.now();
+      onYield?.(sliceStart - waitingSince);
+    });
+  };
+}
+
+async function createGridCooperative(rows, columns, valueFactory, checkpoint) {
+  const grid = new Array(rows);
+  for (let y = 0; y < rows; y += 1) {
+    const row = new Array(columns);
+    for (let x = 0; x < columns; x += 1) row[x] = valueFactory(x, y);
+    grid[y] = row;
+    const pause = checkpoint();
+    if (pause) await pause;
+  }
+  return grid;
+}
+
+async function getRegionCooperative(grid, start, rows, columns, isBlocked, visited, checkpoint) {
+  const region = [];
+  const pending = [start];
+  visited[start.y * columns + start.x] = 1;
+  let pendingIndex = 0;
+  while (pendingIndex < pending.length) {
+    const cell = pending[pendingIndex];
+    pendingIndex += 1;
+    region.push(cell);
+    for (const direction of CARDINAL_DIRECTIONS) {
+      const next = { x: cell.x + direction.x, y: cell.y + direction.y };
+      const index = next.y * columns + next.x;
+      if (
+        next.x > 0 && next.x < columns - 1 &&
+        next.y > 0 && next.y < rows - 1 &&
+        !isBlocked(next) && !visited[index]
+      ) {
+        visited[index] = 1;
+        pending.push(next);
+      }
+    }
+    if ((pendingIndex & 1023) === 0) {
+      const pause = checkpoint();
+      if (pause) await pause;
+    }
+  }
+  return region;
+}
+
+async function getLargestRegionCooperative(grid, rows, columns, isBlocked, checkpoint) {
+  const visited = new Uint8Array(rows * columns);
+  let largestRegion = [];
+  for (let y = 1; y < rows - 1; y += 1) {
+    for (let x = 1; x < columns - 1; x += 1) {
+      const cell = { x, y };
+      if (isBlocked(cell) || visited[y * columns + x]) continue;
+      const region = await getRegionCooperative(grid, cell, rows, columns, isBlocked, visited, checkpoint);
+      if (region.length > largestRegion.length) largestRegion = region;
+    }
+    const pause = checkpoint();
+    if (pause) await pause;
+  }
+  return largestRegion;
+}
+
+async function createWaterPassCooperative({ region, rows, columns, random, waterFillPercent, checkpoint, markPhase }) {
+  const targetCount = Math.min(region.length, Math.round(region.length * waterFillPercent / 100));
+  const lakes = [];
+  const scratch = createLakeScratch(rows, columns);
+  for (const cell of region) scratch.regionKeys[cellIndex(cell, columns)] = 1;
+  let selectedCount = 0;
+  let failedLakeAttempts = 0;
+  while (selectedCount < targetCount && failedLakeAttempts < 5000) {
+    const remaining = targetCount - selectedCount;
+    const targetSize = Math.min(
+      remaining,
+      MIN_WATER_LAKE_SIZE + Math.floor(random() * (MAX_WATER_LAKE_SIZE - MIN_WATER_LAKE_SIZE + 1)),
+    );
+    if (targetSize < MIN_WATER_LAKE_SIZE) break;
+    const lake = selectLakeCells(region, rows, columns, random, targetSize, scratch);
+    if (lake.length < MIN_WATER_LAKE_SIZE) failedLakeAttempts += 1;
+    else {
+      lakes.push(lake);
+      selectedCount += lake.length;
+      reserveLakeCells(lake, scratch.reserved, columns);
+    }
+    const pause = checkpoint();
+    if (pause) await pause;
+  }
+  markPhase("water-lakes");
+  const depths = new Map();
+  for (const lake of lakes) {
+    for (const [key, depth] of assignWaterDepths(lake, rows, columns)) depths.set(key, depth);
+    const pause = checkpoint();
+    if (pause) await pause;
+  }
+  return { depths, lakes };
+}
+
+/** Complete-world runtime generator. Its checkpoints yield between bounded pieces
+ * while the synchronous createWorld API remains available for deterministic callers. */
+export async function createWorldCooperative({
+  rows,
+  columns,
+  wallFillPercent = DEFAULT_WALL_FILL_PERCENT,
+  smoothingIterations = DEFAULT_SMOOTHING_ITERATIONS,
+  minWalkablePercent = DEFAULT_MIN_WALKABLE_PERCENT,
+  waterFillPercent = DEFAULT_WATER_FILL_PERCENT,
+  torchCount = 3,
+  seed,
+} = {}, scheduling = {}) {
+  assertDimensions(rows, columns);
+  if (wallFillPercent < 0 || wallFillPercent > 100) throw new RangeError("wallFillPercent must be between 0 and 100.");
+  if (!Number.isInteger(smoothingIterations) || smoothingIterations < 0) throw new RangeError("smoothingIterations must be a non-negative integer.");
+  if (minWalkablePercent <= 0 || minWalkablePercent > 1) throw new RangeError("minWalkablePercent must be greater than 0 and at most 1.");
+  if (waterFillPercent < 0 || waterFillPercent > 100) throw new RangeError("waterFillPercent must be between 0 and 100.");
+  if (!Number.isInteger(torchCount) || torchCount < 0) throw new RangeError("torchCount must be a non-negative integer.");
+
+  const checkpoint = createFrameCheckpoint(scheduling);
+  const markPhase = scheduling.onPhase ?? (() => {});
+  const resolvedSeed = seed === undefined ? createGeneratedSeed() : seed;
+  const random = createRandom(resolvedSeed);
+  const minimumWalkableCells = Math.ceil((rows - 2) * (columns - 2) * minWalkablePercent);
+
+  for (let attempt = 0; attempt < MAX_GENERATION_ATTEMPTS; attempt += 1) {
+    const ground = await createGridCooperative(rows, columns, (x, y) => (
+      isBorderCell(x, y, rows, columns) ? "wall" : "ground"
+    ), checkpoint);
+    let walls = await createGridCooperative(rows, columns, (x, y) => (
+      ground[y][x] === "wall" || random() * 100 < wallFillPercent
+    ), checkpoint);
+    for (let iteration = 0; iteration < smoothingIterations; iteration += 1) {
+      const previous = walls;
+      walls = await createGridCooperative(rows, columns, (x, y) => (
+        isBorderCell(x, y, rows, columns) ? true : countWalls(previous, x, y) >= 5
+      ), checkpoint);
+    }
+    markPhase("cave");
+    const caveRegion = await getLargestRegionCooperative(walls, rows, columns, (cell) => walls[cell.y][cell.x], checkpoint);
+    if (caveRegion.length < minimumWalkableCells) continue;
+
+    const caveRegionKeys = new Uint8Array(rows * columns);
+    for (let index = 0; index < caveRegion.length; index += 1) {
+      caveRegionKeys[cellIndex(caveRegion[index], columns)] = 1;
+      if ((index & 1023) === 0) {
+        const pause = checkpoint();
+        if (pause) await pause;
+      }
+    }
+    const terrainKinds = await createGridCooperative(rows, columns, (x, y) => (
+      walls[y][x] || !caveRegionKeys[y * columns + x] ? "wall" : ground[y][x]
+    ), checkpoint);
+    markPhase("cave-region");
+    const region = caveRegion.filter((cell) => terrainKinds[cell.y][cell.x] !== "wall");
+    const waterPass = await createWaterPassCooperative({ region, rows, columns, random, waterFillPercent, checkpoint, markPhase });
+    markPhase("water");
+    let depthIndex = 0;
+    for (const [key, depth] of waterPass.depths) {
+      const [x, y] = key.split(",").map(Number);
+      terrainKinds[y][x] = `${depth}Water`;
+      depthIndex += 1;
+      if ((depthIndex & 1023) === 0) {
+        const pause = checkpoint();
+        if (pause) await pause;
+      }
+    }
+    let pause = checkpoint();
+    if (pause) await pause;
+
+    const walkability = await createGridCooperative(rows, columns, (x, y) => (
+      !isBorderCell(x, y, rows, columns) &&
+      (terrainKinds[y][x] === "ground" || terrainKinds[y][x] === "shallowWater")
+    ), checkpoint);
+    const walkableRegion = await getLargestRegionCooperative(
+      walkability, rows, columns, (cell) => !walkability[cell.y][cell.x], checkpoint,
+    );
+    markPhase("walkability-region");
+    if (walkableRegion.length < minimumWalkableCells) continue;
+    const walkableRegionKeys = new Uint8Array(rows * columns);
+    for (let index = 0; index < walkableRegion.length; index += 1) {
+      walkableRegionKeys[cellIndex(walkableRegion[index], columns)] = 1;
+      if ((index & 1023) === 0) {
+        const pause = checkpoint();
+        if (pause) await pause;
+      }
+    }
+    for (let y = 1; y < rows - 1; y += 1) {
+      for (let x = 1; x < columns - 1; x += 1) {
+        if (walkability[y][x] && !walkableRegionKeys[y * columns + x]) {
+          terrainKinds[y][x] = "wall";
+          walkability[y][x] = false;
+        }
+      }
+      pause = checkpoint();
+      if (pause) await pause;
+    }
+
+    const terrain = await createGridCooperative(rows, columns, (x, y) => {
+      const kind = terrainKinds[y][x];
+      return {
+        kind,
+        depth: kind.endsWith("Water") ? kind.replace("Water", "").toLowerCase() : null,
+        glyph: {
+          wall: WALL_GLYPH, ground: FLOOR_GLYPH, shallowWater: SHALLOW_WATER_GLYPH,
+          mediumWater: MEDIUM_WATER_GLYPH, deepWater: DEEP_WATER_GLYPH,
+        }[kind],
+        walkable: walkability[y][x], color: TERRAIN_COLORS[kind], alpha: 1,
+      };
+    }, checkpoint);
+    markPhase("terrain");
+    const start = getCenterMostCell(walkableRegion, rows, columns);
+    const torchCells = await selectTorchCellsCooperative(terrain, start, rows, columns, random, torchCount, checkpoint);
+    if (!torchCells) continue;
+    const characters = await createGridCooperative(rows, columns, () => null, checkpoint);
+    for (const torch of torchCells) characters[torch.y][torch.x] = TORCH_GLYPH;
+    characters[start.y][start.x] = PLAYER_GLYPH;
+    const waterCells = [];
+    for (const [key] of waterPass.depths) {
+      const [x, y] = key.split(",").map(Number);
+      waterCells.push({ x, y, depth: terrain[y][x].depth });
+      if ((waterCells.length & 1023) === 0) {
+        pause = checkpoint();
+        if (pause) await pause;
+      }
+    }
+    markPhase("complete");
+    if (scheduling.signal?.aborted) throw generationAbortError();
+    return {
+      rows, columns, terrain, characters, torches: torchCells, playerStart: start,
+      generationPasses: [...GENERATION_PASSES], waterCells,
+      waterLakes: waterPass.lakes.map((lake) => lake.map((cell) => ({ ...cell }))),
+      options: { wallFillPercent, smoothingIterations, minWalkablePercent, waterFillPercent, torchCount, seed: resolvedSeed },
+    };
+  }
   throw new Error("Unable to generate a connected walkable world with the requested settings.");
 }
 

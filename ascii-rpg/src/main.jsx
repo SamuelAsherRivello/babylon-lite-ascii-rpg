@@ -20,6 +20,7 @@ void startGameLayer(gameLayer, getPalette(), getFontId())
     subscribeToFont(sendFontSnapshot);
   })
   .catch((error) => {
+    if (error.name === "AbortError") return;
     gameLayer.dataset.gameStatus = "unavailable";
     console.error(error);
   });
