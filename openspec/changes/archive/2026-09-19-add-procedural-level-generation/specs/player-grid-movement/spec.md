@@ -1,36 +1,6 @@
-# player-grid-movement Specification
+# Spec Delta
 
-## Purpose
-Provides the first playable ASCII-RPG space: a resizable screen-sized logical
-world with a grid-aligned player that responds consistently to keyboard input.
-
-## Requirements
-
-### Requirement: Full-screen logical rendering
-
-The game SHALL render into the full browser viewport with no outer margins.
-The logical viewport dimensions SHALL be the current screen dimensions divided
-by the configured `upscale` value, which defaults to `1.0`. The game SHALL
-support a default grid-cell width of `32` logical units and a default grid-cell
-height of `32` logical units.
-
-#### Scenario: Default one-to-one rendering
-
-- **WHEN** the browser viewport is `1280 x 720` and `upscale` is `1.0`
-- **THEN** the logical viewport SHALL be `1280 x 720` and each grid cell SHALL
-  occupy `32 x 32` logical units
-
-#### Scenario: Upscaled logical rendering
-
-- **WHEN** the browser viewport is `1280 x 720` and `upscale` is `2.0`
-- **THEN** the logical viewport SHALL be `640 x 360` and the logical output
-  SHALL be scaled to fill the `1280 x 720` screen
-
-#### Scenario: Browser resize
-
-- **WHEN** the browser viewport changes size
-- **THEN** the screen dimensions, logical dimensions, and rendered grid SHALL
-  update to fill the new viewport without adding margins
+## MODIFIED Requirements
 
 ### Requirement: Grid-aligned player rendering
 

@@ -78,13 +78,30 @@ export function clampCell(cell, viewport) {
 }
 
 export function moveCell(cell, direction, viewport) {
-  return clampCell(
-    {
-      x: cell.x + direction.x,
-      y: cell.y + direction.y,
-    },
-    viewport,
-  );
+  const nextCell = {
+    x: cell.x + direction.x,
+    y: cell.y + direction.y,
+  };
+
+  return clampCell(nextCell, viewport);
+}
+
+export function moveWorldCell(cell, direction, world) {
+  const nextCell = {
+    x: cell.x + direction.x,
+    y: cell.y + direction.y,
+  };
+
+  if (
+    nextCell.x < 0 ||
+    nextCell.y < 0 ||
+    nextCell.x >= world.columns ||
+    nextCell.y >= world.rows
+  ) {
+    return cell;
+  }
+
+  return world.terrain[nextCell.y][nextCell.x].walkable ? nextCell : cell;
 }
 
 export function getCellCenter(cell, viewport) {
