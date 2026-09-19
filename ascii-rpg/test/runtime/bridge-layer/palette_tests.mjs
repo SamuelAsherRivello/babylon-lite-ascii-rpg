@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
   DEFAULT_PALETTE_ALPHA,
@@ -69,4 +70,21 @@ test("toggles index and alphabet palette ordering", () => {
   assert.equal(indexAscending[0].code, 32);
   assert.equal(indexDescending[0].unicode, "U+2022");
   assert.equal(alphabetAscending[0].glyph, " ");
+});
+
+test("ships blue defaults for the water glyphs", async () => {
+  const data = JSON.parse(await readFile(new URL(
+    "../../../src/runtime/game-layer-babylon-lite/data/palette_data.json",
+    import.meta.url,
+  ), "utf8"));
+  const palette = createPalette(data);
+  const colors = new Map(palette.map((entry) => [entry.glyph, entry.color]));
+
+  assert.equal(colors.get("~"), "#62c7ff");
+  assert.equal(colors.get("≈"), "#247fc3");
+  assert.equal(colors.get("▓"), "#0b3d91");
+  assert.deepEqual(
+    filterPaletteEntries(palette, "in-maps", new Set(["~", "≈", "▓"])).map((entry) => entry.glyph),
+    ["~", "▓", "≈"],
+  );
 });

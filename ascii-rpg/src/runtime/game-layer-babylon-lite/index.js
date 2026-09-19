@@ -39,7 +39,7 @@ import {
 } from "./systems/world-system.js";
 import { createTimeSystem } from "./systems/time-system.js";
 
-const GLYPHS = ["W", "•", "P"];
+const GLYPHS = ["W", "•", "P", "T", "~", "≈", "▓"];
 const GLYPH_SIZE = 64;
 const WORLD_ROWS = 512;
 const WORLD_COLUMNS = 512;
