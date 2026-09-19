@@ -116,18 +116,30 @@ character-layer glyphs such as `T`; characters SHALL NOT rewrite terrain data.
 - **THEN** the visible character SHALL be rendered while the underlying water
   glyph, depth, and walkability remain available in the terrain layer
 
+#### Scenario: Torch occupies a walkable terrain cell
+
+- **WHEN** a torch is placed in a valid generated world
+- **THEN** that cell SHALL retain its underlying walkable terrain and contain
+  `T` in the character layer
+
 ### Requirement: Top-most cell rendering
 
 The Babylon Lite game layer SHALL render at most one visible glyph for each
 cell. A character glyph SHALL take precedence over the terrain glyph at the
 same position, and the visible glyph SHALL use the active palette style when
 rendered. Empty character cells SHALL render the terrain glyph and its active
-style.
+style. When both a player and a torch would otherwise target the same
+position, the player glyph SHALL remain the visible character.
 
 #### Scenario: Character hides terrain
 
 - **WHEN** a cell contains terrain `•`, `~`, `≈`, or `▓` and a character
 - **THEN** the rendered cell SHALL show only the character glyph
+
+#### Scenario: Torch hides terrain
+
+- **WHEN** a cell contains terrain `•` or `W` and character `T`
+- **THEN** the rendered cell SHALL show only `T`
 
 #### Scenario: Empty character layer shows terrain
 

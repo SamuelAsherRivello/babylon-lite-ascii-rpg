@@ -129,6 +129,14 @@ test("places three deterministic torches on wall-adjacent walkable cells", () =>
   }
 });
 
+test("honors a density-derived requested torch count", () => {
+  const world = createWorld({ rows: 20, columns: 30, torchCount: 5, seed: "torch-density" });
+
+  assert.equal(world.options.torchCount, 5);
+  assert.equal(world.torches.length, 5);
+  assert.equal(world.characters.flat().filter((glyph) => glyph === TORCH_GLYPH).length, 5);
+});
+
 test("restores a torch after the player leaves its cell", () => {
   const world = createWorld({ rows: 12, columns: 20, seed: "torch-overlay" });
   const torch = world.torches[0];

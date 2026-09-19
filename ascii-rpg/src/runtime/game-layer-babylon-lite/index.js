@@ -44,6 +44,7 @@ const GLYPHS = ["W", "•", "P", "T", "~", "≈", "▓"];
 const GLYPH_SIZE = 64;
 const WORLD_ROWS = 512;
 const WORLD_COLUMNS = 512;
+const TORCHES_PER_SCREEN = 3;
 
 function colorToLinearRgba({ color, alpha }) {
   const hex = color.slice(1);
@@ -81,6 +82,15 @@ function createViewportForWindow(zoom = DEFAULT_ZOOM) {
   });
 }
 
+function getTorchCountForViewport(viewport) {
+  const worldArea = WORLD_ROWS * WORLD_COLUMNS;
+  const visibleScreenArea = Math.max(1, viewport.rows * viewport.columns);
+  return Math.max(
+    TORCHES_PER_SCREEN,
+    Math.round((worldArea / visibleScreenArea) * TORCHES_PER_SCREEN),
+  );
+}
+
 /**
  * Starts the non-React Babylon Lite game runtime and returns its narrow UI bridge.
  * The bridge deliberately exposes palette snapshots and disposal only.
@@ -108,6 +118,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   let world = createWorld({
     rows: WORLD_ROWS,
     columns: WORLD_COLUMNS,
+    torchCount: getTorchCountForViewport(viewport),
     seed: getRandomSeedFromSearch(window.location.search),
   });
   const worldSeed = world.options.seed;

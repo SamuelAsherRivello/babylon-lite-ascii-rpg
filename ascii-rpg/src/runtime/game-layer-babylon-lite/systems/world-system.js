@@ -384,19 +384,19 @@ function isTorchCandidate(terrain, x, y, rows, columns, start) {
   });
 }
 
-function selectTorchCells(terrain, start, rows, columns, random) {
+function selectTorchCells(terrain, start, rows, columns, random, torchCount) {
   const candidates = [];
   for (let y = 1; y < rows - 1; y += 1) {
     for (let x = 1; x < columns - 1; x += 1) {
       if (isTorchCandidate(terrain, x, y, rows, columns, start)) candidates.push({ x, y });
     }
   }
-  if (candidates.length < 3) return null;
+  if (candidates.length < torchCount) return null;
   for (let index = candidates.length - 1; index > 0; index -= 1) {
     const swapIndex = Math.floor(random() * (index + 1));
     [candidates[index], candidates[swapIndex]] = [candidates[swapIndex], candidates[index]];
   }
-  return candidates.slice(0, 3);
+  return candidates.slice(0, torchCount);
 }
 
 function isSameCell(first, second) {
@@ -410,6 +410,7 @@ export function createWorld({
   smoothingIterations = DEFAULT_SMOOTHING_ITERATIONS,
   minWalkablePercent = DEFAULT_MIN_WALKABLE_PERCENT,
   waterFillPercent = DEFAULT_WATER_FILL_PERCENT,
+  torchCount = 3,
   seed,
 } = {}) {
   assertDimensions(rows, columns);
@@ -417,6 +418,7 @@ export function createWorld({
   if (!Number.isInteger(smoothingIterations) || smoothingIterations < 0) throw new RangeError("smoothingIterations must be a non-negative integer.");
   if (minWalkablePercent <= 0 || minWalkablePercent > 1) throw new RangeError("minWalkablePercent must be greater than 0 and at most 1.");
   if (waterFillPercent < 0 || waterFillPercent > 100) throw new RangeError("waterFillPercent must be between 0 and 100.");
+  if (!Number.isInteger(torchCount) || torchCount < 0) throw new RangeError("torchCount must be a non-negative integer.");
 
   const resolvedSeed = seed === undefined ? createGeneratedSeed() : seed;
   const random = createRandom(resolvedSeed);
@@ -455,7 +457,7 @@ export function createWorld({
 
     const terrain = createTerrainCells(terrainKinds, walkability);
     const start = getCenterMostCell(walkableRegion, rows, columns);
-    const torchCells = selectTorchCells(terrain, start, rows, columns, random);
+    const torchCells = selectTorchCells(terrain, start, rows, columns, random, torchCount);
     if (!torchCells) continue;
 
     return {
@@ -476,6 +478,7 @@ export function createWorld({
         smoothingIterations,
         minWalkablePercent,
         waterFillPercent,
+        torchCount,
         seed: resolvedSeed,
       },
     };
