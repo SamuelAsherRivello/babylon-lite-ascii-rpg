@@ -7,7 +7,7 @@ body {
   overflow: hidden;
 }
 
-#content_layer,
+#game_layer,
 #game_canvas {
   position: fixed;
   inset: 0;
@@ -16,7 +16,7 @@ body {
   height: 100vh;
 }
 
-#content_layer {
+#game_layer {
   z-index: 0;
 }
 
@@ -136,6 +136,27 @@ body {
   font-size: 16pt;
   font-weight: 700;
   line-height: 1.4;
+}
+
+.prompt_tab {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #999;
+  cursor: pointer;
+  font: inherit;
+}
+
+.prompt_tab[aria-selected="true"] {
+  color: #f5f5f5;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.prompt_tab:focus-visible {
+  outline: 2px solid #f5f5f5;
+  outline-offset: 3px;
 }
 
 .prompt_body {
@@ -315,6 +336,35 @@ body {
   color: #f5f5f5;
   cursor: pointer;
   font: inherit;
+}
+
+.font_editor_body {
+  max-width: 420px;
+  padding: 24px 16px;
+}
+
+.font_select_label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+}
+
+.font_select {
+  width: 100%;
+  border: 1px solid #f5f5f5;
+  padding: 0.5rem;
+  background: #1b1b1b;
+  color: #f5f5f5;
+  font: inherit;
+}
+
+.font_preview {
+  margin-top: 1rem;
+  border: 1px solid #555;
+  padding: 1rem;
+  background: #1b1b1b;
+  font-size: 32pt;
+  text-align: center;
 }
 
 .palette_warning,

@@ -1,6 +1,15 @@
 import { Component, useEffect, useState, useSyncExternalStore } from "react";
 import { HexColorPicker } from "react-colorful";
 import versionText from "../../version.txt?raw";
+import {
+  commitFont,
+  getFontId,
+  getSavedFontId,
+  previewFont,
+  restoreFontPreview,
+  subscribeToFont,
+} from "./font-store.js";
+import { DEFAULT_FONT_ID, FONT_OPTIONS, getFontOption } from "./font.js";
 import { commitPalette, getPalette, subscribeToPalette } from "./palette-store.js";
 import {
   filterPaletteEntries,
@@ -11,6 +20,8 @@ import {
   sortPaletteEntries,
 } from "./palette.js";
 import { withUrlArgument } from "./url-arguments.js";
+import { getTimeSnapshot, sendPaletteSnapshot, subscribeToTime } from "./game-bridge.js";
+import { formatWorldTime } from "./time-system.js";
 import { FLOOR_GLYPH, PLAYER_GLYPH, WALL_GLYPH } from "./world-grid.js";
 
 const fullscreenStorageKey = "babylon-lite-ascii-rpg.fullscreen";
@@ -47,12 +58,21 @@ function GitHubMark() {
 
 export class PromptWindow extends Component {
   state = {
+    activeTab: "palette",
     selectedEntryId: null,
     draft: null,
     anchor: null,
+    fontDraftId: this.props.savedFontId,
+    fontDraftDirty: false,
     warningVisible: false,
     hideWarning: false,
   };
+
+  componentDidUpdate(previousProps) {
+    if (previousProps.savedFontId !== this.props.savedFontId && !this.state.fontDraftDirty) {
+      this.setState({ fontDraftId: this.props.savedFontId });
+    }
+  }
 
   setFilter = (filter) => this.props.onViewStateChange({ ...this.props.viewState, filter });
 
@@ -104,14 +124,47 @@ export class PromptWindow extends Component {
     this.setState({ warningVisible: false, hideWarning: false });
   };
 
+  selectTab = (activeTab) => {
+    this.setState((state) => ({
+      activeTab,
+      fontDraftId: activeTab === "font" && !state.fontDraftDirty ? this.props.savedFontId : state.fontDraftId,
+    }));
+  };
+
+  updateFontDraft = (event) => {
+    const fontId = event.target.value;
+    this.setState({ fontDraftId: fontId, fontDraftDirty: true });
+    this.props.onPreviewFont(fontId);
+  };
+
+  resetFontDraft = () => {
+    this.setState({ fontDraftId: DEFAULT_FONT_ID, fontDraftDirty: true });
+    this.props.onPreviewFont(DEFAULT_FONT_ID);
+  };
+
+  cancelFontEdit = () => {
+    this.props.onCancelFont();
+    this.setState({ fontDraftId: this.props.savedFontId, fontDraftDirty: false });
+  };
+
+  confirmFontEdit = async () => {
+    const result = await this.props.onCommitFont(this.state.fontDraftId);
+    if (result?.ok) {
+      if (result.warning) this.setState({ warningVisible: true, hideWarning: false });
+      this.props.onClose();
+    }
+  };
+
   render() {
-    const { onClose, palette, viewState } = this.props;
+    const { onClose, palette, viewState, fontId } = this.props;
     const {
       selectedEntryId,
       draft,
       anchor,
       warningVisible,
       hideWarning,
+      activeTab,
+      fontDraftId,
     } = this.state;
     const { filter, sortBy, sortDirection } = viewState;
     const selectedEntry = palette.find((entry) => getPaletteEntryId(entry) === selectedEntryId);
@@ -133,7 +186,27 @@ export class PromptWindow extends Component {
           onClick={(event) => event.stopPropagation()}
         >
           <div className="window_header">
-            <h1 id="ascii_palette_title" className="prompt_title">Ascii Palette</h1>
+            <div className="prompt_title" role="tablist" aria-label="Ascii palette sections">
+              <button
+                className="prompt_tab"
+                type="button"
+                role="tab"
+                aria-selected={activeTab === "palette"}
+                onClick={() => this.selectTab("palette")}
+              >
+                Ascii Palette
+              </button>
+              <span aria-hidden="true"> / </span>
+              <button
+                className="prompt_tab"
+                type="button"
+                role="tab"
+                aria-selected={activeTab === "font"}
+                onClick={() => this.selectTab("font")}
+              >
+                Font
+              </button>
+            </div>
             <button
               className="prompt_button window_close"
               type="button"
@@ -143,6 +216,7 @@ export class PromptWindow extends Component {
               X
             </button>
           </div>
+          {activeTab === "palette" ? <>
           <div className="palette_controls" aria-label="Palette filters and sorting">
             <div className="palette_filter_group" aria-label="Palette filters">
               {["all", "in-maps", "customized"].map((filterValue) => (
@@ -221,6 +295,27 @@ export class PromptWindow extends Component {
               </div>
             </div>
           ) : null}
+          </> : (
+            <div className="font_editor_body">
+              <label className="font_select_label" htmlFor="ascii_font_select">Font</label>
+              <select
+                id="ascii_font_select"
+                className="font_select"
+                value={fontDraftId ?? fontId}
+                onChange={this.updateFontDraft}
+              >
+                {FONT_OPTIONS.map((font) => <option key={font.id} value={font.id}>{font.label}</option>)}
+              </select>
+              <div className="font_preview" style={{ fontFamily: getFontOption(fontDraftId ?? fontId).family }}>
+                W • P
+              </div>
+              <div className="palette_editor_actions">
+                <button type="button" onClick={this.confirmFontEdit}>Confirm</button>
+                <button type="button" onClick={this.resetFontDraft}>Reset</button>
+                <button type="button" onClick={this.cancelFontEdit}>Cancel</button>
+              </div>
+            </div>
+          )}
           {warningVisible ? (
             <div className="palette_warning" role="alertdialog" aria-labelledby="palette_warning_title">
               <h2 id="palette_warning_title">Local palette change</h2>
@@ -314,6 +409,9 @@ export function App() {
   const [paletteError, setPaletteError] = useState("");
   const [paletteViewState, setPaletteViewState] = useState(defaultPaletteViewState);
   const palette = useSyncExternalStore(subscribeToPalette, getPalette, getPalette);
+  const fontId = useSyncExternalStore(subscribeToFont, getFontId, getFontId);
+  const savedFontId = useSyncExternalStore(subscribeToFont, getSavedFontId, getSavedFontId);
+  const worldTime = useSyncExternalStore(subscribeToTime, getTimeSnapshot, getTimeSnapshot);
 
   const versionNumber = versionText.trim().replace(/^version=/, "").replace(/^v/, "");
 
@@ -366,6 +464,18 @@ export function App() {
     try {
       setPaletteError("");
       await commitPalette(nextPalette);
+      sendPaletteSnapshot(nextPalette);
+      return { ok: true, warning: !import.meta.env.DEV && window.localStorage.getItem(PALETTE_WARNING_KEY) !== "true" };
+    } catch (error) {
+      setPaletteError(error.message);
+      return { ok: false };
+    }
+  };
+
+  const commitFontSelection = async (nextFontId) => {
+    try {
+      setPaletteError("");
+      await commitFont(nextFontId);
       return { ok: true, warning: !import.meta.env.DEV && window.localStorage.getItem(PALETTE_WARNING_KEY) !== "true" };
     } catch (error) {
       setPaletteError(error.message);
@@ -378,6 +488,9 @@ export function App() {
       <div className="corner corner_top_left">
         <div id="project_title" className="corner_body">
           Ascii RPG
+        </div>
+        <div id="time" className="corner_body">
+          Time: {formatWorldTime(worldTime)}
         </div>
       </div>
       <div className="corner corner_top_right">
@@ -431,10 +544,15 @@ export function App() {
       {asciiPaletteOpen ? (
         <PromptWindow
           palette={palette}
+          fontId={fontId}
+          savedFontId={savedFontId}
           viewState={paletteViewState}
           onViewStateChange={setPaletteViewState}
           error={paletteError}
           onCommit={commitPaletteEntry}
+          onPreviewFont={previewFont}
+          onCommitFont={commitFontSelection}
+          onCancelFont={restoreFontPreview}
           onClose={() => setAsciiPaletteOpen(false)}
         />
       ) : null}
