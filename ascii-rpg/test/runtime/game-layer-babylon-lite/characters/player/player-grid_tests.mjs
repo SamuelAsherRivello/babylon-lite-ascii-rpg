@@ -3,6 +3,9 @@ import test from "node:test";
 import {
   DEFAULT_GRID_HEIGHT,
   DEFAULT_GRID_WIDTH,
+  DEFAULT_ZOOM,
+  MAX_ZOOM,
+  MIN_ZOOM,
   INITIAL_REPEAT_DELAY_MS,
   REPEAT_INTERVAL_MS,
   clampCell,
@@ -11,6 +14,7 @@ import {
   getCenterCell,
   getCombinedDirection,
   getDirectionForKey,
+  getViewOriginForPlayer,
   moveCell,
 } from "../../../../../src/runtime/game-layer-babylon-lite/characters/player/player-grid.js";
 
@@ -26,6 +30,36 @@ test("creates one-to-one and upscaled logical viewports", () => {
   assert.equal(upscaled.logicalHeight, 360);
   assert.equal(upscaled.columns, 20);
   assert.equal(upscaled.rows, 11);
+});
+
+test("changes glyph density with bounded zoom while keeping zoom 5 at the current size", () => {
+  const zoomedOut = createViewport({ screenWidth: 1280, screenHeight: 720, zoom: MIN_ZOOM });
+  const current = createViewport({ screenWidth: 1280, screenHeight: 720, zoom: DEFAULT_ZOOM });
+  const zoomedIn = createViewport({ screenWidth: 1280, screenHeight: 720, zoom: MAX_ZOOM });
+
+  assert.deepEqual(
+    { columns: current.columns, rows: current.rows, gridWidth: current.gridWidth },
+    { columns: 40, rows: 22, gridWidth: 32 },
+  );
+  assert.deepEqual(
+    { columns: zoomedOut.columns, rows: zoomedOut.rows, gridWidth: zoomedOut.gridWidth },
+    { columns: 200, rows: 112, gridWidth: 6.4 },
+  );
+  assert.deepEqual(
+    { columns: zoomedIn.columns, rows: zoomedIn.rows, gridWidth: zoomedIn.gridWidth },
+    { columns: 20, rows: 11, gridWidth: 64 },
+  );
+  assert.equal(createViewport({ screenWidth: 1280, screenHeight: 720, zoom: 100 }).zoom, MAX_ZOOM);
+  assert.equal(createViewport({ screenWidth: 1280, screenHeight: 720, zoom: -2 }).zoom, MIN_ZOOM);
+});
+
+test("centers the viewport on zoom and clamps it to the world", () => {
+  const viewport = createViewport({ screenWidth: 1280, screenHeight: 720, zoom: 5 });
+  const world = { columns: 100, rows: 80 };
+
+  assert.deepEqual(getViewOriginForPlayer({ x: 50, y: 40 }, viewport, world), { x: 30, y: 29 });
+  assert.deepEqual(getViewOriginForPlayer({ x: 0, y: 0 }, viewport, world), { x: 0, y: 0 });
+  assert.deepEqual(getViewOriginForPlayer({ x: 99, y: 79 }, viewport, world), { x: 60, y: 58 });
 });
 
 test("maps WASD and arrow keys to the same directions", () => {
