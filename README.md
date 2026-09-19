@@ -64,7 +64,6 @@ builds. The application targets modern desktop and mobile browsers.
 ### 📦 AI
 
 - `AGENTS.md` contains repository-specific AI agent guidance.
-- `AGENTS_TEMPLATE_USAGE_CHECKLIST.md` contains the template reuse checklist.
 - [openspec](openspec/) contains the repository's specification workflow
   configuration.
 
