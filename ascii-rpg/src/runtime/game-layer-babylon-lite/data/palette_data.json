@@ -1739,6 +1739,13 @@
     },
     {
       "code": null,
+      "unicode": "U+1FA99",
+      "glyph": "🪙",
+      "color": "#ffff00",
+      "alpha": 1
+    },
+    {
+      "code": null,
       "unicode": "U+25B2",
       "glyph": "▲",
       "color": "#ffffff",

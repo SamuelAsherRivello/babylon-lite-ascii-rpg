@@ -27,13 +27,16 @@ import { BoxLayout, CornerLayout, HudBlockLayout } from "./HudLayouts.jsx";
 import { removeFocusableElementsFromTabOrder } from "./button-tab-order.js";
 import { INITIAL_CHARACTER } from "./character-data.js";
 import { deriveBarColors } from "./character-colors.js";
+import { rasterizeGlyph, getGlyphRasterSize } from "../game-layer-babylon-lite/glyph-visual-cache.js";
+import { DEFAULT_ZOOM } from "../game-layer-babylon-lite/zoom-scale.js";
 import {
   getPlatformSettingsDefaults,
   getStoredAspectMode,
   getStoredBooleanValue,
-  getStoredZoomValue,
+  getMigratedStoredZoomValue,
   isMobilePlatform,
 } from "./platform-settings.js";
+import { MAX_ZOOM, MIN_ZOOM, ZOOM_SCALE_STORAGE_VERSION } from "../game-layer-babylon-lite/zoom-scale.js";
 import {
   getTimeSnapshot,
   getGoldSnapshot,
@@ -65,7 +68,7 @@ import {
   getNextCameraMode,
   normalizeCameraMode,
 } from "../bridge-layer/camera.js";
-import { getNextMinimapScale } from "../game-layer-babylon-lite/systems/minimap-zoom.js";
+import { getNextMinimapScale, migrateMinimapScale } from "../game-layer-babylon-lite/systems/minimap-zoom.js";
 import {
   AMBIENT_LIGHT_STEP,
   LIGHTING_PROFILES,
@@ -86,6 +89,7 @@ const fullscreenStorageKey = "babylon-lite-ascii-rpg.fullscreen";
 const aspectStorageKey = "babylon-lite-ascii-rpg.aspect";
 const showUiStorageKey = "babylon-lite-ascii-rpg.show-ui";
 const zoomStorageKey = "babylon-lite-ascii-rpg.zoom";
+const zoomStorageVersionKey = "babylon-lite-ascii-rpg.zoom-version";
 const overgroundAmbientStorageKey = "babylon-lite-ascii-rpg.ambient-overground";
 const undergroundAmbientStorageKey = "babylon-lite-ascii-rpg.ambient-underground";
 const realmStorageKey = "babylon-lite-ascii-rpg.active-realm";
@@ -98,8 +102,8 @@ const playerGpuShadowBleedRangeStorageKey = "babylon-lite-ascii-rpg.player-gpu-s
 const minimapZoomStorageKey = "babylon-lite-ascii-rpg.minimap-zoom";
 const lightingWindowPositionStorageKey = "babylon-lite-ascii-rpg.lighting-window-position";
 const tutorialSkipStorageKey = "babylon-lite-ascii-rpg.tutorial-skip";
-const minZoom = 1;
-const maxZoom = 10;
+const minZoom = MIN_ZOOM;
+const maxZoom = MAX_ZOOM;
 const repositoryUrl = "https://github.com/SamuelAsherRivello/babylon-lite-ascii-rpg";
 const uiMarginPixels = 20;
 const mapGlyphs = new Set([
@@ -144,12 +148,16 @@ const settingsHelp = Object.freeze({
 
 function getStoredZoom() {
   const defaults = getPlatformSettingsDefaults();
-  return getStoredZoomValue(localStorage.getItem(zoomStorageKey), defaults.zoom, minZoom, maxZoom);
+  return getMigratedStoredZoomValue(
+    localStorage.getItem(zoomStorageKey),
+    defaults.zoom,
+    localStorage.getItem(zoomStorageVersionKey),
+  );
 }
 
 function getStoredMinimapZoom() {
   const storedZoom = Number.parseInt(localStorage.getItem(minimapZoomStorageKey), 10);
-  return [2, 4, 1].includes(storedZoom) ? storedZoom : 2;
+  return migrateMinimapScale(storedZoom);
 }
 
 function getStoredBoolean(storageKey, defaultValue) {
@@ -259,7 +267,7 @@ function CharacterBarRow({ row, data, color }) {
 }
 
 function CharacterDetails({ gold = INITIAL_CHARACTER.gold.currentAmount, palette }) {
-  const goldStyle = getPaletteStyle(palette, "◆");
+  const goldStyle = getPaletteStyle(palette, "🪙");
   return (
     <div className="character_details" aria-label="Character details">
       <div className="character_bar_container">
@@ -267,7 +275,7 @@ function CharacterDetails({ gold = INITIAL_CHARACTER.gold.currentAmount, palette
       </div>
       <div className="character_slots_container">
         <div className="character_resource" data-resource="gold" aria-label="Gold" title="Gold: The currency of your character.">
-          <span className="character_resource_icon" aria-hidden="true" style={{ color: goldStyle.color }}>◆</span>
+          <span className="character_resource_icon" aria-hidden="true" style={{ color: goldStyle.color }}>🪙</span>
           <span className="character_resource_value">{gold}</span>
         </div>
         {["Slot 01", "Slot 02"].map((slot) => (
@@ -515,6 +523,25 @@ function LightingWindow({
   );
 }
 
+function PaletteGlyph({ glyph, color, fontFamily }) {
+  const canvasRef = useRef(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return undefined;
+    const size = getGlyphRasterSize(DEFAULT_ZOOM, 32);
+    const raster = rasterizeGlyph(glyph, fontFamily, size, color);
+    canvas.width = raster.width;
+    canvas.height = raster.height;
+    const context = canvas.getContext("2d");
+    if (!context) return undefined;
+    context.putImageData(new ImageData(raster.pixels, raster.width, raster.height), 0, 0);
+    return undefined;
+  }, [color, fontFamily, glyph]);
+
+  return <canvas ref={canvasRef} className="palette_glyph_canvas" aria-label={glyph} />;
+}
+
 export class PromptWindow extends Component {
   state = {
     activeTab: "palette",
@@ -740,8 +767,8 @@ export class PromptWindow extends Component {
                     }}
                   >
                     <span className="palette_index">{entry.code ?? entry.unicode}</span>
-                    <span className="palette_glyph" style={{ color: entry.color }}>
-                      {entry.glyph}
+                    <span className="palette_glyph">
+                      <PaletteGlyph glyph={entry.glyph} color={entry.color} fontFamily={getFontOption(fontId).family} />
                     </span>
                   </button>
                 </Fragment>
@@ -1033,6 +1060,7 @@ function AppContent() {
 
   useEffect(() => {
     localStorage.setItem(zoomStorageKey, String(zoom));
+    localStorage.setItem(zoomStorageVersionKey, ZOOM_SCALE_STORAGE_VERSION);
     sendZoomSnapshot(zoom);
   }, [zoom]);
 

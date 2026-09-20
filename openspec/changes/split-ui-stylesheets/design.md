@@ -2,7 +2,7 @@
 
 ## Context
 
-The React UI currently imports `ascii-rpg/src/runtime/ui-layer-react/style.css`. The stylesheet has already been made import-aware, but its feature files do not yet match the requested ownership model. See `proposal.md` for the motivation and final file contract.
+The React UI currently imports `ascii-rpg/src/runtime/ui-layer-react/style.css`. The stylesheet has already been made import-aware, but its feature files do not yet match the requested ownership model. See `proposal.md` for the motivation and final file contract; the implementation will rename the entry point to `styles.css`.
 
 ## Goals / Non-Goals
 
@@ -23,7 +23,7 @@ The React UI currently imports `ascii-rpg/src/runtime/ui-layer-react/style.css`.
 
 1. **Use six semantic files.** `character.css` owns character details, bars, slots, and resources; `map.css` owns the canvas, transition mask, minimap, and presentation frame; `hud.css` owns corners, HUD blocks, quest status, settings, links, and zoom controls; `windows.css` owns modal/editor window surfaces and their controls; `toasts.css` owns toast layout and animation; `styles.css` owns variables, document defaults, imports, and genuinely shared catch-all rules.
 
-2. **Retain one entry point.** `main.jsx` continues importing `./runtime/ui-layer-react/style.css`. The entry file imports the five feature files in a deliberate order, avoiding multiple application imports and preserving the existing bundling path.
+2. **Retain one entry point.** `main.jsx` imports `./runtime/ui-layer-react/styles.css`. The entry file imports the five feature files in a deliberate order, avoiding multiple application imports and preserving the existing bundling path.
 
 3. **Move rules by ownership, not by component file.** CSS selectors remain unchanged. Rules that span multiple UI elements stay in `styles.css` unless they are clearly part of a named area. This avoids introducing a new naming convention during a refactor.
 
@@ -36,4 +36,3 @@ The React UI currently imports `ascii-rpg/src/runtime/ui-layer-react/style.css`.
 - **[Cascade changes during moves]** → Preserve the existing relative rule order within each ownership group, keep import order explicit, and verify with the full test suite and production build.
 - **[A selector fits more than one category]** → Keep shared selectors in `styles.css` and document the ownership boundary in file headers rather than duplicating rules.
 - **[Tests become coupled to the file list]** → Keep the file list centralized in the existing stylesheet test helper so future additions have one obvious update point.
-

@@ -1,4 +1,4 @@
-/* Game layer styles: Canvas, minimap, and presentation framing. */
+/* Map styles: Game canvas, transition mask, minimap, and presentation framing. */
 
 #game_layer,
 #game_canvas {
@@ -27,13 +27,13 @@
   /* Explicitly sit above the GPU canvas and below the minimap. */
   z-index: 1;
   pointer-events: none;
-  --transition-color: #202020;
+  --transition-color: #101010;
   background: radial-gradient(
     circle at var(--transition-center-x, 50%) var(--transition-center-y, 50%),
     transparent 0,
     transparent var(--transition-radius, 0px),
-    var(--transition-color, #202020) var(--transition-feather-end, 12px),
-    var(--transition-color, #202020) 100%
+    var(--transition-color, #101010) var(--transition-feather-end, 12px),
+    var(--transition-color, #101010) 100%
   );
 }
 
@@ -42,7 +42,7 @@
 }
 
 .game_transition_mask.game_transition_mask_covered {
-  background: #202020;
+  background: #101010;
 }
 
 #minimap_canvas {
@@ -92,9 +92,6 @@ html[data-presentation-aspect="portrait"] #ui_layer {
   transform: translate(-50%, -50%);
 }
 
-html[data-presentation-aspect="portrait"] .toast {
-  --toast-horizontal-inset: 0px;
-}
 
 @media (pointer: coarse) {
   html[data-presentation-aspect="portrait"] #game_layer {

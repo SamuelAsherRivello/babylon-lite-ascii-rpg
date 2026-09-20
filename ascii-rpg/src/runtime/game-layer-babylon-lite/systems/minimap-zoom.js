@@ -1,8 +1,19 @@
-export const MINIMAP_SCALE_LEVELS = [2, 4, 1];
+export const MINIMAP_SCALE_LEVELS = [1, 2, 3];
+export const DEFAULT_MINIMAP_SCALE = 2;
+
+export function normalizeMinimapScale(value, fallback = DEFAULT_MINIMAP_SCALE) {
+  const selected = Number(value);
+  return MINIMAP_SCALE_LEVELS.includes(selected) ? selected : fallback;
+}
+
+export function migrateMinimapScale(value) {
+  return normalizeMinimapScale(value);
+}
 
 export function getNextMinimapScale(currentScale) {
-  const selected = Number.isFinite(currentScale) ? currentScale : 2;
+  const selected = Number(currentScale);
   const currentIndex = MINIMAP_SCALE_LEVELS.indexOf(selected);
+  if (currentIndex < 0) return DEFAULT_MINIMAP_SCALE;
   return MINIMAP_SCALE_LEVELS[(currentIndex + 1) % MINIMAP_SCALE_LEVELS.length];
 }
 

@@ -104,5 +104,6 @@ Ways to break the illusion (AVOID THESE?)
 54. Traveling in a group of NPCs. ☐
 55. Vehicles. ☐
 56. View toggles (env only, enemies only, items only). ☐
-57. Weather that affects gameplay. ☐
-58. Weapons and armor. ☐
+57. Weapons and armor. ☐
+58. Weather that affects gameplay. ☐
+59. Working (Chop trees for wood, mine rocks for ore). ☐

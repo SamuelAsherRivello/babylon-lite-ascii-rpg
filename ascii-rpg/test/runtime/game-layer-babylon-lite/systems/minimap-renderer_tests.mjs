@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createFogOfWar, discoverCell } from "../../../../src/runtime/game-layer-babylon-lite/systems/fog-of-war-system.js";
-import { getMinimapEdgeIndicators, getMinimapMarkers, getMinimapWorldCellGraphic, getMinimapWorldGraphic, getMinimapWorldPixel, MINIMAP_MARKER_DEPTHS } from "../../../../src/runtime/game-layer-babylon-lite/systems/minimap-renderer.js";
-import { canHandleMinimapScale, getMinimapCellLayout, getMinimapViewport, getNextMinimapScale } from "../../../../src/runtime/game-layer-babylon-lite/systems/minimap-zoom.js";
+import { getMinimapEdgeIndicators, getMinimapIndicatorSafeArea, getMinimapMarkers, getMinimapWorldCellGraphic, getMinimapWorldGraphic, getMinimapWorldPixel, MINIMAP_INDICATOR_MIN_SIZE, MINIMAP_INDICATOR_SAFE_INSET, MINIMAP_MARKER_DEPTHS } from "../../../../src/runtime/game-layer-babylon-lite/systems/minimap-renderer.js";
+import { canHandleMinimapScale, getMinimapCellLayout, getMinimapViewport, getNextMinimapScale, migrateMinimapScale } from "../../../../src/runtime/game-layer-babylon-lite/systems/minimap-zoom.js";
 
 function createWorld() {
   return {
@@ -110,11 +110,29 @@ test("quest pickup markers ignore fog and project off-screen as directional chev
   assert.equal(indicators[0].pickupId, "gold-2");
 });
 
+test("minimap indicators use a visible inset safe area", () => {
+  assert.equal(MINIMAP_INDICATOR_SAFE_INSET, 5);
+  assert.equal(MINIMAP_INDICATOR_MIN_SIZE, 9.6);
+  assert.deepEqual(getMinimapIndicatorSafeArea(320, 240), {
+    left: 5,
+    top: 5,
+    right: 315,
+    bottom: 235,
+  });
+});
+
 test("minimap scale cycles through the designated levels and wraps", () => {
-  assert.equal(getNextMinimapScale(2), 4);
-  assert.equal(getNextMinimapScale(4), 1);
   assert.equal(getNextMinimapScale(1), 2);
+  assert.equal(getNextMinimapScale(2), 3);
+  assert.equal(getNextMinimapScale(3), 1);
   assert.equal(getNextMinimapScale(7), 2);
+});
+
+test("minimap migration preserves its independent scale states", () => {
+  assert.equal(migrateMinimapScale(1), 1);
+  assert.equal(migrateMinimapScale(2), 2);
+  assert.equal(migrateMinimapScale(3), 3);
+  assert.equal(migrateMinimapScale(4), 2);
 });
 
 test("minimap zoom changes the rendered viewport without changing canvas bounds", () => {

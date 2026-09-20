@@ -4,11 +4,12 @@ import viteConfig from "../../vite.config.js";
 
 const appRoot = new URL("../", import.meta.url);
 const styleSheetFiles = [
-  "style.css",
-  "game-layer.css",
-  "ui-feedback.css",
+  "styles.css",
+  "character.css",
+  "map.css",
+  "hud.css",
   "windows.css",
-  "palette-editor.css",
+  "toasts.css",
 ];
 
 async function readStyles() {
@@ -280,7 +281,7 @@ test("documents the plain safe-area template", async () => {
   if (!app.includes('className="window"') || !app.includes('className="window_backdrop"')) {
     throw new Error("The Ascii Palette overlay must include a Window and WindowBackdrop.");
   }
-  if (!app.includes('className="palette_grid"') || !app.includes('className="palette_index"') || !app.includes('className="palette_glyph"')) {
+  if (!app.includes('className="palette_grid"') || !app.includes('className="palette_index"') || !app.includes('className="palette_glyph"') || !styles.includes("flex-direction: column") || !styles.includes("white-space: nowrap") || !styles.includes("overflow: hidden")) {
     throw new Error("The Ascii Settings overlay must render a compact index and glyph grid.");
   }
   if (!app.includes('"in-maps"') || !app.includes('"customized"') || !app.includes("Filter: ") || !app.includes("Sort: ") || !app.includes("InMaps") || !app.includes(">\n                #\n") || !app.includes(">\n                Abc\n") || !app.includes(">\n                Group\n") || !app.includes("content_options") || !app.includes("palette_group_header") || !app.includes("getPaletteGroupLabel") || !styles.includes("grid-template-columns: repeat(auto-fill, minmax(72px, 1fr))") || !styles.includes("font-size: 10pt")) {
@@ -327,7 +328,7 @@ test("documents the plain safe-area template", async () => {
   if (!app.includes('id="show_ui_toggle"') || !app.includes("Show UI") || !app.includes("getPlatformSettingsDefaults().showHud")
     || !app.includes("localStorage.setItem(showUiStorageKey, showHud ? \"true\" : \"false\")")
     || !app.includes("const toggleHud") || !app.includes("setShowHud((currentShowHud) => !currentShowHud)")
-    || !platformSettings.includes('matchMedia("(pointer: coarse)")') || !platformSettings.includes("zoom: 7")
+    || !platformSettings.includes('matchMedia("(pointer: coarse)")') || !platformSettings.includes("zoom: 5")
     || !platformSettings.includes("showHud: false")) {
     throw new Error("Show UI must use persisted platform-specific defaults.");
   }
@@ -539,10 +540,10 @@ test("documents the quest tracker, live gold bridge, and quest toasts", async ()
 test("derives the character gold icon color from the shared palette", async () => {
   const app = await readFile(new URL("src/runtime/ui-layer-react/App.jsx", appRoot), "utf8");
   const palette = JSON.parse(await readFile(new URL("src/runtime/game-layer-babylon-lite/data/palette_data.json", appRoot), "utf8"));
-  if (!app.includes('getPaletteStyle(palette, "◆")') || !app.includes("style={{ color: goldStyle.color }}")) {
+  if (!app.includes('getPaletteStyle(palette, "🪙")') || !app.includes("style={{ color: goldStyle.color }}")) {
     throw new Error("The character gold icon must resolve its color from the shared palette.");
   }
-  if (palette.entries.find((entry) => entry.glyph === "◆")?.color !== "#ffff00") {
+  if (palette.entries.find((entry) => entry.glyph === "🪙")?.color !== "#ffff00") {
     throw new Error("The bundled gold glyph must default to yellow.");
   }
 });

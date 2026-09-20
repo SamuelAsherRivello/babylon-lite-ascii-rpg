@@ -17,6 +17,10 @@ The minimap SHALL render a green dot at the generated world's original player-st
 - **WHEN** the player moves to a gridspot that remains fogged
 - **THEN** the minimap does not show the yellow current-player dot until that exact gridspot becomes discovered
 
+#### Scenario: Quest pickup is outside discovered terrain
+- **WHEN** an active quest pickup is in an undiscovered cell or coarse minimap area
+- **THEN** its quest marker SHALL remain visible without revealing the underlying terrain
+
 ### Requirement: Discovery-gated torch markers
 The minimap SHALL render a white dot for each generated torch only when that torch's exact world cell is discovered. A torch in a partly revealed coarse minimap area SHALL remain unmarked until its own cell is discovered. A torch marker SHALL appear on the next minimap render after its cell becomes discovered and SHALL remain visible while that world and minimap are active.
 
@@ -38,3 +42,19 @@ The minimap SHALL compose its layers in the following back-to-front depths: blac
 #### Scenario: Player occupies a discovered torch cell
 - **WHEN** the player occupies a discovered torch cell with a discovered torch
 - **THEN** the yellow player dot is visible at depth 40 above the white torch dot at depth 30
+
+#### Scenario: Quest pickup is inside the viewport
+- **WHEN** an active quest pickup lies inside the minimap viewport
+- **THEN** the minimap SHALL render a solid yellow square at its mapped cell
+
+#### Scenario: Quest pickup is outside the viewport
+- **WHEN** an active quest pickup lies outside the minimap viewport
+- **THEN** the minimap SHALL render a yellow edge indicator on the minimap boundary in the pickup's direction
+
+#### Scenario: Multiple quest pickups are off-screen
+- **WHEN** multiple active quest pickups project to the same minimap edge region
+- **THEN** the minimap SHALL keep each yellow directional chevron distinguishable
+
+#### Scenario: Player occupies a marked cell
+- **WHEN** the player occupies a quest pickup or discovered torch cell
+- **THEN** the yellow player dot SHALL be visible above the other marker

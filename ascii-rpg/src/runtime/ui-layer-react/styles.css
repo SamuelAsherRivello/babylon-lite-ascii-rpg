@@ -1,0 +1,29 @@
+/* Shared styles: Variables, document defaults, feature imports, and shared catch-all rules. */
+
+@import "./character.css";
+@import "./map.css";
+@import "./hud.css";
+@import "./windows.css";
+@import "./toasts.css";
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  background: #2f2f2f;
+  color: #f5f5f5;
+  overflow: hidden;
+}
+
+html {
+  --box-body-font: 5pt;
+  --box-action-font: 10pt;
+  --hud-title-font: var(--box-action-font);
+  --hud-body-font: var(--box-body-font);
+  --hud-content-padding: 16px;
+  --ui-bar-icon-font: 12pt;
+  --character-bar-gap: 5px;
+  --character-bar-height: 8.8px;
+  --top-panel-gap: 16px;
+  --top-panel-size: clamp(96px, 24vmin, 192px);
+}

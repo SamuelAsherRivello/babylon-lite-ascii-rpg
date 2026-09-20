@@ -1,22 +1,25 @@
 import { appendSpriteAtlasFrames, createSpriteAtlasFromFrames, disposeSpriteAtlas } from "@babylonjs/lite";
 
 const ATLAS_WIDTH = 1024;
+import { getZoomScale } from "./zoom-scale.js";
+
 const MAX_CACHED_ZOOMS = 10;
 
-export function getGlyphRasterSize(zoom, cellWidth = 32 * zoom / 5) {
-  // A roughly two-to-one texture footprint avoids severe GPU minification;
-  // the larger temporary source below supplies area-filtered curved edges.
-  return Math.max(12, Math.min(128, Math.round(cellWidth * 2)));
+export function getGlyphRasterSize(zoom, cellWidth = 32 * getZoomScale(zoom)) {
+  // Keep a useful source footprint even when the displayed cell is only a few
+  // pixels wide. The atlas is sampled linearly, so this preserves edge detail
+  // while the GPU reduces the glyph to the actual cell size.
+  return Math.max(64, Math.min(128, Math.round(cellWidth * 4)));
 }
 
-export function rasterizeGlyph(glyph, fontFamily, size) {
+export function rasterizeGlyph(glyph, fontFamily, size, color = "#ffffff") {
   const canvas = document.createElement("canvas");
   canvas.width = size;
   canvas.height = size;
   const context = canvas.getContext("2d", { willReadFrequently: true });
   if (!context) throw new Error("Glyph rasterization needs a 2D canvas context.");
   const paint = (target, targetSize) => {
-    target.fillStyle = "#ffffff";
+    target.fillStyle = color;
     target.font = `${targetSize}px ${fontFamily}`;
     target.textAlign = "center";
     target.textBaseline = "middle";
@@ -37,6 +40,29 @@ export function rasterizeGlyph(glyph, fontFamily, size) {
     paint(context, size);
   }
   return { pixels: context.getImageData(0, 0, size, size).data, width: size, height: size, name: glyph };
+}
+
+// Canvas views and the sprite atlas both consume the same rasterized glyph.
+// Keeping this conversion here prevents a destination renderer from inventing
+// a second glyph-painting algorithm.
+export function createGlyphRasterCanvas(raster, color = "#ffffff") {
+  const glyphCanvas = document.createElement("canvas");
+  glyphCanvas.width = raster.width;
+  glyphCanvas.height = raster.height;
+  const glyphContext = glyphCanvas.getContext("2d");
+  if (!glyphContext) throw new Error("Glyph raster display needs a 2D canvas context.");
+  const image = glyphContext.createImageData(raster.width, raster.height);
+  const red = Number.parseInt(color.slice(1, 3), 16);
+  const green = Number.parseInt(color.slice(3, 5), 16);
+  const blue = Number.parseInt(color.slice(5, 7), 16);
+  for (let index = 0; index < raster.pixels.length; index += 4) {
+    image.data[index] = red;
+    image.data[index + 1] = green;
+    image.data[index + 2] = blue;
+    image.data[index + 3] = raster.pixels[index + 3];
+  }
+  glyphContext.putImageData(image, 0, 0);
+  return glyphCanvas;
 }
 
 export function createGlyphVisualCache(engine, {

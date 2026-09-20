@@ -4,6 +4,7 @@ import {
   getPlatformSettingsDefaults,
   getStoredAspectMode,
   getStoredBooleanValue,
+  getMigratedStoredZoomValue,
   getStoredZoomValue,
   isMobilePlatform,
   MOBILE_SETTINGS_DEFAULTS,
@@ -21,9 +22,11 @@ test("selects platform defaults from the primary pointer capability", () => {
 });
 
 test("uses mobile defaults only when zoom and HUD values are absent", () => {
-  assert.equal(getStoredZoomValue(null, MOBILE_SETTINGS_DEFAULTS.zoom, 1, 10), 5);
+  assert.equal(getStoredZoomValue(null, MOBILE_SETTINGS_DEFAULTS.zoom, 1, 10), MOBILE_SETTINGS_DEFAULTS.zoom);
   assert.equal(getStoredBooleanValue(null, MOBILE_SETTINGS_DEFAULTS.showHud), false);
   assert.equal(getStoredZoomValue("4", MOBILE_SETTINGS_DEFAULTS.zoom, 1, 10), 4);
+  assert.equal(getMigratedStoredZoomValue("5", MOBILE_SETTINGS_DEFAULTS.zoom), 5);
+  assert.equal(getMigratedStoredZoomValue("9", MOBILE_SETTINGS_DEFAULTS.zoom, "2"), 9);
   assert.equal(getStoredBooleanValue("true", MOBILE_SETTINGS_DEFAULTS.showHud), true);
 });
 

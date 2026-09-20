@@ -53,7 +53,7 @@ import {
   setCharacter,
 } from "./systems/world-system.js";
 import { createTimeSystem } from "./systems/time-system.js";
-import { createGlyphVisualCache } from "./glyph-visual-cache.js";
+import { createGlyphRasterCanvas, createGlyphVisualCache } from "./glyph-visual-cache.js";
 import { getVisibleRegion, getVisibleSlot, shouldUpdateVisibleSprite } from "./visible-region.js";
 import { collectWorldViewGlyphs, createWorldViewComposition, renderWorldViewComposition } from "./world-view.js";
 import { colorToLinearRgba, reconcilePaletteColors } from "./palette-color-cache.js";
@@ -71,7 +71,7 @@ import {
   discoverFromPlayer,
   isDiscovered,
 } from "./systems/fog-of-war-system.js";
-import { getMinimapEdgeIndicators, getMinimapMarkers, getMinimapWorldCellGraphic } from "./systems/minimap-renderer.js";
+import { getMinimapEdgeIndicators, getMinimapIndicatorSafeArea, getMinimapMarkers, getMinimapWorldCellGraphic, MINIMAP_INDICATOR_MIN_SIZE, MINIMAP_INDICATOR_SAFE_INSET } from "./systems/minimap-renderer.js";
 import { canHandleMinimapScale, getMinimapCellLayout, getNextMinimapScale, MINIMAP_SCALE_LEVELS } from "./systems/minimap-zoom.js";
 import { createTransitionSystem, TRANSITION_PHASES } from "./systems/transition-system.js";
 import questData from "./data/quest_data.json";
@@ -85,6 +85,26 @@ const TORCHES_PER_SCREEN = 3;
 const REALM_TRANSITION_CLOSE_MS = 500;
 const REALM_TRANSITION_COVER_HOLD_MS = 100;
 const REALM_TRANSITION_OPEN_MS = 500;
+const INITIAL_SPRITE_LAYER_CAPACITY = 4096;
+
+function getInitialSpriteLayerCapacity(viewport) {
+  return Math.max(1, Math.min(INITIAL_SPRITE_LAYER_CAPACITY, viewport.rows * viewport.columns));
+}
+
+function getRenderedCellCenter(cell, viewport, world) {
+  const worldFitsHorizontally = viewport.columns >= world.columns;
+  const worldFitsVertically = viewport.rows >= world.rows;
+  const offsetX = worldFitsHorizontally
+    ? Math.max(0, (viewport.screenWidth - world.columns * viewport.gridWidth) / 2)
+    : 0;
+  const offsetY = worldFitsVertically
+    ? Math.max(0, (viewport.screenHeight - world.rows * viewport.gridHeight) / 2)
+    : 0;
+  return {
+    x: offsetX + cell.x * viewport.gridWidth + viewport.gridWidth / 2,
+    y: offsetY + cell.y * viewport.gridHeight + viewport.gridHeight / 2,
+  };
+}
 
 function createViewportForCanvas(canvas, zoom = DEFAULT_ZOOM) {
   const screenWidth = canvas.clientWidth || window.innerWidth;
@@ -224,7 +244,10 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     if (minimapCanvas.width !== renderWidth) minimapCanvas.width = renderWidth;
     if (minimapCanvas.height !== renderHeight) minimapCanvas.height = renderHeight;
     const context = minimapCanvas.getContext("2d");
-    context.imageSmoothingEnabled = false;
+    // Match the sprite atlas' linear sampling when the shared glyph raster is
+    // reduced into the minimap's destination cells.
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = "high";
     // The minimap uses the game canvas dimensions to select its source cells,
     // then maps those cells into its own fixed canvas. This keeps matching
     // game/minimap zooms on the same viewport composition instead of making a
@@ -308,21 +331,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
         const cacheKey = `${graphic.glyph}:${graphic.color}:${raster.width}`;
         let glyphCanvas = minimapGlyphCanvases.get(cacheKey);
         if (!glyphCanvas) {
-          glyphCanvas = document.createElement("canvas");
-          glyphCanvas.width = raster.width;
-          glyphCanvas.height = raster.height;
-          const glyphContext = glyphCanvas.getContext("2d");
-          const image = glyphContext.createImageData(raster.width, raster.height);
-          const red = Number.parseInt(graphic.color.slice(1, 3), 16);
-          const green = Number.parseInt(graphic.color.slice(3, 5), 16);
-          const blue = Number.parseInt(graphic.color.slice(5, 7), 16);
-          for (let index = 0; index < raster.pixels.length; index += 4) {
-            image.data[index] = red;
-            image.data[index + 1] = green;
-            image.data[index + 2] = blue;
-            image.data[index + 3] = raster.pixels[index + 3];
-          }
-          glyphContext.putImageData(image, 0, 0);
+          glyphCanvas = createGlyphRasterCanvas(raster, graphic.color);
           minimapGlyphCanvases.set(cacheKey, glyphCanvas);
         }
         context.drawImage(
@@ -335,6 +344,11 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       },
       drawOverlay: () => {
         context.globalAlpha = 1;
+        const safeArea = getMinimapIndicatorSafeArea(
+          minimapCanvas.width,
+          minimapCanvas.height,
+          MINIMAP_INDICATOR_SAFE_INSET * devicePixelRatio,
+        );
         const markerWidth = cellWidth * 0.5;
         const markerHeight = cellHeight * 0.5;
         for (const marker of getMinimapMarkers(world, fogOfWar, playerCell)) {
@@ -357,9 +371,12 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
           const edgeX = offsetX + indicator.edge.x * cellWidth + (Math.abs(indicator.direction.x) < Math.abs(indicator.direction.y) ? offset : 0);
           const edgeY = offsetY + indicator.edge.y * cellHeight + (Math.abs(indicator.direction.x) >= Math.abs(indicator.direction.y) ? offset : 0);
           const angle = Math.atan2(indicator.direction.y, indicator.direction.x);
-          const size = Math.min(cellWidth, cellHeight) * 0.8;
+          const size = Math.max(MINIMAP_INDICATOR_MIN_SIZE * devicePixelRatio, Math.min(cellWidth, cellHeight) * 0.8);
+          const arrowExtent = size * 0.6;
+          const safeEdgeX = Math.min(safeArea.right - arrowExtent, Math.max(safeArea.left + arrowExtent, edgeX));
+          const safeEdgeY = Math.min(safeArea.bottom - arrowExtent, Math.max(safeArea.top + arrowExtent, edgeY));
           context.save();
-          context.translate(edgeX, edgeY);
+          context.translate(safeEdgeX, safeEdgeY);
           context.rotate(angle);
           context.fillStyle = indicator.color;
           context.beginPath();
@@ -633,7 +650,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   const rebuildLayer = (nextAtlas = atlas) => {
     if (renderer && layer) removeSpriteRendererLayer(renderer, layer);
     atlas = nextAtlas;
-    layer = createSprite2DLayer(atlas, { capacity: Math.max(1, viewport.rows * viewport.columns) });
+    layer = createSprite2DLayer(atlas, { capacity: getInitialSpriteLayerCapacity(viewport) });
     if (renderer) addSpriteRendererLayer(renderer, layer);
     spriteIndexes.length = 0;
     spriteStates.length = 0;
@@ -729,10 +746,17 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       return;
     }
     const color = applyLightingToColor(baseColor, lightingFactor);
-    const center = getCellCenter({ x, y }, viewport);
+    const center = getRenderedCellCenter({ x, y }, viewport, world);
+    // At displayed zoom 1 the nominal cell is 0.64px wide. Preserve the
+    // nominal grid positions, but give each glyph a small screen-space
+    // footprint so the explored area at the farthest zoom remains inspectable
+    // instead of collapsing into an effectively invisible sub-pixel cluster.
+    const farZoomFootprint = zoom === MIN_ZOOM ? 4 : 0;
+    const renderWidth = Math.max(farZoomFootprint, viewport.gridWidth);
+    const renderHeight = Math.max(farZoomFootprint, viewport.gridHeight);
     const props = {
       positionPx: [center.x, center.y],
-      sizePx: [viewport.gridWidth, viewport.gridHeight],
+      sizePx: [renderWidth, renderHeight],
       frame, color, visible: true,
     };
     if (spriteIndexes[slot] === undefined) spriteIndexes[slot] = addSprite2DIndex(layer, props);
@@ -768,6 +792,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
         x: 0, y: 0, width: viewport.screenWidth, height: viewport.screenHeight,
       },
       getGlyph: getVisibleGlyph,
+      onlyDiscovered: true,
     });
     const visual = glyphCache.ensure(
       zoom,
@@ -985,7 +1010,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       fontId, fontFamily: getFontOption(fontId).family, glyphLimit: GLYPHS.length,
     });
     atlas = glyphCache.ensure(zoom, viewport.gridWidth, []).atlas;
-    layer = createSprite2DLayer(atlas, { capacity: Math.max(1, viewport.rows * viewport.columns) });
+    layer = createSprite2DLayer(atlas, { capacity: getInitialSpriteLayerCapacity(viewport) });
     renderer = createSpriteRenderer(engine, { layers: [layer], clearValue: { r: 0, g: 0, b: 0, a: 1 } });
     registerSpriteRenderer(renderer);
     await startEngine(engine);

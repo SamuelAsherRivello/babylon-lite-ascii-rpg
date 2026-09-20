@@ -11,6 +11,9 @@ export const MINIMAP_MARKER_DEPTHS = Object.freeze({
   player: 40,
 });
 
+export const MINIMAP_INDICATOR_SAFE_INSET = 5;
+export const MINIMAP_INDICATOR_MIN_SIZE = 9.6;
+
 const MINIMAP_MARKER_COLORS = Object.freeze({
   start: "#00ff00",
   quest: "#ffff00",
@@ -72,6 +75,16 @@ export function getMinimapMarkers(world, fog, playerCell) {
 
 function clamp(value, minimum, maximum) {
   return Math.min(maximum, Math.max(minimum, value));
+}
+
+export function getMinimapIndicatorSafeArea(width, height, inset = MINIMAP_INDICATOR_SAFE_INSET) {
+  const safeInset = Math.max(0, inset);
+  return {
+    left: safeInset,
+    top: safeInset,
+    right: Math.max(safeInset, width - safeInset),
+    bottom: Math.max(safeInset, height - safeInset),
+  };
 }
 
 export function getMinimapEdgeIndicators(world, playerCell, viewport) {

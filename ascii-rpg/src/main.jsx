@@ -5,7 +5,7 @@ import { startGameLayer } from "./runtime/game-layer-babylon-lite/index.js";
 import { getGoldSnapshot, getQuestSnapshot, getRealmSnapshot, sendFontSnapshot, sendGoldSnapshot, sendMinimapZoomSnapshot, sendPaletteSnapshot, sendQuestSnapshot, sendRealmSnapshot, sendTimeSnapshot, setGameController } from "./runtime/bridge-layer/game-bridge.js";
 import { fontReady, getFontId, subscribeToFont } from "./runtime/ui-layer-react/font-store.js";
 import { getPalette, paletteReady, subscribeToPalette } from "./runtime/ui-layer-react/palette-store.js";
-import "./runtime/ui-layer-react/style.css";
+import "./runtime/ui-layer-react/styles.css";
 
 const gameLayer = document.getElementById("game_layer");
 

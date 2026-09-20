@@ -29,7 +29,7 @@ current values, actions, and value limits. Its visible control labels SHALL be
 #### Scenario: Inspect lower-left window launchers
 - **WHEN** the player views the lower-left HUD
 - **THEN** `Windows - 1` appears above `Windows - 2`, and `Windows - 2`
-  contains only `Lighting`
+contains only `Lighting`
 
 #### Scenario: Keep Lighting open during play
 - **WHEN** the Lighting window is open

@@ -5,7 +5,7 @@
 Provides a compact movable Lighting window so players can adjust illumination
 controls without permanently expanding the lower-left Settings corner.
 
-## ADDED Requirements
+## MODIFIED Requirements
 
 ### Requirement: Lighting launcher and movable control window
 The lower-left HUD SHALL name its existing window section `Windows - 1` and

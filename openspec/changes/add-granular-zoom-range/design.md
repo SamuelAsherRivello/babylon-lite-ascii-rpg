@@ -21,7 +21,7 @@ The current React settings layer stores an integer zoom from 1–10, while the B
 
 ## Decisions
 
-1. **Use logarithmic ten-level spacing.** Define the effective scale for displayed value `n` as `0.1 × 100^((n - 1) / 9)` relative to the current zoom-1 scale. This makes displayed 1 equal 0.1× current zoom 1 and displayed 10 equal current zoom 10, with a constant adjacent ratio of `100^(1/9)` between them. Linear spacing was rejected because it would concentrate useful changes at one end of the range.
+1. **Use linear nominal ten-level spacing.** Define the effective scale for displayed value `n` as `0.1 + (n - 1) × 1.1` relative to the current zoom-1 scale. This makes displayed 1 equal 0.1× current zoom 1, displayed 10 equal current zoom 10, and every adjacent nominal value differ by exactly `1.1`. Logarithmic spacing was rejected because the requested experience is even by nominal value.
 
 2. **Keep displayed values separate from effective scale.** Local storage, Settings labels, plus/minus bounds, bridge snapshots, and diagnostics continue to use displayed integers. Viewport dimensions, glyph raster sizing, cache keys, and visible-region calculations use the converted effective scale. This avoids exposing fractional values in the UI while allowing fractional rendering sizes internally.
 

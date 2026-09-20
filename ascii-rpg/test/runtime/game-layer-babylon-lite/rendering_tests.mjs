@@ -45,7 +45,7 @@ test("glyph visuals are lazy, reusable by zoom and font, tint-independent, and b
   assert.deepEqual(api.disposed, [1]); // Zoom 5 was evicted, not zoom 1.
   assert.equal(cache.snapshot().zooms, 2);
   assert.equal(cache.snapshot().glyphs, 3);
-  assert.deepEqual(rasterized.map((entry) => entry.size), [13, 13, 64, 128]);
+  assert.deepEqual(rasterized.map((entry) => entry.size), [64, 64, 128, 128]);
   cache.dispose();
   assert.deepEqual(api.disposed.sort(), [0, 1, 2]);
 
@@ -60,8 +60,8 @@ test("glyph visuals are lazy, reusable by zoom and font, tint-independent, and b
 });
 
 test("raster footprints are scaled for distant and close zooms", () => {
-  assert.equal(getGlyphRasterSize(1, 6.4), 13);
-  assert.equal(getGlyphRasterSize(5, 32), 64);
+  assert.equal(getGlyphRasterSize(1, 6.4), 64);
+  assert.equal(getGlyphRasterSize(5, 32), 128);
   assert.equal(getGlyphRasterSize(10, 64), 128);
 });
 
@@ -185,7 +185,7 @@ test("diagnostic half-zoom stays world-bounded and cache cost tracks glyphs rath
   assert.deepEqual(counts, [65320, 16284, 630, 153]);
   assert.equal(cache.snapshot().glyphs, 7 * 4);
   assert.equal(cache.snapshot().zooms, 4);
-  assert.equal(cache.snapshot().atlasBytes, 888832);
+  assert.equal(cache.snapshot().atlasBytes, 1572864);
   const color = [1, 1, 1, 1];
   const states = new Array(counts[0]);
   let submitted = 0;

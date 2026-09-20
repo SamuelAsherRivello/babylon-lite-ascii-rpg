@@ -21,7 +21,7 @@ Saved valid camera modes SHALL continue to take precedence over this default.
 ### Requirement: Bounded zoom control
 
 The Settings UI SHALL expose a `Zoom + N -` control whose value starts at `5`
-on PC and `7` on Mobile when no saved zoom value exists, and SHALL remain
+on PC and Mobile when no saved zoom value exists, and SHALL remain
 between `1` and `10`, inclusive. A saved valid zoom value SHALL take precedence
 over the platform default. Increasing the value SHALL make glyph cells larger
 and decreasing the value SHALL make glyph cells smaller.
@@ -34,7 +34,7 @@ and decreasing the value SHALL make glyph cells smaller.
 #### Scenario: Default Mobile zoom value
 
 - **WHEN** a new Mobile game view is shown with no saved zoom value
-- **THEN** the Settings UI SHALL display `Zoom + 7 -`
+- **THEN** the Settings UI SHALL display `Zoom + 5 -`
 
 #### Scenario: Saved zoom value
 

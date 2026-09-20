@@ -11,14 +11,14 @@ without replacing settings that a player has already chosen and saved.
 The game SHALL classify a browser as Mobile when its primary pointing input is
 coarse; all other browsers SHALL be classified as PC. When a persisted setting
 is absent, PC SHALL use the current PC default values and Mobile SHALL use the
-same values except that Zoom SHALL default to `7` and Show UI SHALL default to
+same values except that Show UI SHALL default to
 off. Existing persisted values SHALL take precedence over platform defaults,
 and first-run defaults SHALL be persisted using the existing settings storage
 so Reset Settings causes the applicable platform defaults to be selected again.
 
 #### Scenario: First mobile visit
 - **WHEN** a Mobile browser opens the game with no persisted settings
-- **THEN** the game starts with Zoom `7`, Show UI off, and every other setting
+- **THEN** the game starts with Zoom `5`, Show UI off, and every other setting
   at its existing PC default
 
 #### Scenario: First PC visit

@@ -1,0 +1,293 @@
+/* HUD styles: Corners, HUD blocks, quest status, links, settings, and zoom controls. */
+
+#ui_layer {
+  position: fixed;
+  inset: var(--ui-margin-y, 20px) var(--ui-margin-x, 20px);
+  /* Keep HTML controls above the game canvas and its transition mask. */
+  z-index: 3;
+  pointer-events: none;
+}
+
+.corner {
+  position: absolute;
+  background: #000;
+  color: #f5f5f5;
+  font-size: var(--box-body-font);
+  pointer-events: auto;
+}
+
+.box_layout {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  border: 1px solid #f5f5f5;
+  color: #f5f5f5;
+  font-size: var(--hud-body-font);
+}
+
+.corner_top_left > .box_layout,
+.corner_top_right > .box_layout {
+  padding: 8px;
+}
+
+/* The minimap canvas supplies the map box surface beneath its action label. */
+.corner_top_right > .box_layout {
+  background: transparent;
+  border: 0;
+}
+
+.box_layout_action {
+  position: absolute;
+  bottom: -0.62em;
+  left: 50%;
+  z-index: 2;
+  padding: 0 4px;
+  background: #000;
+  font-size: var(--box-action-font);
+  font-weight: 700;
+  text-align: center;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.hud_block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hud_block_title,
+.hud_block_body {
+  color: #f5f5f5;
+  line-height: 1.2;
+}
+
+.hud_block_title {
+  font-size: var(--hud-title-font);
+  font-weight: 700;
+}
+
+.hud_block_body {
+  display: contents;
+  font-size: var(--hud-body-font);
+  font-weight: 400;
+}
+
+/* Keep the Show UI control mounted and usable while the rest of the HUD is hidden. */
+html[data-hud-hidden="true"] .corner_bottom_right {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+html[data-hud-hidden="true"] .corner_bottom_left > :not(#settings) {
+  display: none;
+}
+
+html[data-hud-hidden="true"] #settings > .hud_block_title,
+html[data-hud-hidden="true"] #settings > .hud_block_body > :not(:has(#show_ui_toggle)) {
+  display: none;
+}
+
+html[data-hud-hidden="true"] #settings > .hud_block_body > :has(#show_ui_toggle) {
+  display: inline;
+}
+
+.corner_top_left {
+  top: 0;
+  left: 0;
+  box-sizing: border-box;
+  width: var(--top-panel-size);
+  height: var(--top-panel-size);
+  overflow: visible;
+}
+
+.corner_top_right {
+  top: 0;
+  right: 0;
+  box-sizing: border-box;
+  width: var(--top-panel-size);
+  height: var(--top-panel-size);
+}
+
+.corner_top_left,
+.corner_top_right {
+  border: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 0;
+  cursor: pointer;
+  user-select: none;
+}
+
+
+.corner_top_right {
+  background: transparent;
+  border: 0;
+}
+
+.minimap_status {
+  position: absolute;
+  top: calc(var(--top-panel-size) + 25px);
+  right: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  padding: 8px 0;
+  color: #f5f5f5;
+  font-size: var(--box-action-font);
+  line-height: 1.2;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.quest_tracker {
+  position: absolute;
+  top: calc(var(--top-panel-size) + 25px);
+  left: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-start;
+  padding: 8px 0;
+  color: #f5f5f5;
+  font-size: var(--box-action-font);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.quest_tracker_title {
+  font-weight: 700;
+}
+
+.quest_tracker_body {
+  display: block;
+  margin-left: 5px;
+  font-size: 8pt;
+}
+
+.quest_tracker_body_complete {
+  text-decoration: line-through;
+}
+
+.corner_bottom_left {
+  bottom: 0;
+  left: 0;
+}
+
+.corner_bottom_left .corner_body,
+.corner_bottom_left .corner_title {
+  font-size: var(--box-action-font);
+}
+
+.corner_bottom_right {
+  right: 0;
+  bottom: 0;
+}
+
+.corner a,
+.corner a:visited {
+  color: #f5f5f5;
+}
+
+.project_link {
+  display: block;
+  width: max-content;
+  margin-bottom: 0.45rem;
+}
+
+.corner_body,
+.corner_title {
+  color: #f5f5f5;
+  font-size: var(--box-body-font);
+  line-height: 1.2;
+}
+
+.corner_title {
+  font-weight: 700;
+}
+
+.corner_body {
+  font-weight: 400;
+}
+
+.hud_section + .hud_section,
+.hud_block + .hud_block {
+  margin-top: 0.45rem;
+}
+
+.settings_option {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  color: #f5f5f5;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0;
+  font: inherit;
+}
+
+.settings_option:focus-visible {
+  outline: 2px solid #f5f5f5;
+  outline-offset: 3px;
+}
+
+.setting_tooltip_target {
+  display: block;
+  width: max-content;
+}
+
+.setting_tooltip_target > button:disabled {
+  pointer-events: none;
+}
+
+.settings_tooltip {
+  position: fixed;
+  z-index: 5;
+  box-sizing: border-box;
+  width: max-content;
+  max-width: 100vw;
+  padding: 4px 6px;
+  border: 1px solid #f5f5f5;
+  background: #2f2f2f;
+  color: #f5f5f5;
+  font-size: 10pt;
+  line-height: 1.2;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+}
+
+
+.zoom_control {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.zoom_control button {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #f5f5f5;
+  cursor: pointer;
+  font: inherit;
+}
+
+.zoom_control button:disabled {
+  color: #777;
+  cursor: default;
+}
+
+.zoom_control button:focus-visible {
+  outline: 2px solid #f5f5f5;
+  outline-offset: 3px;
+}

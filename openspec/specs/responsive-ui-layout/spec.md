@@ -7,21 +7,27 @@ between landscape and portrait mobile-sized viewports.
 ## Requirements
 
 ### Requirement: Responsive four-corner HUD
-The game SHALL retain the project title, project links, version, Windows, and
-Settings regions within one shared inset from their respective viewport edges.
-When a landscape viewport has limited height, the lower-left Windows and
-Settings region SHALL compact without scrolling, clipping, or extending beyond
-the shared inset; every control SHALL remain visible and operable.
+The game SHALL retain its HUD regions within one shared inset from the viewport edges. The upper-left and upper-right regions SHALL be equal-sized bordered boxes aligned across the top of the viewport, with the upper-left box serving as the Character box and the upper-right box serving as the Minimap box. The lower-left and lower-right regions SHALL retain their existing responsive behavior and remain usable without clipping or overflow.
+
+#### Scenario: Matching top boxes in landscape
+- **WHEN** the game is shown in a landscape viewport
+- **THEN** the Character box and Minimap box appear at the upper-left and upper-right with the same width, height, border, and shared inset
 
 #### Scenario: Constrained landscape HUD
 - **WHEN** the browser is resized to a short landscape viewport
-- **THEN** all four corner regions and every Windows and Settings control are
-  visible inside the shared margins without vertical overflow
+- **THEN** all four corner regions and every Windows and Settings control are visible inside the shared margins without vertical overflow
+
+#### Scenario: Matching top boxes in portrait
+- **WHEN** the game is shown in a portrait or mobile-sized viewport
+- **THEN** both top boxes remain visible within the viewport, retain matching geometry and borders, and do not cause page overflow
 
 #### Scenario: Portrait HUD
 - **WHEN** the browser is resized to a portrait viewport
-- **THEN** every corner region remains inside its shared margins and the game
-  canvas continues to fill the viewport behind the UI
+- **THEN** every corner region remains inside its shared margins and the game canvas continues to fill the viewport behind the UI
+
+#### Scenario: Character box contents are deferred
+- **WHEN** this layout change is implemented before the character-panel design is specified
+- **THEN** the upper-left box is established as the Character box without requiring unspecified character data or controls
 
 ### Requirement: Selectable test presentation aspect
 The Settings region SHALL provide a persisted aspect control. A first-time
@@ -72,18 +78,18 @@ and operable.
 #### Scenario: Open editor in portrait
 - **WHEN** a developer opens the Ascii Palette in a portrait viewport
 - **THEN** the editor frame, tabs, and close action are visible within the
-  viewport and palette content is reachable through its window body
+viewport and palette content is reachable through its window body
 
 #### Scenario: Switch to Font in portrait
 - **WHEN** a developer selects the Font tab in a portrait viewport
 - **THEN** the font selector, preview, and Confirm, Reset, and Cancel actions
-  are visible inside the editor frame
+are visible inside the editor frame
 
 #### Scenario: Lighting window is moved near a viewport edge
 - **WHEN** a player drags the Lighting window toward a desktop or mobile
-  viewport edge
+viewport edge
 - **THEN** the window remains positioned so its title bar, controls, and
-  close action are reachable without page or horizontal overflow
+close action are reachable without page or horizontal overflow
 
 ### Requirement: Windows launchers and surfaces remain hit-testable
 
@@ -96,3 +102,22 @@ The three lower-left Windows launchers and every visible control in their result
 #### Scenario: Close each Windows surface
 - **WHEN** a player uses the corresponding close control, or the modal backdrop where applicable
 - **THEN** only the selected window SHALL close and the three launchers SHALL remain usable
+
+### Requirement: Upper-right minimap and lower-left project link placement
+
+The upper-right HUD area SHALL always contain the minimap. The
+project GitHub link SHALL appear immediately above the Windows list in the
+lower-left HUD region. These placements SHALL remain inside the shared HUD
+inset in supported desktop landscape and mobile portrait layouts.
+
+#### Scenario: Minimap occupies the upper right
+
+- **WHEN** the HUD is visible
+- **THEN** it is displayed in the upper-right area and the GitHub link is not
+  displayed there
+
+#### Scenario: Project link precedes Windows
+
+- **WHEN** the HUD is visible
+- **THEN** the GitHub link appears immediately above the Windows list in the
+  lower-left region

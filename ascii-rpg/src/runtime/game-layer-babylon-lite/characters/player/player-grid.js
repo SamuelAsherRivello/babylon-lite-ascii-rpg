@@ -1,8 +1,7 @@
 export const DEFAULT_UPSCALE = 1.0;
 export const DEFAULT_FONT_RESOLUTION = 1.0;
-export const DEFAULT_ZOOM = 5;
-export const MIN_ZOOM = 1;
-export const MAX_ZOOM = 10;
+export { DEFAULT_ZOOM, MAX_ZOOM, MIN_ZOOM } from "../../zoom-scale.js";
+import { DEFAULT_ZOOM, getZoomScale, MAX_ZOOM, MIN_ZOOM, normalizeZoom } from "../../zoom-scale.js";
 export const DEFAULT_GRID_WIDTH = 32;
 export const DEFAULT_GRID_HEIGHT = 32;
 export const INITIAL_REPEAT_DELAY_MS = 250;
@@ -75,8 +74,8 @@ export function createViewport({
   fontResolution = DEFAULT_FONT_RESOLUTION,
 }) {
   const safeUpscale = upscale > 0 ? upscale : DEFAULT_UPSCALE;
-  const safeZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom));
-  const zoomScale = safeZoom / DEFAULT_ZOOM;
+  const safeZoom = normalizeZoom(zoom);
+  const zoomScale = getZoomScale(safeZoom);
   const scaledGridWidth = gridWidth * zoomScale;
   const scaledGridHeight = gridHeight * zoomScale;
   const logicalWidth = screenWidth / safeUpscale;

@@ -27,6 +27,7 @@ export function createWorldViewComposition({
   destination = {},
   getGlyph,
   discovered = isDiscovered,
+  onlyDiscovered = false,
 } = {}) {
   if (!world || !Number.isInteger(world.columns) || !Number.isInteger(world.rows)) {
     throw new TypeError("World-view composition requires a generated world.");
@@ -40,6 +41,7 @@ export function createWorldViewComposition({
     for (let localX = 0; localX < region.width; localX += 1) {
       const cell = { x: region.x + localX, y: region.y + localY };
       const isVisible = discovered(fog, world, cell);
+      if (onlyDiscovered && !isVisible) continue;
       cells.push({
         cell,
         localX,
@@ -80,4 +82,3 @@ export function renderWorldViewComposition(composition, {
   drawOverlay?.(composition.destination, composition.region);
   return { cells: composition.cells.length, discoveredCells };
 }
-
