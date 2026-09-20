@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "entries": [
     {
       "code": 32,
@@ -1567,6 +1567,454 @@
       "unicode": "U+2022",
       "glyph": "•",
       "color": "#4c4c4c",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+2191",
+      "glyph": "↑",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+2193",
+      "glyph": "↓",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+2190",
+      "glyph": "←",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+2192",
+      "glyph": "→",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+2196",
+      "glyph": "↖",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+2197",
+      "glyph": "↗",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+2198",
+      "glyph": "↘",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+2199",
+      "glyph": "↙",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+2194",
+      "glyph": "↔",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+2195",
+      "glyph": "↕",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+21E7",
+      "glyph": "⇧",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+21E9",
+      "glyph": "⇩",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+21A9",
+      "glyph": "↩",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+21AA",
+      "glyph": "↪",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+2665",
+      "glyph": "♥",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+2661",
+      "glyph": "♡",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+2666",
+      "glyph": "♦",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+2662",
+      "glyph": "♢",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+2663",
+      "glyph": "♣",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+2667",
+      "glyph": "♧",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+2660",
+      "glyph": "♠",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+2664",
+      "glyph": "♤",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+25C7",
+      "glyph": "◇",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+25C6",
+      "glyph": "◆",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+25B2",
+      "glyph": "▲",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+25BC",
+      "glyph": "▼",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+25B3",
+      "glyph": "△",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+25BD",
+      "glyph": "▽",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+25CB",
+      "glyph": "○",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+25CF",
+      "glyph": "●",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+25C9",
+      "glyph": "◉",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+25CE",
+      "glyph": "◎",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+2299",
+      "glyph": "⊙",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+2316",
+      "glyph": "⌖",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+2311",
+      "glyph": "⌑",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+2606",
+      "glyph": "☆",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+2605",
+      "glyph": "★",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+2726",
+      "glyph": "✦",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+2727",
+      "glyph": "✧",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+2736",
+      "glyph": "✶",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+266A",
+      "glyph": "♪",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+266B",
+      "glyph": "♫",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+263C",
+      "glyph": "☼",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+2600",
+      "glyph": "☀",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+263E",
+      "glyph": "☾",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+263D",
+      "glyph": "☽",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+2601",
+      "glyph": "☁",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+2602",
+      "glyph": "☂",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+2603",
+      "glyph": "☃",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+2744",
+      "glyph": "❄",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+2668",
+      "glyph": "♨",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+2694",
+      "glyph": "⚔",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+2692",
+      "glyph": "⚒",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+2699",
+      "glyph": "⚙",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+2691",
+      "glyph": "⚑",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+2690",
+      "glyph": "⚐",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+26A0",
+      "glyph": "⚠",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+2620",
+      "glyph": "☠",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+2618",
+      "glyph": "☘",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+2696",
+      "glyph": "⚖",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+2697",
+      "glyph": "⚗",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+2695",
+      "glyph": "⚕",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+271D",
+      "glyph": "✝",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+262F",
+      "glyph": "☯",
+      "color": "#ffffff",
       "alpha": 1
     }
   ]

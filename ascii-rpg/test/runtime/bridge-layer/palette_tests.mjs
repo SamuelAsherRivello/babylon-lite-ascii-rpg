@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   DEFAULT_PALETTE_ALPHA,
   DEFAULT_PALETTE_COLOR,
+  PALETTE_VERSION,
   createDefaultPalette,
   createPalette,
   getPaletteEntryId,
@@ -14,15 +15,30 @@ import {
   validatePaletteEntries,
 } from "../../../src/runtime/bridge-layer/palette.js";
 
-test("creates every visible Code Page 437 entry plus the bullet", () => {
+test("creates every visible Code Page 437 entry, the bullet, and 64 text symbols", () => {
   const palette = createDefaultPalette();
   const ids = new Set(palette.map(getPaletteEntryId));
 
-  assert.equal(palette.length, 224);
-  assert.equal(ids.size, 224);
+  assert.equal(palette.length, 288);
+  assert.equal(ids.size, 288);
+  assert.equal(new Set(palette.map((entry) => entry.glyph)).size, 288);
   assert.ok(ids.has("32"));
   assert.ok(ids.has("254"));
   assert.ok(ids.has("U+2022"));
+  for (const id of ["U+2191", "U+2665", "U+25C7", "U+266A", "U+2694"]) {
+    assert.ok(ids.has(id));
+  }
+});
+
+test("migrates saved 224-entry palettes while preserving existing colors", () => {
+  const legacyEntries = createDefaultPalette().slice(0, 224);
+  legacyEntries.find((entry) => entry.glyph === "•").color = "#4c4c4c";
+
+  const palette = createPalette({ version: 1, entries: legacyEntries });
+
+  assert.equal(palette.length, 288);
+  assert.equal(palette.find((entry) => entry.glyph === "•").color, "#4c4c4c");
+  assert.equal(palette.find((entry) => entry.glyph === "↑").color, DEFAULT_PALETTE_COLOR);
 });
 
 test("defaults entries to white and fully opaque", () => {
@@ -48,8 +64,8 @@ test("rejects malformed palette entries", () => {
 
 test("serializes a complete validated palette", () => {
   const serialized = JSON.parse(serializePalette(createDefaultPalette()));
-  assert.equal(serialized.version, 1);
-  assert.equal(serialized.entries.length, 224);
+  assert.equal(serialized.version, PALETTE_VERSION);
+  assert.equal(serialized.entries.length, 288);
 });
 
 test("filters the palette by map usage and customized styles", () => {
@@ -68,7 +84,7 @@ test("toggles index and alphabet palette ordering", () => {
   const alphabetAscending = sortPaletteEntries(palette, "alphabet", "ascending");
 
   assert.equal(indexAscending[0].code, 32);
-  assert.equal(indexDescending[0].unicode, "U+2022");
+  assert.ok(indexDescending[0].unicode);
   assert.equal(alphabetAscending[0].glyph, " ");
 });
 

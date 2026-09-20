@@ -6,6 +6,7 @@ import {
   getPaletteEntryId,
   isPaletteEntryCustomized,
   PALETTE_STORAGE_KEY,
+  PALETTE_VERSION,
   validatePaletteEntries,
 } from "../bridge-layer/palette.js";
 
@@ -81,7 +82,7 @@ export async function commitPalette(entries) {
     });
     if (!response.ok) throw new Error("The local palette file could not be written.");
   } else {
-    window.localStorage.setItem(PALETTE_STORAGE_KEY, JSON.stringify({ version: 1, entries }));
+    window.localStorage.setItem(PALETTE_STORAGE_KEY, JSON.stringify({ version: PALETTE_VERSION, entries }));
   }
   replacePalette(entries);
   notifyPaletteChange();

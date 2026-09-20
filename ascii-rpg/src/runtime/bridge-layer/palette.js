@@ -2,9 +2,25 @@ export const DEFAULT_PALETTE_COLOR = "#ffffff";
 export const DEFAULT_PALETTE_ALPHA = 1;
 export const PALETTE_STORAGE_KEY = "babylon-lite-ascii-rpg.palette";
 export const PALETTE_WARNING_KEY = "babylon-lite-ascii-rpg.palette-warning-hidden";
+export const PALETTE_VERSION = 2;
 
 const BULLET_GLYPH = "•";
 const BULLET_ID = "U+2022";
+const LEGACY_PALETTE_SIZE = 224;
+
+const TEXT_SYMBOL_GLYPHS = [
+  "↑", "↓", "←", "→", "↖", "↗", "↘", "↙", "↔", "↕", "⇧", "⇩", "↩", "↪",
+  "♥", "♡", "♦", "♢", "♣", "♧", "♠", "♤",
+  "◇", "◆", "▲", "▼", "△", "▽", "○", "●", "◉", "◎", "⊙", "⌖", "⌑", "☆", "★", "✦", "✧", "✶",
+  "♪", "♫", "☼", "☀", "☾", "☽", "☁", "☂", "☃", "❄", "♨",
+  "⚔", "⚒", "⚙", "⚑", "⚐", "⚠", "☠", "☘", "⚖", "⚗", "⚕", "✝", "☯",
+];
+
+function getUnicodeId(glyph) {
+  return `U+${glyph.codePointAt(0).toString(16).toUpperCase().padStart(4, "0")}`;
+}
+
+const supportedUnicodeIds = new Set([BULLET_ID, ...TEXT_SYMBOL_GLYPHS.map(getUnicodeId)]);
 
 const GROUP_LETTER_EXCEPTIONS = {
   "Æ": "A",
@@ -48,6 +64,9 @@ export function createDefaultPalette() {
     entries.push(createDefaultEntry({ code: index + 127, glyph }));
   });
   entries.push(createDefaultEntry({ unicode: BULLET_ID, glyph: BULLET_GLYPH }));
+  for (const glyph of TEXT_SYMBOL_GLYPHS) {
+    entries.push(createDefaultEntry({ unicode: getUnicodeId(glyph), glyph }));
+  }
   return entries;
 }
 
@@ -61,7 +80,7 @@ function isValidColor(color) {
 
 function isValidIdentity(entry) {
   return (Number.isInteger(entry.code) && entry.code >= 32 && entry.code <= 254 && entry.unicode === null)
-    || (entry.code === null && entry.unicode === BULLET_ID);
+    || (entry.code === null && supportedUnicodeIds.has(entry.unicode));
 }
 
 function getGroupLetter(glyph) {
@@ -128,6 +147,9 @@ export function validatePaletteEntries(entries) {
 export function createPalette(data = {}) {
   const entries = data.entries ?? createDefaultPalette();
   const palette = entries.map((entry) => ({ ...entry }));
+  if (data.version === 1 && data.entries?.length === LEGACY_PALETTE_SIZE) {
+    palette.push(...createDefaultPalette().slice(LEGACY_PALETTE_SIZE));
+  }
   if (data.overrides) {
     for (const [id, override] of Object.entries(data.overrides)) {
       const entry = palette.find((candidate) => getPaletteEntryId(candidate) === id);
@@ -143,7 +165,7 @@ export function createPalette(data = {}) {
 
 export function serializePalette(entries) {
   validatePaletteEntries(entries);
-  return JSON.stringify({ version: 1, entries }, null, 2);
+  return JSON.stringify({ version: PALETTE_VERSION, entries }, null, 2);
 }
 
 export function getPaletteStyle(entries, glyph) {

@@ -9,7 +9,15 @@ visible Code Page 437 character can be used and styled consistently at runtime.
 ### Requirement: Complete visible glyph inventory
 
 The palette SHALL contain one entry for every visible Code Page 437 value from
-32 through 254 and one additional entry for the Unicode bullet `•` (U+2022).
+32 through 254, one entry for the Unicode bullet `•` (U+2022), and the following
+64 text-style Unicode symbols:
+
+- Arrows: `↑ ↓ ← → ↖ ↗ ↘ ↙ ↔ ↕ ⇧ ⇩ ↩ ↪`
+- Suits and hearts: `♥ ♡ ♦ ♢ ♣ ♧ ♠ ♤`
+- Map shapes and markers: `◇ ◆ ▲ ▼ △ ▽ ○ ● ◉ ◎ ⊙ ⌖ ⌑ ☆ ★ ✦ ✧ ✶`
+- Nature and music: `♪ ♫ ☼ ☀ ☾ ☽ ☁ ☂ ☃ ❄ ♨`
+- Gameplay symbols: `⚔ ⚒ ⚙ ⚑ ⚐ ⚠ ☠ ☘ ⚖ ⚗ ⚕ ✝ ☯`
+
 Every entry SHALL expose its numeric or Unicode identity and its rendered glyph
 value. The game SHALL be permitted to use any entry without an allow-list.
 
@@ -23,6 +31,18 @@ value. The game SHALL be permitted to use any entry without an allow-list.
 - **WHEN** the palette is loaded
 - **THEN** the bullet entry U+2022 SHALL be present even though it is not a
   standard ASCII or Code Page 437 value
+
+#### Scenario: Text symbol inventory
+
+- **WHEN** the palette is loaded
+- **THEN** all 64 text-style symbols SHALL be present exactly once with
+  Unicode identities and default white styling unless customized
+
+#### Scenario: Existing palette migration
+
+- **WHEN** a version 1 palette containing the previous 224 entries is loaded
+- **THEN** its existing styles SHALL be preserved and the 64 new entries SHALL
+  be added with default styling
 
 ### Requirement: Default glyph styling
 

@@ -4,5 +4,8 @@
     "args": [
       "C:\\Users\\srive\\AppData\\Roaming\\npm\\node_modules\\@fission-ai\\openspec\\bin\\openspec.js"
     ]
+  },
+  "notifications": {
+    "systemNotificationsEnabled": true
   }
 }
