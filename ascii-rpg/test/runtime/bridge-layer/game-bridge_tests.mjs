@@ -5,7 +5,6 @@ import {
   sendRealmAmbientSnapshot,
   sendCameraModeSnapshot,
   sendGpuLightPassSnapshot,
-  sendMinimapSnapshot,
   sendMinimapZoomSnapshot,
   sendFontSnapshot,
   sendPlayerLightingSnapshot,
@@ -116,18 +115,6 @@ test("forwards GPU light pass state and reapplies it to a new controller", () =>
   let restored = null;
   setGameController({ setGpuLightPass(enabled) { restored = enabled; } });
   assert.equal(restored, true);
-});
-
-test("forwards minimap visibility and reapplies it to a new controller", () => {
-  let received = null;
-  setGameController({ setMinimap(enabled) { received = enabled; } });
-  sendMinimapSnapshot(false);
-  assert.equal(received, false);
-
-  let restored = null;
-  setGameController({ setMinimap(enabled) { restored = enabled; } });
-  assert.equal(restored, false);
-  sendMinimapSnapshot(true);
 });
 
 test("forwards realm ambient and independent source lighting and shadow profiles to the game layer", () => {

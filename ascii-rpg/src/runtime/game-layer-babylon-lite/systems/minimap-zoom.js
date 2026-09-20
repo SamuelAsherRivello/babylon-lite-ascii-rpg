@@ -6,8 +6,8 @@ export function getNextMinimapScale(currentScale) {
   return MINIMAP_SCALE_LEVELS[(currentIndex + 1) % MINIMAP_SCALE_LEVELS.length];
 }
 
-export function canHandleMinimapScale(minimapVisible) {
-  return minimapVisible === true;
+export function canHandleMinimapScale() {
+  return true;
 }
 
 export function getMinimapViewport({ columns, rows }, focusCell, scale) {

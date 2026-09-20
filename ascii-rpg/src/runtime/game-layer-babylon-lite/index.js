@@ -175,7 +175,6 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   const questListeners = new Set();
   const goldListeners = new Set();
   let fogOfWar = null;
-  let minimapVisible = true;
   let minimapZoom = 2;
   let viewOrigin = { x: 0, y: 0 };
   let cameraMode = "center";
@@ -214,7 +213,6 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   };
 
   const renderMinimap = () => {
-    if (!minimapVisible) return;
     if (!fogOfWar) return;
     minimapCanvas.hidden = false;
     const bounds = minimapCanvas.getBoundingClientRect();
@@ -375,7 +373,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
 
   const handleMinimapClick = () => {
     if (transitionActive) return;
-    if (!canHandleMinimapScale(minimapVisible)) return;
+    if (!canHandleMinimapScale()) return;
     const nextZoom = getNextMinimapScale(minimapZoom);
     for (const listener of minimapZoomListeners) listener(nextZoom);
   };
@@ -1116,11 +1114,6 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       if (nextEnabled === gpuLightPassEnabled) return;
       gpuLightPassEnabled = nextEnabled;
       renderWorld({ refreshLighting: true });
-    },
-    setMinimap(enabled) {
-      minimapVisible = enabled === true;
-      minimapCanvas.hidden = !minimapVisible;
-      renderMinimap();
     },
     setMinimapZoom(nextZoom) {
       if (!MINIMAP_SCALE_LEVELS.includes(nextZoom) || nextZoom === minimapZoom) return;

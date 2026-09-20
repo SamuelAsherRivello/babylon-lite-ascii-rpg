@@ -4,7 +4,7 @@
 
 ### Requirement: Selectable test presentation aspect
 The Settings region SHALL provide a persisted aspect control. A first-time
-session SHALL select landscape and display the exact label `Aspect (Lanscape)`.
+session SHALL select landscape and display the exact label `Aspect (Landscape)`.
 Activating that control SHALL select portrait; while portrait is selected, the
 control SHALL display `Aspect (Portrait)` and SHALL toggle back to landscape
 when activated. Reset Settings SHALL restore landscape. In landscape, the game
@@ -17,11 +17,11 @@ enforcing the desktop test-frame ratio.
 
 #### Scenario: Default landscape presentation
 - **WHEN** a user opens the game with no saved aspect selection
-- **THEN** the Settings control displays `Aspect (Lanscape)` and the
+- **THEN** the Settings control displays `Aspect (Landscape)` and the
   viewport-filling presentation is wider than tall
 
 #### Scenario: Desktop user selects portrait testing
-- **WHEN** a desktop-class user activates `Aspect (Lanscape)`
+- **WHEN** a desktop-class user activates `Aspect (Landscape)`
 - **THEN** the control displays `Aspect (Portrait)` and the game uses a
   centered 9:16 tall test frame
 
@@ -37,4 +37,4 @@ enforcing the desktop test-frame ratio.
 #### Scenario: Reset restores landscape
 - **WHEN** a user activates Reset Settings after selecting portrait
 - **THEN** the next initialized session selects landscape and displays
-  `Aspect (Lanscape)`
+  `Aspect (Landscape)`

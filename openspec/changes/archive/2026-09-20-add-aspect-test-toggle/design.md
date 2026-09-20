@@ -30,7 +30,7 @@ path. See `proposal.md` for motivation and the delta specs for behavior.
   values. The absent value resolves to landscape and is written during initial
   render; this follows the repository's persistence contract. `localStorage`
   clearing remains the reset mechanism.
-- Use `Aspect (Lanscape)` as the landscape-state label exactly as requested;
+- Use `Aspect (Landscape)` as the landscape-state label exactly as requested;
   selected portrait displays `Aspect (Portrait)` so the button describes the
   current active presentation and remains a two-way test switch.
 - Apply an aspect state marker at the UI/game presentation boundary. Landscape

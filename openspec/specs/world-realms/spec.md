@@ -85,16 +85,15 @@ realm transfer SHALL restore the destination realm's previous discovery.
 - **THEN** Underground starts with only its own discovered cells and
   Overground discovery remains available when the player returns
 
-### Requirement: Realm settings transfer
-The Settings UI SHALL display `Realm (Overground)` or `Realm (Underground)`
-for the active realm. Activating it SHALL select the stairs with the shortest
-reachable walking-path distance, move the player to those stairs, and transfer
-to the paired realm. Each walkable cell on the selected route SHALL be
+### Requirement: Realm transfer remains gameplay-owned
+The game SHALL transfer to the paired realm when the player enters the stairs,
+selecting the shortest reachable walking-path distance. Each walkable cell on
+the selected route SHALL be
 discovered in the source realm before transfer. The selected realm SHALL be
 persisted and generated first after refresh.
 
-#### Scenario: Settings transfer uses reachable stairs
-- **WHEN** the player activates Realm while in Overground
+#### Scenario: Stair transfer uses reachable stairs
+- **WHEN** the player enters the stairs while in Overground
 - **THEN** the game uses the shortest walkable path to an `S` cell and arrives
   in Underground at the paired `S` coordinate, with every route cell retained
   as discovered in Overground

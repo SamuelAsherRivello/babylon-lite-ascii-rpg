@@ -39,12 +39,10 @@ import {
   getGoldSnapshot,
   getQuestSnapshot,
   getRealmSnapshot,
-  travelRealm,
   sendRealmAmbientSnapshot,
   sendRealmPreferenceSnapshot,
   sendCameraModeSnapshot,
   sendGpuLightPassSnapshot,
-  sendMinimapSnapshot,
   sendMinimapZoomSnapshot,
   sendPlayerGpuShadowBleedRangeSnapshot,
   sendPlayerLightingSnapshot,
@@ -96,7 +94,6 @@ const torchShadowStorageKey = "babylon-lite-ascii-rpg.torch-shadow";
 const playerShadowStorageKey = "babylon-lite-ascii-rpg.player-shadow";
 const gpuLightPassStorageKey = "babylon-lite-ascii-rpg.gpu-light-pass";
 const playerGpuShadowBleedRangeStorageKey = "babylon-lite-ascii-rpg.player-gpu-shadow-bleed-range";
-const minimapStorageKey = "babylon-lite-ascii-rpg.minimap";
 const minimapZoomStorageKey = "babylon-lite-ascii-rpg.minimap-zoom";
 const lightingWindowPositionStorageKey = "babylon-lite-ascii-rpg.lighting-window-position";
 const minZoom = 1;
@@ -130,7 +127,6 @@ const settingsHelp = Object.freeze({
   lighting: "Open lighting controls.",
   closeLighting: "Close lighting controls.",
   gpuLightPass: "Toggle soft GPU light glow.",
-  minimap: "Show or hide the exploration minimap.",
   playerGpuShadowBleedRange: "Cycle the bounded player shadow edge range in grid cells.",
   camera: "Cycle camera mode.",
   torchLighting: `Cycle torch light. ${lightingValueHelp}`,
@@ -141,7 +137,6 @@ const settingsHelp = Object.freeze({
   ambientDecrease: `Dim overall light. ${ambientValueHelp}`,
   zoomIn: "Make map glyphs larger.",
   zoomOut: "Make map glyphs smaller.",
-  toast: "Send a test toast.",
   reset: "Clear local storage and reload.",
 });
 
@@ -835,7 +830,6 @@ function AppContent() {
   const [overgroundAmbient, setOvergroundAmbient] = useState(() => getStoredAmbientLight(overgroundAmbientStorageKey, 0.9));
   const [undergroundAmbient, setUndergroundAmbient] = useState(() => getStoredAmbientLight(undergroundAmbientStorageKey, 0.1));
   const [gpuLightPass, setGpuLightPass] = useState(() => getStoredBoolean(gpuLightPassStorageKey, false));
-  const [minimap, setMinimap] = useState(() => getStoredBoolean(minimapStorageKey, true));
   const [playerGpuShadowBleedRange, setPlayerGpuShadowBleedRange] = useState(getStoredPlayerGpuShadowBleedRange);
   const [torchLightingIndex, setTorchLightingIndex] = useState(() => getStoredSourceIndex(torchLightingStorageKey, 1));
   const [playerLightingIndex, setPlayerLightingIndex] = useState(() => getStoredSourceIndex(playerLightingStorageKey, 4));
@@ -969,11 +963,6 @@ function AppContent() {
     localStorage.setItem(gpuLightPassStorageKey, gpuLightPass ? "true" : "false");
     sendGpuLightPassSnapshot(gpuLightPass);
   }, [gpuLightPass]);
-
-  useEffect(() => {
-    localStorage.setItem(minimapStorageKey, minimap ? "true" : "false");
-    sendMinimapSnapshot(minimap);
-  }, [minimap]);
 
   useEffect(() => {
     localStorage.setItem(playerGpuShadowBleedRangeStorageKey, String(playerGpuShadowBleedRange));
@@ -1230,7 +1219,7 @@ function AppContent() {
               tabIndex={-1}
               onClick={toggleAspectMode}
             >
-              {aspectMode === "portrait" ? "Aspect (Portrait)" : "Aspect (Lanscape)"}
+              {aspectMode === "portrait" ? "Aspect (Portrait)" : "Aspect (Landscape)"}
             </button>
           </SettingTooltipTarget>
           <SettingTooltipTarget description={settingsHelp.showUi} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
@@ -1249,22 +1238,6 @@ function AppContent() {
               </span>
             </button>
           </SettingTooltipTarget>
-          <SettingTooltipTarget description={settingsHelp.minimap} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
-            <button
-              id="minimap_toggle"
-              className="corner_body settings_option"
-              type="button"
-              aria-pressed={minimap}
-              aria-description={settingsHelp.minimap}
-              tabIndex={-1}
-              onClick={() => setMinimap((enabled) => !enabled)}
-            >
-              <span>Minimap</span>
-              <span id="minimap_checkbox" aria-hidden="true">
-                {minimap ? "☑" : "☐"}
-              </span>
-            </button>
-          </SettingTooltipTarget>
           <SettingTooltipTarget description={settingsHelp.camera} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
             <button
               id="camera_mode_toggle"
@@ -1278,14 +1251,6 @@ function AppContent() {
               {CAMERA_MODE_LABELS[cameraMode] ?? CAMERA_MODE_LABELS[DEFAULT_CAMERA_MODE]}
             </button>
           </SettingTooltipTarget>
-          <button
-            id="realm_toggle"
-            className="corner_body settings_option"
-            type="button"
-            onClick={travelRealm}
-          >
-            Realm ({activeRealm})
-          </button>
           <div id="zoom_control" className="corner_body zoom_control" aria-label="Zoom">
             <span>Zoom</span>
             <SettingTooltipTarget description={settingsHelp.zoomIn} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
@@ -1296,18 +1261,6 @@ function AppContent() {
               <button type="button" aria-label="Zoom out" aria-description={settingsHelp.zoomOut} onClick={() => changeZoom(-1)} disabled={zoom <= minZoom}>-</button>
             </SettingTooltipTarget>
           </div>
-          <SettingTooltipTarget description={settingsHelp.toast} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
-            <button
-              id="send_toast"
-              className="corner_body settings_option"
-              type="button"
-              aria-description={settingsHelp.toast}
-              tabIndex={-1}
-              onClick={() => enqueueToast("Test toast")}
-            >
-              Send Toast
-            </button>
-          </SettingTooltipTarget>
           <SettingTooltipTarget description={settingsHelp.reset} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
             <button
               id="reset_settings"

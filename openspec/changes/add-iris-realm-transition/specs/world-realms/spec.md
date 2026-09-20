@@ -32,9 +32,9 @@ generation parameters.
 - **THEN** Underground becomes the stored active-realm preference for the next
   refresh
 
-#### Scenario: Settings transfer uses the same realm presentation
+#### Scenario: Stair transfer uses the same realm presentation
 
-- **WHEN** the Settings UI activates Realm and the game moves the player along
+- **WHEN** the player enters the paired stairs and the game moves the player along
   the shortest reachable path to an `S` cell
 - **THEN** the paired-realm transfer uses the same blocking iris sequence,
   preserves discovery of every source-route cell, and arrives at the paired

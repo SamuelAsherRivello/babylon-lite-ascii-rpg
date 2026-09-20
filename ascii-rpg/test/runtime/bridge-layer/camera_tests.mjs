@@ -9,6 +9,7 @@ import {
 } from "../../../src/runtime/bridge-layer/camera.js";
 
 test("camera mode values normalize safely and cycle in the visible order", () => {
+  assert.equal(DEFAULT_CAMERA_MODE, "lock");
   assert.equal(normalizeCameraMode(null), DEFAULT_CAMERA_MODE);
   assert.equal(normalizeCameraMode("unknown"), DEFAULT_CAMERA_MODE);
   assert.equal(getCameraModeLabel("center"), CAMERA_MODE_LABELS.center);

@@ -12,7 +12,7 @@ as desktop.
 ## What Changes
 
 - Add a Settings toggle whose default, exact visible label is
-  `Aspect (Lanscape)`; activating it switches the displayed state to portrait,
+  `Aspect (Landscape)`; activating it switches the displayed state to portrait,
   and activating it again returns to landscape.
 - In landscape, make the game presentation fill the available browser viewport
   while ensuring its effective content frame is wider than tall.

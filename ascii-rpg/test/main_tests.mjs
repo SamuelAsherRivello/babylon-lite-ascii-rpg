@@ -101,14 +101,15 @@ test("documents the plain safe-area template", async () => {
       throw new Error(`The character info panel must include the empty ${slot} placeholder.`);
     }
   }
-  if (!styles.includes("grid-template-columns: repeat(3, minmax(0, var(--character-slot-size)))")
-    || !styles.includes("grid-template-rows: repeat(2, minmax(0, var(--character-slot-size)))")
-    || !styles.includes("container-type: size")
-    || !styles.includes("--character-slot-size: min(")
-    || !styles.includes("flex: 1 1 auto")
-    || !styles.includes("overflow: hidden")
+  if (!styles.includes("grid-template-columns: repeat(3, minmax(0, 1fr))")
+    || !styles.includes("grid-auto-rows: auto")
+    || !styles.includes("width: min(calc(100dvw")
+    || !styles.includes("height: min(calc(100dvh")
+    || !styles.includes("flex: 0 0 auto")
+    || !styles.includes("height: auto")
     || !styles.includes("width: 100%")
-    || !styles.includes("height: 100%")
+    || !styles.includes("height: min(83px, 32%)")
+    || !styles.includes("grid-template-rows: repeat(4, minmax(0, 1fr))")
     || !styles.includes("aspect-ratio: 1 / 1")
     || !styles.includes("min-height: 0")) {
     throw new Error("Character resources and empty inventory slots must share a six-cell grid.");
@@ -144,16 +145,24 @@ test("documents the plain safe-area template", async () => {
   if (!app.includes('id="fps"') || !app.includes("FPS: {fps}") || !app.includes("requestAnimationFrame(updateFps)")) {
     throw new Error("The HUD must display a once-per-second browser FPS counter.");
   }
-  if (!app.includes('id="windows"') || !app.includes('id="windows_title"') || !app.includes("Windows - 1")
-    || !app.includes('id="windows_2"') || !app.includes('id="windows_2_title"') || !app.includes("Windows - 2")) {
+  if (!app.includes('id="windows"') || !app.includes('titleId="windows_title"') || !app.includes("title=\"Windows - 1\"")
+    || !app.includes('id="windows_2"') || !app.includes('titleId="windows_2_title"') || !app.includes("title=\"Windows - 2\"")) {
     throw new Error("The lower-left HUD must include Windows - 1 and Windows - 2 sections.");
   }
-  if (!app.includes('id="settings"') || !app.includes('id="settings_title"') || !app.includes("Settings")) {
+  if (!app.includes('id="settings"') || !app.includes('titleId="settings_title"') || !app.includes('title="Settings"')) {
     throw new Error("The lower-left HUD must include a Settings section.");
   }
   if (!styles.includes(".corner_body") || !styles.includes(".corner_title")
     || !styles.includes(".hud_block_title") || !styles.includes(".hud_block_body")) {
     throw new Error("The page must define shared HUD title and body text styles.");
+  }
+  const topLeftStyle = styles.slice(styles.indexOf(".corner_top_left {"), styles.indexOf(".corner_top_right {"));
+  const topRightStyle = styles.slice(styles.indexOf(".corner_top_right {"), styles.indexOf(".corner_top_left,\n.corner_top_right"));
+  if (!topLeftStyle.includes("width: var(--top-panel-size)")
+    || !topLeftStyle.includes("height: var(--top-panel-size)")
+    || !topRightStyle.includes("width: var(--top-panel-size)")
+    || !topRightStyle.includes("height: var(--top-panel-size)")) {
+    throw new Error("The Character and Map boxes must use the same map-sized dimensions.");
   }
   if (!app.includes('id="lighting_torch_toggle"') || !app.includes('id="lighting_player_toggle"')
     || !app.includes('id="shadow_torch_toggle"') || !app.includes('id="shadow_player_toggle"')
@@ -206,7 +215,7 @@ test("documents the plain safe-area template", async () => {
     throw new Error("Windows - 2 must contain only the Lighting launcher.");
   }
   const statsMarkup = app.slice(statsStart, settingsStart);
-  if (!statsMarkup.includes('id="stats_title"') || !statsMarkup.includes("Stats") || !statsMarkup.includes('id="fps"')) {
+  if (!statsMarkup.includes('titleId="stats_title"') || !statsMarkup.includes('title="Stats"') || !statsMarkup.includes('id="fps"')) {
     throw new Error("The Stats section must appear below Windows and contain the FPS counter.");
   }
   if (settingsMarkup.includes('id="ascii_palette_toggle"') || settingsMarkup.includes('id="arguments_toggle"')) {
@@ -316,7 +325,7 @@ test("documents the plain safe-area template", async () => {
   if (!app.includes("Fullscreen")) {
     throw new Error("The Settings section must include the Fullscreen option line.");
   }
-  if (!app.includes('id="aspect_toggle"') || !app.includes("Aspect (Lanscape)")
+  if (!app.includes('id="aspect_toggle"') || !app.includes("Aspect (Landscape)")
     || !app.includes("Aspect (Portrait)") || !app.includes("aspectStorageKey")
     || !app.includes("getStoredAspectMode") || !app.includes("localStorage.setItem(aspectStorageKey, aspectMode)")
     || !app.includes("dataset.presentationAspect = aspectMode") || !app.includes("const toggleAspectMode")) {
@@ -397,9 +406,12 @@ test("documents the plain safe-area template", async () => {
   if (!app.includes("https://github.com/SamuelAsherRivello/babylon-lite-ascii-rpg")) {
     throw new Error("The page must link to the project repository.");
   }
-  if (!app.includes('id="minimap_toggle"') || !app.includes("Minimap")
-    || !app.includes("minimapStorageKey") || !app.includes("sendMinimapSnapshot")) {
-    throw new Error("Settings must provide a persisted Minimap visibility checkbox.");
+  if (app.includes('id="minimap_toggle"') || app.includes("minimapStorageKey") || app.includes("sendMinimapSnapshot")
+    || !gameLayer.includes("let minimapZoom = 2")) {
+    throw new Error("Minimap visibility must remain always on without a settings checkbox or visibility bridge.");
+  }
+  if (app.includes('id="realm_toggle"') || app.includes('id="send_toast"') || app.includes("Send Toast")) {
+    throw new Error("Realm and test-toast Settings buttons must not be rendered.");
   }
   if (!gameLayer.includes('id = "minimap_canvas"') || !gameLayer.includes("createFogOfWar")
     || !gameLayer.includes("discoverFromPlayer") || !gameLayer.includes("getMinimapWorldCellGraphic")
@@ -421,7 +433,7 @@ test("documents the plain safe-area template", async () => {
     throw new Error("The transition mask must be a pointer-transparent, soft-edged game-layer surface.");
   }
   if (!gameLayer.includes('minimapCanvas.addEventListener("click", handleMinimapClick)')
-    || !gameLayer.includes("canHandleMinimapScale(minimapVisible)")
+    || !gameLayer.includes("canHandleMinimapScale()")
     || !gameLayer.includes('minimapCanvas.removeEventListener("click", handleMinimapClick)')
     || !gameLayer.includes("subscribeToMinimapZoom(listener)")
     || !main.includes("controller.subscribeToMinimapZoom(sendMinimapZoomSnapshot)")
@@ -441,7 +453,7 @@ test("documents the plain safe-area template", async () => {
     || !styles.includes("image-rendering: pixelated") || !styles.includes("pointer-events: auto")) {
     throw new Error("The minimap must use responsive pixel-preserving sizing.");
   }
-  const bottomLeftStart = app.indexOf('className="corner corner_bottom_left"');
+  const bottomLeftStart = app.indexOf('position="bottom-left"');
   if (!app.includes('aria-label="Map icon"') || !app.includes('onClick={activateMinimapZoom}')) {
     throw new Error("The upper-right HUD must expose the box-wide minimap map action.");
   }
@@ -487,7 +499,7 @@ test("documents the quest tracker, live gold bridge, and quest toasts", async ()
   const app = await readFile(new URL("src/runtime/ui-layer-react/App.jsx", appRoot), "utf8");
   const bridge = await readFile(new URL("src/runtime/bridge-layer/game-bridge.js", appRoot), "utf8");
   const styles = await readFile(new URL("src/runtime/ui-layer-react/style.css", appRoot), "utf8");
-  if (!app.includes("Question: {quest.title}") || !app.includes("quest_tracker_body_complete")
+  if (!app.includes("Question: ${quest.title}") || !app.includes("quest_tracker_body_complete")
     || !app.includes("Quest Started: ${quest.title}.") || !app.includes("Quest Progress: ${quest.title}")
     || !app.includes("Quest Completed: ${quest.title}.")) {
     throw new Error("The React HUD must render live quest text and state-specific quest toasts.");

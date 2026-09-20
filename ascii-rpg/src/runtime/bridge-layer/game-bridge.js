@@ -11,7 +11,6 @@ let torchShadowSnapshot = "X High";
 let playerShadowSnapshot = "High";
 let gpuLightPassSnapshot = false;
 let playerGpuShadowBleedRangeSnapshot = 2;
-let minimapSnapshot = true;
 let minimapZoomSnapshot = 2;
 let zoomSnapshot = null;
 let lightingSnapshot = null;
@@ -34,7 +33,6 @@ export function setGameController(controller) {
   gameController?.setPlayerShadow?.(playerShadowSnapshot);
   gameController?.setGpuLightPass?.(gpuLightPassSnapshot);
   gameController?.setPlayerGpuShadowBleedRange?.(playerGpuShadowBleedRangeSnapshot);
-  gameController?.setMinimap?.(minimapSnapshot);
   gameController?.setMinimapZoom?.(minimapZoomSnapshot);
   if (zoomSnapshot !== null) gameController?.setZoom?.(zoomSnapshot);
   if (lightingSnapshot !== null) gameController?.setLighting?.(lightingSnapshot);
@@ -118,11 +116,6 @@ export function sendGpuLightPassSnapshot(enabled) {
 export function sendPlayerGpuShadowBleedRangeSnapshot(range) {
   playerGpuShadowBleedRangeSnapshot = range;
   gameController?.setPlayerGpuShadowBleedRange?.(range);
-}
-
-export function sendMinimapSnapshot(enabled) {
-  minimapSnapshot = enabled === true;
-  gameController?.setMinimap?.(minimapSnapshot);
 }
 
 export function getQuestSnapshot() { return questSnapshot; }

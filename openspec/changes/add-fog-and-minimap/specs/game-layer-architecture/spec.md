@@ -5,16 +5,16 @@
 ### Requirement: Game-owned exploration and minimap rendering
 
 Babylon Lite SHALL own fog-of-war state, discovery evaluation, minimap fog
-opacity calculation, and unlit world-content minimap rendering. React SHALL own only the
-persisted `Minimap` control and SHALL send its Boolean visibility value through
-the narrow bridge; it SHALL NOT receive or render mutable world cells,
+opacity calculation, and unlit world-content minimap rendering. React SHALL
+NOT own a minimap visibility control or send visibility through the bridge;
+it SHALL NOT receive or render mutable world cells,
 discovery data, or minimap cells.
 
-#### Scenario: Visibility command stays narrow
+#### Scenario: Minimap presentation stays game-owned
 
-- **WHEN** the user changes the `Minimap` setting in React
-- **THEN** React sends only the visibility value and Babylon Lite updates
-  minimap presentation without transferring world or fog data to React
+- **WHEN** a world is generated or updated
+- **THEN** Babylon Lite keeps the minimap rendered without a visibility
+  command or React-owned world and fog data
 
 #### Scenario: Game layer retains fog authority
 

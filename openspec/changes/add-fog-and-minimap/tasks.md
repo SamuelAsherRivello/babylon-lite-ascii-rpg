@@ -12,8 +12,8 @@
 
 ## 3. UI command and HUD placement
 
-- [x] 3.1 Add the default-enabled persisted `Minimap` checkbox and tooltip in Settings, following the existing Boolean storage pattern; verify UI tests cover default initialization, persistence, Reset Settings behavior, and the literal control label.
-- [x] 3.2 Add the cached Boolean minimap-visibility bridge command and game-controller setter; verify bridge tests prove late controller registration receives the cached setting and disabling rendering does not clear fog state.
+- [x] 3.1 Keep the minimap permanently visible without a Settings checkbox or persisted visibility state; verify UI tests cover the removed control and retained minimap surface.
+- [x] 3.2 Remove the minimap-visibility bridge command and game-controller setter; verify bridge tests retain zoom forwarding without visibility state.
 - [x] 3.3 Move the GitHub link immediately above the lower-left Windows list and remove it from the upper-right HUD; verify the rendered HUD structure and responsive CSS tests preserve the stated order and keep the minimap area available.
 
 ## 4. Integrated verification

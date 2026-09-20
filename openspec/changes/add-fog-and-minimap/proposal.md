@@ -15,8 +15,8 @@ downsampled view of the world instead of anonymous coverage brightness.
 - Add a Babylon Lite-owned upper-right minimap that renders downsampled world
   content at a hard-coded initial 1:10 world-to-minimap scale, with discovery
   coverage as an opacity mask rather than grayscale map content.
-- Add a persisted `Minimap` settings checkbox that only toggles minimap
-  rendering; it never pauses or clears fog discovery.
+- Keep the minimap permanently rendered; it never pauses or clears fog
+  discovery.
 - Size the minimap with a hard-coded minimum plus a viewport-relative size so
   it remains usable in desktop landscape and mobile portrait layouts.
 - Move the GitHub link from the upper-right HUD position to immediately above

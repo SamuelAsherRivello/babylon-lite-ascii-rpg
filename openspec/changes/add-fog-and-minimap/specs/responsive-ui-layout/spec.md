@@ -4,14 +4,14 @@
 
 ### Requirement: Upper-right minimap and lower-left project link placement
 
-The upper-right HUD area SHALL contain the minimap when it is enabled. The
+The upper-right HUD area SHALL always contain the minimap. The
 project GitHub link SHALL appear immediately above the Windows list in the
 lower-left HUD region. These placements SHALL remain inside the shared HUD
 inset in supported desktop landscape and mobile portrait layouts.
 
-#### Scenario: Enabled minimap occupies the upper right
+#### Scenario: Minimap occupies the upper right
 
-- **WHEN** the minimap is enabled while the HUD is visible
+- **WHEN** the HUD is visible
 - **THEN** it is displayed in the upper-right area and the GitHub link is not
   displayed there
 

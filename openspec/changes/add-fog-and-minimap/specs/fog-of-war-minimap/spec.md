@@ -82,22 +82,14 @@ shadow lighting and SHALL NOT use camera framing as its source.
 
 The minimap SHALL use a hard-coded minimum size and viewport-relative size so
 it remains visible within the upper-right area in desktop landscape and mobile
-portrait viewports. The Settings UI SHALL provide a persisted checkbox labeled
-`Minimap`, enabled by default, that controls whether the minimap is rendered.
-Fog discovery SHALL continue while the minimap is disabled, and Reset Settings
-SHALL restore the enabled default.
+portrait viewports. The minimap SHALL always be rendered while the HUD is
+visible. Fog discovery SHALL continue independently of minimap rendering.
 
-#### Scenario: Hidden minimap keeps discovering
+#### Scenario: Minimap remains rendered while discovering
 
-- **WHEN** the user disables `Minimap` and moves the player
-- **THEN** no minimap is rendered and eligible walkable cells continue to
-  become discovered
-
-#### Scenario: Re-enabled minimap shows prior discovery
-
-- **WHEN** the user re-enables `Minimap` during the same world session
-- **THEN** the minimap immediately displays all coverage discovered while it
-  was hidden
+- **WHEN** the player moves while the HUD is visible
+- **THEN** the minimap remains rendered and eligible walkable cells continue
+  to become discovered
 
 #### Scenario: Portrait minimap remains in bounds
 

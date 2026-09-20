@@ -1,5 +1,5 @@
 export const CAMERA_MODES = Object.freeze(["center", "deadzone", "lock"]);
-export const DEFAULT_CAMERA_MODE = "center";
+export const DEFAULT_CAMERA_MODE = "lock";
 export const CAMERA_STORAGE_KEY = "babylon-lite-ascii-rpg.camera-mode";
 export const CAMERA_MODE_LABELS = Object.freeze({
   center: "CameraMode (Center)",

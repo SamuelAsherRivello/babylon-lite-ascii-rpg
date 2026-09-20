@@ -92,14 +92,12 @@ Alternative: use the final lit game canvas as the source. Rejected because
 the minimap must ignore lighting for now and should remain deterministic from
 world and discovery state.
 
-### Persist only visibility through the existing bridge
+### Keep minimap presentation always on
 
-`App.jsx` follows the existing Boolean-settings pattern for a default-enabled
-`Minimap` value and sends the Boolean through a cached bridge command. On
-controller registration, the bridge applies that cached value. Babylon Lite
-only hides or shows the dedicated minimap canvas; discovery continues and the
-coarse coverage remains current. Reset Settings already clears local storage
-and reloads, restoring the default-enabled state.
+The minimap has no user visibility setting or bridge command. Babylon Lite
+always renders the dedicated minimap canvas while discovery continues and the
+coarse coverage remains current. Reset Settings does not need to manage
+minimap visibility.
 
 ## Risks / Trade-offs
 
@@ -117,11 +115,9 @@ and reloads, restoring the default-enabled state.
 
 ## Migration Plan
 
-1. Missing `Minimap` storage resolves to enabled and writes its default on
-   the first React render.
-2. Each generated world initializes a new empty discovery field and coarse
+1. Each generated world initializes a new empty discovery field and coarse
    coverage table.
-3. Reset Settings clears only persisted preferences; reload naturally starts a
+2. Reset Settings clears only persisted preferences; reload naturally starts a
    fresh world and therefore fresh fog.
-4. Rollback removes the minimap surface and its visibility preference; no
-   saved world data requires migration.
+3. Rollback removes the minimap surface; no saved world data requires
+   migration.

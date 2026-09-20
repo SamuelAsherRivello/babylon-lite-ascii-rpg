@@ -132,9 +132,8 @@ test("minimap zoom changes the rendered viewport without changing canvas bounds"
   );
 });
 
-test("hidden minimaps do not accept scale input", () => {
-  assert.equal(canHandleMinimapScale(true), true);
-  assert.equal(canHandleMinimapScale(false), false);
+test("always-visible minimaps accept scale input", () => {
+  assert.equal(canHandleMinimapScale(), true);
 });
 
 test("matching minimap zoom keeps the game cell footprint instead of stretching to canvas bounds", () => {

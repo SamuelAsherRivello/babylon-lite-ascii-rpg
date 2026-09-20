@@ -8,6 +8,16 @@ that does not follow the player during movement.
 
 ## Requirements
 
+### Requirement: Lock is the default camera mode
+
+When no valid camera mode is saved, the game SHALL select `Camera Lock`.
+Saved valid camera modes SHALL continue to take precedence over this default.
+
+#### Scenario: New game defaults to camera lock
+
+- **WHEN** a game view is shown with no saved camera mode
+- **THEN** the Settings UI SHALL display `CameraMode (Lock)`
+
 ### Requirement: Bounded zoom control
 
 The Settings UI SHALL expose a `Zoom + N -` control whose value starts at `5`
