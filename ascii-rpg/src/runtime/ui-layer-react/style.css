@@ -10,8 +10,9 @@ body {
 html {
   --box-body-font: 5pt;
   --box-action-font: 10pt;
-  --ui-bar-icon-font: clamp(7px, calc(var(--top-panel-size) * 0.08), 14.4pt);
-  --character-bar-gap: clamp(2px, calc(var(--top-panel-size) * 0.052 - 1px), 9px);
+  --ui-bar-icon-font: 14.4pt;
+  --character-bar-gap: 7px;
+  --character-bar-height: 8.8px;
   --top-panel-gap: 16px;
   --top-panel-size: clamp(96px, 24vmin, 192px);
 }
@@ -45,7 +46,7 @@ html {
     circle at var(--transition-center-x, 50%) var(--transition-center-y, 50%),
     transparent 0,
     transparent var(--transition-radius, 0px),
-    var(--transition-color, #ef3340) calc(var(--transition-radius, 0px) + var(--transition-feather, 12px)),
+    var(--transition-color, #ef3340) var(--transition-feather-end, 12px),
     var(--transition-color, #ef3340) 100%
   );
 }
@@ -103,6 +104,10 @@ html[data-hud-hidden="true"] #settings > :not(#show_ui_toggle) {
   display: none;
 }
 
+html[data-hud-hidden="true"] #settings > :has(#show_ui_toggle) {
+  display: inline;
+}
+
 .corner_top_left {
   top: 0;
   left: 0;
@@ -155,10 +160,10 @@ html[data-hud-hidden="true"] #settings > :not(#show_ui_toggle) {
   flex: 0 0 auto;
   top: -4px;
   left: -4px;
-  height: calc(var(--ui-bar-icon-font) * 4 + var(--character-bar-gap) * 3);
+  height: 98px;
   grid-template-rows: repeat(4, var(--ui-bar-icon-font));
   row-gap: var(--character-bar-gap);
-  width: calc(100% + 4px);
+  right: -4px;
   min-height: 0;
 }
 
@@ -187,7 +192,7 @@ html[data-hud-hidden="true"] #settings > :not(#show_ui_toggle) {
 .character_bar {
   position: relative;
   min-width: 0;
-  height: clamp(4px, calc(var(--top-panel-size) * 0.046), 8.8px);
+  height: var(--character-bar-height);
   overflow: hidden;
   border: 1px solid #9da3aa;
   background: #000;
@@ -304,7 +309,7 @@ html[data-hud-hidden="true"] #settings > :not(#show_ui_toggle) {
 
 .minimap_status {
   position: absolute;
-  top: calc(var(--top-panel-size) + 25px);
+  top: 217px;
   right: 0;
   display: flex;
   flex-direction: column;
@@ -314,6 +319,32 @@ html[data-hud-hidden="true"] #settings > :not(#show_ui_toggle) {
   line-height: 1.2;
   text-align: right;
   white-space: nowrap;
+}
+
+.quest_tracker {
+  position: absolute;
+  top: calc(var(--top-panel-size) + 25px);
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: #f5f5f5;
+  font-size: var(--box-action-font);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.quest_tracker_title {
+  font-weight: 700;
+}
+
+.quest_tracker_body {
+  margin-left: 5px;
+  font-size: var(--box-body-font);
+}
+
+.quest_tracker_body_complete {
+  text-decoration: line-through;
 }
 
 .corner_bottom_left {
@@ -337,8 +368,8 @@ html[data-hud-hidden="true"] #settings > :not(#show_ui_toggle) {
 }
 
 html[data-presentation-aspect="portrait"] {
-  --presentation-frame-width: min(100vw, calc(100vh * 9 / 16));
-  --presentation-frame-height: min(100vh, calc(100vw * 16 / 9));
+  --presentation-frame-width: min(100vw, 56.25vh);
+  --presentation-frame-height: min(100vh, 177.78vw);
 }
 
 html[data-presentation-aspect="portrait"] #game_layer {
@@ -351,9 +382,14 @@ html[data-presentation-aspect="portrait"] #game_layer {
 }
 
 html[data-presentation-aspect="portrait"] #ui_layer {
-  inset:
-    calc(50% - var(--presentation-frame-height) / 2 + var(--ui-margin-y, 20px))
-    calc(50% - var(--presentation-frame-width) / 2 + var(--ui-margin-x, 20px));
+  inset: auto;
+  top: 50%;
+  left: 50%;
+  width: var(--presentation-frame-width);
+  height: var(--presentation-frame-height);
+  padding: var(--ui-margin-y, 20px) var(--ui-margin-x, 20px);
+  box-sizing: border-box;
+  transform: translate(-50%, -50%);
 }
 
 @media (pointer: coarse) {
@@ -426,7 +462,7 @@ html[data-presentation-aspect="portrait"] #ui_layer {
   z-index: 5;
   box-sizing: border-box;
   width: max-content;
-  max-width: calc(100vw - 16px);
+  max-width: 100vw;
   padding: 4px 6px;
   border: 1px solid #f5f5f5;
   background: #2f2f2f;
@@ -441,7 +477,7 @@ html[data-presentation-aspect="portrait"] #ui_layer {
 .toast {
   position: fixed;
   top: var(--ui-margin-y, 20px);
-  --toast-horizontal-inset: calc(var(--ui-margin-x, 20px) + var(--top-panel-size) + var(--top-panel-gap));
+  --toast-horizontal-inset: 228px;
   right: var(--toast-horizontal-inset);
   left: var(--toast-horizontal-inset);
   z-index: 6;
@@ -470,13 +506,13 @@ html[data-presentation-aspect="portrait"] #ui_layer {
 }
 
 @keyframes toast_descend {
-  from { transform: translateY(calc(-100% - var(--ui-margin-y, 20px))); }
+  from { transform: translateY(var(--toast-exit-offset, -120%)); }
   to { transform: translateY(0); }
 }
 
 @keyframes toast_ascend {
   from { transform: translateY(0); }
-  to { transform: translateY(calc(-100% - var(--ui-margin-y, 20px))); }
+  to { transform: translateY(var(--toast-exit-offset, -120%)); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -498,10 +534,7 @@ html[data-presentation-aspect="portrait"] #ui_layer {
   .toast {
     left: 50%;
     right: auto;
-    width: min(
-      920px,
-      calc(100vw - var(--toast-horizontal-inset) - var(--toast-horizontal-inset))
-    );
+    width: min(920px, 100vw);
     transform: translateX(-50%);
   }
 
@@ -519,13 +552,13 @@ html[data-presentation-aspect="portrait"] #ui_layer {
 }
 
 @keyframes toast_descend_wide {
-  from { transform: translate(-50%, calc(-100% - var(--ui-margin-y, 20px))); }
+  from { transform: translate(-50%, var(--toast-exit-offset, -120%)); }
   to { transform: translate(-50%, 0); }
 }
 
 @keyframes toast_ascend_wide {
   from { transform: translate(-50%, 0); }
-  to { transform: translate(-50%, calc(-100% - var(--ui-margin-y, 20px))); }
+  to { transform: translate(-50%, var(--toast-exit-offset, -120%)); }
 }
 
 .zoom_control {
@@ -558,8 +591,8 @@ html[data-presentation-aspect="portrait"] #ui_layer {
   position: fixed;
   z-index: 2;
   box-sizing: border-box;
-  width: min(360px, calc(100vw - 24px));
-  max-height: calc(100vh - 24px);
+  width: min(360px, 100vw);
+  max-height: 100vh;
   border: 1px solid #f5f5f5;
   background: #2f2f2f;
   color: #f5f5f5;
@@ -829,8 +862,8 @@ html[data-presentation-aspect="portrait"] #ui_layer {
   z-index: 2;
   box-sizing: border-box;
   width: 286px;
-  max-width: calc(100vw - 32px);
-  max-height: calc(100vh - 32px);
+  max-width: 100vw;
+  max-height: 100vh;
   overflow: auto;
   padding: 12px;
   border: 1px solid #f5f5f5;

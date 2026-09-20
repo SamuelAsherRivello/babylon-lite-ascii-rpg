@@ -1,0 +1,27 @@
+{
+  "quests": [
+    {
+      "id": "collect-gold",
+      "title": "Collect Gold",
+      "objective": "Collect Gold",
+      "criterion": {
+        "mode": "relative",
+        "subject": "gold",
+        "eventType": "pickup-collected",
+        "pickupType": "gold",
+        "target": 3
+      },
+      "pickup": {
+        "type": "gold",
+        "count": 3,
+        "distances": [10, 30, 100]
+      }
+    }
+  ],
+  "criterionExamples": [
+    {
+      "id": "own-100-gold",
+      "criterion": { "mode": "absolute", "subject": "gold", "target": 100 }
+    }
+  ]
+}

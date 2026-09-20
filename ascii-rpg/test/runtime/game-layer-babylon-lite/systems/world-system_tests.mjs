@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   DEEP_WATER_GLYPH,
   FLOOR_GLYPH,
+  GOLD_GLYPH,
   GENERATION_PASSES,
   MOUNTAIN_GLYPH,
   MEDIUM_WATER_GLYPH,
@@ -173,6 +174,18 @@ test("restores a torch after the player leaves its cell", () => {
   clearCharacter(world, torch);
   assert.equal(getVisibleGlyph(world, torch), TORCH_GLYPH);
   assert.equal(isWalkableCell(world, torch), true);
+});
+
+test("restores an active pickup after the player leaves its cell", () => {
+  const world = createWorld({ rows: 12, columns: 20, seed: "pickup-overlay" });
+  const cell = { x: 2, y: 2 };
+  world.characters[cell.y][cell.x] = PLAYER_GLYPH;
+  world.pickups = [{ id: "gold-1", active: true, cell, glyph: GOLD_GLYPH }];
+  clearCharacter(world, cell);
+  assert.equal(getVisibleGlyph(world, cell), GOLD_GLYPH);
+  world.pickups[0].active = false;
+  clearCharacter(world, cell);
+  assert.equal(getVisibleGlyph(world, cell), WALL_GLYPH);
 });
 
 test("generates and retains a seed that can reproduce an unseeded level", () => {

@@ -268,7 +268,7 @@ test("documents the plain safe-area template", async () => {
   if (!app.slice(confirmStart, confirmEnd).includes("this.cancelEdit()") || !app.includes("{asciiPaletteOpen ? (")) {
     throw new Error("Confirming a glyph must close only its editor and keep the main palette window open.");
   }
-  if (!app.includes("getPaletteEditorPosition") || !app.includes("innerHeight") || !styles.includes("max-height: calc(100vh - 32px)")) {
+  if (!app.includes("getPaletteEditorPosition") || !app.includes("innerHeight") || !styles.includes("max-height: 100vh")) {
     throw new Error("The palette editor must remain completely onscreen at every glyph position.");
   }
   if (!app.includes("Hide warning") || !app.includes("Local palette change") || !app.includes("PALETTE_WARNING_KEY")) {
@@ -317,7 +317,7 @@ test("documents the plain safe-area template", async () => {
     throw new Error("The aspect setting must default invalid and missing stored values to landscape.");
   }
   if (!styles.includes('html[data-presentation-aspect="portrait"] #game_layer')
-    || !styles.includes("calc(100vh * 9 / 16)") || !styles.includes("calc(100vw * 16 / 9)")
+    || !styles.includes("56.25vh") || !styles.includes("177.78vw")
     || !styles.includes("@media (pointer: coarse)") || !styles.includes("width: 100vw")) {
     throw new Error("Portrait presentation must use a desktop 9:16 frame and fill a coarse-pointer mobile viewport.");
   }
@@ -468,5 +468,24 @@ test("documents the plain safe-area template", async () => {
   }
   if (page.includes('src="/src/main.js"')) {
     throw new Error("The safe-area template should not load an application module.");
+  }
+});
+
+test("documents the quest tracker, live gold bridge, and quest toasts", async () => {
+  const app = await readFile(new URL("src/runtime/ui-layer-react/App.jsx", appRoot), "utf8");
+  const bridge = await readFile(new URL("src/runtime/bridge-layer/game-bridge.js", appRoot), "utf8");
+  const styles = await readFile(new URL("src/runtime/ui-layer-react/style.css", appRoot), "utf8");
+  if (!app.includes("Question: {quest.title}") || !app.includes("quest_tracker_body_complete")
+    || !app.includes("Quest Started: ${quest.title}.") || !app.includes("Quest Progress: ${quest.title}")
+    || !app.includes("Quest Completed: ${quest.title}.")) {
+    throw new Error("The React HUD must render live quest text and state-specific quest toasts.");
+  }
+  if (!bridge.includes("getQuestSnapshot") || !bridge.includes("subscribeToQuest")
+    || !bridge.includes("getGoldSnapshot") || !bridge.includes("subscribeToGold")) {
+    throw new Error("The bridge must expose quest and runtime gold snapshots.");
+  }
+  if (!styles.includes(".quest_tracker") || !styles.includes("top: calc(var(--top-panel-size) + 25px)")
+    || !styles.includes("margin-left: 5px") || !styles.includes("text-decoration: line-through")) {
+    throw new Error("The quest tracker must preserve the requested HUD spacing, indent, and completion style.");
   }
 });

@@ -15,6 +15,12 @@ import {
   sendTorchShadowSnapshot,
   sendZoomSnapshot,
   sendTimeSnapshot,
+  sendQuestSnapshot,
+  sendGoldSnapshot,
+  getQuestSnapshot,
+  getGoldSnapshot,
+  subscribeToQuest,
+  subscribeToGold,
   setGameController,
   subscribeToTime,
   subscribeToMinimapZoom,
@@ -48,6 +54,22 @@ test("publishes time snapshots to subscribers", () => {
   unsubscribe();
   sendTimeSnapshot(3);
   assert.deepEqual(received, [2]);
+});
+
+test("publishes immutable quest and live gold snapshots", () => {
+  const quests = [];
+  const gold = [];
+  const stopQuest = subscribeToQuest(() => quests.push(getQuestSnapshot()));
+  const stopGold = subscribeToGold(() => gold.push(getGoldSnapshot()));
+  const snapshot = Object.freeze({ id: "collect-gold", title: "Collect Gold", objective: "Collect Gold", state: "pending", current: 1, target: 3 });
+  sendQuestSnapshot(snapshot);
+  sendGoldSnapshot(1);
+  assert.strictEqual(getQuestSnapshot(), snapshot);
+  assert.equal(getGoldSnapshot(), 1);
+  assert.deepEqual(quests, [snapshot]);
+  assert.deepEqual(gold, [1]);
+  stopQuest();
+  stopGold();
 });
 
 test("forwards zoom changes to the game layer", () => {

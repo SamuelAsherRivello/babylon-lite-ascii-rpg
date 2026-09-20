@@ -15,9 +15,13 @@ let minimapSnapshot = true;
 let minimapZoomSnapshot = 2;
 let zoomSnapshot = null;
 let lightingSnapshot = null;
+let questSnapshot = null;
+let goldSnapshot = 0;
 const timeListeners = new Set();
 const realmListeners = new Set();
 const minimapZoomListeners = new Set();
+const questListeners = new Set();
+const goldListeners = new Set();
 
 export function setGameController(controller) {
   gameController = controller;
@@ -119,6 +123,20 @@ export function sendPlayerGpuShadowBleedRangeSnapshot(range) {
 export function sendMinimapSnapshot(enabled) {
   minimapSnapshot = enabled === true;
   gameController?.setMinimap?.(minimapSnapshot);
+}
+
+export function getQuestSnapshot() { return questSnapshot; }
+export function subscribeToQuest(listener) { questListeners.add(listener); return () => questListeners.delete(listener); }
+export function sendQuestSnapshot(snapshot) {
+  questSnapshot = snapshot;
+  for (const listener of questListeners) listener();
+}
+
+export function getGoldSnapshot() { return goldSnapshot; }
+export function subscribeToGold(listener) { goldListeners.add(listener); return () => goldListeners.delete(listener); }
+export function sendGoldSnapshot(gold) {
+  goldSnapshot = Number(gold) || 0;
+  for (const listener of goldListeners) listener();
 }
 
 export function sendCameraModeSnapshot(mode) {

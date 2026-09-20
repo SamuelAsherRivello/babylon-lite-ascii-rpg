@@ -2,6 +2,7 @@ export const WALL_GLYPH = "W";
 export const FLOOR_GLYPH = "•";
 export const PLAYER_GLYPH = "P";
 export const TORCH_GLYPH = "T";
+export const GOLD_GLYPH = "◆";
 export const STAIR_GLYPH = "S";
 export const MOUNTAIN_GLYPH = "M";
 export const SHALLOW_WATER_GLYPH = "~";
@@ -62,7 +63,7 @@ export function createGeneratedSeed() {
   return `${Date.now().toString(36)}-${randomPart}`;
 }
 
-function createRandom(seed) {
+export function createRandom(seed) {
   let state = 2166136261;
   for (const character of String(seed)) {
     state ^= character.charCodeAt(0);
@@ -898,7 +899,8 @@ export function clearCharacter(world, cell) {
   if (!world || cell.x < 0 || cell.y < 0 || cell.x >= world.columns || cell.y >= world.rows) return false;
   const stair = world.stairs?.find((candidate) => isSameCell(candidate, cell));
   const torch = world.torches?.find((candidate) => isSameCell(candidate, cell));
-  world.characters[cell.y][cell.x] = stair ? STAIR_GLYPH : torch ? TORCH_GLYPH : null;
+  const pickup = world.pickups?.find((candidate) => candidate.active && isSameCell(candidate.cell, cell));
+  world.characters[cell.y][cell.x] = stair ? STAIR_GLYPH : torch ? TORCH_GLYPH : pickup ? pickup.glyph ?? GOLD_GLYPH : null;
   return true;
 }
 

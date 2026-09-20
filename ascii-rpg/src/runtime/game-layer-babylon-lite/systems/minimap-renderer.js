@@ -6,12 +6,14 @@ export const MINIMAP_MARKER_DEPTHS = Object.freeze({
   base: 0,
   world: 10,
   start: 20,
-  torch: 30,
+  quest: 30,
+  torch: 35,
   player: 40,
 });
 
 const MINIMAP_MARKER_COLORS = Object.freeze({
   start: "#00ff00",
+  quest: "#ffff00",
   torch: "#ffffff",
   player: "#ffff00",
 });
@@ -38,10 +40,18 @@ function getMinimapMarkerCell(cell) {
 export function getMinimapMarkers(world, fog, playerCell) {
   if (!world || !fog || !playerCell) return [];
   const markers = [];
-  if (world.playerStart && isDiscovered(fog, world, world.playerStart)) {
+  if (world.playerStart) {
     markers.push({
       type: "start", color: MINIMAP_MARKER_COLORS.start,
       depth: MINIMAP_MARKER_DEPTHS.start, cell: getMinimapMarkerCell(world.playerStart),
+    });
+  }
+  for (const pickup of world.pickups ?? []) {
+    if (!pickup.active) continue;
+    markers.push({
+      type: "quest", color: MINIMAP_MARKER_COLORS.quest,
+      depth: MINIMAP_MARKER_DEPTHS.quest, pickupId: pickup.id,
+      cell: getMinimapMarkerCell(pickup.cell),
     });
   }
   for (const torch of world.torches ?? []) {
@@ -51,13 +61,53 @@ export function getMinimapMarkers(world, fog, playerCell) {
       depth: MINIMAP_MARKER_DEPTHS.torch, cell: getMinimapMarkerCell(torch),
     });
   }
-  if (isDiscovered(fog, world, playerCell)) {
+  if (playerCell) {
     markers.push({
       type: "player", color: MINIMAP_MARKER_COLORS.player,
       depth: MINIMAP_MARKER_DEPTHS.player, cell: getMinimapMarkerCell(playerCell),
     });
   }
   return markers;
+}
+
+function clamp(value, minimum, maximum) {
+  return Math.min(maximum, Math.max(minimum, value));
+}
+
+export function getMinimapEdgeIndicators(world, playerCell, viewport) {
+  if (!world || !playerCell || !viewport) return [];
+  const indicators = [];
+  const minimumX = viewport.x;
+  const minimumY = viewport.y;
+  const maximumX = viewport.x + viewport.columns - 1;
+  const maximumY = viewport.y + viewport.rows - 1;
+  const localPlayer = { x: playerCell.x - minimumX, y: playerCell.y - minimumY };
+  const edgeCounts = new Map();
+  for (const pickup of world.pickups ?? []) {
+    if (!pickup.active) continue;
+    const localTarget = { x: pickup.cell.x - minimumX, y: pickup.cell.y - minimumY };
+    if (localTarget.x >= 0 && localTarget.x < viewport.columns && localTarget.y >= 0 && localTarget.y < viewport.rows) continue;
+    const direction = { x: localTarget.x - localPlayer.x, y: localTarget.y - localPlayer.y };
+    if (direction.x === 0 && direction.y === 0) continue;
+    const factors = [];
+    if (direction.x > 0) factors.push((viewport.columns - 1 - localPlayer.x) / direction.x);
+    if (direction.x < 0) factors.push((0 - localPlayer.x) / direction.x);
+    if (direction.y > 0) factors.push((viewport.rows - 1 - localPlayer.y) / direction.y);
+    if (direction.y < 0) factors.push((0 - localPlayer.y) / direction.y);
+    const factor = Math.min(...factors.filter((candidate) => candidate >= 0));
+    const edge = {
+      x: clamp(localPlayer.x + direction.x * factor, 0, viewport.columns - 1),
+      y: clamp(localPlayer.y + direction.y * factor, 0, viewport.rows - 1),
+    };
+    const edgeKey = `${Math.round(edge.x === 0 || edge.x === viewport.columns - 1 ? edge.x : edge.y)}:${edge.x === 0 || edge.x === viewport.columns - 1 ? "x" : "y"}`;
+    const offsetIndex = edgeCounts.get(edgeKey) ?? 0;
+    edgeCounts.set(edgeKey, offsetIndex + 1);
+    indicators.push({
+      type: "quest-edge", pickupId: pickup.id, color: MINIMAP_MARKER_COLORS.quest,
+      edge, direction, offsetIndex,
+    });
+  }
+  return indicators;
 }
 
 /**

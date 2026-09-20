@@ -34,6 +34,8 @@ import {
 } from "./platform-settings.js";
 import {
   getTimeSnapshot,
+  getGoldSnapshot,
+  getQuestSnapshot,
   getRealmSnapshot,
   travelRealm,
   sendRealmAmbientSnapshot,
@@ -50,6 +52,8 @@ import {
   sendTorchShadowSnapshot,
   sendZoomSnapshot,
   subscribeToTime,
+  subscribeToGold,
+  subscribeToQuest,
   subscribeToRealm,
   subscribeToMinimapZoom,
 } from "../bridge-layer/game-bridge.js";
@@ -254,7 +258,7 @@ function CharacterBarRow({ row, data, color }) {
   );
 }
 
-function CharacterDetails() {
+function CharacterDetails({ gold = INITIAL_CHARACTER.gold.currentAmount }) {
   return (
     <div className="character_details" aria-label="Character details">
       <div className="character_bar_list">
@@ -263,7 +267,7 @@ function CharacterDetails() {
       <div className="character_resource_list">
         <div className="character_resource" data-resource="gold" aria-label="Gold">
           <span className="character_resource_icon" aria-hidden="true">◆</span>
-          <span className="character_resource_value">{INITIAL_CHARACTER.gold.currentAmount}</span>
+          <span className="character_resource_value">{gold}</span>
         </div>
         {["Slot 01", "Slot 02"].map((slot) => (
           <div className="character_resource character_slot" key={slot} aria-label={slot}>
@@ -280,6 +284,16 @@ function CharacterDetails() {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+function QuestTracker({ quest }) {
+  if (!quest) return null;
+  return (
+    <div className="quest_tracker" aria-label="Current quest">
+      <div className="quest_tracker_title">Question: {quest.title}</div>
+      <div className={`quest_tracker_body${quest.complete ? " quest_tracker_body_complete" : ""}`}>{quest.objective} {quest.current} of {quest.target}</div>
     </div>
   );
 }
@@ -829,6 +843,9 @@ function AppContent() {
   const savedFontId = useSyncExternalStore(subscribeToFont, getSavedFontId, getSavedFontId);
   const worldTime = useSyncExternalStore(subscribeToTime, getTimeSnapshot, getTimeSnapshot);
   const activeRealm = useSyncExternalStore(subscribeToRealm, getRealmSnapshot, getRealmSnapshot);
+  const quest = useSyncExternalStore(subscribeToQuest, getQuestSnapshot, getQuestSnapshot);
+  const gold = useSyncExternalStore(subscribeToGold, getGoldSnapshot, getGoldSnapshot);
+  const previousQuestRef = useRef(null);
   const [fps, setFps] = useState(0);
 
   const versionNumber = versionText.trim().replace(/^version=/, "").replace(/^v/, "");
@@ -881,6 +898,15 @@ function AppContent() {
     frameId = window.requestAnimationFrame(updateFps);
     return () => window.cancelAnimationFrame(frameId);
   }, []);
+
+  useEffect(() => {
+    if (!quest) return;
+    const previous = previousQuestRef.current;
+    if (!previous && quest.state === "pending") enqueueToast(`Quest Started: ${quest.title}.`);
+    else if (quest.state === "complete" && previous?.state !== "complete") enqueueToast(`Quest Completed: ${quest.title}.`);
+    else if (previous && quest.current > previous.current) enqueueToast(`Quest Progress: ${quest.title} ${quest.current} of ${quest.target}.`);
+    previousQuestRef.current = quest;
+  }, [enqueueToast, quest]);
 
   useEffect(() => {
     const uiLayer = document.getElementById("ui_layer");
@@ -1099,9 +1125,10 @@ function AppContent() {
         onClick={activateDetails}
         onKeyDown={(event) => handleTopPanelKeyDown(event, activateDetails)}
       >
-        <CharacterDetails />
+        <CharacterDetails gold={gold} />
         <div className="top_panel_action">Character</div>
       </div>
+      <QuestTracker quest={quest} />
       {true ? (
         <>
           <div

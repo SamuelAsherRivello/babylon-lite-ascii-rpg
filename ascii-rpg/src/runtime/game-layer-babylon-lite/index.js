@@ -44,7 +44,9 @@ import { getPaletteStyle, validatePaletteEntries } from "../bridge-layer/palette
 import {
   clearCharacter,
   createGeneratedSeed,
+  createRandom,
   createWorldRealms,
+  GOLD_GLYPH,
   getRandomSeedFromSearch,
   getVisibleGlyph,
   setCharacter,
@@ -68,11 +70,14 @@ import {
   discoverFromPlayer,
   MINIMAP_WORLD_SCALE,
 } from "./systems/fog-of-war-system.js";
-import { getMinimapMarkers, getMinimapWorldCellGraphic } from "./systems/minimap-renderer.js";
+import { getMinimapEdgeIndicators, getMinimapMarkers, getMinimapWorldCellGraphic } from "./systems/minimap-renderer.js";
 import { canHandleMinimapScale, getMinimapCellLayout, getNextMinimapScale, MINIMAP_SCALE_LEVELS } from "./systems/minimap-zoom.js";
 import { createTransitionSystem, TRANSITION_PHASES } from "./systems/transition-system.js";
+import questData from "./data/quest_data.json";
+import { createPickupSystem, selectPickupCells } from "./systems/pickup-system.js";
+import { createQuestManager } from "./systems/quest-system.js";
 
-const GLYPHS = ["W", "M", "•", "P", "T", "S", "~", "≈", "▓"];
+const GLYPHS = ["W", "M", "•", "P", "T", "S", "◆", "~", "≈", "▓"];
 const WORLD_ROWS = 512;
 const WORLD_COLUMNS = 512;
 const TORCHES_PER_SCREEN = 3;
@@ -162,6 +167,11 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   let worldRealms = null;
   let activeRealm = initialRealm === "Underground" ? "Underground" : "Overground";
   let playerCell = null;
+  let characterGold = 0;
+  let questManager = null;
+  let pickupSystem = null;
+  const questListeners = new Set();
+  const goldListeners = new Set();
   let fogOfWar = null;
   let minimapVisible = true;
   let minimapZoom = 2;
@@ -191,6 +201,14 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     generationMs: null, firstVisibleRenderMs: null, totalReadyMs: null,
     lastZoomRerenderMs: null, lastZoomWarmupMs: null,
     generationYields: 0, generationWaitMs: 0, generationPhases: {},
+  };
+
+  const notifyQuest = (snapshot) => {
+    for (const listener of questListeners) listener(snapshot);
+  };
+
+  const notifyGold = () => {
+    for (const listener of goldListeners) listener(characterGold);
   };
 
   const renderMinimap = () => {
@@ -309,6 +327,26 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
         markerHeight,
       );
     }
+    for (const indicator of getMinimapEdgeIndicators(world, playerCell, {
+      x: sourceX, y: sourceY, columns: sourceColumns, rows: sourceRows,
+    })) {
+      const offset = (indicator.offsetIndex % 3 - 1) * Math.min(cellWidth, cellHeight) * 0.55;
+      const edgeX = offsetX + indicator.edge.x * cellWidth + (Math.abs(indicator.direction.x) < Math.abs(indicator.direction.y) ? offset : 0);
+      const edgeY = offsetY + indicator.edge.y * cellHeight + (Math.abs(indicator.direction.x) >= Math.abs(indicator.direction.y) ? offset : 0);
+      const angle = Math.atan2(indicator.direction.y, indicator.direction.x);
+      const size = Math.min(cellWidth, cellHeight) * 0.8;
+      context.save();
+      context.translate(edgeX, edgeY);
+      context.rotate(angle);
+      context.fillStyle = indicator.color;
+      context.beginPath();
+      context.moveTo(size * 0.6, 0);
+      context.lineTo(-size * 0.45, -size * 0.45);
+      context.lineTo(-size * 0.45, size * 0.45);
+      context.closePath();
+      context.fill();
+      context.restore();
+    }
   };
 
   const schedulePresentation = () => {
@@ -385,7 +423,9 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     transitionMask.style.setProperty("--transition-center-x", `${playerCenter.x}px`);
     transitionMask.style.setProperty("--transition-center-y", `${playerCenter.y}px`);
     transitionMask.hidden = false;
-    transitionMask.style.setProperty("--transition-radius", `${Math.max(0, value)}px`);
+    const radius = Math.max(0, value);
+    transitionMask.style.setProperty("--transition-radius", `${radius}px`);
+    transitionMask.style.setProperty("--transition-feather-end", `${radius + 12}px`);
   };
 
   const getTransitionRadii = () => {
@@ -412,6 +452,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       durationCovered: REALM_TRANSITION_COVER_HOLD_MS,
       onStart: () => {
         transitionMask.style.setProperty("--transition-radius", `${cover}px`);
+        transitionMask.style.setProperty("--transition-feather-end", `${cover + 12}px`);
         transitionMask.hidden = false;
       },
       onCovered: () => activateRealm(destination, arrival),
@@ -726,6 +767,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     playerCell = nextCell;
     setCharacter(world, playerCell);
     world.playerCell = playerCell;
+    pickupSystem?.collectAtCell(playerCell, { playerCell: { ...playerCell }, world });
     timeSystem.advance();
     viewOrigin = nextOrigin;
     if (world.stairs?.some((stair) => stair.x === playerCell.x && stair.y === playerCell.y)) {
@@ -890,6 +932,34 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     playerCell = world.playerStart;
     world.playerCell = playerCell;
     fogOfWar = world.fog;
+    const collectGoldDefinition = questData.quests.find((quest) => quest.id === "collect-gold");
+    questManager = createQuestManager(questData.quests, { gold: characterGold });
+    pickupSystem = createPickupSystem();
+    questManager.subscribe(({ snapshot }) => notifyQuest(snapshot));
+    pickupSystem.subscribe((event) => {
+      questManager.observe(event, { gold: characterGold });
+      notifyQuest(questManager.getSnapshot());
+      scheduleMinimapRender();
+    });
+    world.pickups = [];
+    const questRandom = createRandom(`${world.options.seed}:quest:collect-gold`);
+    const pickupCells = selectPickupCells(world, world.playerStart, collectGoldDefinition.pickup.distances, questRandom);
+    pickupCells.forEach((cell, index) => {
+      const pickup = pickupSystem.addPickup({
+        id: `gold-${index + 1}`,
+        type: "gold",
+        cell,
+        glyph: GOLD_GLYPH,
+        effect: () => {
+          characterGold += 1;
+          notifyGold();
+        },
+      });
+      world.pickups.push(pickup);
+      world.characters[cell.y][cell.x] = GOLD_GLYPH;
+    });
+    questManager.startQuest("collect-gold", { gold: characterGold });
+    notifyGold();
     refreshDiscovery();
     resolveViewForPlayer();
     const firstRender = renderWorld();
@@ -1002,6 +1072,18 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     },
     travelRealm() { travelToNearestStairs(); },
     getRealm() { return activeRealm; },
+    getQuestSnapshot() { return questManager?.getSnapshot() ?? null; },
+    subscribeToQuest(listener) {
+      questListeners.add(listener);
+      if (questManager?.getSnapshot()) listener(questManager.getSnapshot());
+      return () => questListeners.delete(listener);
+    },
+    getGold() { return characterGold; },
+    subscribeToGold(listener) {
+      goldListeners.add(listener);
+      listener(characterGold);
+      return () => goldListeners.delete(listener);
+    },
     subscribeToRealm(listener) { realmListeners.add(listener); return () => realmListeners.delete(listener); },
     subscribeToMinimapZoom(listener) { minimapZoomListeners.add(listener); return () => minimapZoomListeners.delete(listener); },
     setTorchLighting(profile) {

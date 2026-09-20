@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createFogOfWar, discoverCell } from "../../../../src/runtime/game-layer-babylon-lite/systems/fog-of-war-system.js";
-import { getMinimapMarkers, getMinimapWorldCellGraphic, getMinimapWorldGraphic, getMinimapWorldPixel, MINIMAP_MARKER_DEPTHS } from "../../../../src/runtime/game-layer-babylon-lite/systems/minimap-renderer.js";
+import { getMinimapEdgeIndicators, getMinimapMarkers, getMinimapWorldCellGraphic, getMinimapWorldGraphic, getMinimapWorldPixel, MINIMAP_MARKER_DEPTHS } from "../../../../src/runtime/game-layer-babylon-lite/systems/minimap-renderer.js";
 import { canHandleMinimapScale, getMinimapCellLayout, getMinimapViewport, getNextMinimapScale } from "../../../../src/runtime/game-layer-babylon-lite/systems/minimap-zoom.js";
 
 function createWorld() {
@@ -72,7 +72,10 @@ test("minimap markers use the approved depth order and exact torch discovery", (
   const fog = createFogOfWar(world);
   const player = { x: 1, y: 1 };
 
-  assert.deepEqual(getMinimapMarkers(world, fog, player), []);
+  assert.deepEqual(getMinimapMarkers(world, fog, player), [
+    { type: "start", color: "#00ff00", depth: MINIMAP_MARKER_DEPTHS.start, cell: { x: 1, y: 1 } },
+    { type: "player", color: "#ffff00", depth: MINIMAP_MARKER_DEPTHS.player, cell: { x: 1, y: 1 } },
+  ]);
 
   discoverCell(fog, world, player);
   assert.deepEqual(getMinimapMarkers(world, fog, player), [
@@ -90,6 +93,21 @@ test("minimap markers use the approved depth order and exact torch discovery", (
     { type: "torch", color: "#ffffff", depth: MINIMAP_MARKER_DEPTHS.torch, cell: { x: 8, y: 8 } },
     { type: "player", color: "#ffff00", depth: MINIMAP_MARKER_DEPTHS.player, cell: { x: 8, y: 8 } },
   ]);
+});
+
+test("quest pickup markers ignore fog and project off-screen as directional chevrons", () => {
+  const world = createWorld();
+  world.pickups = [
+    { id: "gold-1", active: true, cell: { x: 2, y: 2 } },
+    { id: "gold-2", active: true, cell: { x: 9, y: 1 } },
+  ];
+  const fog = createFogOfWar(world);
+  const markers = getMinimapMarkers(world, fog, { x: 1, y: 1 });
+  assert.equal(markers.some((marker) => marker.type === "quest" && marker.pickupId === "gold-1"), true);
+  const indicators = getMinimapEdgeIndicators(world, { x: 1, y: 1 }, { x: 0, y: 0, columns: 5, rows: 5 });
+  assert.equal(indicators.length, 1);
+  assert.equal(indicators[0].type, "quest-edge");
+  assert.equal(indicators[0].pickupId, "gold-2");
 });
 
 test("minimap scale cycles through the designated levels and wraps", () => {
