@@ -7,7 +7,7 @@ import {
 } from "../game-layer-babylon-lite/zoom-scale.js";
 
 export const PC_SETTINGS_DEFAULTS = Object.freeze({
-  zoom: migrateLegacyZoom(5),
+  zoom: 5,
   showHud: true,
 });
 
