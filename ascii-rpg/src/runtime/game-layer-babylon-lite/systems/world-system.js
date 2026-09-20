@@ -2,9 +2,11 @@ export const WALL_GLYPH = "W";
 export const FLOOR_GLYPH = "•";
 export const PLAYER_GLYPH = "P";
 export const TORCH_GLYPH = "T";
+export const STAIR_GLYPH = "S";
+export const MOUNTAIN_GLYPH = "M";
 export const SHALLOW_WATER_GLYPH = "~";
 export const MEDIUM_WATER_GLYPH = "≈";
-export const DEEP_WATER_GLYPH = "▓";
+export const DEEP_WATER_GLYPH = MEDIUM_WATER_GLYPH;
 export const DEFAULT_WALL_FILL_PERCENT = 40;
 export const DEFAULT_SMOOTHING_ITERATIONS = 4;
 export const DEFAULT_MIN_WALKABLE_PERCENT = 0.3;
@@ -24,6 +26,10 @@ export const GENERATION_PASSES = Object.freeze([
   "walkability",
   "player-position",
 ]);
+export const REALM_PROFILES = Object.freeze({
+  Overground: Object.freeze({ wallFillPercent: 25, minWalkablePercent: 0.55, groundKind: "grass", blockedKind: "mountain", blockedGlyph: MOUNTAIN_GLYPH }),
+  Underground: Object.freeze({ wallFillPercent: 50, minWalkablePercent: 0.3, groundKind: "dirt", blockedKind: "wall", blockedGlyph: WALL_GLYPH }),
+});
 
 const CARDINAL_DIRECTIONS = [
   { x: 0, y: -1 },
@@ -890,9 +896,52 @@ export function setCharacter(world, cell, glyph = PLAYER_GLYPH) {
 
 export function clearCharacter(world, cell) {
   if (!world || cell.x < 0 || cell.y < 0 || cell.x >= world.columns || cell.y >= world.rows) return false;
+  const stair = world.stairs?.find((candidate) => isSameCell(candidate, cell));
   const torch = world.torches?.find((candidate) => isSameCell(candidate, cell));
-  world.characters[cell.y][cell.x] = torch ? TORCH_GLYPH : null;
+  world.characters[cell.y][cell.x] = stair ? STAIR_GLYPH : torch ? TORCH_GLYPH : null;
   return true;
+}
+
+function applyRealmProfile(realm, name) {
+  const profile = REALM_PROFILES[name];
+  for (const row of realm.terrain) for (const cell of row) {
+    if (cell.kind === "ground") { cell.kind = profile.groundKind; }
+    if (cell.kind === "wall") { cell.kind = profile.blockedKind; cell.glyph = profile.blockedGlyph; }
+  }
+  realm.realm = name;
+  realm.stairs = [];
+  return realm;
+}
+
+function addPairedStairs(realms, stairCount, seed) {
+  const [overground, underground] = [realms.Overground, realms.Underground];
+  const candidates = [];
+  for (let y = 1; y < overground.rows - 1; y += 1) for (let x = 1; x < overground.columns - 1; x += 1) {
+    const cell = { x, y };
+    if (!overground.terrain[y][x].walkable || !underground.terrain[y][x].walkable ||
+      isSameCell(cell, overground.playerStart) || isSameCell(cell, underground.playerStart)) continue;
+    if (overground.torches.some((torch) => isSameCell(torch, cell)) || underground.torches.some((torch) => isSameCell(torch, cell))) continue;
+    candidates.push(cell);
+  }
+  const random = createRandom(`${seed}:stairs`);
+  const stairs = distributeObjectOfType("torch", candidates, random, stairCount);
+  for (const realm of Object.values(realms)) {
+    realm.stairs = stairs.map((cell) => ({ ...cell }));
+    for (const stair of realm.stairs) realm.characters[stair.y][stair.x] = STAIR_GLYPH;
+  }
+  return stairs;
+}
+
+export async function createWorldRealms({ rows, columns, torchCount = 3, seed = createGeneratedSeed(), initialRealm = "Overground" } = {}, scheduling = {}) {
+  const realms = {};
+  const realmOrder = initialRealm === "Underground" ? ["Underground", "Overground"] : ["Overground", "Underground"];
+  for (const name of realmOrder) {
+    const profile = REALM_PROFILES[name];
+    const realm = await createWorldCooperative({ rows, columns, torchCount, seed: `${seed}:${name}`, wallFillPercent: profile.wallFillPercent, minWalkablePercent: profile.minWalkablePercent }, scheduling);
+    realms[name] = applyRealmProfile(realm, name);
+  }
+  const stairs = addPairedStairs(realms, torchCount, seed);
+  return { seed, realms, stairs };
 }
 
 export function getVisibleGlyph(world, cell) {

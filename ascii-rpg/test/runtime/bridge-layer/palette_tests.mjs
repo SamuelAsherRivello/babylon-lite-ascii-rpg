@@ -121,7 +121,7 @@ test("classifies agreed special-symbol families without changing inventory", () 
   assert.equal(getPaletteGroupLabel(entry("⊕")), "Status");
 });
 
-test("ships blue defaults for the water glyphs", async () => {
+test("ships blue defaults for the distinct water glyphs", async () => {
   const data = JSON.parse(await readFile(new URL(
     "../../../src/runtime/game-layer-babylon-lite/data/palette_data.json",
     import.meta.url,
@@ -131,9 +131,8 @@ test("ships blue defaults for the water glyphs", async () => {
 
   assert.equal(colors.get("~"), "#62c7ff");
   assert.equal(colors.get("≈"), "#247fc3");
-  assert.equal(colors.get("▓"), "#0b3d91");
   assert.deepEqual(
-    filterPaletteEntries(palette, "in-maps", new Set(["~", "≈", "▓"])).map((entry) => entry.glyph),
-    ["~", "▓", "≈"],
+    filterPaletteEntries(palette, "in-maps", new Set(["~", "≈"])).map((entry) => entry.glyph),
+    ["~", "≈"],
   );
 });

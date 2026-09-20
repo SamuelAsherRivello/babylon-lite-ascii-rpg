@@ -1,11 +1,10 @@
-# Spec Delta
+# world-realms Specification
 
 ## Purpose
-
 Defines a two-realm generated world so exploration can cross synchronized
 Overground and Underground maps without sharing temporary realm state.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Default world contains two named realms
 Each newly generated world SHALL contain exactly an `Overground` realm and an
@@ -22,6 +21,23 @@ discovery SHALL use only that active realm.
 - **WHEN** the player is active in Overground
 - **THEN** Underground terrain, characters, lighting, and minimap content are
   not rendered as part of the active game view
+
+### Requirement: Active world and realm display
+The upper-left UI SHALL display `World: 1`, then `Realm: Overground` or
+`Realm: Underground`, then the time display according to the active realm. A
+newly generated world SHALL start in Overground unless the
+stored active-realm preference is Underground.
+
+#### Scenario: New session defaults to Overground
+- **WHEN** no active-realm preference exists in local storage
+- **THEN** the game starts in Overground and the upper-left UI displays
+  `World: 1`, `Realm: Overground`, and then the time
+
+#### Scenario: Stored Underground preference restores the realm
+- **WHEN** the stored active-realm preference is Underground and a new world
+  is generated after refresh
+- **THEN** the player starts in Underground and the upper-left UI displays
+  `World: 1`, `Realm: Underground`, and then the time
 
 ### Requirement: Realm-specific terrain profiles
 Overground SHALL use walkable grass as its default terrain and non-walkable
@@ -53,6 +69,11 @@ generation parameters.
 - **THEN** the active realm changes to its paired realm and the player arrives
   on the paired `S` coordinate without immediately transferring back
 
+#### Scenario: Entering Underground persists active realm
+- **WHEN** the player enters Overground stairs and transfers to Underground
+- **THEN** Underground becomes the stored active-realm preference for the
+  next refresh
+
 ### Requirement: Realm-scoped fog of war
 Each realm SHALL own a separate fog-of-war record for the lifetime of its
 world. Discovery in one realm SHALL not reveal cells in the other realm, and
@@ -64,14 +85,16 @@ realm transfer SHALL restore the destination realm's previous discovery.
 - **THEN** Underground starts with only its own discovered cells and
   Overground discovery remains available when the player returns
 
-### Requirement: Realm restart controls
-The upper-left UI SHALL display `Restart Overground` and `Restart Underground`
-beneath the project title and time. Activating a restart control SHALL replace
-only the named realm with a newly generated valid realm, clear only its fog,
-and make that replacement realm the active realm at its valid player start.
+### Requirement: Realm settings transfer
+The Settings UI SHALL display `Realm (Overground)` or `Realm (Underground)`
+for the active realm. Activating it SHALL select the stairs with the shortest
+reachable walking-path distance, move the player to those stairs, and transfer
+to the paired realm. Each walkable cell on the selected route SHALL be
+discovered in the source realm before transfer. The selected realm SHALL be
+persisted and generated first after refresh.
 
-#### Scenario: Restart preserves the other realm
-- **WHEN** the player activates `Restart Underground`
-- **THEN** a fresh Underground realm and fog replace the prior Underground,
-  the player enters it at its valid start, and existing Overground terrain and
-  discovery remain unchanged
+#### Scenario: Settings transfer uses reachable stairs
+- **WHEN** the player activates Realm while in Overground
+- **THEN** the game uses the shortest walkable path to an `S` cell and arrives
+  in Underground at the paired `S` coordinate, with every route cell retained
+  as discovered in Overground

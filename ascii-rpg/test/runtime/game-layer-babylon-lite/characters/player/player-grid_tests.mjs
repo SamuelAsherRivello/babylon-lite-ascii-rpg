@@ -8,6 +8,7 @@ import {
   MIN_ZOOM,
   INITIAL_REPEAT_DELAY_MS,
   REPEAT_INTERVAL_MS,
+  SHIFT_REPEAT_INTERVAL_MS,
   clampCell,
   createViewport,
   getCellCenter,
@@ -15,6 +16,7 @@ import {
   getCombinedDirection,
   getDirectionForKey,
   getDirectionForSwipe,
+  getRepeatInterval,
   getViewOriginForPlayer,
   getViewOriginForCamera,
   moveCell,
@@ -153,4 +155,7 @@ test("centers and clamps the player to complete grid cells", () => {
 test("uses the agreed held-key timing constants", () => {
   assert.equal(INITIAL_REPEAT_DELAY_MS, 250);
   assert.equal(REPEAT_INTERVAL_MS, 125);
+  assert.equal(SHIFT_REPEAT_INTERVAL_MS, 100 / 3);
+  assert.equal(getRepeatInterval(false), REPEAT_INTERVAL_MS);
+  assert.equal(getRepeatInterval(true), SHIFT_REPEAT_INTERVAL_MS);
 });

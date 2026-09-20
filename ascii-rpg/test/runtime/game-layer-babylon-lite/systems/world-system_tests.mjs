@@ -4,14 +4,17 @@ import {
   DEEP_WATER_GLYPH,
   FLOOR_GLYPH,
   GENERATION_PASSES,
+  MOUNTAIN_GLYPH,
   MEDIUM_WATER_GLYPH,
   OBJECT_DISTRIBUTION_RULES,
   PLAYER_GLYPH,
   SHALLOW_WATER_GLYPH,
   TORCH_GLYPH,
+  STAIR_GLYPH,
   WALL_GLYPH,
   createWorld,
   createWorldCooperative,
+  createWorldRealms,
   getRandomSeedFromSearch,
   getVisibleGlyph,
   isWalkableCell,
@@ -50,14 +53,10 @@ test("creates a repeatable bordered world with layered terrain", () => {
 test("runs ordered generation passes and creates nested deterministic water", () => {
   const first = createWorld({ rows: 40, columns: 60, seed: "water-passes" });
   const second = createWorld({ rows: 40, columns: 60, seed: "water-passes" });
-  const water = first.terrain.flat().filter((cell) => [
-    SHALLOW_WATER_GLYPH,
-    MEDIUM_WATER_GLYPH,
-    DEEP_WATER_GLYPH,
-  ].includes(cell.glyph));
-  const shallow = water.filter((cell) => cell.glyph === SHALLOW_WATER_GLYPH);
-  const medium = water.filter((cell) => cell.glyph === MEDIUM_WATER_GLYPH);
-  const deep = water.filter((cell) => cell.glyph === DEEP_WATER_GLYPH);
+  const water = first.terrain.flat().filter((cell) => cell.depth !== null);
+  const shallow = water.filter((cell) => cell.depth === "shallow");
+  const medium = water.filter((cell) => cell.depth === "medium");
+  const deep = water.filter((cell) => cell.depth === "deep");
   const nonWalls = first.terrain.flat().filter((cell) => cell.glyph !== WALL_GLYPH);
 
   assert.deepEqual(first.generationPasses, GENERATION_PASSES);
@@ -89,6 +88,7 @@ test("runs ordered generation passes and creates nested deterministic water", ()
   assert.equal(shallow[0].color, "#62c7ff");
   assert.equal(medium[0].color, "#247fc3");
   assert.equal(deep[0].color, "#0b3d91");
+  assert.equal(DEEP_WATER_GLYPH, MEDIUM_WATER_GLYPH);
   assert.equal(first.terrain[first.playerStart.y][first.playerStart.x].walkable, true);
   assert.notEqual(first.terrain[first.playerStart.y][first.playerStart.x].glyph, MEDIUM_WATER_GLYPH);
   assert.notEqual(first.terrain[first.playerStart.y][first.playerStart.x].glyph, DEEP_WATER_GLYPH);
@@ -103,8 +103,8 @@ test("uses independent water coverage and depth walkability settings", () => {
   assert.equal(wet.options.waterFillPercent, 100);
   assert.ok(wet.waterCells.length > 0);
   for (const cell of wet.terrain.flat()) {
-    if (cell.glyph === SHALLOW_WATER_GLYPH) assert.equal(cell.walkable, true);
-    if (cell.glyph === MEDIUM_WATER_GLYPH || cell.glyph === DEEP_WATER_GLYPH) {
+    if (cell.depth === "shallow") assert.equal(cell.walkable, true);
+    if (cell.depth === "medium" || cell.depth === "deep") {
       assert.equal(cell.walkable, false);
     }
   }
@@ -239,6 +239,27 @@ test("cooperative generation preserves completed spaced torch world data and ord
   assertMinimumTorchDistance(cooperative.torches);
   assert.deepEqual(phases, ["cave", "cave-region", "water-lakes", "water", "walkability-region", "terrain", "complete"]);
   assert.ok(yields > 1);
+});
+
+test("creates deterministic paired realm stairs on walkable terrain", async () => {
+  const options = { rows: 256, columns: 256, torchCount: 3, seed: "paired-realms" };
+  const first = await createWorldRealms(options);
+  const second = await createWorldRealms(options);
+  const overground = first.realms.Overground;
+  const underground = first.realms.Underground;
+
+  assert.deepEqual(first, second);
+  assert.equal(overground.realm, "Overground");
+  assert.equal(underground.realm, "Underground");
+  assert.ok(overground.terrain.flat().some((cell) => cell.glyph === MOUNTAIN_GLYPH));
+  assert.ok(underground.terrain.flat().some((cell) => cell.glyph === WALL_GLYPH));
+  assert.deepEqual(overground.stairs, underground.stairs);
+  for (const stair of overground.stairs) {
+    assert.equal(overground.terrain[stair.y][stair.x].walkable, true);
+    assert.equal(underground.terrain[stair.y][stair.x].walkable, true);
+    assert.equal(overground.characters[stair.y][stair.x], STAIR_GLYPH);
+    assert.equal(underground.characters[stair.y][stair.x], STAIR_GLYPH);
+  }
 });
 
 test("aborted generation never publishes a partial world and a replacement can finish", async () => {

@@ -22,8 +22,12 @@ choices legible while preserving deterministic procedural generation.
   immediate return transfer.
 - Keep fog of war separate for every world and realm; restarting one realm
   clears and regenerates only that realm and its fog.
-- Add `Restart Overground` and `Restart Underground` beneath the existing
-  upper-left title and time display.
+- Add a persisted Settings control labeled `Realm (Overground)` or
+  `Realm (Underground)` that transfers through the nearest reachable stairs
+  and reveals every route cell in the source realm fog.
+- Display `World: 1`, then `Realm: Overground` or `Realm: Underground`, then
+  the time. New sessions start in Overground; entering
+  Underground persists that active-realm choice for the next refresh.
 - Replace the single ambient setting with persisted, independently adjustable
   `Ambient Overground` and `Ambient Underground` values. Their defaults are
   `0.9` and `0.1`, respectively; the active realm selects the applied value.

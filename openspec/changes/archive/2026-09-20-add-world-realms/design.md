@@ -106,15 +106,31 @@ realm change. Reset Settings clears both keys through the existing reset path.
 Alternative: store ambient on generated realm data. Rejected because these are
 user-facing persistent lighting preferences, not generated-world state.
 
-### Keep restart controls in the upper-left React HUD
+### Route the Settings realm control through the nearest paired stairs
 
-The React upper-left corner retains the required title and time roles and adds
-the two named restart buttons beneath them. Buttons issue only a realm name to
-the bridge. The game layer remains responsible for generation cancellation,
-replacement, active-player setup, and rendering readiness.
+The React Settings UI exposes one `Realm (<active realm>)` control. Its narrow
+bridge command asks Babylon Lite to breadth-first search the active realm's
+walkable grid from the player to the nearest stair. The game layer discovers
+every route cell in the active realm fog record, renders the updated minimap,
+places the player on that stair, and transfers to the identically positioned
+stair in the other realm. React never receives path or world data.
 
-Alternative: expose realm objects to React for direct replacement. Rejected
-because it violates the established authoritative game-layer boundary.
+Alternative: teleport directly to a stair. Rejected because the user-visible
+fog should reflect the route the player was taken through.
+
+### Publish an immutable realm status and persist only the preferred realm
+
+Babylon Lite will emit a narrow status snapshot containing the fixed current
+world label and active realm label. React renders `World: 1`, then
+`Realm: <name>`, then the existing time. Its Settings control displays the active
+realm and issues only a request to route to the nearest stairs. React persists
+only the active realm identifier. On refresh, a
+fresh two-realm world is generated and starts in the stored realm; generated
+terrain, fog, and player position are not restored. With no stored preference,
+Overground is the default.
+
+Alternative: persist the complete world. Rejected because save-game behavior
+is explicitly out of scope and fog remains session-owned.
 
 ## Risks / Trade-offs
 
@@ -137,7 +153,9 @@ because it violates the established authoritative game-layer boundary.
    defaults; do not reuse the legacy single ambient value.
 2. Generate a two-realm world for a new session; each realm starts with its
    own empty fog state.
-3. Restart controls replace their named realm and fog only; the other realm
-   remains in memory.
+3. The Realm Settings control reveals the selected route in the source realm
+   before arriving at the paired stair in the destination realm.
 4. Rollback removes the realm coordinator and restores one-world rendering;
    realm ambient keys can remain harmless unused browser preferences.
+5. Missing active-realm storage resolves to Overground and writes that default
+   through the existing first-render preference pattern.

@@ -7,6 +7,7 @@ export const DEFAULT_GRID_WIDTH = 32;
 export const DEFAULT_GRID_HEIGHT = 32;
 export const INITIAL_REPEAT_DELAY_MS = 250;
 export const REPEAT_INTERVAL_MS = 125;
+export const SHIFT_REPEAT_INTERVAL_MS = 100 / 3;
 export const SWIPE_THRESHOLD_PX = 24;
 export const CAMERA_DEADZONE_WIDTH_RATIO = 0.2;
 export const CAMERA_DEADZONE_HEIGHT_RATIO = 0.2;
@@ -24,6 +25,10 @@ const keyDirections = new Map([
 
 export function getDirectionForKey(key) {
   return keyDirections.get(key.toLowerCase()) ?? null;
+}
+
+export function getRepeatInterval(isShiftHeld) {
+  return isShiftHeld ? SHIFT_REPEAT_INTERVAL_MS : REPEAT_INTERVAL_MS;
 }
 
 export function getCombinedDirection(keys) {

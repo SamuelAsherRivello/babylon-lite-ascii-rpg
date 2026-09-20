@@ -15,10 +15,12 @@ test("documents the plain safe-area template", async () => {
   const app = await readFile(new URL("src/runtime/ui-layer-react/App.jsx", appRoot), "utf8");
   const main = await readFile(new URL("src/main.jsx", appRoot), "utf8");
   const gameLayer = await readFile(new URL("src/runtime/game-layer-babylon-lite/index.js", appRoot), "utf8");
+  const gameBridge = await readFile(new URL("src/runtime/bridge-layer/game-bridge.js", appRoot), "utf8");
   const camera = await readFile(new URL("src/runtime/bridge-layer/camera.js", appRoot), "utf8");
   const styles = await readFile(new URL("src/runtime/ui-layer-react/style.css", appRoot), "utf8");
   const fontStore = await readFile(new URL("src/runtime/ui-layer-react/font-store.js", appRoot), "utf8");
   const paletteStore = await readFile(new URL("src/runtime/ui-layer-react/palette-store.js", appRoot), "utf8");
+  const platformSettings = await readFile(new URL("src/runtime/ui-layer-react/platform-settings.js", appRoot), "utf8");
 
   if (!page.includes("<title>Ascii RPG</title>")) {
     throw new Error("The browser title must identify the project.");
@@ -61,7 +63,9 @@ test("documents the plain safe-area template", async () => {
   if (!app.includes("v{versionNumber}")) {
     throw new Error("The version corner must display versions in v0.0.0 format.");
   }
-  if (!app.includes('id="time"') || !app.includes("Time: {formatWorldTime(worldTime)}")) {
+  if (!app.includes('id="world" className="corner_body">World: 1</div>')
+    || !app.includes('id="realm" className="corner_body">Realm: {activeRealm}</div>')
+    || !app.includes('id="time"') || !app.includes("Time: {formatWorldTime(worldTime)}")) {
     throw new Error("The upper-left corner must display the subscribed world time.");
   }
   if (!app.includes('id="fps"') || !app.includes("FPS: {fps}") || !app.includes("requestAnimationFrame(updateFps)")) {
@@ -79,7 +83,7 @@ test("documents the plain safe-area template", async () => {
   }
   if (!app.includes('id="lighting_torch_toggle"') || !app.includes('id="lighting_player_toggle"')
     || !app.includes('id="shadow_torch_toggle"') || !app.includes('id="shadow_player_toggle"')
-    || !app.includes('id="ambient_light_control"') || !app.includes(">Ambient<")
+    || !app.includes('id="ambient_overground_control"') || !app.includes('id="ambient_underground_control"') || !app.includes("Ambient Overground") || !app.includes("Ambient Underground")
     || !app.includes('id="player_gpu_shadow_bleed_range"')
     || !app.includes("formatLightingProfile") || !app.includes("formatShadowProfile")) {
     throw new Error("The Lighting window must include all independent lighting, shadow, and ambient controls.");
@@ -96,6 +100,11 @@ test("documents the plain safe-area template", async () => {
   }
   if (!gameLayer.includes("navigator.gpu") || !gameLayer.includes("container.replaceChildren()")) {
     throw new Error("A WebGPU startup failure must leave the game layer unloaded without a canvas fallback.");
+  }
+  if (!gameLayer.includes("canvas.clientWidth || window.innerWidth")
+    || !gameLayer.includes("canvas.clientHeight || window.innerHeight")
+    || !gameLayer.includes("new ResizeObserver(handleResize)")) {
+    throw new Error("The game viewport must follow the canvas dimensions available in the browser.");
   }
   const topLeftStart = app.indexOf('className="corner corner_top_left"');
   const topRightStart = app.indexOf('className="corner corner_top_right"');
@@ -136,10 +145,10 @@ test("documents the plain safe-area template", async () => {
   const lightingWindowMarkup = app.slice(lightingWindowStart, app.indexOf("</section>", lightingWindowStart));
   if (lightingWindowStart === -1 || !lightingWindowMarkup.includes('id="lighting_window_title"')
     || !lightingWindowMarkup.includes('className="corner_title"') || !lightingWindowMarkup.includes('className="corner_body settings_option"')
-    || !lightingWindowMarkup.includes('id="gpu_light_pass_toggle"') || !lightingWindowMarkup.includes('id="ambient_light_control"')) {
+    || !lightingWindowMarkup.includes('id="gpu_light_pass_toggle"') || !lightingWindowMarkup.includes('id="ambient_overground_control"') || !lightingWindowMarkup.includes('id="ambient_underground_control"')) {
     throw new Error("The Lighting window must reuse corner text styles and contain every lighting control.");
   }
-  const ambientStart = lightingWindowMarkup.indexOf('id="ambient_light_control"');
+  const ambientStart = lightingWindowMarkup.indexOf('id="ambient_overground_control"');
   const gpuStart = lightingWindowMarkup.indexOf('id="gpu_light_pass_toggle"');
   const playerStart = lightingWindowMarkup.indexOf('id="lighting_player_toggle"');
   const playerGpuStart = lightingWindowMarkup.indexOf('id="player_gpu_shadow_bleed_range"');
@@ -233,10 +242,29 @@ test("documents the plain safe-area template", async () => {
   if (!app.includes("Fullscreen")) {
     throw new Error("The Settings section must include the Fullscreen option line.");
   }
-  if (!app.includes('id="show_ui_toggle"') || !app.includes("Show UI") || !app.includes("getStoredBoolean(showUiStorageKey, true)")
+  if (!app.includes('id="aspect_toggle"') || !app.includes("Aspect (Lanscape)")
+    || !app.includes("Aspect (Portrait)") || !app.includes("aspectStorageKey")
+    || !app.includes("getStoredAspectMode") || !app.includes("localStorage.setItem(aspectStorageKey, aspectMode)")
+    || !app.includes("dataset.presentationAspect = aspectMode") || !app.includes("const toggleAspectMode")) {
+    throw new Error("The Settings section must provide the persisted aspect testing toggle.");
+  }
+  if (!app.includes("settingsHelp.aspect") || !app.includes("Switch between landscape and portrait testing presentation.")) {
+    throw new Error("The aspect setting must provide the existing Settings tooltip behavior.");
+  }
+  if (!platformSettings.includes('storedValue === "portrait" ? "portrait" : "landscape"')) {
+    throw new Error("The aspect setting must default invalid and missing stored values to landscape.");
+  }
+  if (!styles.includes('html[data-presentation-aspect="portrait"] #game_layer')
+    || !styles.includes("calc(100vh * 9 / 16)") || !styles.includes("calc(100vw * 16 / 9)")
+    || !styles.includes("@media (pointer: coarse)") || !styles.includes("width: 100vw")) {
+    throw new Error("Portrait presentation must use a desktop 9:16 frame and fill a coarse-pointer mobile viewport.");
+  }
+  if (!app.includes('id="show_ui_toggle"') || !app.includes("Show UI") || !app.includes("getPlatformSettingsDefaults().showHud")
     || !app.includes("localStorage.setItem(showUiStorageKey, showHud ? \"true\" : \"false\")")
-    || !app.includes("const toggleHud") || !app.includes("setShowHud((currentShowHud) => !currentShowHud)")) {
-    throw new Error("The Settings section must include a default-on Show UI checkbox toggle persisted to local storage.");
+    || !app.includes("const toggleHud") || !app.includes("setShowHud((currentShowHud) => !currentShowHud)")
+    || !platformSettings.includes('matchMedia("(pointer: coarse)")') || !platformSettings.includes("zoom: 7")
+    || !platformSettings.includes("showHud: false")) {
+    throw new Error("The Settings section must use persisted platform-specific Show UI defaults.");
   }
   if (!app.includes('{showHud ? (\n        <div className="corner corner_top_right"')
     || !app.includes('{showHud ? (\n        <div className="corner corner_bottom_right"')
@@ -256,9 +284,14 @@ test("documents the plain safe-area template", async () => {
   if (!app.includes('id="reset_settings"') || !app.includes("localStorage.clear()")) {
     throw new Error("The Settings section must include a local-storage reset control.");
   }
-  if (!app.includes("zoomStorageKey") || !app.includes("ambientLightStorageKey")
+  if (!app.includes('document.addEventListener("click", requestFullscreenOnFirstClick, true)')
+    || !app.includes('document.removeEventListener("click", requestFullscreenOnFirstClick, true)')
+    || !app.includes("void document.documentElement.requestFullscreen().catch(() => {})")) {
+    throw new Error("Mobile sessions must make one non-blocking fullscreen request from their first click.");
+  }
+  if (!app.includes("zoomStorageKey") || !app.includes("overgroundAmbientStorageKey") || !app.includes("undergroundAmbientStorageKey")
     || !app.includes("localStorage.setItem(zoomStorageKey")
-    || !app.includes("localStorage.setItem(ambientLightStorageKey")) {
+    || !app.includes("localStorage.setItem(overgroundAmbientStorageKey") || !app.includes("localStorage.setItem(undergroundAmbientStorageKey")) {
     throw new Error("The Settings values must persist zoom and ambient lighting choices locally.");
   }
   if (app.includes("Fullscreen (")) {
@@ -297,11 +330,25 @@ test("documents the plain safe-area template", async () => {
   }
   if (!gameLayer.includes('id = "minimap_canvas"') || !gameLayer.includes("createFogOfWar")
     || !gameLayer.includes("discoverFromPlayer") || !gameLayer.includes("getMinimapWorldPixel")
-    || !gameLayer.includes("context.globalAlpha = pixel.opacity")) {
+    || !gameLayer.includes("getMinimapMarkers") || !gameLayer.includes("context.globalAlpha = pixel.opacity")) {
     throw new Error("The game layer must own fog discovery and fog-masked world-content minimap rendering.");
   }
+  if (!gameLayer.includes('minimapCanvas.addEventListener("click", handleMinimapClick)')
+    || !gameLayer.includes("canHandleMinimapScale(minimapVisible)")
+    || !gameLayer.includes('minimapCanvas.removeEventListener("click", handleMinimapClick)')
+    || !gameLayer.includes("subscribeToMinimapZoom(listener)")
+    || !main.includes("controller.subscribeToMinimapZoom(sendMinimapZoomSnapshot)")
+    || !gameBridge.includes("export function subscribeToMinimapZoom(listener)")
+    || !app.includes("minimapZoomStorageKey")
+    || !app.includes("useEffect(() => subscribeToMinimapZoom(setMinimapZoom), [])")
+    || !gameLayer.includes("getMinimapViewport")
+    || !gameLayer.includes("fillRect(x * minimapZoom, y * minimapZoom, minimapZoom, minimapZoom)")
+    || styles.includes("--minimap-zoom")
+    || styles.includes("transform: scale")) {
+    throw new Error("Minimap content zoom must stay hidden, persist independently, preserve canvas bounds, and clean up on disposal.");
+  }
   if (!styles.includes("#minimap_canvas") || !styles.includes("24vmin")
-    || !styles.includes("image-rendering: pixelated")) {
+    || !styles.includes("image-rendering: pixelated") || !styles.includes("pointer-events: auto")) {
     throw new Error("The minimap must use responsive pixel-preserving sizing.");
   }
   const bottomLeftStart = app.indexOf('className="corner corner_bottom_left"');
@@ -323,8 +370,12 @@ test("documents the plain safe-area template", async () => {
     "canvas.addEventListener(\"pointercancel\"",
     "canvas.addEventListener(\"lostpointercapture\"",
     "window.addEventListener(\"orientationchange\"",
-    "const handlePageHide = () => {\n    clearTouchInput();",
-    "dispose() {\n      if (disposed) return;\n      disposed = true;\n      clearTouchInput();",
+    "const handlePageHide = () => {\n    clearMovementInput();",
+    "const clearKeyboardInput = () => {\n    heldKeys.clear();\n    shiftHeld = false;",
+    "const handleWindowBlur = () => {\n    clearMovementInput();",
+    "window.addEventListener(\"blur\", handleWindowBlur)",
+    "window.removeEventListener(\"blur\", handleWindowBlur)",
+    "dispose() {\n      if (disposed) return;\n      disposed = true;\n      clearMovementInput();",
   ]) {
     if (!`${styles}\n${gameLayer}`.includes(requiredSourceFragment)) {
       throw new Error("Canvas swipe input must stay scoped to the game canvas and clean up on every stop path.");

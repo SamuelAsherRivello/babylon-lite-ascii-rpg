@@ -73,6 +73,11 @@ repository root; keep the application's source and tests under
 - A new setting must read its stored value on initialization and write its default
   value on first render when no stored value exists. Reset Settings must continue
   to clear every persisted setting.
+- For agent-driven mobile-friendly visual testing, use the in-game `Aspect`
+  setting: `Aspect (Lanscape)` is the viewport-filling wide mode and desktop
+  portrait uses its 9:16 test frame; coarse-pointer mobile portrait continues
+  to fill its browser viewport. Do not hardcode browser dimensions, synthetic
+  screen sizes, or similar viewport workarounds to imitate these modes.
 
 ## Browser test policy
 Do not create, update, or execute Playwright test files by default. Use the

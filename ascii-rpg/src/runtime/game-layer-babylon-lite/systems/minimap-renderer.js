@@ -2,12 +2,60 @@ import { getPaletteStyle } from "../../bridge-layer/palette.js";
 import { MINIMAP_WORLD_SCALE, getMinimapCoverage, isDiscovered } from "./fog-of-war-system.js";
 import { getVisibleGlyph } from "./world-system.js";
 
+export const MINIMAP_MARKER_DEPTHS = Object.freeze({
+  base: 0,
+  world: 10,
+  start: 20,
+  torch: 30,
+  player: 40,
+});
+
+const MINIMAP_MARKER_COLORS = Object.freeze({
+  start: "#00ff00",
+  torch: "#ffffff",
+  player: "#ffff00",
+});
+
 function hexToRgb(color) {
   return [0, 2, 4].map((offset) => Number.parseInt(color.slice(offset + 1, offset + 3), 16));
 }
 
 function rgbToHex([red, green, blue]) {
   return `#${[red, green, blue].map((channel) => Math.round(channel).toString(16).padStart(2, "0")).join("")}`;
+}
+
+function getMinimapMarkerCell(cell) {
+  return {
+    x: Math.floor(cell.x / MINIMAP_WORLD_SCALE),
+    y: Math.floor(cell.y / MINIMAP_WORLD_SCALE),
+  };
+}
+
+/**
+ * Returns minimap markers from back to front so later entries visibly cover
+ * earlier entries in the same coarse minimap pixel.
+ */
+export function getMinimapMarkers(world, fog, playerCell) {
+  if (!world || !fog || !playerCell) return [];
+  const markers = [];
+  if (world.playerStart) {
+    markers.push({
+      type: "start", color: MINIMAP_MARKER_COLORS.start,
+      depth: MINIMAP_MARKER_DEPTHS.start, cell: getMinimapMarkerCell(world.playerStart),
+    });
+  }
+  for (const torch of world.torches ?? []) {
+    if (!isDiscovered(fog, world, torch)) continue;
+    markers.push({
+      type: "torch", color: MINIMAP_MARKER_COLORS.torch,
+      depth: MINIMAP_MARKER_DEPTHS.torch, cell: getMinimapMarkerCell(torch),
+    });
+  }
+  markers.push({
+    type: "player", color: MINIMAP_MARKER_COLORS.player,
+    depth: MINIMAP_MARKER_DEPTHS.player, cell: getMinimapMarkerCell(playerCell),
+  });
+  return markers;
 }
 
 /**

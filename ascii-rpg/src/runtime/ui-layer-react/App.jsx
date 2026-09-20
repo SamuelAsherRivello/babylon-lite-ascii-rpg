@@ -21,12 +21,25 @@ import {
   sortPaletteEntries,
 } from "../bridge-layer/palette.js";
 import { withUrlArgument } from "./url-arguments.js";
+import { ToastProvider, useToast } from "./ToastProvider.jsx";
+import { removeButtonsFromTabOrder } from "./button-tab-order.js";
+import {
+  getPlatformSettingsDefaults,
+  getStoredAspectMode,
+  getStoredBooleanValue,
+  getStoredZoomValue,
+  isMobilePlatform,
+} from "./platform-settings.js";
 import {
   getTimeSnapshot,
-  sendAmbientLightSnapshot,
+  getRealmSnapshot,
+  travelRealm,
+  sendRealmAmbientSnapshot,
+  sendRealmPreferenceSnapshot,
   sendCameraModeSnapshot,
   sendGpuLightPassSnapshot,
   sendMinimapSnapshot,
+  sendMinimapZoomSnapshot,
   sendPlayerGpuShadowBleedRangeSnapshot,
   sendPlayerLightingSnapshot,
   sendPlayerShadowSnapshot,
@@ -35,6 +48,8 @@ import {
   sendTorchShadowSnapshot,
   sendZoomSnapshot,
   subscribeToTime,
+  subscribeToRealm,
+  subscribeToMinimapZoom,
 } from "../bridge-layer/game-bridge.js";
 import {
   CAMERA_MODE_LABELS,
@@ -61,9 +76,12 @@ import {
 } from "../game-layer-babylon-lite/systems/world-system.js";
 
 const fullscreenStorageKey = "babylon-lite-ascii-rpg.fullscreen";
+const aspectStorageKey = "babylon-lite-ascii-rpg.aspect";
 const showUiStorageKey = "babylon-lite-ascii-rpg.show-ui";
 const zoomStorageKey = "babylon-lite-ascii-rpg.zoom";
-const ambientLightStorageKey = "babylon-lite-ascii-rpg.ambient-light";
+const overgroundAmbientStorageKey = "babylon-lite-ascii-rpg.ambient-overground";
+const undergroundAmbientStorageKey = "babylon-lite-ascii-rpg.ambient-underground";
+const realmStorageKey = "babylon-lite-ascii-rpg.active-realm";
 const torchLightingStorageKey = "babylon-lite-ascii-rpg.torch-lighting";
 const playerLightingStorageKey = "babylon-lite-ascii-rpg.player-lighting";
 const torchShadowStorageKey = "babylon-lite-ascii-rpg.torch-shadow";
@@ -71,10 +89,10 @@ const playerShadowStorageKey = "babylon-lite-ascii-rpg.player-shadow";
 const gpuLightPassStorageKey = "babylon-lite-ascii-rpg.gpu-light-pass";
 const playerGpuShadowBleedRangeStorageKey = "babylon-lite-ascii-rpg.player-gpu-shadow-bleed-range";
 const minimapStorageKey = "babylon-lite-ascii-rpg.minimap";
+const minimapZoomStorageKey = "babylon-lite-ascii-rpg.minimap-zoom";
 const lightingWindowPositionStorageKey = "babylon-lite-ascii-rpg.lighting-window-position";
 const minZoom = 1;
 const maxZoom = 10;
-const defaultZoom = 5;
 const repositoryUrl = "https://github.com/SamuelAsherRivello/babylon-lite-ascii-rpg";
 const uiMarginPixels = 20;
 const mapGlyphs = new Set([
@@ -96,6 +114,7 @@ const shadowValueHelp = "O Occlusion · B Bleed";
 const ambientValueHelp = "0 dark · 1 bright";
 const settingsHelp = Object.freeze({
   fullscreen: "Toggle fullscreen.",
+  aspect: "Switch between landscape and portrait testing presentation.",
   showUi: "Show or hide the HUD.",
   lighting: "Open lighting controls.",
   closeLighting: "Close lighting controls.",
@@ -111,22 +130,27 @@ const settingsHelp = Object.freeze({
   ambientDecrease: `Dim overall light. ${ambientValueHelp}`,
   zoomIn: "Make map glyphs larger.",
   zoomOut: "Make map glyphs smaller.",
+  toast: "Send a test toast.",
   reset: "Clear local storage and reload.",
 });
 
 function getStoredZoom() {
-  const storedZoom = Number.parseInt(localStorage.getItem(zoomStorageKey), 10);
-  return Number.isInteger(storedZoom) ? Math.min(maxZoom, Math.max(minZoom, storedZoom)) : defaultZoom;
+  const defaults = getPlatformSettingsDefaults();
+  return getStoredZoomValue(localStorage.getItem(zoomStorageKey), defaults.zoom, minZoom, maxZoom);
+}
+
+function getStoredMinimapZoom() {
+  const storedZoom = Number.parseInt(localStorage.getItem(minimapZoomStorageKey), 10);
+  return [1, 5, 10].includes(storedZoom) ? storedZoom : 5;
 }
 
 function getStoredBoolean(storageKey, defaultValue) {
-  const storedValue = localStorage.getItem(storageKey);
-  return storedValue === null ? defaultValue : storedValue === "true";
+  return getStoredBooleanValue(localStorage.getItem(storageKey), defaultValue);
 }
 
-function getStoredAmbientLight() {
-  const stored = Number.parseFloat(localStorage.getItem(ambientLightStorageKey));
-  return Number.isFinite(stored) ? Math.min(1, Math.max(0, stored)) : 0.6;
+function getStoredAmbientLight(storageKey, fallback) {
+  const stored = Number.parseFloat(localStorage.getItem(storageKey));
+  return Number.isFinite(stored) ? Math.min(1, Math.max(0, stored)) : fallback;
 }
 
 function getStoredSourceIndex(storageKey, defaultIndex) {
@@ -216,8 +240,10 @@ function LightingWindow({
   onPlayerLightingChange,
   playerShadowLabel,
   onPlayerShadowChange,
-  ambientLight,
-  onAmbientLightChange,
+  overgroundAmbient,
+  undergroundAmbient,
+  onOvergroundAmbientChange,
+  onUndergroundAmbientChange,
   onShowTooltip,
   onHideTooltip,
 }) {
@@ -295,16 +321,17 @@ function LightingWindow({
         </button>
       </div>
       <div className="lighting_window_body">
-        <div id="ambient_light_control" className="corner_body zoom_control" aria-label="Ambient">
-          <span>Ambient</span>
+        <div id="ambient_overground_control" className="corner_body zoom_control" aria-label="Ambient Overground">
+          <span>Ambient Overground</span>
           <SettingTooltipTarget description={settingsHelp.ambientIncrease} onShow={onShowTooltip} onHide={onHideTooltip}>
-            <button type="button" aria-label="Increase ambient light" aria-description={settingsHelp.ambientIncrease} onClick={() => onAmbientLightChange(AMBIENT_LIGHT_STEP)} disabled={ambientLight >= 1}>+</button>
+            <button type="button" aria-label="Increase Overground ambient light" aria-description={settingsHelp.ambientIncrease} onClick={() => onOvergroundAmbientChange(AMBIENT_LIGHT_STEP)} disabled={overgroundAmbient >= 1}>+</button>
           </SettingTooltipTarget>
-          <span aria-live="polite">{ambientLight.toFixed(1)}</span>
+          <span aria-live="polite">{overgroundAmbient.toFixed(1)}</span>
           <SettingTooltipTarget description={settingsHelp.ambientDecrease} onShow={onShowTooltip} onHide={onHideTooltip}>
-            <button type="button" aria-label="Decrease ambient light" aria-description={settingsHelp.ambientDecrease} onClick={() => onAmbientLightChange(-AMBIENT_LIGHT_STEP)} disabled={ambientLight <= 0}>-</button>
+            <button type="button" aria-label="Decrease Overground ambient light" aria-description={settingsHelp.ambientDecrease} onClick={() => onOvergroundAmbientChange(-AMBIENT_LIGHT_STEP)} disabled={overgroundAmbient <= 0}>-</button>
           </SettingTooltipTarget>
         </div>
+        <div id="ambient_underground_control" className="corner_body zoom_control" aria-label="Ambient Underground"><span>Ambient Underground</span><button type="button" onClick={() => onUndergroundAmbientChange(AMBIENT_LIGHT_STEP)}>+</button><span>{undergroundAmbient.toFixed(1)}</span><button type="button" onClick={() => onUndergroundAmbientChange(-AMBIENT_LIGHT_STEP)}>-</button></div>
         <SettingTooltipTarget description={settingsHelp.gpuLightPass} onShow={onShowTooltip} onHide={onHideTooltip}>
           <button
             id="gpu_light_pass_toggle"
@@ -695,17 +722,21 @@ export function ArgumentsWindow({ onClose }) {
   );
 }
 
-export function App() {
+function AppContent() {
+  const { enqueueToast } = useToast();
   const [settingTooltip, setSettingTooltip] = useState(null);
   const [settingTooltipPosition, setSettingTooltipPosition] = useState({ top: 0, left: 0 });
   const settingTooltipRef = useRef(null);
-  const [showHud, setShowHud] = useState(() => getStoredBoolean(showUiStorageKey, true));
+  const [showHud, setShowHud] = useState(() => getStoredBoolean(showUiStorageKey, getPlatformSettingsDefaults().showHud));
   const [fullscreenPreferred, setFullscreenPreferred] = useState(() => {
     return localStorage.getItem(fullscreenStorageKey) === "true";
   });
+  const [aspectMode, setAspectMode] = useState(() => getStoredAspectMode(localStorage.getItem(aspectStorageKey)));
   const [cameraMode, setCameraMode] = useState(() => normalizeCameraMode(localStorage.getItem(CAMERA_STORAGE_KEY)));
   const [zoom, setZoom] = useState(getStoredZoom);
-  const [ambientLight, setAmbientLight] = useState(getStoredAmbientLight);
+  const [minimapZoom, setMinimapZoom] = useState(getStoredMinimapZoom);
+  const [overgroundAmbient, setOvergroundAmbient] = useState(() => getStoredAmbientLight(overgroundAmbientStorageKey, 0.9));
+  const [undergroundAmbient, setUndergroundAmbient] = useState(() => getStoredAmbientLight(undergroundAmbientStorageKey, 0.1));
   const [gpuLightPass, setGpuLightPass] = useState(() => getStoredBoolean(gpuLightPassStorageKey, true));
   const [minimap, setMinimap] = useState(() => getStoredBoolean(minimapStorageKey, true));
   const [playerGpuShadowBleedRange, setPlayerGpuShadowBleedRange] = useState(getStoredPlayerGpuShadowBleedRange);
@@ -723,6 +754,7 @@ export function App() {
   const fontId = useSyncExternalStore(subscribeToFont, getFontId, getFontId);
   const savedFontId = useSyncExternalStore(subscribeToFont, getSavedFontId, getSavedFontId);
   const worldTime = useSyncExternalStore(subscribeToTime, getTimeSnapshot, getTimeSnapshot);
+  const activeRealm = useSyncExternalStore(subscribeToRealm, getRealmSnapshot, getRealmSnapshot);
   const [fps, setFps] = useState(0);
 
   const versionNumber = versionText.trim().replace(/^version=/, "").replace(/^v/, "");
@@ -793,6 +825,12 @@ export function App() {
   }, [fullscreenPreferred]);
 
   useEffect(() => {
+    localStorage.setItem(aspectStorageKey, aspectMode);
+    document.documentElement.dataset.presentationAspect = aspectMode;
+    return () => delete document.documentElement.dataset.presentationAspect;
+  }, [aspectMode]);
+
+  useEffect(() => {
     localStorage.setItem(showUiStorageKey, showHud ? "true" : "false");
   }, [showHud]);
 
@@ -807,9 +845,14 @@ export function App() {
   }, [zoom]);
 
   useEffect(() => {
-    localStorage.setItem(ambientLightStorageKey, String(ambientLight));
-    sendAmbientLightSnapshot(ambientLight);
-  }, [ambientLight]);
+    localStorage.setItem(minimapZoomStorageKey, String(minimapZoom));
+    sendMinimapZoomSnapshot(minimapZoom);
+  }, [minimapZoom]);
+
+  useEffect(() => subscribeToMinimapZoom(setMinimapZoom), []);
+
+  useEffect(() => { localStorage.setItem(overgroundAmbientStorageKey, String(overgroundAmbient)); localStorage.setItem(undergroundAmbientStorageKey, String(undergroundAmbient)); sendRealmAmbientSnapshot({ Overground: overgroundAmbient, Underground: undergroundAmbient }); }, [overgroundAmbient, undergroundAmbient]);
+  useEffect(() => { localStorage.setItem(realmStorageKey, activeRealm); sendRealmPreferenceSnapshot(activeRealm); }, [activeRealm]);
 
   useEffect(() => {
     localStorage.setItem(gpuLightPassStorageKey, gpuLightPass ? "true" : "false");
@@ -859,6 +902,23 @@ export function App() {
     return () => document.removeEventListener("fullscreenchange", syncFullscreenState);
   }, []);
 
+  useEffect(() => {
+    if (!isMobilePlatform()) return undefined;
+
+    let attempted = false;
+    const requestFullscreenOnFirstClick = () => {
+      if (attempted) return;
+      attempted = true;
+      document.removeEventListener("click", requestFullscreenOnFirstClick, true);
+      if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+        void document.documentElement.requestFullscreen().catch(() => {});
+      }
+    };
+
+    document.addEventListener("click", requestFullscreenOnFirstClick, true);
+    return () => document.removeEventListener("click", requestFullscreenOnFirstClick, true);
+  }, []);
+
   const toggleFullscreen = async () => {
     try {
       if (document.fullscreenElement) {
@@ -881,6 +941,11 @@ export function App() {
     setShowHud((currentShowHud) => !currentShowHud);
   };
 
+  const toggleAspectMode = () => {
+    setSettingTooltip(null);
+    setAspectMode((currentMode) => currentMode === "landscape" ? "portrait" : "landscape");
+  };
+
   const changeZoom = (amount) => {
     setZoom((currentZoom) => {
       const nextZoom = Math.min(maxZoom, Math.max(minZoom, currentZoom + amount));
@@ -891,9 +956,7 @@ export function App() {
 
   const cycleCameraMode = () => setCameraMode((current) => getNextCameraMode(current));
 
-  const changeAmbientLight = (amount) => {
-    setAmbientLight((current) => Math.min(1, Math.max(0, Math.round((current + amount) * 100) / 100)));
-  };
+  const changeRealmAmbient = (setter, amount) => setter((current) => Math.min(1, Math.max(0, Math.round((current + amount) * 100) / 100)));
 
   const cycleLighting = (setter) => {
     setter((currentIndex) => (currentIndex + 1) % LIGHTING_SOURCE_STATES.length);
@@ -955,6 +1018,8 @@ export function App() {
         <div id="project_title" className="corner_body">
           Ascii RPG
         </div>
+        <div id="world" className="corner_body">World: 1</div>
+        <div id="realm" className="corner_body">Realm: {activeRealm}</div>
         <div id="time" className="corner_body">
           Time: {formatWorldTime(worldTime)}
         </div>
@@ -1037,6 +1102,19 @@ export function App() {
               </span>
             </button>
           </SettingTooltipTarget>
+          <SettingTooltipTarget description={settingsHelp.aspect} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
+            <button
+              id="aspect_toggle"
+              className="corner_body settings_option"
+              type="button"
+              aria-pressed={aspectMode === "portrait"}
+              aria-description={settingsHelp.aspect}
+              tabIndex={-1}
+              onClick={toggleAspectMode}
+            >
+              {aspectMode === "portrait" ? "Aspect (Portrait)" : "Aspect (Lanscape)"}
+            </button>
+          </SettingTooltipTarget>
           <SettingTooltipTarget description={settingsHelp.showUi} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
             <button
               id="show_ui_toggle"
@@ -1082,6 +1160,14 @@ export function App() {
               {CAMERA_MODE_LABELS[cameraMode] ?? CAMERA_MODE_LABELS[DEFAULT_CAMERA_MODE]}
             </button>
           </SettingTooltipTarget>
+          <button
+            id="realm_toggle"
+            className="corner_body settings_option"
+            type="button"
+            onClick={travelRealm}
+          >
+            Realm ({activeRealm})
+          </button>
           <div id="zoom_control" className="corner_body zoom_control" aria-label="Zoom">
             <span>Zoom</span>
             <SettingTooltipTarget description={settingsHelp.zoomIn} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
@@ -1092,6 +1178,18 @@ export function App() {
               <button type="button" aria-label="Zoom out" aria-description={settingsHelp.zoomOut} onClick={() => changeZoom(-1)} disabled={zoom <= minZoom}>-</button>
             </SettingTooltipTarget>
           </div>
+          <SettingTooltipTarget description={settingsHelp.toast} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
+            <button
+              id="send_toast"
+              className="corner_body settings_option"
+              type="button"
+              aria-description={settingsHelp.toast}
+              tabIndex={-1}
+              onClick={() => enqueueToast("Test toast")}
+            >
+              Send Toast
+            </button>
+          </SettingTooltipTarget>
           <SettingTooltipTarget description={settingsHelp.reset} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
             <button
               id="reset_settings"
@@ -1147,8 +1245,10 @@ export function App() {
           onPlayerLightingChange={() => cycleLighting(setPlayerLightingIndex)}
           playerShadowLabel={playerShadowLabel}
           onPlayerShadowChange={() => cycleLighting(setPlayerShadowIndex)}
-          ambientLight={ambientLight}
-          onAmbientLightChange={changeAmbientLight}
+          overgroundAmbient={overgroundAmbient}
+          undergroundAmbient={undergroundAmbient}
+          onOvergroundAmbientChange={(amount) => changeRealmAmbient(setOvergroundAmbient, amount)}
+          onUndergroundAmbientChange={(amount) => changeRealmAmbient(setUndergroundAmbient, amount)}
           onShowTooltip={showSettingTooltip}
           onHideTooltip={hideSettingTooltip}
         />
@@ -1180,5 +1280,15 @@ export function App() {
       ) : null}
       {argumentsOpen ? <ArgumentsWindow onClose={() => setArgumentsOpen(false)} /> : null}
     </>
+  );
+}
+
+export function App() {
+  useLayoutEffect(() => removeButtonsFromTabOrder(document.getElementById("ui_layer")), []);
+
+  return (
+    <ToastProvider>
+      <AppContent />
+    </ToastProvider>
   );
 }
