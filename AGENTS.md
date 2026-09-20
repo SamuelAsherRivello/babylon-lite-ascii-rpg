@@ -67,6 +67,13 @@ Correct: run `git status`, dependency, build, test, and run commands from the
 repository root; keep the application's source and tests under
 `ascii-rpg/`.
 
+## Settings persistence
+
+- Every user-facing setting must persist to browser `localStorage` by default.
+- A new setting must read its stored value on initialization and write its default
+  value on first render when no stored value exists. Reset Settings must continue
+  to clear every persisted setting.
+
 ## Browser test policy
 Do not create, update, or execute Playwright test files by default. Use the
 existing Node tests, build checks, and manual browser verification only when

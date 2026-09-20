@@ -9,6 +9,12 @@ export const AMBIENT_LIGHT_STEP = 0.05;
 export const LIGHTING_SOURCE_STATES = Object.freeze(["Off", "Low", "Med", "High", "X High"]);
 export const SHADOW_SOURCE_STATES = LIGHTING_SOURCE_STATES;
 export const DEFAULT_SHADOW_SETTINGS = Object.freeze({ occlusion: 1, bleed: 0 });
+export const PLAYER_GPU_SHADOW_BLEED_RANGES = Object.freeze([0, 1, 2, 3, 4, 6]);
+
+export function normalizePlayerGpuShadowBleedRange(value) {
+  const numeric = Number(value);
+  return PLAYER_GPU_SHADOW_BLEED_RANGES.includes(numeric) ? numeric : 2;
+}
 
 function assertLightingConfig(config) {
   if (!config || !Number.isFinite(config.ambient) || config.ambient < 0 || config.ambient > 1) {
@@ -104,6 +110,33 @@ function getLightPathBlockerCount(source, target, terrain) {
 
 export function hasClearLightPath(source, target, terrain) {
   return getLightPathBlockerCount(source, target, terrain) === 0;
+}
+
+/** Returns grid steps beyond the first intervening blocker, or zero when clear. */
+export function getShadowDistanceBeyondFirstBlocker(source, target, terrain) {
+  if (!Array.isArray(terrain) || !source || !target || !terrain[source.y]?.[source.x] || !terrain[target.y]?.[target.x]) return null;
+  const stepX = Math.sign(target.x - source.x);
+  const stepY = Math.sign(target.y - source.y);
+  const countX = Math.abs(target.x - source.x);
+  const countY = Math.abs(target.y - source.y);
+  let x = source.x; let y = source.y; let crossedX = 0; let crossedY = 0;
+  let foundBlocker = false; let distance = 0;
+  const visit = (cellX, cellY) => {
+    if (foundBlocker) { distance += 1; return; }
+    if (cellX === target.x && cellY === target.y) return;
+    if (!foundBlocker && blocksLight(terrain, cellX, cellY)) foundBlocker = true;
+  };
+  while (crossedX < countX || crossedY < countY) {
+    const xBoundary = (1 + 2 * crossedX) * countY;
+    const yBoundary = (1 + 2 * crossedY) * countX;
+    if (xBoundary === yBoundary) {
+      visit(x + stepX, y); visit(x, y + stepY);
+      x += stepX; y += stepY; crossedX += 1; crossedY += 1;
+    } else if (xBoundary < yBoundary) { x += stepX; crossedX += 1; }
+    else { y += stepY; crossedY += 1; }
+    visit(x, y);
+  }
+  return foundBlocker ? distance : 0;
 }
 
 function getShadowTransmission(blockerCount, shadow = DEFAULT_SHADOW_SETTINGS) {
@@ -206,6 +239,25 @@ function buildVisibleSourceField(terrain, region, sources, profile, shadow) {
   return values;
 }
 
+function buildPlayerPenumbraField(terrain, region, playerCell, profile, range) {
+  const values = new Float64Array(region.columns * region.rows);
+  if (!playerCell || profile.maximum <= 0 || range === 0) return values;
+  const radiusSquared = profile.radius ** 2;
+  for (let y = region.y; y < region.y + region.rows; y += 1) {
+    for (let x = region.x; x < region.x + region.columns; x += 1) {
+      const distanceSquared = (x - playerCell.x) ** 2 + (y - playerCell.y) ** 2;
+      if (distanceSquared >= radiusSquared) continue;
+      const shadowDistance = getShadowDistanceBeyondFirstBlocker(playerCell, { x, y }, terrain);
+      if (!shadowDistance || shadowDistance > range) continue;
+      const distanceRatio = Math.sqrt(distanceSquared) / profile.radius;
+      const fade = (1 - shadowDistance / (range + 1)) ** 2;
+      values[(y - region.y) * region.columns + x - region.x] =
+        profile.maximum * ((1 - distanceRatio) ** profile.falloffExponent) * 0.2 * fade;
+    }
+  }
+  return values;
+}
+
 export function createSceneLightingFieldCache() {
   let torchEntry = null;
   let playerEntry = null;
@@ -219,6 +271,7 @@ export function createSceneLightingFieldCache() {
       const playerProfile = settings.playerProfile ?? getLightingProfile("Med").config;
       const torchShadow = settings.torchShadow ?? getShadowProfile("X High").config;
       const playerShadow = settings.playerShadow ?? getShadowProfile("X High").config;
+      const playerGpuShadowBleedRange = normalizePlayerGpuShadowBleedRange(settings.playerGpuShadowBleedRange);
       const terrain = world?.terrain;
       if (!Array.isArray(terrain)) throw new TypeError("Scene lighting requires terrain walkability.");
 
@@ -229,13 +282,15 @@ export function createSceneLightingFieldCache() {
           values: buildVisibleSourceField(terrain, region, torches, torchProfile, torchShadow),
         };
       }
-      if (!playerEntry || playerEntry.world !== world || playerEntry.profile !== playerProfile || playerEntry.shadow !== playerShadow ||
+      if (!playerEntry || playerEntry.world !== world || playerEntry.profile !== playerProfile || playerEntry.shadow !== playerShadow || playerEntry.range !== playerGpuShadowBleedRange ||
           playerEntry.x !== playerCell?.x || playerEntry.y !== playerCell?.y ||
           !sameRegion(playerEntry.region, region)) {
         playerEntry = {
-          world, profile: playerProfile, shadow: playerShadow, region: { ...region },
+          world, profile: playerProfile, shadow: playerShadow, range: playerGpuShadowBleedRange, region: { ...region },
           x: playerCell?.x, y: playerCell?.y,
           values: buildVisibleSourceField(terrain, region, playerCell ? [playerCell] : [], playerProfile, playerShadow),
+          gpuDirectValues: buildVisibleSourceField(terrain, region, playerCell ? [playerCell] : [], playerProfile, DEFAULT_SHADOW_SETTINGS),
+          gpuPenumbraValues: buildPlayerPenumbraField(terrain, region, playerCell, playerProfile, playerGpuShadowBleedRange),
         };
       }
 
@@ -244,6 +299,8 @@ export function createSceneLightingFieldCache() {
       return {
         torchContributions,
         playerContributions,
+        playerGpuDirectContributions: playerEntry.gpuDirectValues,
+        playerGpuPenumbraContributions: playerEntry.gpuPenumbraValues,
         getFactor(cell) {
           const localX = cell.x - region.x;
           const localY = cell.y - region.y;

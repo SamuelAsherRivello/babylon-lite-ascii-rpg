@@ -3,9 +3,12 @@ let timeSnapshot = 1;
 let cameraModeSnapshot = "center";
 let ambientLightSnapshot = 0.5;
 let torchLightingSnapshot = "Med";
-let playerLightingSnapshot = "Med";
+let playerLightingSnapshot = "X High";
 let torchShadowSnapshot = "X High";
-let playerShadowSnapshot = "X High";
+let playerShadowSnapshot = "High";
+let gpuLightPassSnapshot = true;
+let playerGpuShadowBleedRangeSnapshot = 2;
+let minimapSnapshot = true;
 let zoomSnapshot = null;
 let lightingSnapshot = null;
 const timeListeners = new Set();
@@ -18,6 +21,9 @@ export function setGameController(controller) {
   gameController?.setPlayerLighting?.(playerLightingSnapshot);
   gameController?.setTorchShadow?.(torchShadowSnapshot);
   gameController?.setPlayerShadow?.(playerShadowSnapshot);
+  gameController?.setGpuLightPass?.(gpuLightPassSnapshot);
+  gameController?.setPlayerGpuShadowBleedRange?.(playerGpuShadowBleedRangeSnapshot);
+  gameController?.setMinimap?.(minimapSnapshot);
   if (zoomSnapshot !== null) gameController?.setZoom?.(zoomSnapshot);
   if (lightingSnapshot !== null) gameController?.setLighting?.(lightingSnapshot);
 }
@@ -63,6 +69,21 @@ export function sendTorchShadowSnapshot(profile) {
 export function sendPlayerShadowSnapshot(profile) {
   playerShadowSnapshot = profile;
   gameController?.setPlayerShadow?.(profile);
+}
+
+export function sendGpuLightPassSnapshot(enabled) {
+  gpuLightPassSnapshot = enabled === true;
+  gameController?.setGpuLightPass?.(gpuLightPassSnapshot);
+}
+
+export function sendPlayerGpuShadowBleedRangeSnapshot(range) {
+  playerGpuShadowBleedRangeSnapshot = range;
+  gameController?.setPlayerGpuShadowBleedRange?.(range);
+}
+
+export function sendMinimapSnapshot(enabled) {
+  minimapSnapshot = enabled === true;
+  gameController?.setMinimap?.(minimapSnapshot);
 }
 
 export function sendCameraModeSnapshot(mode) {

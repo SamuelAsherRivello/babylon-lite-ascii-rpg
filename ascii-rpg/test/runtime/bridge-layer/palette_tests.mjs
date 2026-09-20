@@ -7,6 +7,8 @@ import {
   PALETTE_VERSION,
   createDefaultPalette,
   createPalette,
+  getPaletteGroup,
+  getPaletteGroupLabel,
   getPaletteEntryId,
   filterPaletteEntries,
   isPaletteEntryCustomized,
@@ -88,19 +90,35 @@ test("toggles index and alphabet palette ordering", () => {
   assert.equal(alphabetAscending[0].glyph, " ");
 });
 
-test("groups digits, accented Latin letters, and punctuation", () => {
+test("groups the palette into ordered semantic families", () => {
   const palette = createPalette();
   const grouped = sortPaletteEntries(palette, "group", "ascending").map((entry) => entry.glyph);
   const digits = grouped.slice(0, 10);
-  const aStart = grouped.indexOf("A");
-  const bStart = grouped.indexOf("B");
-  const punctuationStart = grouped.findIndex((glyph) => !/[0-9A-Za-zÀ-ÿ]/u.test(glyph));
 
   assert.deepEqual(digits, ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]);
-  assert.deepEqual(grouped.slice(aStart, bStart), ["A", "Ä", "Å", "Æ", "a", "à", "á", "â", "ä", "å", "æ"]);
-  assert.equal(grouped[bStart], "B");
-  assert.equal(grouped[punctuationStart], " ");
-  assert.ok(grouped.slice(punctuationStart).includes("•"));
+  assert.ok(grouped.indexOf("A") < grouped.indexOf("│"));
+  assert.ok(grouped.indexOf("│") < grouped.indexOf("╣"));
+  assert.ok(grouped.indexOf("╣") < grouped.indexOf("╡"));
+  assert.ok(grouped.indexOf("╡") < grouped.indexOf("░"));
+  assert.ok(grouped.indexOf("░") < grouped.indexOf("α"));
+  assert.ok(grouped.indexOf("α") < grouped.indexOf("↑"));
+  assert.ok(grouped.indexOf("↑") < grouped.indexOf("♥"));
+});
+
+test("classifies agreed special-symbol families without changing inventory", () => {
+  const entry = (glyph) => ({ glyph });
+
+  assert.equal(getPaletteGroup(entry("┄")), "terrain");
+  assert.equal(getPaletteGroup(entry("╱")), "terrain");
+  assert.equal(getPaletteGroup(entry("◈")), "maps");
+  assert.equal(getPaletteGroup(entry("◒")), "maps");
+  assert.equal(getPaletteGroup(entry("⊗")), "status");
+  assert.equal(getPaletteGroup(entry("⊟")), "status");
+  assert.equal(getPaletteGroup(entry("ᚠ")), "runes");
+  assert.equal(getPaletteGroup(entry("⚄")), "dice");
+  assert.equal(getPaletteGroup(entry("♛")), "chess");
+  assert.equal(getPaletteGroupLabel(entry("◈")), "Maps");
+  assert.equal(getPaletteGroupLabel(entry("⊕")), "Status");
 });
 
 test("ships blue defaults for the water glyphs", async () => {

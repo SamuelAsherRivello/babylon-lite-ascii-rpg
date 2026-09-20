@@ -2,13 +2,16 @@ import {
   addSpriteRendererLayer,
   addSprite2DIndex,
   createEngine,
+  createSpriteAtlasFromFrames,
   createSprite2DLayer,
   createSpriteRenderer,
   disposeEngine,
+  disposeSpriteAtlas,
   disposeSpriteRenderer,
   removeSpriteRendererLayer,
   registerSpriteRenderer,
   startEngine,
+  spriteBlendAdditive,
   updateSprite2DIndex,
 } from "@babylonjs/lite";
 import {
@@ -25,6 +28,7 @@ import {
   getCellCenter,
   getCombinedDirection,
   getDirectionForKey,
+  getDirectionForSwipe,
   getViewOriginForCamera,
   moveWorldCell,
 } from "./characters/player/player-grid.js";
@@ -51,6 +55,12 @@ import {
   getLightingProfile,
   getShadowProfile,
 } from "./lighting.js";
+import { buildGpuLightPassSamples, createGpuLightPassFrame, GPU_LIGHT_PASS_COLOR } from "./gpu-light-pass.js";
+import {
+  createFogOfWar,
+  discoverFromPlayer,
+} from "./systems/fog-of-war-system.js";
+import { getMinimapWorldPixel } from "./systems/minimap-renderer.js";
 
 const GLYPHS = ["W", "•", "P", "T", "~", "≈", "▓"];
 const WORLD_ROWS = 512;
@@ -92,21 +102,32 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   const canvas = document.createElement("canvas");
   canvas.id = "game_canvas";
   canvas.setAttribute("aria-label", "Ascii RPG game");
-  container.replaceChildren(canvas);
+  const minimapCanvas = document.createElement("canvas");
+  minimapCanvas.id = "minimap_canvas";
+  minimapCanvas.setAttribute("aria-label", "Exploration minimap");
+  container.replaceChildren(canvas, minimapCanvas);
 
   let engine;
   let renderer;
   let atlas;
   let layer;
   let glyphCache;
+  let gpuLightAtlas;
+  let gpuLightLayer;
+  let gpuLightPassEnabled = true;
   let disposed = false;
   let repeatTimer = null;
   let generationController = new AbortController();
   let generating = false;
   const heldKeys = new Set();
+  let touchDirection = null;
+  let activePointerId = null;
+  let touchStart = null;
   let viewport = createViewportForWindow();
   let world = null;
   let playerCell = null;
+  let fogOfWar = null;
+  let minimapVisible = true;
   let viewOrigin = { x: 0, y: 0 };
   let cameraMode = "center";
   const timeSystem = createTimeSystem();
@@ -115,20 +136,49 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   let lighting = {
     ambient: DEFAULT_LIGHTING.ambient,
     torchProfile: getLightingProfile("Med").config,
-    playerProfile: getLightingProfile("Med").config,
+    playerProfile: getLightingProfile("X High").config,
     torchShadow: getShadowProfile("X High").config,
-    playerShadow: getShadowProfile("X High").config,
+    playerShadow: getShadowProfile("High").config,
+    playerGpuShadowBleedRange: 2,
   };
   const lightingFieldCache = createSceneLightingFieldCache();
   let fontId = initialFontId;
   let zoom = DEFAULT_ZOOM;
   const spriteIndexes = [];
   const spriteStates = [];
+  const gpuLightSpriteIndexes = [];
+  const gpuLightSpriteStates = [];
   const metrics = {
     visibleCells: 0, submittedCells: 0, skippedCells: 0, glyphWarmupMs: 0,
     generationMs: null, firstVisibleRenderMs: null, totalReadyMs: null,
     lastZoomRerenderMs: null, lastZoomWarmupMs: null,
     generationYields: 0, generationWaitMs: 0, generationPhases: {},
+  };
+
+  const renderMinimap = () => {
+    if (!fogOfWar || !minimapVisible) return;
+    minimapCanvas.hidden = false;
+    if (minimapCanvas.width !== fogOfWar.minimapColumns) minimapCanvas.width = fogOfWar.minimapColumns;
+    if (minimapCanvas.height !== fogOfWar.minimapRows) minimapCanvas.height = fogOfWar.minimapRows;
+    const context = minimapCanvas.getContext("2d");
+    context.fillStyle = "#000";
+    context.fillRect(0, 0, minimapCanvas.width, minimapCanvas.height);
+    for (let y = 0; y < fogOfWar.minimapRows; y += 1) {
+      for (let x = 0; x < fogOfWar.minimapColumns; x += 1) {
+        const pixel = getMinimapWorldPixel(world, fogOfWar, palette, { x, y });
+        if (pixel.opacity <= 0) continue;
+        context.globalAlpha = pixel.opacity;
+        context.fillStyle = pixel.color;
+        context.fillRect(x, y, 1, 1);
+      }
+    }
+    context.globalAlpha = 1;
+  };
+
+  const refreshDiscovery = () => {
+    if (!fogOfWar || !world || !playerCell) return;
+    discoverFromPlayer(fogOfWar, world, playerCell, lighting.playerProfile);
+    renderMinimap();
   };
 
   const clampViewOrigin = () => {
@@ -155,6 +205,23 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     }
   };
 
+  const getHeldDirection = () => {
+    const keyboardDirection = getCombinedDirection(heldKeys);
+    return {
+      x: Math.sign(keyboardDirection.x + (touchDirection?.x ?? 0)),
+      y: Math.sign(keyboardDirection.y + (touchDirection?.y ?? 0)),
+    };
+  };
+
+  const hasHeldMovement = () => heldKeys.size > 0 || touchDirection !== null;
+
+  const clearTouchInput = () => {
+    activePointerId = null;
+    touchStart = null;
+    touchDirection = null;
+    if (!hasHeldMovement()) clearRepeat();
+  };
+
   const rebuildLayer = (nextAtlas = atlas) => {
     if (renderer && layer) removeSpriteRendererLayer(renderer, layer);
     atlas = nextAtlas;
@@ -162,6 +229,59 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     if (renderer) addSpriteRendererLayer(renderer, layer);
     spriteIndexes.length = 0;
     spriteStates.length = 0;
+  };
+
+  const disposeGpuLightPass = () => {
+    if (renderer && gpuLightLayer) removeSpriteRendererLayer(renderer, gpuLightLayer);
+    gpuLightLayer = undefined;
+    gpuLightSpriteIndexes.length = 0;
+    gpuLightSpriteStates.length = 0;
+    if (gpuLightAtlas) disposeSpriteAtlas(gpuLightAtlas);
+    gpuLightAtlas = undefined;
+  };
+
+  const ensureGpuLightPass = (capacity) => {
+    if (gpuLightLayer && gpuLightLayer._capacity >= capacity) return;
+    disposeGpuLightPass();
+    gpuLightAtlas = createSpriteAtlasFromFrames(engine, [createGpuLightPassFrame()], { sampling: "linear" });
+    gpuLightLayer = createSprite2DLayer(gpuLightAtlas, {
+      capacity: Math.max(1, capacity), blendMode: spriteBlendAdditive, order: 1,
+    });
+    addSpriteRendererLayer(renderer, gpuLightLayer);
+  };
+
+  const renderGpuLightPass = (region, lightField) => {
+    if (!gpuLightPassEnabled) {
+      if (gpuLightLayer) gpuLightLayer.visible = false;
+      return;
+    }
+    ensureGpuLightPass(region.count);
+    gpuLightLayer.visible = true;
+    const samples = buildGpuLightPassSamples(region, lightField, lighting.ambient);
+    const activeSlots = new Set();
+    for (const sample of samples) {
+      activeSlots.add(sample.slot);
+      const center = getCellCenter(sample, viewport);
+      const props = {
+        positionPx: [center.x, center.y],
+        sizePx: [viewport.gridWidth, viewport.gridHeight],
+        frame: 0,
+        color: [...GPU_LIGHT_PASS_COLOR, Math.min(0.16, sample.intensity * 0.16)],
+        visible: true,
+      };
+      if (gpuLightSpriteIndexes[sample.slot] === undefined) {
+        gpuLightSpriteIndexes[sample.slot] = addSprite2DIndex(gpuLightLayer, props);
+      } else {
+        updateSprite2DIndex(gpuLightLayer, gpuLightSpriteIndexes[sample.slot], props);
+      }
+      gpuLightSpriteStates[sample.slot] = true;
+    }
+    for (let slot = 0; slot < gpuLightSpriteIndexes.length; slot += 1) {
+      if (gpuLightSpriteStates[slot] && !activeSlots.has(slot)) {
+        updateSprite2DIndex(gpuLightLayer, gpuLightSpriteIndexes[slot], { visible: false });
+        gpuLightSpriteStates[slot] = false;
+      }
+    }
   };
 
   const renderCell = (region, x, y, frames, lightField) => {
@@ -221,6 +341,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
         spriteStates[slot].visible = false;
       }
     }
+    renderGpuLightPass(region, lightField);
     metrics.visibleCells = region.count;
     return {
       renderMs: performance.now() - started,
@@ -260,7 +381,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
 
   const movePlayer = () => {
     if (!world || !playerCell) return;
-    const direction = getCombinedDirection(heldKeys);
+    const direction = getHeldDirection();
     if (direction.x === 0 && direction.y === 0) return;
     const nextCell = moveWorldCell(playerCell, direction, world);
     if (nextCell.x === playerCell.x && nextCell.y === playerCell.y) return;
@@ -272,6 +393,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     setCharacter(world, playerCell);
     timeSystem.advance();
     viewOrigin = nextOrigin;
+    refreshDiscovery();
     // Player lighting is a moving source. Re-render the complete visible
     // region after every move so cells behind the player lose its former light
     // contribution instead of retaining a trail.
@@ -282,7 +404,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     clearRepeat();
     repeatTimer = window.setTimeout(() => {
       repeatTimer = null;
-      if (heldKeys.size === 0) return;
+      if (!hasHeldMovement()) return;
       movePlayer();
       scheduleRepeat(REPEAT_INTERVAL_MS);
     }, delay);
@@ -302,18 +424,51 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     if (!getDirectionForKey(event.key)) return;
     event.preventDefault();
     heldKeys.delete(event.key);
-    if (heldKeys.size === 0) clearRepeat();
+    if (!hasHeldMovement()) clearRepeat();
+  };
+
+  const handlePointerDown = (event) => {
+    if (!event.isPrimary || activePointerId !== null || (event.pointerType === "mouse" && event.button !== 0)) return;
+    event.preventDefault();
+    activePointerId = event.pointerId;
+    touchStart = { x: event.clientX, y: event.clientY };
+    canvas.setPointerCapture(event.pointerId);
+  };
+
+  const handlePointerMove = (event) => {
+    if (event.pointerId !== activePointerId || !touchStart) return;
+    const nextDirection = getDirectionForSwipe(
+      event.clientX - touchStart.x,
+      event.clientY - touchStart.y,
+    );
+    if (!nextDirection) return;
+    event.preventDefault();
+    const wasMoving = touchDirection !== null;
+    touchDirection = nextDirection;
+    if (wasMoving) return;
+    movePlayer();
+    scheduleRepeat(INITIAL_REPEAT_DELAY_MS);
+  };
+
+  const handlePointerStop = (event) => {
+    if (event.pointerId !== activePointerId) return;
+    clearTouchInput();
   };
 
   const handleResize = () => {
+    clearTouchInput();
     rebuildViewport();
+    renderMinimap();
     if (generating && !world) {
       generationController.abort();
       generationController = new AbortController();
     }
   };
 
-  const handlePageHide = () => generationController.abort();
+  const handlePageHide = () => {
+    clearTouchInput();
+    generationController.abort();
+  };
   window.addEventListener("pagehide", handlePageHide);
 
   try {
@@ -330,6 +485,12 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
     window.addEventListener("resize", handleResize);
+    window.addEventListener("orientationchange", handleResize);
+    canvas.addEventListener("pointerdown", handlePointerDown);
+    canvas.addEventListener("pointermove", handlePointerMove);
+    canvas.addEventListener("pointerup", handlePointerStop);
+    canvas.addEventListener("pointercancel", handlePointerStop);
+    canvas.addEventListener("lostpointercapture", handlePointerStop);
     await startEngine(engine);
     generating = true;
     let generationStarted;
@@ -362,6 +523,8 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     generating = false;
     metrics.generationMs = performance.now() - generationStarted;
     playerCell = world.playerStart;
+    fogOfWar = createFogOfWar(world);
+    refreshDiscovery();
     resolveViewForPlayer();
     const firstRender = renderWorld();
     metrics.firstVisibleRenderMs = firstRender.renderMs;
@@ -382,11 +545,18 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       cache: glyphCache.snapshot(),
     }));
   } catch (error) {
+    clearTouchInput();
     clearRepeat();
     window.removeEventListener("pagehide", handlePageHide);
     window.removeEventListener("keydown", handleKeyDown);
     window.removeEventListener("keyup", handleKeyUp);
     window.removeEventListener("resize", handleResize);
+    window.removeEventListener("orientationchange", handleResize);
+    canvas.removeEventListener("pointerdown", handlePointerDown);
+    canvas.removeEventListener("pointermove", handlePointerMove);
+    canvas.removeEventListener("pointerup", handlePointerStop);
+    canvas.removeEventListener("pointercancel", handlePointerStop);
+    canvas.removeEventListener("lostpointercapture", handlePointerStop);
     renderer && disposeSpriteRenderer(renderer);
     glyphCache?.dispose();
     engine && disposeEngine(engine);
@@ -410,6 +580,8 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
         state.color = color;
         metrics.submittedCells += 1;
       }
+      renderMinimap();
+      if (gpuLightPassEnabled) renderWorld();
     },
     setFont(nextFontId) {
       validateFontId(nextFontId);
@@ -461,6 +633,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     },
     setPlayerLighting(profile) {
       lighting = { ...lighting, playerProfile: getLightingProfile(profile).config };
+      refreshDiscovery();
       renderWorld();
     },
     setTorchShadow(profile) {
@@ -470,6 +643,21 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     setPlayerShadow(profile) {
       lighting = { ...lighting, playerShadow: getShadowProfile(profile).config };
       renderWorld();
+    },
+    setPlayerGpuShadowBleedRange(range) {
+      lighting = { ...lighting, playerGpuShadowBleedRange: Number(range) };
+      renderWorld();
+    },
+    setGpuLightPass(enabled) {
+      const nextEnabled = enabled === true;
+      if (nextEnabled === gpuLightPassEnabled) return;
+      gpuLightPassEnabled = nextEnabled;
+      renderWorld({ refreshLighting: true });
+    },
+    setMinimap(enabled) {
+      minimapVisible = enabled === true;
+      minimapCanvas.hidden = !minimapVisible;
+      renderMinimap();
     },
     setCameraMode(nextMode) {
       const selected = normalizeCameraMode(nextMode);
@@ -487,12 +675,20 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     dispose() {
       if (disposed) return;
       disposed = true;
+      clearTouchInput();
       clearRepeat();
       generationController.abort();
       window.removeEventListener("pagehide", handlePageHide);
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
       window.removeEventListener("resize", handleResize);
+      window.removeEventListener("orientationchange", handleResize);
+      canvas.removeEventListener("pointerdown", handlePointerDown);
+      canvas.removeEventListener("pointermove", handlePointerMove);
+      canvas.removeEventListener("pointerup", handlePointerStop);
+      canvas.removeEventListener("pointercancel", handlePointerStop);
+      canvas.removeEventListener("lostpointercapture", handlePointerStop);
+      if (typeof disposeGpuLightPass === "function") disposeGpuLightPass();
       disposeSpriteRenderer(renderer);
       glyphCache.dispose();
       disposeEngine(engine);

@@ -30,6 +30,46 @@ const GROUP_LETTER_EXCEPTIONS = {
   "ß": "s",
 };
 
+const PALETTE_GROUPS = [
+  ["digits", "Digits"],
+  ["letters", "Letters"],
+  ["punctuation", "Punctuation"],
+  ["single-line-borders", "Single-line Borders"],
+  ["double-line-borders", "Double-line Borders"],
+  ["mixed-line-borders", "Mixed-line Borders"],
+  ["blocks-and-shading", "Blocks and Shading"],
+  ["terrain", "Terrain"],
+  ["greek-letters", "Greek Letters"],
+  ["mathematical-symbols", "Mathematical Symbols"],
+  ["arrows", "Arrows"],
+  ["playing-cards", "Playing Cards"],
+  ["maps", "Maps"],
+  ["status", "Status"],
+  ["weather", "Weather"],
+  ["music", "Music"],
+  ["gameplay", "Gameplay"],
+  ["runes", "Runes"],
+  ["dice", "Dice"],
+  ["chess", "Chess"],
+].map(([id, label], order) => Object.freeze({ id, label, order }));
+
+const PALETTE_GROUP_BY_ID = new Map(PALETTE_GROUPS.map((group) => [group.id, group]));
+
+const SINGLE_LINE_BORDER_GLYPHS = new Set(["│", "┤", "┐", "└", "┴", "┬", "├", "─", "┼", "┘", "┌"]);
+const DOUBLE_LINE_BORDER_GLYPHS = new Set(["╣", "║", "╗", "╝", "╚", "╔", "╩", "╦", "╠", "═", "╬"]);
+const MIXED_LINE_BORDER_GLYPHS = new Set(["╡", "╢", "╖", "╕", "╜", "╛", "╞", "╟", "╧", "╨", "╤", "╥", "╙", "╘", "╒", "╓", "╫", "╪"]);
+const BLOCK_AND_SHADING_GLYPHS = new Set(["░", "▒", "▓", "█", "▄", "▌", "▐", "▀", "■"]);
+const TERRAIN_GLYPHS = new Set(["~", "┄", "┅", "┈", "┉", "╱", "╲", "╳", "▤", "▥", "▦", "▧", "▨"]);
+const GREEK_LETTER_GLYPHS = new Set(["α", "Γ", "π", "Σ", "σ", "µ", "τ", "Φ", "Θ", "Ω", "δ", "φ", "ε"]);
+const MATHEMATICAL_SYMBOL_GLYPHS = new Set(["∞", "∩", "≡", "±", "≥", "≤", "⌠", "⌡", "÷", "≈", "°", "∙", "·", "√", "ⁿ", "²"]);
+const ARROW_GLYPHS = new Set(["↑", "↓", "←", "→", "↖", "↗", "↘", "↙", "↔", "↕", "⇧", "⇩", "↩", "↪"]);
+const PLAYING_CARD_GLYPHS = new Set(["♥", "♡", "♦", "♢", "♣", "♧", "♠", "♤"]);
+const MAP_GLYPHS = new Set(["◇", "◆", "▲", "▼", "△", "▽", "○", "●", "◉", "◎", "⊙", "⌖", "⌑", "☆", "★", "✦", "✧", "✶", "◈", "▣", "◐", "◑", "◒", "◓"]);
+const STATUS_GLYPHS = new Set(["⊕", "⊖", "⊗", "⊘", "⊞", "⊟"]);
+const WEATHER_GLYPHS = new Set(["☼", "☀", "☾", "☽", "☁", "☂", "☃", "❄", "♨"]);
+const MUSIC_GLYPHS = new Set(["♪", "♫"]);
+const GAMEPLAY_GLYPHS = new Set(["⚔", "⚒", "⚙", "⚑", "⚐", "⚠", "☠", "☘", "⚖", "⚗", "⚕", "✝", "☯"]);
+
 const CP437_EXTENDED_GLYPHS = [
   "⌂", "Ç", "ü", "é", "â", "ä", "à", "å", "ç", "ê", "ë", "è", "ï", "î", "ì", "Ä",
   "Å", "É", "æ", "Æ", "ô", "ö", "ò", "û", "ù", "ÿ", "Ö", "Ü", "ø", "£", "Ø", "×",
@@ -90,13 +130,38 @@ function getGroupLetter(glyph) {
 }
 
 export function getPaletteGroup(entry) {
-  if (/^[0-9]$/.test(entry.glyph)) return "digits";
-  return getGroupLetter(entry.glyph) ?? "punctuation";
+  const glyph = entry.glyph;
+  if (/^[0-9]$/.test(glyph)) return "digits";
+  if (getGroupLetter(glyph)) return "letters";
+  if (SINGLE_LINE_BORDER_GLYPHS.has(glyph)) return "single-line-borders";
+  if (DOUBLE_LINE_BORDER_GLYPHS.has(glyph)) return "double-line-borders";
+  if (MIXED_LINE_BORDER_GLYPHS.has(glyph)) return "mixed-line-borders";
+  if (BLOCK_AND_SHADING_GLYPHS.has(glyph)) return "blocks-and-shading";
+  if (TERRAIN_GLYPHS.has(glyph)) return "terrain";
+  if (GREEK_LETTER_GLYPHS.has(glyph)) return "greek-letters";
+  if (MATHEMATICAL_SYMBOL_GLYPHS.has(glyph)) return "mathematical-symbols";
+  if (ARROW_GLYPHS.has(glyph)) return "arrows";
+  if (PLAYING_CARD_GLYPHS.has(glyph)) return "playing-cards";
+  if (MAP_GLYPHS.has(glyph)) return "maps";
+  if (STATUS_GLYPHS.has(glyph)) return "status";
+  if (WEATHER_GLYPHS.has(glyph)) return "weather";
+  if (MUSIC_GLYPHS.has(glyph)) return "music";
+  if (GAMEPLAY_GLYPHS.has(glyph)) return "gameplay";
+  const codePoint = glyph.codePointAt(0);
+  if (codePoint >= 0x16A0 && codePoint <= 0x16B7) return "runes";
+  if (codePoint >= 0x2680 && codePoint <= 0x2685) return "dice";
+  if (codePoint >= 0x2654 && codePoint <= 0x265F) return "chess";
+  return "punctuation";
+}
+
+export function getPaletteGroupLabel(entry) {
+  return PALETTE_GROUP_BY_ID.get(getPaletteGroup(entry)).label;
 }
 
 function getGroupSortKey(entry) {
+  const group = PALETTE_GROUP_BY_ID.get(getPaletteGroup(entry));
   const glyph = entry.glyph;
-  if (/^[0-9]$/.test(glyph)) return [0, Number(glyph), 0, "", entry.code ?? Number.MAX_SAFE_INTEGER];
+  if (/^[0-9]$/.test(glyph)) return [group.order, Number(glyph), 0, "", entry.code ?? Number.MAX_SAFE_INTEGER];
 
   const letter = getGroupLetter(glyph);
   if (letter) {
@@ -104,10 +169,10 @@ function getGroupSortKey(entry) {
     const accentKey = GROUP_LETTER_EXCEPTIONS[glyph]
       ? `${isUppercase ? "Z" : "z"}${GROUP_LETTER_EXCEPTIONS[glyph]}`
       : glyph.normalize("NFD");
-    return [1, letter, isUppercase ? 0 : 1, accentKey, entry.code ?? Number.MAX_SAFE_INTEGER];
+    return [group.order, letter, isUppercase ? 0 : 1, accentKey, entry.code ?? Number.MAX_SAFE_INTEGER];
   }
 
-  return [2, "", 0, "", entry.code ?? Number.MAX_SAFE_INTEGER];
+  return [group.order, glyph, 0, "", entry.code ?? Number.MAX_SAFE_INTEGER];
 }
 
 function compareGroupKeys(left, right) {

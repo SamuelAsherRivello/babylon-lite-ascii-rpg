@@ -4,6 +4,8 @@ import {
   getTimeSnapshot,
   sendAmbientLightSnapshot,
   sendCameraModeSnapshot,
+  sendGpuLightPassSnapshot,
+  sendMinimapSnapshot,
   sendFontSnapshot,
   sendPlayerLightingSnapshot,
   sendPlayerShadowSnapshot,
@@ -63,6 +65,29 @@ test("forwards camera mode changes and reapplies the latest mode to a new contro
   let restored = null;
   setGameController({ setCameraMode(mode) { restored = mode; } });
   assert.equal(restored, "deadzone");
+});
+
+test("forwards GPU light pass state and reapplies it to a new controller", () => {
+  let received = null;
+  setGameController({ setGpuLightPass(enabled) { received = enabled; } });
+  sendGpuLightPassSnapshot(true);
+  assert.equal(received, true);
+
+  let restored = null;
+  setGameController({ setGpuLightPass(enabled) { restored = enabled; } });
+  assert.equal(restored, true);
+});
+
+test("forwards minimap visibility and reapplies it to a new controller", () => {
+  let received = null;
+  setGameController({ setMinimap(enabled) { received = enabled; } });
+  sendMinimapSnapshot(false);
+  assert.equal(received, false);
+
+  let restored = null;
+  setGameController({ setMinimap(enabled) { restored = enabled; } });
+  assert.equal(restored, false);
+  sendMinimapSnapshot(true);
 });
 
 test("forwards ambient and independent source lighting and shadow profiles to the game layer", () => {

@@ -9,6 +9,7 @@ import {
   getLightingFactor,
   getShadowProfile,
   getSceneLightingFactor,
+  getShadowDistanceBeyondFirstBlocker,
   hasClearLightPath,
   LIGHTING_PRESETS,
   LIGHTING_SOURCE_STATES,
@@ -62,6 +63,13 @@ test("grid light path lights the first blocker and closes diagonal corners", () 
   corner[1][2] = { walkable: false };
   assert.equal(hasClearLightPath({ x: 1, y: 1 }, { x: 3, y: 3 }, corner), false);
   assert.equal(hasClearLightPath({ x: 3, y: 3 }, { x: 1, y: 1 }, corner), false);
+});
+
+test("shadow distance begins immediately behind the first blocker", () => {
+  const terrain = makeTerrain();
+  terrain[2][3] = { walkable: false };
+  assert.equal(getShadowDistanceBeyondFirstBlocker({ x: 1, y: 2 }, { x: 2, y: 2 }, terrain), 0);
+  assert.ok(getShadowDistanceBeyondFirstBlocker({ x: 1, y: 2 }, { x: 4, y: 2 }, terrain) >= 1);
 });
 
 test("a blocked cell lights up but casts a straight shadow behind it", () => {

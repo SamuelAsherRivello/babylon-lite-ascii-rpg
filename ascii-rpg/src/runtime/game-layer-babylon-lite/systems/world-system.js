@@ -8,11 +8,15 @@ export const DEEP_WATER_GLYPH = "▓";
 export const DEFAULT_WALL_FILL_PERCENT = 40;
 export const DEFAULT_SMOOTHING_ITERATIONS = 4;
 export const DEFAULT_MIN_WALKABLE_PERCENT = 0.3;
-export const DEFAULT_WATER_FILL_PERCENT = 50;
+// Normal worlds always include water; callers can still explicitly request a dry world.
+export const DEFAULT_WATER_FILL_PERCENT = 100;
 export const MIN_WATER_LAKE_SIZE = 50;
 export const MAX_WATER_LAKE_SIZE = 240;
 export const OCCASIONAL_LARGE_WATER_LAKE_SIZE = 480;
 export const MAX_GENERATION_ATTEMPTS = 64;
+export const OBJECT_DISTRIBUTION_RULES = Object.freeze({
+  torch: Object.freeze({ minimumDistance: 25 }),
+});
 export const GENERATION_PASSES = Object.freeze([
   "ground",
   "cave/walls",
@@ -443,22 +447,49 @@ function isTorchCandidate(terrain, x, y, rows, columns, start) {
   });
 }
 
-function selectTorchCells(terrain, start, rows, columns, random, torchCount) {
+function getObjectDistributionRule(objectType) {
+  const rule = OBJECT_DISTRIBUTION_RULES[objectType];
+  if (!rule) throw new RangeError(`Cannot distribute an unknown object type: ${objectType}.`);
+  return rule;
+}
+
+function collectObjectCandidates(objectType, terrain, start, rows, columns) {
+  if (objectType !== "torch") throw new RangeError(`Cannot collect candidates for object type: ${objectType}.`);
   const candidates = [];
   for (let y = 1; y < rows - 1; y += 1) {
     for (let x = 1; x < columns - 1; x += 1) {
       if (isTorchCandidate(terrain, x, y, rows, columns, start)) candidates.push({ x, y });
     }
   }
-  if (candidates.length < torchCount) return null;
+  return candidates;
+}
+
+function isFarEnoughFromDistributedObjects(candidate, objects, minimumDistance) {
+  const minimumDistanceSquared = minimumDistance ** 2;
+  return objects.every((object) => {
+    const distanceX = candidate.x - object.x;
+    const distanceY = candidate.y - object.y;
+    return distanceX ** 2 + distanceY ** 2 >= minimumDistanceSquared;
+  });
+}
+
+function distributeObjectOfType(objectType, candidates, random, requestedCount) {
+  const { minimumDistance } = getObjectDistributionRule(objectType);
   for (let index = candidates.length - 1; index > 0; index -= 1) {
     const swapIndex = Math.floor(random() * (index + 1));
     [candidates[index], candidates[swapIndex]] = [candidates[swapIndex], candidates[index]];
   }
-  return candidates.slice(0, torchCount);
+  const distributedObjects = [];
+  for (const candidate of candidates) {
+    if (!isFarEnoughFromDistributedObjects(candidate, distributedObjects, minimumDistance)) continue;
+    distributedObjects.push(candidate);
+    if (distributedObjects.length === requestedCount) break;
+  }
+  return distributedObjects;
 }
 
-async function selectTorchCellsCooperative(terrain, start, rows, columns, random, torchCount, checkpoint) {
+async function collectObjectCandidatesCooperative(objectType, terrain, start, rows, columns, checkpoint) {
+  if (objectType !== "torch") throw new RangeError(`Cannot collect candidates for object type: ${objectType}.`);
   const candidates = [];
   for (let y = 1; y < rows - 1; y += 1) {
     for (let x = 1; x < columns - 1; x += 1) {
@@ -467,7 +498,11 @@ async function selectTorchCellsCooperative(terrain, start, rows, columns, random
     const pause = checkpoint();
     if (pause) await pause;
   }
-  if (candidates.length < torchCount) return null;
+  return candidates;
+}
+
+async function distributeObjectOfTypeCooperative(objectType, candidates, random, requestedCount, checkpoint) {
+  const { minimumDistance } = getObjectDistributionRule(objectType);
   for (let index = candidates.length - 1; index > 0; index -= 1) {
     const swapIndex = Math.floor(random() * (index + 1));
     [candidates[index], candidates[swapIndex]] = [candidates[swapIndex], candidates[index]];
@@ -476,7 +511,19 @@ async function selectTorchCellsCooperative(terrain, start, rows, columns, random
       if (pause) await pause;
     }
   }
-  return candidates.slice(0, torchCount);
+  const distributedObjects = [];
+  for (let index = 0; index < candidates.length; index += 1) {
+    const candidate = candidates[index];
+    if (isFarEnoughFromDistributedObjects(candidate, distributedObjects, minimumDistance)) {
+      distributedObjects.push(candidate);
+      if (distributedObjects.length === requestedCount) break;
+    }
+    if ((index & 1023) === 0) {
+      const pause = checkpoint();
+      if (pause) await pause;
+    }
+  }
+  return distributedObjects;
 }
 
 function isSameCell(first, second) {
@@ -539,8 +586,8 @@ export function createWorld({
 
     const terrain = createTerrainCells(terrainKinds, walkability);
     const start = getCenterMostCell(walkableRegion, rows, columns);
-    const torchCells = selectTorchCells(terrain, start, rows, columns, random, torchCount);
-    if (!torchCells) continue;
+    const torchCandidates = collectObjectCandidates("torch", terrain, start, rows, columns);
+    const torchCells = distributeObjectOfType("torch", torchCandidates, random, torchCount);
 
     return {
       rows,
@@ -800,8 +847,8 @@ export async function createWorldCooperative({
     }, checkpoint);
     markPhase("terrain");
     const start = getCenterMostCell(walkableRegion, rows, columns);
-    const torchCells = await selectTorchCellsCooperative(terrain, start, rows, columns, random, torchCount, checkpoint);
-    if (!torchCells) continue;
+    const torchCandidates = await collectObjectCandidatesCooperative("torch", terrain, start, rows, columns, checkpoint);
+    const torchCells = await distributeObjectOfTypeCooperative("torch", torchCandidates, random, torchCount, checkpoint);
     const characters = await createGridCooperative(rows, columns, () => null, checkpoint);
     for (const torch of torchCells) characters[torch.y][torch.x] = TORCH_GLYPH;
     characters[start.y][start.x] = PLAYER_GLYPH;

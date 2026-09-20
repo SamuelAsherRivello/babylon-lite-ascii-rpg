@@ -5,6 +5,7 @@ import {
   FLOOR_GLYPH,
   GENERATION_PASSES,
   MEDIUM_WATER_GLYPH,
+  OBJECT_DISTRIBUTION_RULES,
   PLAYER_GLYPH,
   SHALLOW_WATER_GLYPH,
   TORCH_GLYPH,
@@ -18,6 +19,16 @@ import {
   setCharacter,
 } from "../../../../src/runtime/game-layer-babylon-lite/systems/world-system.js";
 import { moveWorldCell } from "../../../../src/runtime/game-layer-babylon-lite/characters/player/player-grid.js";
+
+function assertMinimumTorchDistance(torches, minimumDistance = OBJECT_DISTRIBUTION_RULES.torch.minimumDistance) {
+  for (let index = 0; index < torches.length; index += 1) {
+    for (let otherIndex = index + 1; otherIndex < torches.length; otherIndex += 1) {
+      const deltaX = torches[index].x - torches[otherIndex].x;
+      const deltaY = torches[index].y - torches[otherIndex].y;
+      assert.ok(deltaX ** 2 + deltaY ** 2 >= minimumDistance ** 2);
+    }
+  }
+}
 
 test("creates a repeatable bordered world with layered terrain", () => {
   const first = createWorld({ rows: 12, columns: 20, seed: "cave" });
@@ -109,27 +120,27 @@ test("generates the production-sized world with sparse large-body water populati
   assert.ok(world.waterLakes.every((lake) => lake.length >= 50 && lake.length <= 480));
 });
 
-test("makes water a roughly fifty-fifty world feature", () => {
+test("includes restrained water in every default world", () => {
   const worlds = Array.from({ length: 100 }, (_, index) => createWorld({
     rows: 40,
     columns: 60,
     seed: `water-frequency-${index}`,
   }));
   const waterWorlds = worlds.filter((world) => world.waterCells.length > 0);
-  const ratio = waterWorlds.length / worlds.length;
-
-  assert.ok(ratio >= 0.35 && ratio <= 0.65, `water appeared in ${waterWorlds.length}% of worlds`);
+  assert.equal(waterWorlds.length, worlds.length, "every default world should include water");
   assert.ok(waterWorlds.every((world) => world.waterLakes.length >= 1 && world.waterLakes.length <= 2));
 });
 
-test("places three deterministic torches on wall-adjacent walkable cells", () => {
+test("distributes deterministic spaced torches on wall-adjacent walkable cells", () => {
   const first = createWorld({ rows: 12, columns: 20, seed: "torches" });
   const second = createWorld({ rows: 12, columns: 20, seed: "torches" });
   const torches = first.torches;
 
-  assert.equal(torches.length, 3);
+  assert.equal(OBJECT_DISTRIBUTION_RULES.torch.minimumDistance, 25);
+  assert.ok(torches.length > 0 && torches.length < 3);
   assert.deepEqual(torches, second.torches);
-  assert.equal(first.characters.flat().filter((glyph) => glyph === TORCH_GLYPH).length, 3);
+  assert.equal(first.characters.flat().filter((glyph) => glyph === TORCH_GLYPH).length, torches.length);
+  assertMinimumTorchDistance(torches);
 
   for (const torch of torches) {
     assert.equal(first.terrain[torch.y][torch.x].walkable, true);
@@ -144,12 +155,13 @@ test("places three deterministic torches on wall-adjacent walkable cells", () =>
   }
 });
 
-test("honors a density-derived requested torch count", () => {
-  const world = createWorld({ rows: 20, columns: 30, torchCount: 5, seed: "torch-density" });
+test("honors a density-derived requested torch count when spacing permits", () => {
+  const world = createWorld({ rows: 80, columns: 80, torchCount: 5, seed: "torch-density" });
 
   assert.equal(world.options.torchCount, 5);
   assert.equal(world.torches.length, 5);
   assert.equal(world.characters.flat().filter((glyph) => glyph === TORCH_GLYPH).length, 5);
+  assertMinimumTorchDistance(world.torches);
 });
 
 test("restores a torch after the player leaves its cell", () => {
@@ -212,8 +224,8 @@ test("blocks world movement into walls and outside bounds", () => {
   assert.equal(isWalkableCell(world, { x: 0, y: wallAdjacentCell.y }), false);
 });
 
-test("cooperative generation preserves completed seeded world data and ordered phases", async () => {
-  const options = { rows: 40, columns: 60, torchCount: 9, seed: "cooperative-equality" };
+test("cooperative generation preserves completed spaced torch world data and ordered phases", async () => {
+  const options = { rows: 128, columns: 128, torchCount: 9, seed: "cooperative-equality" };
   const synchronous = createWorld(options);
   const phases = [];
   let yields = 0;
@@ -223,6 +235,8 @@ test("cooperative generation preserves completed seeded world data and ordered p
     onPhase: (phase) => phases.push(phase),
   });
   assert.deepEqual(cooperative, synchronous);
+  assert.equal(cooperative.torches.length, 9);
+  assertMinimumTorchDistance(cooperative.torches);
   assert.deepEqual(phases, ["cave", "cave-region", "water-lakes", "water", "walkability-region", "terrain", "complete"]);
   assert.ok(yields > 1);
 });

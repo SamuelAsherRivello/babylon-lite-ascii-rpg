@@ -7,6 +7,7 @@ export const DEFAULT_GRID_WIDTH = 32;
 export const DEFAULT_GRID_HEIGHT = 32;
 export const INITIAL_REPEAT_DELAY_MS = 250;
 export const REPEAT_INTERVAL_MS = 125;
+export const SWIPE_THRESHOLD_PX = 24;
 export const CAMERA_DEADZONE_WIDTH_RATIO = 0.2;
 export const CAMERA_DEADZONE_HEIGHT_RATIO = 0.2;
 
@@ -40,6 +41,23 @@ export function getCombinedDirection(keys) {
     x: Math.sign(direction.x),
     y: Math.sign(direction.y),
   };
+}
+
+export function getDirectionForSwipe(offsetX, offsetY, threshold = SWIPE_THRESHOLD_PX) {
+  if (!Number.isFinite(offsetX) || !Number.isFinite(offsetY)) return null;
+  if (Math.hypot(offsetX, offsetY) < threshold) return null;
+
+  const octant = ((Math.round(Math.atan2(offsetY, offsetX) / (Math.PI / 4)) % 8) + 8) % 8;
+  return [
+    { x: 1, y: 0 },
+    { x: 1, y: 1 },
+    { x: 0, y: 1 },
+    { x: -1, y: 1 },
+    { x: -1, y: 0 },
+    { x: -1, y: -1 },
+    { x: 0, y: -1 },
+    { x: 1, y: -1 },
+  ][octant];
 }
 
 export function createViewport({

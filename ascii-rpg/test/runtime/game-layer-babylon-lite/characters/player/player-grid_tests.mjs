@@ -14,6 +14,7 @@ import {
   getCenterCell,
   getCombinedDirection,
   getDirectionForKey,
+  getDirectionForSwipe,
   getViewOriginForPlayer,
   getViewOriginForCamera,
   moveCell,
@@ -117,6 +118,21 @@ test("combines orthogonal keys into normalized eight-way directions", () => {
   assert.deepEqual(getCombinedDirection(["ArrowDown", "d"]), { x: 1, y: 1 });
   assert.deepEqual(getCombinedDirection(["w"]), { x: 0, y: -1 });
   assert.deepEqual(getCombinedDirection([]), { x: 0, y: 0 });
+});
+
+test("maps thresholded swipes to the nearest of eight directions", () => {
+  assert.equal(getDirectionForSwipe(23, 0), null);
+  assert.deepEqual(getDirectionForSwipe(24, 0), { x: 1, y: 0 });
+  assert.deepEqual(getDirectionForSwipe(0, -30), { x: 0, y: -1 });
+  assert.deepEqual(getDirectionForSwipe(-30, 0), { x: -1, y: 0 });
+  assert.deepEqual(getDirectionForSwipe(0, 30), { x: 0, y: 1 });
+  assert.deepEqual(getDirectionForSwipe(30, 30), { x: 1, y: 1 });
+  assert.deepEqual(getDirectionForSwipe(-30, -30), { x: -1, y: -1 });
+});
+
+test("uses diagonal direction at the equal-angle sector boundary", () => {
+  assert.deepEqual(getDirectionForSwipe(30, 30 * Math.tan(Math.PI / 8)), { x: 1, y: 1 });
+  assert.deepEqual(getDirectionForSwipe(-30, -30 * Math.tan(Math.PI / 8)), { x: -1, y: -1 });
 });
 
 test("centers and clamps the player to complete grid cells", () => {

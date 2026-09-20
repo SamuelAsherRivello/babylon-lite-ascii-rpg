@@ -65,10 +65,11 @@ test("documents the plain safe-area template", async () => {
     throw new Error("The upper-left corner must display the subscribed world time.");
   }
   if (!app.includes('id="fps"') || !app.includes("FPS: {fps}") || !app.includes("requestAnimationFrame(updateFps)")) {
-    throw new Error("The upper-left corner must display a once-per-second browser FPS counter.");
+    throw new Error("The HUD must display a once-per-second browser FPS counter.");
   }
-  if (!app.includes('id="windows"') || !app.includes('id="windows_title"') || !app.includes("Windows")) {
-    throw new Error("The lower-left HUD must include a Windows section.");
+  if (!app.includes('id="windows"') || !app.includes('id="windows_title"') || !app.includes("Windows - 1")
+    || !app.includes('id="windows_2"') || !app.includes('id="windows_2_title"') || !app.includes("Windows - 2")) {
+    throw new Error("The lower-left HUD must include Windows - 1 and Windows - 2 sections.");
   }
   if (!app.includes('id="settings"') || !app.includes('id="settings_title"') || !app.includes("Settings")) {
     throw new Error("The lower-left HUD must include a Settings section.");
@@ -78,10 +79,15 @@ test("documents the plain safe-area template", async () => {
   }
   if (!app.includes('id="lighting_torch_toggle"') || !app.includes('id="lighting_player_toggle"')
     || !app.includes('id="shadow_torch_toggle"') || !app.includes('id="shadow_player_toggle"')
-    || !app.includes('id="ambient_light_control"') || !app.includes("Light Ambient")
+    || !app.includes('id="ambient_light_control"') || !app.includes(">Ambient<")
+    || !app.includes('id="player_gpu_shadow_bleed_range"')
     || !app.includes("formatLightingProfile") || !app.includes("formatShadowProfile")) {
-    throw new Error("The Settings section must include independent torch and player lighting, shadow, and ambient controls.");
+    throw new Error("The Lighting window must include all independent lighting, shadow, and ambient controls.");
   }
+  const torchLightingStart = app.indexOf('id="lighting_torch_toggle"');
+  const torchShadowStart = app.indexOf('id="shadow_torch_toggle"');
+  const playerLightingStart = app.indexOf('id="lighting_player_toggle"');
+  const playerShadowStart = app.indexOf('id="shadow_player_toggle"');
   if (main.includes("GameCanvas") || main.includes('createRoot(document.getElementById("game_layer"))')) {
     throw new Error("React must mount only UI and must not own the Babylon Lite game canvas.");
   }
@@ -91,21 +97,73 @@ test("documents the plain safe-area template", async () => {
   if (!gameLayer.includes("navigator.gpu") || !gameLayer.includes("container.replaceChildren()")) {
     throw new Error("A WebGPU startup failure must leave the game layer unloaded without a canvas fallback.");
   }
-  const windowsStart = app.indexOf('id="windows"');
-  const settingsStart = app.indexOf('id="settings"');
-  if (windowsStart === -1 || settingsStart === -1 || windowsStart > settingsStart) {
-    throw new Error("The Windows section must appear before the Settings section.");
+  const topLeftStart = app.indexOf('className="corner corner_top_left"');
+  const topRightStart = app.indexOf('className="corner corner_top_right"');
+  if (app.slice(topLeftStart, topRightStart).includes('id="fps"')) {
+    throw new Error("The upper-left corner must not display the FPS counter.");
   }
-  const windowsMarkup = app.slice(windowsStart, settingsStart);
-  const settingsMarkup = app.slice(settingsStart);
-  if (!windowsMarkup.includes('id="ascii_palette_toggle"') || !windowsMarkup.includes("Ascii Palette")) {
-    throw new Error("The Windows section must include the Ascii Palette option.");
+  const windowsStart = app.indexOf('id="windows"');
+  const windows2Start = app.indexOf('id="windows_2"');
+  const statsStart = app.indexOf('id="stats"');
+  const settingsStart = app.indexOf('id="settings"');
+  if (windowsStart === -1 || windows2Start === -1 || statsStart === -1 || settingsStart === -1 || !(windowsStart < windows2Start && windows2Start < statsStart && statsStart < settingsStart)) {
+    throw new Error("Windows - 1, Windows - 2, Stats, and Settings must appear in lower-left order.");
+  }
+  const windowsMarkup = app.slice(windowsStart, windows2Start);
+  const windows2Markup = app.slice(windows2Start, statsStart);
+  const settingsMarkup = app.slice(settingsStart, app.indexOf("</section>", settingsStart));
+  if (!windowsMarkup.includes('id="ascii_palette_toggle"') || !windowsMarkup.includes("Ascii Settings")) {
+    throw new Error("The Windows section must include the Ascii Settings option.");
   }
   if (!windowsMarkup.includes('id="arguments_toggle"') || !windowsMarkup.includes("Arguments")) {
     throw new Error("The Windows section must include the Arguments option.");
   }
+  if (!windows2Markup.includes('id="lighting_window_toggle"') || !windows2Markup.includes(">\n              Lighting\n")
+    || windows2Markup.includes('id="ascii_palette_toggle"') || windows2Markup.includes('id="arguments_toggle"')) {
+    throw new Error("Windows - 2 must contain only the Lighting launcher.");
+  }
+  const statsMarkup = app.slice(statsStart, settingsStart);
+  if (!statsMarkup.includes('id="stats_title"') || !statsMarkup.includes("Stats") || !statsMarkup.includes('id="fps"')) {
+    throw new Error("The Stats section must appear below Windows and contain the FPS counter.");
+  }
   if (settingsMarkup.includes('id="ascii_palette_toggle"') || settingsMarkup.includes('id="arguments_toggle"')) {
     throw new Error("Window launchers must not be duplicated in the Settings section.");
+  }
+  if (settingsMarkup.includes('id="lighting_window_toggle"') || settingsMarkup.includes('id="gpu_light_pass_toggle"') || settingsMarkup.includes('id="lighting_torch_toggle"')) {
+    throw new Error("Settings must not expose Lighting controls or its launcher.");
+  }
+  const lightingWindowStart = app.indexOf('id="lighting_window"');
+  const lightingWindowMarkup = app.slice(lightingWindowStart, app.indexOf("</section>", lightingWindowStart));
+  if (lightingWindowStart === -1 || !lightingWindowMarkup.includes('id="lighting_window_title"')
+    || !lightingWindowMarkup.includes('className="corner_title"') || !lightingWindowMarkup.includes('className="corner_body settings_option"')
+    || !lightingWindowMarkup.includes('id="gpu_light_pass_toggle"') || !lightingWindowMarkup.includes('id="ambient_light_control"')) {
+    throw new Error("The Lighting window must reuse corner text styles and contain every lighting control.");
+  }
+  const ambientStart = lightingWindowMarkup.indexOf('id="ambient_light_control"');
+  const gpuStart = lightingWindowMarkup.indexOf('id="gpu_light_pass_toggle"');
+  const playerStart = lightingWindowMarkup.indexOf('id="lighting_player_toggle"');
+  const playerGpuStart = lightingWindowMarkup.indexOf('id="player_gpu_shadow_bleed_range"');
+  const playerShadowWindowStart = lightingWindowMarkup.indexOf('id="shadow_player_toggle"');
+  if (!(ambientStart < gpuStart && gpuStart < playerStart && playerStart < playerGpuStart && playerGpuStart < playerShadowWindowStart && playerShadowWindowStart < torchLightingStart && torchLightingStart < torchShadowStart)
+    || !lightingWindowMarkup.includes("GPU Light Pass") || lightingWindowMarkup.includes("Lighting GPU Light Pass") || lightingWindowMarkup.includes("Light Ambient")) {
+    throw new Error("Lighting controls must use short labels in alphabetic order.");
+  }
+  if (!app.includes('aria-label="Close Lighting"') || !app.includes("onPointerDown={beginDrag}")
+    || !app.includes("onPointerMove={moveDrag}") || !app.includes("getLightingWindowPosition")
+    || !styles.includes(".lighting_window") || !styles.includes(".lighting_window_titlebar")
+    || !styles.includes("touch-action: none")) {
+    throw new Error("The Lighting window must provide a draggable title bar and accessible close action.");
+  }
+  if (!app.includes("onClick={() => setLightingWindowOpen((isOpen) => !isOpen)}")
+    || !app.includes("lightingWindowPositionStorageKey")
+    || !app.includes("useState(getStoredLightingWindowPosition)")
+    || !app.includes("localStorage.setItem(lightingWindowPositionStorageKey, JSON.stringify(lightingWindowPosition))")) {
+    throw new Error("The Lighting launcher must toggle its window and restore its last saved position.");
+  }
+  const closeLightingStart = app.indexOf('aria-label="Close Lighting"');
+  const closeLightingMarkup = app.slice(app.lastIndexOf("<button", closeLightingStart), app.indexOf("</button>", closeLightingStart));
+  if (closeLightingMarkup.includes("aria-description") || app.slice(Math.max(0, closeLightingStart - 300), closeLightingStart).includes("SettingTooltipTarget")) {
+    throw new Error("Close controls must not show a tooltip.");
   }
   if (!app.includes('id="arguments_title"') || !app.includes("randomSeed")) {
     throw new Error("The Arguments window must document the randomSeed URL argument.");
@@ -123,10 +181,10 @@ test("documents the plain safe-area template", async () => {
     throw new Error("The Ascii Palette overlay must include a Window and WindowBackdrop.");
   }
   if (!app.includes('className="palette_grid"') || !app.includes('className="palette_index"') || !app.includes('className="palette_glyph"')) {
-    throw new Error("The Ascii Palette overlay must render a compact index and glyph grid.");
+    throw new Error("The Ascii Settings overlay must render a compact index and glyph grid.");
   }
-  if (!app.includes('"in-maps"') || !app.includes('"customized"') || !app.includes("Sort by index") || !app.includes("Sort alphabetically") || !app.includes("Sort by group") || !app.includes(">\n                Group\n") || !app.includes("palette_group_break") || !styles.includes("grid-template-columns: repeat(10")) {
-    throw new Error("The palette overlay must provide map/customized filters and index/alphabet/group sorting controls.");
+  if (!app.includes('"in-maps"') || !app.includes('"customized"') || !app.includes("Filter: ") || !app.includes("Sort: ") || !app.includes("InMaps") || !app.includes(">\n                #\n") || !app.includes(">\n                Abc\n") || !app.includes(">\n                Group\n") || !app.includes("content_options") || !app.includes("palette_group_header") || !app.includes("getPaletteGroupLabel") || !styles.includes("grid-template-columns: repeat(auto-fill, minmax(72px, 1fr))") || !styles.includes("font-size: 10pt")) {
+    throw new Error("The Glyphs tab must provide labeled filter and index/alphabet/group sort options.");
   }
   if (!app.includes("paletteViewState") || !app.includes("setPaletteViewState") || app.includes("sessionStorage")) {
     throw new Error("Palette filter and sort choices must last for the page session without surviving refresh.");
@@ -145,8 +203,8 @@ test("documents the plain safe-area template", async () => {
   if (!app.includes("Hide warning") || !app.includes("Local palette change") || !app.includes("PALETTE_WARNING_KEY")) {
     throw new Error("The deployed palette persistence warning must include the Hide warning choice.");
   }
-  if (!app.includes('aria-label="Close Ascii Palette"') || !app.includes(">\n              X\n")) {
-    throw new Error("The Ascii Palette overlay must provide an X close control.");
+  if (!app.includes('aria-label="Close Ascii Settings"') || !app.includes(">\n              X\n")) {
+    throw new Error("The Ascii Settings overlay must provide an X close control.");
   }
   if (!app.includes('className="window_backdrop" aria-hidden="true" onClick={onClose}') || !app.includes("event.stopPropagation()")) {
     throw new Error("Clicks outside the Ascii Palette window must close it without closing from inside the window.");
@@ -157,8 +215,8 @@ test("documents the plain safe-area template", async () => {
   if (!styles.includes(".window_backdrop") || !styles.includes("z-index: 0") || !styles.includes("background: #000")) {
     throw new Error("The Ascii Palette overlay must fully block and darken the app behind it.");
   }
-  if (!styles.includes(".window") || !styles.includes("inset: 100px")) {
-    throw new Error("The Ascii Palette window must use a 100px margin on every side.");
+  if (!styles.includes(".window") || !styles.includes("inset: clamp(8px, 6dvh, 25px) clamp(8px, 6dvw, 25px)")) {
+    throw new Error("The Ascii Palette window must keep a responsive inset on every side.");
   }
   if (!styles.includes(".prompt_title") || !styles.includes("font-size: 16pt")) {
     throw new Error("Prompt titles must use the larger prompt title style.");
@@ -175,10 +233,20 @@ test("documents the plain safe-area template", async () => {
   if (!app.includes("Fullscreen")) {
     throw new Error("The Settings section must include the Fullscreen option line.");
   }
+  if (!app.includes('id="show_ui_toggle"') || !app.includes("Show UI") || !app.includes("getStoredBoolean(showUiStorageKey, true)")
+    || !app.includes("localStorage.setItem(showUiStorageKey, showHud ? \"true\" : \"false\")")
+    || !app.includes("const toggleHud") || !app.includes("setShowHud((currentShowHud) => !currentShowHud)")) {
+    throw new Error("The Settings section must include a default-on Show UI checkbox toggle persisted to local storage.");
+  }
+  if (!app.includes('{showHud ? (\n        <div className="corner corner_top_right"')
+    || !app.includes('{showHud ? (\n        <div className="corner corner_bottom_right"')
+    || !app.includes("{showHud ? <>\n          <a className=\"project_link\"")) {
+    throw new Error("Hiding the UI must remove the upper-right and lower-corner HUD while retaining the lower-left Show UI control.");
+  }
   if (!app.includes('id="camera_mode_toggle"')
-    || !camera.includes("Camera Center")
-    || !camera.includes("Camera Deadzone")
-    || !camera.includes("Camera Lock")
+    || !camera.includes("CameraMode (Center)")
+    || !camera.includes("CameraMode (Deadzone)")
+    || !camera.includes("CameraMode (Lock)")
     || !app.includes("CAMERA_STORAGE_KEY")) {
     throw new Error("The Settings section must include the persisted three-mode camera control.");
   }
@@ -202,6 +270,12 @@ test("documents the plain safe-area template", async () => {
   if (!app.includes("localStorage.setItem(fullscreenStorageKey")) {
     throw new Error("The fullscreen setting must persist its preference locally.");
   }
+  if (!app.includes('id="gpu_light_pass_toggle"') || !app.includes("GPU Light Pass")
+    || !app.includes("getStoredBoolean(gpuLightPassStorageKey, true)")
+    || !app.includes("localStorage.setItem(gpuLightPassStorageKey, gpuLightPass ? \"true\" : \"false\")")
+    || !app.includes("localStorage.clear()")) {
+    throw new Error("The GPU light pass checkbox must default on, persist, and reset with settings.");
+  }
   if (!viteConfig.plugins.some((plugin) => plugin?.name === "ascii-palette-persistence")) {
     throw new Error("Vite must provide the local disk persistence plugin for ASCII palette and font edits.");
   }
@@ -217,8 +291,51 @@ test("documents the plain safe-area template", async () => {
   if (!app.includes("https://github.com/SamuelAsherRivello/babylon-lite-ascii-rpg")) {
     throw new Error("The page must link to the project repository.");
   }
+  if (!app.includes('id="minimap_toggle"') || !app.includes("Minimap")
+    || !app.includes("minimapStorageKey") || !app.includes("sendMinimapSnapshot")) {
+    throw new Error("Settings must provide a persisted Minimap visibility checkbox.");
+  }
+  if (!gameLayer.includes('id = "minimap_canvas"') || !gameLayer.includes("createFogOfWar")
+    || !gameLayer.includes("discoverFromPlayer") || !gameLayer.includes("getMinimapWorldPixel")
+    || !gameLayer.includes("context.globalAlpha = pixel.opacity")) {
+    throw new Error("The game layer must own fog discovery and fog-masked world-content minimap rendering.");
+  }
+  if (!styles.includes("#minimap_canvas") || !styles.includes("24vmin")
+    || !styles.includes("image-rendering: pixelated")) {
+    throw new Error("The minimap must use responsive pixel-preserving sizing.");
+  }
+  const bottomLeftStart = app.indexOf('className="corner corner_bottom_left"');
+  if (!app.includes('className="corner corner_top_right" aria-hidden="true"></div>')) {
+    throw new Error("The GitHub link must not remain in the upper-right HUD.");
+  }
+  const lowerLeftMarkup = app.slice(bottomLeftStart, windowsStart);
+  if (!lowerLeftMarkup.includes("GitHubMark")) {
+    throw new Error("The GitHub link must appear immediately above the Windows section.");
+  }
   if (!app.includes("tabIndex={-1}")) {
     throw new Error("The corner UI controls must be removed from the tabbing order.");
+  }
+  for (const requiredSourceFragment of [
+    "touch-action: none",
+    "getDirectionForSwipe",
+    "canvas.addEventListener(\"pointerdown\"",
+    "canvas.addEventListener(\"pointerup\"",
+    "canvas.addEventListener(\"pointercancel\"",
+    "canvas.addEventListener(\"lostpointercapture\"",
+    "window.addEventListener(\"orientationchange\"",
+    "const handlePageHide = () => {\n    clearTouchInput();",
+    "dispose() {\n      if (disposed) return;\n      disposed = true;\n      clearTouchInput();",
+  ]) {
+    if (!`${styles}\n${gameLayer}`.includes(requiredSourceFragment)) {
+      throw new Error("Canvas swipe input must stay scoped to the game canvas and clean up on every stop path.");
+    }
+  }
+  if (!styles.includes("touch-action: none") || !gameLayer.includes("clearTouchInput")) {
+    throw new Error("Canvas swipe input must stay scoped to the game canvas and clean up on lifecycle changes.");
+  }
+  if (!styles.includes("@media (orientation: landscape)") || !styles.includes(".hud_section + .hud_section")
+    || !styles.includes(".font_editor_body") || !styles.includes("overflow-wrap: anywhere")) {
+    throw new Error("Responsive HUD, palette, and Font layout rules must keep controls contained.");
   }
   if (page.includes('src="/src/main.js"')) {
     throw new Error("The safe-area template should not load an application module.");

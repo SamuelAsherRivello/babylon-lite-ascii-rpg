@@ -15,6 +15,7 @@ import {
   filterPaletteEntries,
   DEFAULT_PALETTE_COLOR,
   getPaletteGroup,
+  getPaletteGroupLabel,
   getPaletteEntryId,
   PALETTE_WARNING_KEY,
   sortPaletteEntries,
@@ -24,6 +25,9 @@ import {
   getTimeSnapshot,
   sendAmbientLightSnapshot,
   sendCameraModeSnapshot,
+  sendGpuLightPassSnapshot,
+  sendMinimapSnapshot,
+  sendPlayerGpuShadowBleedRangeSnapshot,
   sendPlayerLightingSnapshot,
   sendPlayerShadowSnapshot,
   sendPaletteSnapshot,
@@ -45,6 +49,7 @@ import {
   LIGHTING_PROFILES,
   LIGHTING_SOURCE_STATES,
   SHADOW_PROFILES,
+  PLAYER_GPU_SHADOW_BLEED_RANGES,
 } from "../game-layer-babylon-lite/lighting.js";
 import {
   DEEP_WATER_GLYPH,
@@ -56,12 +61,17 @@ import {
 } from "../game-layer-babylon-lite/systems/world-system.js";
 
 const fullscreenStorageKey = "babylon-lite-ascii-rpg.fullscreen";
+const showUiStorageKey = "babylon-lite-ascii-rpg.show-ui";
 const zoomStorageKey = "babylon-lite-ascii-rpg.zoom";
 const ambientLightStorageKey = "babylon-lite-ascii-rpg.ambient-light";
 const torchLightingStorageKey = "babylon-lite-ascii-rpg.torch-lighting";
 const playerLightingStorageKey = "babylon-lite-ascii-rpg.player-lighting";
 const torchShadowStorageKey = "babylon-lite-ascii-rpg.torch-shadow";
 const playerShadowStorageKey = "babylon-lite-ascii-rpg.player-shadow";
+const gpuLightPassStorageKey = "babylon-lite-ascii-rpg.gpu-light-pass";
+const playerGpuShadowBleedRangeStorageKey = "babylon-lite-ascii-rpg.player-gpu-shadow-bleed-range";
+const minimapStorageKey = "babylon-lite-ascii-rpg.minimap";
+const lightingWindowPositionStorageKey = "babylon-lite-ascii-rpg.lighting-window-position";
 const minZoom = 1;
 const maxZoom = 10;
 const defaultZoom = 5;
@@ -78,12 +88,20 @@ const mapGlyphs = new Set([
 const paletteEditorWidth = 286;
 const paletteEditorHeight = 340;
 const paletteEditorMargin = 16;
+const lightingWindowMargin = 12;
+const defaultLightingWindowPosition = { left: 252, top: 52 };
 const defaultPaletteViewState = { filter: "all", sortBy: "index", sortDirection: "ascending" };
 const lightingValueHelp = "R Radius · M Maximum · F Falloff";
 const shadowValueHelp = "O Occlusion · B Bleed";
 const ambientValueHelp = "0 dark · 1 bright";
 const settingsHelp = Object.freeze({
   fullscreen: "Toggle fullscreen.",
+  showUi: "Show or hide the HUD.",
+  lighting: "Open lighting controls.",
+  closeLighting: "Close lighting controls.",
+  gpuLightPass: "Toggle soft GPU light glow.",
+  minimap: "Show or hide the exploration minimap.",
+  playerGpuShadowBleedRange: "Cycle the bounded player shadow edge range in grid cells.",
   camera: "Cycle camera mode.",
   torchLighting: `Cycle torch light. ${lightingValueHelp}`,
   playerLighting: `Cycle player light. ${lightingValueHelp}`,
@@ -101,6 +119,11 @@ function getStoredZoom() {
   return Number.isInteger(storedZoom) ? Math.min(maxZoom, Math.max(minZoom, storedZoom)) : defaultZoom;
 }
 
+function getStoredBoolean(storageKey, defaultValue) {
+  const storedValue = localStorage.getItem(storageKey);
+  return storedValue === null ? defaultValue : storedValue === "true";
+}
+
 function getStoredAmbientLight() {
   const stored = Number.parseFloat(localStorage.getItem(ambientLightStorageKey));
   return Number.isFinite(stored) ? Math.min(1, Math.max(0, stored)) : 0.6;
@@ -111,6 +134,13 @@ function getStoredSourceIndex(storageKey, defaultIndex) {
   return Number.isInteger(storedIndex) && storedIndex >= 0 && storedIndex < LIGHTING_SOURCE_STATES.length
     ? storedIndex
     : defaultIndex;
+}
+
+function getStoredPlayerGpuShadowBleedRange() {
+  const storedValue = localStorage.getItem(playerGpuShadowBleedRangeStorageKey);
+  if (storedValue === null) return 2;
+  const stored = Number(storedValue);
+  return PLAYER_GPU_SHADOW_BLEED_RANGES.includes(stored) ? stored : 2;
 }
 
 export function getPaletteEditorPosition(anchor, viewport = { width: window.innerWidth, height: window.innerHeight }) {
@@ -126,6 +156,26 @@ export function getPaletteEditorPosition(anchor, viewport = { width: window.inne
     top: Math.min(Math.max(preferredTop, paletteEditorMargin), maxTop),
     left: Math.min(Math.max(anchor.left + 12, paletteEditorMargin), maxLeft),
   };
+}
+
+export function getLightingWindowPosition(position, dimensions, viewport = { width: window.innerWidth, height: window.innerHeight }) {
+  const maxLeft = Math.max(lightingWindowMargin, viewport.width - dimensions.width - lightingWindowMargin);
+  const maxTop = Math.max(lightingWindowMargin, viewport.height - dimensions.height - lightingWindowMargin);
+  return {
+    left: Math.min(Math.max(position.left, lightingWindowMargin), maxLeft),
+    top: Math.min(Math.max(position.top, lightingWindowMargin), maxTop),
+  };
+}
+
+function getStoredLightingWindowPosition() {
+  try {
+    const storedPosition = JSON.parse(localStorage.getItem(lightingWindowPositionStorageKey));
+    return Number.isFinite(storedPosition?.left) && Number.isFinite(storedPosition?.top)
+      ? { left: storedPosition.left, top: storedPosition.top }
+      : defaultLightingWindowPosition;
+  } catch {
+    return defaultLightingWindowPosition;
+  }
 }
 
 function GitHubMark() {
@@ -147,6 +197,146 @@ function SettingTooltipTarget({ description, onShow, onHide, children }) {
     >
       {children}
     </span>
+  );
+}
+
+function LightingWindow({
+  position,
+  onPositionChange,
+  onClose,
+  gpuLightPass,
+  onGpuLightPassChange,
+  playerGpuShadowBleedRange,
+  onPlayerGpuShadowBleedRangeChange,
+  torchLightingLabel,
+  onTorchLightingChange,
+  torchShadowLabel,
+  onTorchShadowChange,
+  playerLightingLabel,
+  onPlayerLightingChange,
+  playerShadowLabel,
+  onPlayerShadowChange,
+  ambientLight,
+  onAmbientLightChange,
+  onShowTooltip,
+  onHideTooltip,
+}) {
+  const windowRef = useRef(null);
+  const dragStartRef = useRef(null);
+
+  const clampPosition = (nextPosition) => {
+    const rect = windowRef.current?.getBoundingClientRect();
+    return getLightingWindowPosition(nextPosition, {
+      width: rect?.width ?? 360,
+      height: rect?.height ?? 320,
+    });
+  };
+
+  useLayoutEffect(() => {
+    const keepWindowReachable = () => {
+      onPositionChange((currentPosition) => clampPosition(currentPosition));
+    };
+    keepWindowReachable();
+    window.addEventListener("resize", keepWindowReachable);
+    return () => window.removeEventListener("resize", keepWindowReachable);
+  }, []);
+
+  const beginDrag = (event) => {
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    dragStartRef.current = {
+      pointerId: event.pointerId,
+      x: event.clientX,
+      y: event.clientY,
+      position,
+    };
+  };
+
+  const moveDrag = (event) => {
+    const dragStart = dragStartRef.current;
+    if (!dragStart || dragStart.pointerId !== event.pointerId) return;
+    onPositionChange(clampPosition({
+      left: dragStart.position.left + event.clientX - dragStart.x,
+      top: dragStart.position.top + event.clientY - dragStart.y,
+    }));
+  };
+
+  const endDrag = (event) => {
+    if (dragStartRef.current?.pointerId === event.pointerId) {
+      dragStartRef.current = null;
+    }
+  };
+
+  return (
+    <section
+      ref={windowRef}
+      id="lighting_window"
+      className="lighting_window"
+      aria-labelledby="lighting_window_title"
+      style={position}
+    >
+      <div
+        className="lighting_window_titlebar"
+        onPointerDown={beginDrag}
+        onPointerMove={moveDrag}
+        onPointerUp={endDrag}
+        onLostPointerCapture={endDrag}
+      >
+        <div id="lighting_window_title" className="corner_title">Lighting</div>
+        <button
+          className="corner_body settings_option lighting_window_close"
+          type="button"
+          aria-label="Close Lighting"
+          tabIndex={-1}
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={onClose}
+        >
+          X
+        </button>
+      </div>
+      <div className="lighting_window_body">
+        <div id="ambient_light_control" className="corner_body zoom_control" aria-label="Ambient">
+          <span>Ambient</span>
+          <SettingTooltipTarget description={settingsHelp.ambientIncrease} onShow={onShowTooltip} onHide={onHideTooltip}>
+            <button type="button" aria-label="Increase ambient light" aria-description={settingsHelp.ambientIncrease} onClick={() => onAmbientLightChange(AMBIENT_LIGHT_STEP)} disabled={ambientLight >= 1}>+</button>
+          </SettingTooltipTarget>
+          <span aria-live="polite">{ambientLight.toFixed(1)}</span>
+          <SettingTooltipTarget description={settingsHelp.ambientDecrease} onShow={onShowTooltip} onHide={onHideTooltip}>
+            <button type="button" aria-label="Decrease ambient light" aria-description={settingsHelp.ambientDecrease} onClick={() => onAmbientLightChange(-AMBIENT_LIGHT_STEP)} disabled={ambientLight <= 0}>-</button>
+          </SettingTooltipTarget>
+        </div>
+        <SettingTooltipTarget description={settingsHelp.gpuLightPass} onShow={onShowTooltip} onHide={onHideTooltip}>
+          <button
+            id="gpu_light_pass_toggle"
+            className="corner_body settings_option"
+            type="button"
+            aria-pressed={gpuLightPass}
+            aria-label="GPU Light Pass"
+            aria-description={settingsHelp.gpuLightPass}
+            tabIndex={-1}
+            onClick={onGpuLightPassChange}
+          >
+            <span>GPU Light Pass</span>
+            <span id="gpu_light_pass_checkbox" aria-hidden="true">{gpuLightPass ? "☑" : "☐"}</span>
+          </button>
+        </SettingTooltipTarget>
+        <SettingTooltipTarget description={settingsHelp.playerLighting} onShow={onShowTooltip} onHide={onHideTooltip}>
+          <button id="lighting_player_toggle" className="corner_body settings_option" type="button" aria-label="Cycle player lighting" aria-description={settingsHelp.playerLighting} tabIndex={-1} onClick={onPlayerLightingChange}>{playerLightingLabel}</button>
+        </SettingTooltipTarget>
+        <SettingTooltipTarget description={settingsHelp.playerGpuShadowBleedRange} onShow={onShowTooltip} onHide={onHideTooltip}>
+          <button id="player_gpu_shadow_bleed_range" className="corner_body settings_option" type="button" aria-label="Player GPU Shadow Bleed Range" aria-description={settingsHelp.playerGpuShadowBleedRange} tabIndex={-1} onClick={onPlayerGpuShadowBleedRangeChange}>Player GPU Shadow Bleed Range ({playerGpuShadowBleedRange})</button>
+        </SettingTooltipTarget>
+        <SettingTooltipTarget description={settingsHelp.playerShadow} onShow={onShowTooltip} onHide={onHideTooltip}>
+          <button id="shadow_player_toggle" className="corner_body settings_option" type="button" aria-label="Cycle player shadow" aria-description={settingsHelp.playerShadow} tabIndex={-1} onClick={onPlayerShadowChange}>{playerShadowLabel}</button>
+        </SettingTooltipTarget>
+        <SettingTooltipTarget description={settingsHelp.torchLighting} onShow={onShowTooltip} onHide={onHideTooltip}>
+          <button id="lighting_torch_toggle" className="corner_body settings_option" type="button" aria-label="Cycle torch lighting" aria-description={settingsHelp.torchLighting} tabIndex={-1} onClick={onTorchLightingChange}>{torchLightingLabel}</button>
+        </SettingTooltipTarget>
+        <SettingTooltipTarget description={settingsHelp.torchShadow} onShow={onShowTooltip} onHide={onHideTooltip}>
+          <button id="shadow_torch_toggle" className="corner_body settings_option" type="button" aria-label="Cycle torch shadow" aria-description={settingsHelp.torchShadow} tabIndex={-1} onClick={onTorchShadowChange}>{torchShadowLabel}</button>
+        </SettingTooltipTarget>
+      </div>
+    </section>
   );
 }
 
@@ -276,7 +466,8 @@ export class PromptWindow extends Component {
           onClick={(event) => event.stopPropagation()}
         >
           <div className="window_header">
-            <div className="prompt_title" role="tablist" aria-label="Ascii palette sections">
+            <h1 id="ascii_palette_title" className="prompt_title">Ascii Settings</h1>
+            <div className="title_tabs" role="tablist" aria-label="Ascii settings sections">
               <button
                 className="prompt_tab"
                 type="button"
@@ -284,7 +475,7 @@ export class PromptWindow extends Component {
                 aria-selected={activeTab === "palette"}
                 onClick={() => this.selectTab("palette")}
               >
-                Ascii Palette
+                Glyphs
               </button>
               <span aria-hidden="true"> / </span>
               <button
@@ -294,24 +485,25 @@ export class PromptWindow extends Component {
                 aria-selected={activeTab === "font"}
                 onClick={() => this.selectTab("font")}
               >
-                Font
+                Fonts
               </button>
             </div>
             <button
               className="prompt_button window_close"
               type="button"
-              aria-label="Close Ascii Palette"
+              aria-label="Close Ascii Settings"
               onClick={onClose}
             >
               X
             </button>
           </div>
           {activeTab === "palette" ? <>
-          <div className="palette_controls" aria-label="Palette filters and sorting">
-            <div className="palette_filter_group" aria-label="Palette filters">
+          <div className="content_options" aria-label="Glyph filter and sort options">
+            <div className="content_option_group" aria-label="Glyph filters">
+              <span className="content_option_label">Filter: </span>
               {["all", "in-maps", "customized"].map((filterValue) => (
                 <button
-                  className="palette_control_button"
+                  className="content_option_button"
                   type="button"
                   key={filterValue}
                   aria-pressed={filter === filterValue}
@@ -321,9 +513,10 @@ export class PromptWindow extends Component {
                 </button>
               ))}
             </div>
-            <div className="palette_sort_group" aria-label="Palette sorting">
+            <div className="content_option_group" aria-label="Glyph sorting">
+              <span className="content_option_label">Sort: </span>
               <button
-                className="palette_control_button"
+                className="content_option_button"
                 type="button"
                 aria-label={`Sort by index ${sortBy === "index" ? sortDirection : "ascending"}`}
                 aria-pressed={sortBy === "index"}
@@ -332,7 +525,7 @@ export class PromptWindow extends Component {
                 #
               </button>
               <button
-                className="palette_control_button"
+                className="content_option_button"
                 type="button"
                 aria-label={`Sort alphabetically ${sortBy === "alphabet" ? sortDirection : "ascending"}`}
                 aria-pressed={sortBy === "alphabet"}
@@ -341,7 +534,7 @@ export class PromptWindow extends Component {
                 Abc
               </button>
               <button
-                className="palette_control_button"
+                className="content_option_button"
                 type="button"
                 aria-label={`Sort by group ${sortBy === "group" ? sortDirection : "ascending"}`}
                 aria-pressed={sortBy === "group"}
@@ -354,12 +547,15 @@ export class PromptWindow extends Component {
           <div className="palette_grid" data-grouped={sortBy === "group" ? "true" : "false"}>
             {visibleEntries.map((entry, index) => {
               const entryId = getPaletteEntryId(entry);
-              const startsNewGroup = sortBy === "group"
-                && index > 0
-                && getPaletteGroup(entry) !== getPaletteGroup(visibleEntries[index - 1]);
+              const groupHeaderVisible = sortBy === "group"
+                && (index === 0 || getPaletteGroup(entry) !== getPaletteGroup(visibleEntries[index - 1]));
               return (
                 <Fragment key={entryId}>
-                  {startsNewGroup ? <span className="palette_group_break" aria-hidden="true" /> : null}
+                  {groupHeaderVisible ? (
+                    <div className="palette_group_header" role="heading" aria-level="3">
+                      {getPaletteGroupLabel(entry)}
+                    </div>
+                  ) : null}
                   <button
                     className="palette_cell"
                     type="button"
@@ -503,16 +699,22 @@ export function App() {
   const [settingTooltip, setSettingTooltip] = useState(null);
   const [settingTooltipPosition, setSettingTooltipPosition] = useState({ top: 0, left: 0 });
   const settingTooltipRef = useRef(null);
+  const [showHud, setShowHud] = useState(() => getStoredBoolean(showUiStorageKey, true));
   const [fullscreenPreferred, setFullscreenPreferred] = useState(() => {
     return localStorage.getItem(fullscreenStorageKey) === "true";
   });
   const [cameraMode, setCameraMode] = useState(() => normalizeCameraMode(localStorage.getItem(CAMERA_STORAGE_KEY)));
   const [zoom, setZoom] = useState(getStoredZoom);
   const [ambientLight, setAmbientLight] = useState(getStoredAmbientLight);
+  const [gpuLightPass, setGpuLightPass] = useState(() => getStoredBoolean(gpuLightPassStorageKey, true));
+  const [minimap, setMinimap] = useState(() => getStoredBoolean(minimapStorageKey, true));
+  const [playerGpuShadowBleedRange, setPlayerGpuShadowBleedRange] = useState(getStoredPlayerGpuShadowBleedRange);
   const [torchLightingIndex, setTorchLightingIndex] = useState(() => getStoredSourceIndex(torchLightingStorageKey, 1));
-  const [playerLightingIndex, setPlayerLightingIndex] = useState(() => getStoredSourceIndex(playerLightingStorageKey, 3));
+  const [playerLightingIndex, setPlayerLightingIndex] = useState(() => getStoredSourceIndex(playerLightingStorageKey, 4));
   const [torchShadowIndex, setTorchShadowIndex] = useState(() => getStoredSourceIndex(torchShadowStorageKey, 4));
-  const [playerShadowIndex, setPlayerShadowIndex] = useState(() => getStoredSourceIndex(playerShadowStorageKey, 4));
+  const [playerShadowIndex, setPlayerShadowIndex] = useState(() => getStoredSourceIndex(playerShadowStorageKey, 3));
+  const [lightingWindowOpen, setLightingWindowOpen] = useState(false);
+  const [lightingWindowPosition, setLightingWindowPosition] = useState(getStoredLightingWindowPosition);
   const [asciiPaletteOpen, setAsciiPaletteOpen] = useState(false);
   const [argumentsOpen, setArgumentsOpen] = useState(false);
   const [paletteError, setPaletteError] = useState("");
@@ -591,6 +793,10 @@ export function App() {
   }, [fullscreenPreferred]);
 
   useEffect(() => {
+    localStorage.setItem(showUiStorageKey, showHud ? "true" : "false");
+  }, [showHud]);
+
+  useEffect(() => {
     localStorage.setItem(CAMERA_STORAGE_KEY, cameraMode);
     sendCameraModeSnapshot(cameraMode);
   }, [cameraMode]);
@@ -604,6 +810,21 @@ export function App() {
     localStorage.setItem(ambientLightStorageKey, String(ambientLight));
     sendAmbientLightSnapshot(ambientLight);
   }, [ambientLight]);
+
+  useEffect(() => {
+    localStorage.setItem(gpuLightPassStorageKey, gpuLightPass ? "true" : "false");
+    sendGpuLightPassSnapshot(gpuLightPass);
+  }, [gpuLightPass]);
+
+  useEffect(() => {
+    localStorage.setItem(minimapStorageKey, minimap ? "true" : "false");
+    sendMinimapSnapshot(minimap);
+  }, [minimap]);
+
+  useEffect(() => {
+    localStorage.setItem(playerGpuShadowBleedRangeStorageKey, String(playerGpuShadowBleedRange));
+    sendPlayerGpuShadowBleedRangeSnapshot(playerGpuShadowBleedRange);
+  }, [playerGpuShadowBleedRange]);
 
   useEffect(() => {
     localStorage.setItem(torchLightingStorageKey, String(torchLightingIndex));
@@ -624,6 +845,10 @@ export function App() {
     localStorage.setItem(playerShadowStorageKey, String(playerShadowIndex));
     sendPlayerShadowSnapshot(LIGHTING_SOURCE_STATES[playerShadowIndex]);
   }, [playerShadowIndex]);
+
+  useEffect(() => {
+    localStorage.setItem(lightingWindowPositionStorageKey, JSON.stringify(lightingWindowPosition));
+  }, [lightingWindowPosition]);
 
   useEffect(() => {
     const syncFullscreenState = () => {
@@ -651,6 +876,11 @@ export function App() {
     }
   };
 
+  const toggleHud = () => {
+    setSettingTooltip(null);
+    setShowHud((currentShowHud) => !currentShowHud);
+  };
+
   const changeZoom = (amount) => {
     setZoom((currentZoom) => {
       const nextZoom = Math.min(maxZoom, Math.max(minZoom, currentZoom + amount));
@@ -668,6 +898,10 @@ export function App() {
   const cycleLighting = (setter) => {
     setter((currentIndex) => (currentIndex + 1) % LIGHTING_SOURCE_STATES.length);
   };
+  const cyclePlayerGpuShadowBleedRange = () => setPlayerGpuShadowBleedRange((current) => {
+    const index = PLAYER_GPU_SHADOW_BLEED_RANGES.indexOf(current);
+    return PLAYER_GPU_SHADOW_BLEED_RANGES[(index + 1) % PLAYER_GPU_SHADOW_BLEED_RANGES.length];
+  });
 
   const resetSettings = () => {
     localStorage.clear();
@@ -684,10 +918,10 @@ export function App() {
     const { occlusion, bleed } = profile.config;
     return `${profile.label} (O${occlusion} B${bleed})`;
   };
-  const torchLightingLabel = `Lighting Torch - ${formatLightingProfile(torchLightingIndex)}`;
-  const playerLightingLabel = `Lighting Player - ${formatLightingProfile(playerLightingIndex)}`;
-  const torchShadowLabel = `Lighting Torch Shadow - ${formatShadowProfile(torchShadowIndex)}`;
-  const playerShadowLabel = `Lighting Player Shadow - ${formatShadowProfile(playerShadowIndex)}`;
+  const torchLightingLabel = `Torch - ${formatLightingProfile(torchLightingIndex)}`;
+  const playerLightingLabel = `Player - ${formatLightingProfile(playerLightingIndex)}`;
+  const torchShadowLabel = `Torch Shadow - ${formatShadowProfile(torchShadowIndex)}`;
+  const playerShadowLabel = `Player Shadow - ${formatShadowProfile(playerShadowIndex)}`;
 
   const commitPaletteEntry = async (entryId, draft) => {
     const nextPalette = palette.map((entry) =>
@@ -721,22 +955,21 @@ export function App() {
         <div id="project_title" className="corner_body">
           Ascii RPG
         </div>
-        <div id="fps" className="corner_body">
-          FPS: {fps}
-        </div>
         <div id="time" className="corner_body">
           Time: {formatWorldTime(worldTime)}
         </div>
       </div>
-      <div className="corner corner_top_right">
-        <a href={repositoryUrl} target="_blank" rel="noopener noreferrer" aria-label="View the repository on GitHub" tabIndex={-1}>
-          <GitHubMark />
-        </a>
-      </div>
+      {showHud ? (
+        <div className="corner corner_top_right" aria-hidden="true"></div>
+      ) : null}
       <div className="corner corner_bottom_left">
-        <section className="hud_section" id="windows" aria-labelledby="windows_title">
+        {showHud ? <>
+          <a className="project_link" href={repositoryUrl} target="_blank" rel="noopener noreferrer" aria-label="View the repository on GitHub" tabIndex={-1}>
+            <GitHubMark />
+          </a>
+          <section className="hud_section" id="windows" aria-labelledby="windows_title">
           <div id="windows_title" className="corner_title">
-            Windows
+            Windows - 1
           </div>
           <button
             id="ascii_palette_toggle"
@@ -745,7 +978,7 @@ export function App() {
             tabIndex={-1}
             onClick={() => setAsciiPaletteOpen(true)}
           >
-            Ascii Palette
+            Ascii Settings
           </button>
           <button
             id="arguments_toggle"
@@ -756,6 +989,33 @@ export function App() {
           >
             Arguments
           </button>
+        </section>
+        <section className="hud_section" id="windows_2" aria-labelledby="windows_2_title">
+          <div id="windows_2_title" className="corner_title">
+            Windows - 2
+          </div>
+          <SettingTooltipTarget description={settingsHelp.lighting} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
+            <button
+              id="lighting_window_toggle"
+              className="corner_body settings_option"
+              type="button"
+              aria-expanded={lightingWindowOpen}
+              aria-controls="lighting_window"
+              aria-description={settingsHelp.lighting}
+              tabIndex={-1}
+              onClick={() => setLightingWindowOpen((isOpen) => !isOpen)}
+            >
+              Lighting
+            </button>
+          </SettingTooltipTarget>
+        </section>
+        <section className="hud_section" id="stats" aria-labelledby="stats_title">
+          <div id="stats_title" className="corner_title">
+            Stats
+          </div>
+          <div id="fps" className="corner_body">
+            FPS: {fps}
+          </div>
         </section>
         <section className="hud_section" id="settings" aria-labelledby="settings_title">
           <div id="settings_title" className="corner_title">
@@ -777,6 +1037,38 @@ export function App() {
               </span>
             </button>
           </SettingTooltipTarget>
+          <SettingTooltipTarget description={settingsHelp.showUi} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
+            <button
+              id="show_ui_toggle"
+              className="corner_body settings_option"
+              type="button"
+              aria-pressed={showHud}
+              aria-description={settingsHelp.showUi}
+              tabIndex={-1}
+              onClick={toggleHud}
+            >
+              <span>Show UI</span>
+              <span id="show_ui_checkbox" aria-hidden="true">
+                {showHud ? "☑" : "☐"}
+              </span>
+            </button>
+          </SettingTooltipTarget>
+          <SettingTooltipTarget description={settingsHelp.minimap} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
+            <button
+              id="minimap_toggle"
+              className="corner_body settings_option"
+              type="button"
+              aria-pressed={minimap}
+              aria-description={settingsHelp.minimap}
+              tabIndex={-1}
+              onClick={() => setMinimap((enabled) => !enabled)}
+            >
+              <span>Minimap</span>
+              <span id="minimap_checkbox" aria-hidden="true">
+                {minimap ? "☑" : "☐"}
+              </span>
+            </button>
+          </SettingTooltipTarget>
           <SettingTooltipTarget description={settingsHelp.camera} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
             <button
               id="camera_mode_toggle"
@@ -790,68 +1082,6 @@ export function App() {
               {CAMERA_MODE_LABELS[cameraMode] ?? CAMERA_MODE_LABELS[DEFAULT_CAMERA_MODE]}
             </button>
           </SettingTooltipTarget>
-          <SettingTooltipTarget description={settingsHelp.torchLighting} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
-            <button
-              id="lighting_torch_toggle"
-              className="corner_body settings_option"
-              type="button"
-              aria-label="Cycle torch lighting"
-              aria-description={settingsHelp.torchLighting}
-              tabIndex={-1}
-              onClick={() => cycleLighting(setTorchLightingIndex)}
-            >
-              {torchLightingLabel}
-            </button>
-          </SettingTooltipTarget>
-          <SettingTooltipTarget description={settingsHelp.playerLighting} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
-            <button
-              id="lighting_player_toggle"
-              className="corner_body settings_option"
-              type="button"
-              aria-label="Cycle player lighting"
-              aria-description={settingsHelp.playerLighting}
-              tabIndex={-1}
-              onClick={() => cycleLighting(setPlayerLightingIndex)}
-            >
-              {playerLightingLabel}
-            </button>
-          </SettingTooltipTarget>
-          <SettingTooltipTarget description={settingsHelp.torchShadow} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
-            <button
-              id="shadow_torch_toggle"
-              className="corner_body settings_option"
-              type="button"
-              aria-label="Cycle torch shadow"
-              aria-description={settingsHelp.torchShadow}
-              tabIndex={-1}
-              onClick={() => cycleLighting(setTorchShadowIndex)}
-            >
-              {torchShadowLabel}
-            </button>
-          </SettingTooltipTarget>
-          <SettingTooltipTarget description={settingsHelp.playerShadow} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
-            <button
-              id="shadow_player_toggle"
-              className="corner_body settings_option"
-              type="button"
-              aria-label="Cycle player shadow"
-              aria-description={settingsHelp.playerShadow}
-              tabIndex={-1}
-              onClick={() => cycleLighting(setPlayerShadowIndex)}
-            >
-              {playerShadowLabel}
-            </button>
-          </SettingTooltipTarget>
-          <div id="ambient_light_control" className="corner_body zoom_control" aria-label="Light Ambient">
-            <span>Light Ambient</span>
-            <SettingTooltipTarget description={settingsHelp.ambientIncrease} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
-              <button type="button" aria-label="Increase ambient light" aria-description={settingsHelp.ambientIncrease} onClick={() => changeAmbientLight(AMBIENT_LIGHT_STEP)} disabled={ambientLight >= 1}>+</button>
-            </SettingTooltipTarget>
-            <span aria-live="polite">{ambientLight.toFixed(1)}</span>
-            <SettingTooltipTarget description={settingsHelp.ambientDecrease} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
-              <button type="button" aria-label="Decrease ambient light" aria-description={settingsHelp.ambientDecrease} onClick={() => changeAmbientLight(-AMBIENT_LIGHT_STEP)} disabled={ambientLight <= 0}>-</button>
-            </SettingTooltipTarget>
-          </div>
           <div id="zoom_control" className="corner_body zoom_control" aria-label="Zoom">
             <span>Zoom</span>
             <SettingTooltipTarget description={settingsHelp.zoomIn} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
@@ -876,12 +1106,53 @@ export function App() {
             </button>
           </SettingTooltipTarget>
         </section>
+        </> : (
+          <button
+            id="show_ui_toggle"
+            className="corner_body settings_option"
+            type="button"
+            aria-pressed={showHud}
+            aria-description={settingsHelp.showUi}
+            tabIndex={-1}
+            onClick={toggleHud}
+          >
+            <span>Show UI</span>
+            <span id="show_ui_checkbox" aria-hidden="true">
+              {showHud ? "☑" : "☐"}
+            </span>
+          </button>
+        )}
       </div>
-      <div className="corner corner_bottom_right">
-        <span id="version" className="corner_body">
-          v{versionNumber}
-        </span>
-      </div>
+      {showHud ? (
+        <div className="corner corner_bottom_right">
+          <span id="version" className="corner_body">
+            v{versionNumber}
+          </span>
+        </div>
+      ) : null}
+      {showHud && lightingWindowOpen ? (
+        <LightingWindow
+          position={lightingWindowPosition}
+          onPositionChange={setLightingWindowPosition}
+          onClose={() => setLightingWindowOpen(false)}
+          gpuLightPass={gpuLightPass}
+          onGpuLightPassChange={() => setGpuLightPass((enabled) => !enabled)}
+          playerGpuShadowBleedRange={playerGpuShadowBleedRange}
+          onPlayerGpuShadowBleedRangeChange={cyclePlayerGpuShadowBleedRange}
+          torchLightingLabel={torchLightingLabel}
+          onTorchLightingChange={() => cycleLighting(setTorchLightingIndex)}
+          torchShadowLabel={torchShadowLabel}
+          onTorchShadowChange={() => cycleLighting(setTorchShadowIndex)}
+          playerLightingLabel={playerLightingLabel}
+          onPlayerLightingChange={() => cycleLighting(setPlayerLightingIndex)}
+          playerShadowLabel={playerShadowLabel}
+          onPlayerShadowChange={() => cycleLighting(setPlayerShadowIndex)}
+          ambientLight={ambientLight}
+          onAmbientLightChange={changeAmbientLight}
+          onShowTooltip={showSettingTooltip}
+          onHideTooltip={hideSettingTooltip}
+        />
+      ) : null}
       {settingTooltip ? (
         <div
           ref={settingTooltipRef}
