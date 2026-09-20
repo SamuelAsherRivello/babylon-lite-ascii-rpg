@@ -67,6 +67,12 @@ Correct: run `git status`, dependency, build, test, and run commands from the
 repository root; keep the application's source and tests under
 `ascii-rpg/`.
 
+## CSS relative adjustments
+
+- When the user requests a relative CSS adjustment, calculate the new value
+  first and hardcode that value in the stylesheet. Do not use `calc()` for the
+  adjusted value.
+
 ## Settings persistence
 
 - Every user-facing setting must persist to browser `localStorage` by default.

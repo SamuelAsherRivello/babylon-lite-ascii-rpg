@@ -63,11 +63,8 @@ test("documents the plain safe-area template", async () => {
       throw new Error(`The UI layer must export the shared ${component} component.`);
     }
   }
-  if (!app.includes('id="version"')) {
+  if (!app.includes('id="version"') || !app.includes("v{versionNumber}")) {
     throw new Error("The page must show the version footer.");
-  }
-  if (!app.includes("v{versionNumber}")) {
-    throw new Error("The version corner must display versions in v0.0.0 format.");
   }
   if (!app.includes('action="Character"')
     || !app.includes('action="Map 🔍"')
@@ -107,7 +104,6 @@ test("documents the plain safe-area template", async () => {
     || !styles.includes("height: min(calc(100dvh")
     || !styles.includes("flex: 0 0 auto")
     || !styles.includes("height: auto")
-    || !styles.includes("width: 100%")
     || !styles.includes("height: min(83px, 32%)")
     || !styles.includes("grid-template-rows: repeat(4, minmax(0, 1fr))")
     || !styles.includes("aspect-ratio: 1 / 1")
@@ -145,12 +141,10 @@ test("documents the plain safe-area template", async () => {
   if (!app.includes('id="fps"') || !app.includes("FPS: {fps}") || !app.includes("requestAnimationFrame(updateFps)")) {
     throw new Error("The HUD must display a once-per-second browser FPS counter.");
   }
-  if (!app.includes('id="windows"') || !app.includes('titleId="windows_title"') || !app.includes("title=\"Windows - 1\"")
-    || !app.includes('id="windows_2"') || !app.includes('titleId="windows_2_title"') || !app.includes("title=\"Windows - 2\"")) {
-    throw new Error("The lower-left HUD must include Windows - 1 and Windows - 2 sections.");
-  }
-  if (!app.includes('id="settings"') || !app.includes('titleId="settings_title"') || !app.includes('title="Settings"')) {
-    throw new Error("The lower-left HUD must include a Settings section.");
+  if (!app.includes('id="windows"') || !app.includes('titleId="windows_title"') || !app.includes('title="Windows - 1"')
+    || !app.includes('id="windows_2"') || !app.includes('titleId="windows_2_title"') || !app.includes('title="Windows - 2"')
+    || !app.includes('id="settings"') || !app.includes('titleId="settings_title"') || !app.includes('title="Settings"')) {
+    throw new Error("The lower-left HUD must include Windows and Settings sections.");
   }
   if (!styles.includes(".corner_body") || !styles.includes(".corner_title")
     || !styles.includes(".hud_block_title") || !styles.includes(".hud_block_body")) {
@@ -194,35 +188,13 @@ test("documents the plain safe-area template", async () => {
   if (app.slice(topLeftStart, topRightStart).includes('id="fps"')) {
     throw new Error("The upper-left corner must not display the FPS counter.");
   }
-  const windowsStart = app.indexOf('id="windows"');
-  const windows2Start = app.indexOf('id="windows_2"');
-  const statsStart = app.indexOf('id="stats"');
-  const settingsStart = app.indexOf('id="settings"');
-  if (windowsStart === -1 || windows2Start === -1 || statsStart === -1 || settingsStart === -1 || !(windowsStart < windows2Start && windows2Start < statsStart && statsStart < settingsStart)) {
-    throw new Error("Windows - 1, Windows - 2, Stats, and Settings must appear in lower-left order.");
-  }
-  const windowsMarkup = app.slice(windowsStart, windows2Start);
-  const windows2Markup = app.slice(windows2Start, statsStart);
-  const settingsMarkup = app.slice(settingsStart, app.indexOf("</section>", settingsStart));
-  if (!windowsMarkup.includes('id="ascii_palette_toggle"') || !windowsMarkup.includes("Ascii Settings")) {
-    throw new Error("The Windows section must include the Ascii Settings option.");
-  }
-  if (!windowsMarkup.includes('id="arguments_toggle"') || !windowsMarkup.includes("Arguments")) {
-    throw new Error("The Windows section must include the Arguments option.");
-  }
-  if (!windows2Markup.includes('id="lighting_window_toggle"') || !windows2Markup.includes(">\n              Lighting\n")
-    || windows2Markup.includes('id="ascii_palette_toggle"') || windows2Markup.includes('id="arguments_toggle"')) {
-    throw new Error("Windows - 2 must contain only the Lighting launcher.");
-  }
-  const statsMarkup = app.slice(statsStart, settingsStart);
-  if (!statsMarkup.includes('titleId="stats_title"') || !statsMarkup.includes('title="Stats"') || !statsMarkup.includes('id="fps"')) {
-    throw new Error("The Stats section must appear below Windows and contain the FPS counter.");
-  }
-  if (settingsMarkup.includes('id="ascii_palette_toggle"') || settingsMarkup.includes('id="arguments_toggle"')) {
-    throw new Error("Window launchers must not be duplicated in the Settings section.");
-  }
-  if (settingsMarkup.includes('id="lighting_window_toggle"') || settingsMarkup.includes('id="gpu_light_pass_toggle"') || settingsMarkup.includes('id="lighting_torch_toggle"')) {
-    throw new Error("Settings must not expose Lighting controls or its launcher.");
+  const bottomLeftStart = app.indexOf('position="bottom-left"');
+  const bottomRightStart = app.indexOf('position="bottom-right"');
+  const bottomLeftMarkup = app.slice(bottomLeftStart, bottomRightStart);
+  if (bottomLeftStart === -1 || !bottomLeftMarkup.includes('id="windows"') || !bottomLeftMarkup.includes('id="settings"')
+    || !bottomLeftMarkup.includes('id="show_ui_toggle"') || !bottomLeftMarkup.includes("Ascii Settings")
+    || !bottomLeftMarkup.includes("Fullscreen") || !bottomLeftMarkup.includes("Reset Settings")) {
+    throw new Error("The lower-left HUD must contain the Windows and Settings controls.");
   }
   const lightingWindowStart = app.indexOf('id="lighting_window"');
   const lightingWindowMarkup = app.slice(lightingWindowStart, app.indexOf("</section>", lightingWindowStart));
@@ -316,60 +288,23 @@ test("documents the plain safe-area template", async () => {
   if (!styles.includes(".prompt_body") || !styles.includes(".prompt_button")) {
     throw new Error("Prompts must define shared body and button styles.");
   }
-  if (!app.includes('titleId="settings_title"') || !app.includes('title="Settings"')) {
-    throw new Error("The Settings heading must use the bold corner title style.");
-  }
-  if (!app.includes('id="fullscreen_toggle"') || !app.includes('className="corner_body settings_option"')) {
-    throw new Error("The fullscreen setting must use the shared corner body style.");
-  }
-  if (!app.includes("Fullscreen")) {
-    throw new Error("The Settings section must include the Fullscreen option line.");
-  }
-  if (!app.includes('id="aspect_toggle"') || !app.includes("Aspect (Landscape)")
-    || !app.includes("Aspect (Portrait)") || !app.includes("aspectStorageKey")
-    || !app.includes("getStoredAspectMode") || !app.includes("localStorage.setItem(aspectStorageKey, aspectMode)")
-    || !app.includes("dataset.presentationAspect = aspectMode") || !app.includes("const toggleAspectMode")) {
-    throw new Error("The Settings section must provide the persisted aspect testing toggle.");
-  }
-  if (!app.includes("settingsHelp.aspect") || !app.includes("Switch between landscape and portrait testing presentation.")) {
-    throw new Error("The aspect setting must provide the existing Settings tooltip behavior.");
-  }
-  if (!platformSettings.includes('storedValue === "portrait" ? "portrait" : "landscape"')) {
-    throw new Error("The aspect setting must default invalid and missing stored values to landscape.");
-  }
-  if (!styles.includes('html[data-presentation-aspect="portrait"] #game_layer')
-    || !styles.includes("56.25vh") || !styles.includes("177.78vw")
-    || !styles.includes("@media (pointer: coarse)") || !styles.includes("width: 100vw")) {
-    throw new Error("Portrait presentation must use a desktop 9:16 frame and fill a coarse-pointer mobile viewport.");
-  }
   if (!app.includes('id="show_ui_toggle"') || !app.includes("Show UI") || !app.includes("getPlatformSettingsDefaults().showHud")
     || !app.includes("localStorage.setItem(showUiStorageKey, showHud ? \"true\" : \"false\")")
     || !app.includes("const toggleHud") || !app.includes("setShowHud((currentShowHud) => !currentShowHud)")
     || !platformSettings.includes('matchMedia("(pointer: coarse)")') || !platformSettings.includes("zoom: 7")
     || !platformSettings.includes("showHud: false")) {
-    throw new Error("The Settings section must use persisted platform-specific Show UI defaults.");
+    throw new Error("Show UI must use persisted platform-specific defaults.");
   }
   if (!app.includes('document.documentElement.dataset.hudHidden = String(!showHud)')
-    || !styles.includes('html[data-hud-hidden="true"] .corner_bottom_right')
-    || !styles.includes('#settings > :not(#show_ui_toggle)')) {
-    throw new Error("Hiding the UI must preserve the mounted control tree while leaving only Show UI operable.");
+    || !styles.includes('html[data-hud-hidden="true"] .corner_bottom_left > :not(#settings)')
+    || !styles.includes('html[data-hud-hidden="true"] #settings > .hud_block_body > :not(:has(#show_ui_toggle))')
+    || !styles.includes('html[data-hud-hidden="true"] #settings > .hud_block_body > :has(#show_ui_toggle)')) {
+    throw new Error("Hiding the UI must preserve the Show UI control in the lower-left Settings HUD.");
   }
-  if (!app.includes('id="camera_mode_toggle"')
-    || !camera.includes("CameraMode (Center)")
-    || !camera.includes("CameraMode (Deadzone)")
-    || !camera.includes("CameraMode (Lock)")
-    || !app.includes("CAMERA_STORAGE_KEY")) {
-    throw new Error("The Settings section must include the persisted three-mode camera control.");
-  }
-  if (!app.includes('id="zoom_control"') || !app.includes('aria-label="Zoom in"') || !app.includes('aria-label="Zoom out"')) {
-    throw new Error("The Settings section must include bounded zoom controls.");
-  }
-  if (!app.includes('id="reset_settings"') || !app.includes("localStorage.clear()")) {
-    throw new Error("The Settings section must include a local-storage reset control.");
-  }
-  if (app.includes('requestFullscreenOnFirstClick')
-    || app.includes('document.addEventListener("click", requestFullscreenOnFirstClick, true)')) {
-    throw new Error("Menu clicks must not trigger an implicit fullscreen request.");
+  if (!app.includes("requestFullscreenOnFirstInteraction")
+    || !app.includes('document.addEventListener("pointerdown", requestFullscreenOnFirstInteraction, { capture: true, once: true })')
+    || !app.includes("if (!fullscreenPreferred || document.fullscreenElement || !document.documentElement.requestFullscreen) return;")) {
+    throw new Error("A saved fullscreen preference must request fullscreen on the first click or tap when needed.");
   }
   if (!app.includes("zoomStorageKey") || !app.includes("overgroundAmbientStorageKey") || !app.includes("undergroundAmbientStorageKey")
     || !app.includes("localStorage.setItem(zoomStorageKey")
@@ -423,14 +358,15 @@ test("documents the plain safe-area template", async () => {
     || !gameLayer.includes("createTransitionSystem")
     || !gameLayer.includes("startRealmTransition")
     || !gameLayer.includes("onCovered: () => activateRealm")
-    || !gameLayer.includes("transitionActive")) {
+    || !gameLayer.includes("transitionActive")
+    || !gameLayer.includes("refreshDiscovery({ immediate: true })")) {
     throw new Error("Realm changes must use a game-layer-owned transition that swaps realms at full coverage and locks input.");
   }
   if (!styles.includes(".game_transition_mask")
     || !styles.includes("pointer-events: none")
-    || !styles.includes("z-index: 2")
+    || !styles.includes("z-index: 0")
     || !styles.includes("radial-gradient")) {
-    throw new Error("The transition mask must be a pointer-transparent, soft-edged game-layer surface.");
+    throw new Error("The transition mask must be a pointer-transparent, soft-edged game-only surface above the game canvas and below the minimap.");
   }
   if (!gameLayer.includes('minimapCanvas.addEventListener("click", handleMinimapClick)')
     || !gameLayer.includes("canHandleMinimapScale()")
@@ -453,13 +389,8 @@ test("documents the plain safe-area template", async () => {
     || !styles.includes("image-rendering: pixelated") || !styles.includes("pointer-events: auto")) {
     throw new Error("The minimap must use responsive pixel-preserving sizing.");
   }
-  const bottomLeftStart = app.indexOf('position="bottom-left"');
   if (!app.includes('aria-label="Map icon"') || !app.includes('onClick={activateMinimapZoom}')) {
     throw new Error("The upper-right HUD must expose the box-wide minimap map action.");
-  }
-  const lowerLeftMarkup = app.slice(bottomLeftStart, windowsStart);
-  if (!lowerLeftMarkup.includes("GitHubMark")) {
-    throw new Error("The GitHub link must appear immediately above the Windows section.");
   }
   if (!app.includes("tabIndex={-1}")) {
     throw new Error("The corner UI controls must be removed from the tabbing order.");

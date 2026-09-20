@@ -81,9 +81,9 @@ const GLYPHS = ["W", "M", "•", "P", "T", "S", "◆", "~", "≈", "▓"];
 const WORLD_ROWS = 512;
 const WORLD_COLUMNS = 512;
 const TORCHES_PER_SCREEN = 3;
-const REALM_TRANSITION_CLOSE_MS = 500;
+const REALM_TRANSITION_CLOSE_MS = 2000;
 const REALM_TRANSITION_COVER_HOLD_MS = 100;
-const REALM_TRANSITION_OPEN_MS = 500;
+const REALM_TRANSITION_OPEN_MS = 2000;
 
 function createViewportForCanvas(canvas, zoom = DEFAULT_ZOOM) {
   const screenWidth = canvas.clientWidth || window.innerWidth;
@@ -360,6 +360,15 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     });
   };
 
+  const presentImmediately = () => {
+    if (!engine || disposed) return;
+    if (presentationFrame !== null) {
+      window.cancelAnimationFrame(presentationFrame);
+      presentationFrame = null;
+    }
+    renderFrame(engine, 0);
+  };
+
   // Movement can repeat faster than a display can paint, especially while
   // Shift is held. Keep the newest world state, but perform at most one
   // expensive minimap paint per animation frame so input tasks keep yielding.
@@ -378,10 +387,11 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     for (const listener of minimapZoomListeners) listener(nextZoom);
   };
 
-  const refreshDiscovery = () => {
+  const refreshDiscovery = ({ immediate = false } = {}) => {
     if (!fogOfWar || !world || !playerCell) return;
     discoverFromPlayer(fogOfWar, world, playerCell);
-    scheduleMinimapRender();
+    if (immediate) renderMinimap();
+    else scheduleMinimapRender();
   };
 
   const activateRealm = (name, arrival = null) => {
@@ -403,13 +413,22 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     viewOrigin = sourceScreenCell
       ? getViewOriginForPreservedPlayerPosition(playerCell, sourceScreenCell, viewport, world)
       : getViewOriginForCamera(cameraMode, playerCell, viewport, world, viewOrigin);
-    refreshDiscovery();
     for (const listener of realmListeners) listener(activeRealm);
-    // A realm swap changes every visible cell. Reset the submitted sprite
-    // state so the destination realm is rendered immediately instead of
-    // waiting for the next movement to invalidate individual cells.
-    if (renderer && layer) rebuildLayer();
+    // A realm swap changes every visible cell. Clear the submitted sprites in
+    // place instead of removing/re-adding the Babylon layer at the exact
+    // covered -> opening boundary. Replacing the layer here can expose an
+    // empty/new layer for one presentation frame while the transition mask
+    // starts opening.
+    resetLayerSprites();
     renderWorld({ refreshLighting: true });
+    // The transition system runs from its own RAF. Present the destination
+    // layer synchronously while the mask is still fully closed, rather than
+    // allowing the opening phase to race the normal presentation RAF.
+    presentImmediately();
+    // The realm swap changes the game and minimap views as one operation. Do
+    // not defer this repaint to the next animation frame or show the old map
+    // beneath the destination realm while the transition opens.
+    refreshDiscovery({ immediate: true });
   };
 
   const setTransitionMask = ({ phase, value }) => {
@@ -433,13 +452,12 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     const height = Math.max(1, canvas.clientHeight || window.innerHeight);
     return {
       cover: Math.hypot(width, height),
-      character: Math.max(4, Math.max(viewport.gridWidth, viewport.gridHeight) / 2),
     };
   };
 
   const startRealmTransition = (destination, arrival = null) => {
     if (transitionActive || !transitionSystem || !worldRealms?.realms?.[destination]) return false;
-    const { cover, character } = getTransitionRadii();
+    const { cover } = getTransitionRadii();
     clearMovementInput();
     // Ensure the source realm's latest player position is submitted before the
     // mask becomes visible.
@@ -448,7 +466,9 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     const started = transitionSystem.start({
       target: "game_layer",
       from: cover,
-      to: character,
+      // Fully close the aperture before swapping realms. Leaving a player-
+      // sized transparent hole exposes the old/new layer during the handoff.
+      to: 0,
       durationOut: REALM_TRANSITION_CLOSE_MS,
       durationCovered: REALM_TRANSITION_COVER_HOLD_MS,
       durationIn: REALM_TRANSITION_OPEN_MS,
@@ -576,6 +596,16 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     atlas = nextAtlas;
     layer = createSprite2DLayer(atlas, { capacity: Math.max(1, viewport.rows * viewport.columns) });
     if (renderer) addSpriteRendererLayer(renderer, layer);
+    spriteIndexes.length = 0;
+    spriteStates.length = 0;
+  };
+
+  const resetLayerSprites = () => {
+    if (layer) {
+      for (const index of spriteIndexes) {
+        if (index !== undefined) updateSprite2DIndex(layer, index, { visible: false });
+      }
+    }
     spriteIndexes.length = 0;
     spriteStates.length = 0;
   };

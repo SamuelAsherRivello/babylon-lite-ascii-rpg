@@ -823,6 +823,7 @@ function AppContent() {
   const [fullscreenPreferred, setFullscreenPreferred] = useState(() => {
     return localStorage.getItem(fullscreenStorageKey) === "true";
   });
+  const fullscreenRequestInProgressRef = useRef(false);
   const [aspectMode, setAspectMode] = useState(() => getStoredAspectMode(localStorage.getItem(aspectStorageKey)));
   const [cameraMode, setCameraMode] = useState(() => normalizeCameraMode(localStorage.getItem(CAMERA_STORAGE_KEY)));
   const [zoom, setZoom] = useState(getStoredZoom);
@@ -1002,13 +1003,31 @@ function AppContent() {
     return () => document.removeEventListener("fullscreenchange", syncFullscreenState);
   }, []);
 
+  useEffect(() => {
+    if (!fullscreenPreferred || document.fullscreenElement || !document.documentElement.requestFullscreen) return;
+
+    const requestFullscreenOnFirstInteraction = () => {
+      if (document.fullscreenElement || fullscreenRequestInProgressRef.current) return;
+      fullscreenRequestInProgressRef.current = true;
+      document.documentElement.requestFullscreen()
+        .catch(() => setFullscreenPreferred(false))
+        .finally(() => {
+          fullscreenRequestInProgressRef.current = false;
+        });
+    };
+
+    document.addEventListener("pointerdown", requestFullscreenOnFirstInteraction, { capture: true, once: true });
+    return () => document.removeEventListener("pointerdown", requestFullscreenOnFirstInteraction, true);
+  }, [fullscreenPreferred]);
+
   const toggleFullscreen = async () => {
     try {
       if (document.fullscreenElement) {
         if (document.exitFullscreen) {
           await document.exitFullscreen();
         }
-      } else if (document.documentElement.requestFullscreen) {
+      } else if (document.documentElement.requestFullscreen && !fullscreenRequestInProgressRef.current) {
+        fullscreenRequestInProgressRef.current = true;
         await document.documentElement.requestFullscreen();
         if (!document.fullscreenElement) {
           setFullscreenPreferred(true);
@@ -1016,6 +1035,8 @@ function AppContent() {
       }
     } catch {
       setFullscreenPreferred(false);
+    } finally {
+      fullscreenRequestInProgressRef.current = false;
     }
   };
 
@@ -1147,158 +1168,62 @@ function AppContent() {
         </>
       ) : null}
       <CornerLayout position="bottom-left">
-        {true ? <>
-          <a className="project_link" href={repositoryUrl} target="_blank" rel="noopener noreferrer" aria-label="View the repository on GitHub" tabIndex={-1}>
-            <GitHubMark />
-          </a>
-          <HudBlockLayout className="hud_section" id="windows" aria-labelledby="windows_title" titleId="windows_title" title="Windows - 1">
-          <button
-            id="ascii_palette_toggle"
-            className="corner_body settings_option"
-            type="button"
-            tabIndex={-1}
-            onClick={() => setAsciiPaletteOpen(true)}
-          >
+        <a className="project_link" href={repositoryUrl} target="_blank" rel="noopener noreferrer" aria-label="View the repository on GitHub" tabIndex={-1}>
+          <GitHubMark />
+        </a>
+        <HudBlockLayout className="hud_section" id="windows" aria-labelledby="windows_title" titleId="windows_title" title="Windows - 1">
+          <button id="ascii_palette_toggle" className="corner_body settings_option" type="button" tabIndex={-1} onClick={() => setAsciiPaletteOpen(true)}>
             Ascii Settings
           </button>
-          <button
-            id="arguments_toggle"
-            className="corner_body settings_option"
-            type="button"
-            tabIndex={-1}
-            onClick={() => setArgumentsOpen(true)}
-          >
+          <button id="arguments_toggle" className="corner_body settings_option" type="button" tabIndex={-1} onClick={() => setArgumentsOpen(true)}>
             Arguments
           </button>
         </HudBlockLayout>
         <HudBlockLayout className="hud_section" id="windows_2" aria-labelledby="windows_2_title" titleId="windows_2_title" title="Windows - 2">
           <SettingTooltipTarget description={settingsHelp.lighting} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
-            <button
-              id="lighting_window_toggle"
-              className="corner_body settings_option"
-              type="button"
-              aria-expanded={lightingWindowOpen}
-              aria-controls="lighting_window"
-              aria-description={settingsHelp.lighting}
-              tabIndex={-1}
-              onClick={() => setLightingWindowOpen((isOpen) => !isOpen)}
-            >
+            <button id="lighting_window_toggle" className="corner_body settings_option" type="button" aria-expanded={lightingWindowOpen} aria-controls="lighting_window" aria-description={settingsHelp.lighting} tabIndex={-1} onClick={() => setLightingWindowOpen((isOpen) => !isOpen)}>
               Lighting
             </button>
           </SettingTooltipTarget>
         </HudBlockLayout>
         <HudBlockLayout className="hud_section" id="stats" aria-labelledby="stats_title" titleId="stats_title" title="Stats">
-          <div id="fps" className="corner_body">
-            FPS: {fps}
-          </div>
+          <div id="fps" className="corner_body">FPS: {fps}</div>
         </HudBlockLayout>
         <HudBlockLayout className="hud_section" id="settings" aria-labelledby="settings_title" titleId="settings_title" title="Settings">
           <SettingTooltipTarget description={settingsHelp.fullscreen} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
-            <button
-              id="fullscreen_toggle"
-              className="corner_body settings_option"
-              type="button"
-              aria-pressed={fullscreenPreferred}
-              aria-description={settingsHelp.fullscreen}
-              tabIndex={-1}
-              onClick={toggleFullscreen}
-            >
-              <span>Fullscreen</span>
-              <span id="fullscreen_checkbox" aria-hidden="true">
-                {fullscreenPreferred ? "☑" : "☐"}
-              </span>
+            <button id="fullscreen_toggle" className="corner_body settings_option" type="button" aria-pressed={fullscreenPreferred} aria-description={settingsHelp.fullscreen} tabIndex={-1} onClick={toggleFullscreen}>
+              <span>Fullscreen</span><span id="fullscreen_checkbox" aria-hidden="true">{fullscreenPreferred ? "☑" : "☐"}</span>
             </button>
           </SettingTooltipTarget>
           <SettingTooltipTarget description={settingsHelp.aspect} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
-            <button
-              id="aspect_toggle"
-              className="corner_body settings_option"
-              type="button"
-              aria-pressed={aspectMode === "portrait"}
-              aria-description={settingsHelp.aspect}
-              tabIndex={-1}
-              onClick={toggleAspectMode}
-            >
+            <button id="aspect_toggle" className="corner_body settings_option" type="button" aria-pressed={aspectMode === "portrait"} aria-description={settingsHelp.aspect} tabIndex={-1} onClick={toggleAspectMode}>
               {aspectMode === "portrait" ? "Aspect (Portrait)" : "Aspect (Landscape)"}
             </button>
           </SettingTooltipTarget>
           <SettingTooltipTarget description={settingsHelp.showUi} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
-            <button
-              id="show_ui_toggle"
-              className="corner_body settings_option"
-              type="button"
-              aria-pressed={showHud}
-              aria-description={settingsHelp.showUi}
-              tabIndex={-1}
-              onClick={toggleHud}
-            >
-              <span>Show UI</span>
-              <span id="show_ui_checkbox" aria-hidden="true">
-                {showHud ? "☑" : "☐"}
-              </span>
+            <button id="show_ui_toggle" className="corner_body settings_option" type="button" aria-pressed={showHud} aria-description={settingsHelp.showUi} tabIndex={-1} onClick={toggleHud}>
+              <span>Show UI</span><span id="show_ui_checkbox" aria-hidden="true">{showHud ? "☑" : "☐"}</span>
             </button>
           </SettingTooltipTarget>
           <SettingTooltipTarget description={settingsHelp.camera} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
-            <button
-              id="camera_mode_toggle"
-              className="corner_body settings_option"
-              type="button"
-              aria-label="Camera mode"
-              aria-description={settingsHelp.camera}
-              tabIndex={-1}
-              onClick={cycleCameraMode}
-            >
+            <button id="camera_mode_toggle" className="corner_body settings_option" type="button" aria-label="Camera mode" aria-description={settingsHelp.camera} tabIndex={-1} onClick={cycleCameraMode}>
               {CAMERA_MODE_LABELS[cameraMode] ?? CAMERA_MODE_LABELS[DEFAULT_CAMERA_MODE]}
             </button>
           </SettingTooltipTarget>
           <div id="zoom_control" className="corner_body zoom_control" aria-label="Zoom">
             <span>Zoom</span>
-            <SettingTooltipTarget description={settingsHelp.zoomIn} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
-              <button type="button" aria-label="Zoom in" aria-description={settingsHelp.zoomIn} onClick={() => changeZoom(1)} disabled={zoom >= maxZoom}>+</button>
-            </SettingTooltipTarget>
+            <SettingTooltipTarget description={settingsHelp.zoomIn} onShow={showSettingTooltip} onHide={hideSettingTooltip}><button type="button" aria-label="Zoom in" aria-description={settingsHelp.zoomIn} onClick={() => changeZoom(1)} disabled={zoom >= maxZoom}>+</button></SettingTooltipTarget>
             <span aria-live="polite">{zoom}</span>
-            <SettingTooltipTarget description={settingsHelp.zoomOut} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
-              <button type="button" aria-label="Zoom out" aria-description={settingsHelp.zoomOut} onClick={() => changeZoom(-1)} disabled={zoom <= minZoom}>-</button>
-            </SettingTooltipTarget>
+            <SettingTooltipTarget description={settingsHelp.zoomOut} onShow={showSettingTooltip} onHide={hideSettingTooltip}><button type="button" aria-label="Zoom out" aria-description={settingsHelp.zoomOut} onClick={() => changeZoom(-1)} disabled={zoom <= minZoom}>-</button></SettingTooltipTarget>
           </div>
           <SettingTooltipTarget description={settingsHelp.reset} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
-            <button
-              id="reset_settings"
-              className="corner_body settings_option"
-              type="button"
-              aria-label="Reset Settings"
-              aria-description={settingsHelp.reset}
-              tabIndex={-1}
-              onClick={resetSettings}
-            >
-              Reset Settings
-            </button>
+            <button id="reset_settings" className="corner_body settings_option" type="button" aria-label="Reset Settings" aria-description={settingsHelp.reset} tabIndex={-1} onClick={resetSettings}>Reset Settings</button>
           </SettingTooltipTarget>
         </HudBlockLayout>
-        </> : (
-          <button
-            id="show_ui_toggle"
-            className="corner_body settings_option"
-            type="button"
-            aria-pressed={showHud}
-            aria-description={settingsHelp.showUi}
-            tabIndex={-1}
-            onClick={toggleHud}
-          >
-            <span>Show UI</span>
-            <span id="show_ui_checkbox" aria-hidden="true">
-              {showHud ? "☑" : "☐"}
-            </span>
-          </button>
-        )}
       </CornerLayout>
-      {true ? (
-        <CornerLayout position="bottom-right">
-          <span id="version" className="corner_body">
-            v{versionNumber}
-          </span>
-        </CornerLayout>
-      ) : null}
+      <CornerLayout position="bottom-right">
+        <span id="version" className="corner_body">v{versionNumber}</span>
+      </CornerLayout>
       {true && lightingWindowOpen ? (
         <LightingWindow
           position={lightingWindowPosition}
