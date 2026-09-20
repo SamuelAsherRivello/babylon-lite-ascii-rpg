@@ -219,10 +219,10 @@ function GitHubMark() {
 }
 
 const characterBarRows = [
-  { key: "health", label: "Health", icon: "♥", color: "#ef3340" },
-  { key: "offense", label: "Offense", icon: "⚔", color: "#70e85a" },
-  { key: "defense", label: "Defense", icon: "⛨", color: "#49b7ec" },
-  { key: "experience", label: "Experience", icon: "✦", color: "#5f3df5" },
+  { key: "health", label: "Health", tooltip: "Health: The vitality of your character.", icon: "♥", color: "#ef3340" },
+  { key: "offense", label: "Offense", tooltip: "Offense: The attack power of your character.", icon: "⚔", color: "#70e85a" },
+  { key: "defense", label: "Defense", tooltip: "Defense: The protection of your character.", icon: "⛨", color: "#49b7ec" },
+  { key: "experience", label: "Experience", tooltip: "Experience: The progress of your character.", icon: "✦", color: "#5f3df5" },
 ];
 
 function CharacterBarRow({ row, data, color }) {
@@ -237,6 +237,7 @@ function CharacterBarRow({ row, data, color }) {
         className="character_bar"
         role="progressbar"
         aria-label={row.label}
+        title={row.tooltip}
         aria-valuemin="0"
         aria-valuemax="100"
         aria-valuenow={data.currentPercent}
@@ -265,21 +266,21 @@ function CharacterDetails({ gold = INITIAL_CHARACTER.gold.currentAmount, palette
         {characterBarRows.map((row) => <CharacterBarRow key={row.key} row={row} color={row.color} data={INITIAL_CHARACTER[row.key]} />)}
       </div>
       <div className="character_slots_container">
-        <div className="character_resource" data-resource="gold" aria-label="Gold">
+        <div className="character_resource" data-resource="gold" aria-label="Gold" title="Gold: The currency of your character.">
           <span className="character_resource_icon" aria-hidden="true" style={{ color: goldStyle.color }}>◆</span>
           <span className="character_resource_value">{gold}</span>
         </div>
         {["Slot 01", "Slot 02"].map((slot) => (
-          <div className="character_resource character_slot" key={slot} aria-label={slot}>
+          <div className="character_resource character_slot" key={slot} aria-label={slot} title={slot}>
             <span className="character_slot_text">{slot}</span>
           </div>
         ))}
-        <div className="character_resource" data-resource="carrying" aria-label="Carrying weight">
+        <div className="character_resource" data-resource="carrying" aria-label="Carrying weight" title="Carrying: The load your character is carrying.">
           <span className="character_resource_icon" aria-hidden="true">▣</span>
           <span className="character_resource_value">{INITIAL_CHARACTER.carrying.currentWeight}/{INITIAL_CHARACTER.carrying.capacity}</span>
         </div>
         {["Slot 03", "Slot 04"].map((slot) => (
-          <div className="character_resource character_slot" key={slot} aria-label={slot}>
+          <div className="character_resource character_slot" key={slot} aria-label={slot} title={slot}>
             <span className="character_slot_text">{slot}</span>
           </div>
         ))}
