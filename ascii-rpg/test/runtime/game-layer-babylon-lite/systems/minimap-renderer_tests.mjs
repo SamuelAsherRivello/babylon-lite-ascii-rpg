@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createFogOfWar, discoverCell } from "../../../../src/runtime/game-layer-babylon-lite/systems/fog-of-war-system.js";
-import { getMinimapMarkers, getMinimapWorldPixel, MINIMAP_MARKER_DEPTHS } from "../../../../src/runtime/game-layer-babylon-lite/systems/minimap-renderer.js";
+import { getMinimapMarkers, getMinimapWorldCellGraphic, getMinimapWorldGraphic, getMinimapWorldPixel, MINIMAP_MARKER_DEPTHS } from "../../../../src/runtime/game-layer-babylon-lite/systems/minimap-renderer.js";
 import { canHandleMinimapScale, getMinimapViewport, getNextMinimapScale } from "../../../../src/runtime/game-layer-babylon-lite/systems/minimap-zoom.js";
 
 function createWorld() {
@@ -24,6 +24,23 @@ test("minimap pixels are black and transparent before discovery", () => {
   const world = createWorld();
   const pixel = getMinimapWorldPixel(world, createFogOfWar(world), palette, { x: 0, y: 0 });
   assert.deepEqual(pixel, { color: "#000000", opacity: 0 });
+});
+
+test("minimap world graphics preserve discovered glyphs and palette colors", () => {
+  const world = createWorld();
+  const fog = createFogOfWar(world);
+  world.characters[0][0] = "P";
+  discoverCell(fog, world, { x: 0, y: 0 });
+  assert.deepEqual(getMinimapWorldGraphic(world, fog, palette, { x: 0, y: 0 }), {
+    glyph: "P",
+    color: "#ff0000",
+  });
+  assert.equal(getMinimapWorldGraphic(world, fog, palette, { x: 1, y: 1 }), null);
+  assert.deepEqual(getMinimapWorldCellGraphic(world, fog, palette, { x: 0, y: 0 }), {
+    glyph: "P",
+    color: "#ff0000",
+  });
+  assert.equal(getMinimapWorldCellGraphic(world, fog, palette, { x: 1, y: 1 }), null);
 });
 
 test("minimap uses discovered world content and proportional fog opacity", () => {

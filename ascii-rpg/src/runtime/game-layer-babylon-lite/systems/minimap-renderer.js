@@ -92,3 +92,27 @@ export function getMinimapWorldPixel(world, fog, palette, minimapCell) {
     opacity,
   };
 }
+
+export function getMinimapWorldGraphic(world, fog, palette, minimapCell) {
+  const minimumX = minimapCell.x * MINIMAP_WORLD_SCALE;
+  const minimumY = minimapCell.y * MINIMAP_WORLD_SCALE;
+  const maximumX = Math.min(world.columns, minimumX + MINIMAP_WORLD_SCALE);
+  const maximumY = Math.min(world.rows, minimumY + MINIMAP_WORLD_SCALE);
+
+  for (let y = minimumY; y < maximumY; y += 1) {
+    for (let x = minimumX; x < maximumX; x += 1) {
+      const cell = { x, y };
+      if (!world.terrain[y][x].walkable || !isDiscovered(fog, world, cell)) continue;
+      const glyph = getVisibleGlyph(world, cell);
+      return { glyph, color: getPaletteStyle(palette, glyph).color };
+    }
+  }
+
+  return null;
+}
+
+export function getMinimapWorldCellGraphic(world, fog, palette, cell) {
+  if (!world?.terrain?.[cell.y]?.[cell.x] || !isDiscovered(fog, world, cell)) return null;
+  const glyph = getVisibleGlyph(world, cell);
+  return { glyph, color: getPaletteStyle(palette, glyph).color };
+}

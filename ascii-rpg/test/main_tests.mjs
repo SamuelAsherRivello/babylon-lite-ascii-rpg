@@ -329,9 +329,10 @@ test("documents the plain safe-area template", async () => {
     throw new Error("Settings must provide a persisted Minimap visibility checkbox.");
   }
   if (!gameLayer.includes('id = "minimap_canvas"') || !gameLayer.includes("createFogOfWar")
-    || !gameLayer.includes("discoverFromPlayer") || !gameLayer.includes("getMinimapWorldPixel")
-    || !gameLayer.includes("getMinimapMarkers") || !gameLayer.includes("context.globalAlpha = pixel.opacity")) {
-    throw new Error("The game layer must own fog discovery and fog-masked world-content minimap rendering.");
+    || !gameLayer.includes("discoverFromPlayer") || !gameLayer.includes("getMinimapWorldCellGraphic")
+    || !gameLayer.includes("getMinimapMarkers") || !gameLayer.includes("visual.rasters")
+    || gameLayer.includes("context.fillText")) {
+    throw new Error("The game layer must own fog discovery and actual world-graphic minimap rendering.");
   }
   if (!gameLayer.includes('minimapCanvas.addEventListener("click", handleMinimapClick)')
     || !gameLayer.includes("canHandleMinimapScale(minimapVisible)")
@@ -342,7 +343,10 @@ test("documents the plain safe-area template", async () => {
     || !app.includes("minimapZoomStorageKey")
     || !app.includes("useEffect(() => subscribeToMinimapZoom(setMinimapZoom), [])")
     || !gameLayer.includes("getMinimapViewport")
-    || !gameLayer.includes("fillRect(x * minimapZoom, y * minimapZoom, minimapZoom, minimapZoom)")
+    || !gameLayer.includes("getMinimapWorldCellGraphic")
+    || !gameLayer.includes("// Pass 1: world background.")
+    || !gameLayer.includes("// Pass 2: discovered world glyph rasters from the same cache as the game renderer.")
+    || !gameLayer.includes("// Pass 3: markers, painted after world graphics in back-to-front order.")
     || styles.includes("--minimap-zoom")
     || styles.includes("transform: scale")) {
     throw new Error("Minimap content zoom must stay hidden, persist independently, preserve canvas bounds, and clean up on disposal.");

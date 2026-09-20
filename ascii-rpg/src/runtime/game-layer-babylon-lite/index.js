@@ -63,7 +63,7 @@ import {
   discoverFromPlayer,
   MINIMAP_WORLD_SCALE,
 } from "./systems/fog-of-war-system.js";
-import { getMinimapMarkers, getMinimapWorldPixel } from "./systems/minimap-renderer.js";
+import { getMinimapMarkers, getMinimapWorldCellGraphic } from "./systems/minimap-renderer.js";
 import { canHandleMinimapScale, getMinimapViewport, getNextMinimapScale, MINIMAP_SCALE_LEVELS } from "./systems/minimap-zoom.js";
 
 const GLYPHS = ["W", "M", "•", "P", "T", "S", "~", "≈", "▓"];
@@ -122,6 +122,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   let gpuLightAtlas;
   let gpuLightLayer;
   let gpuLightPassEnabled = true;
+  const minimapGlyphCanvases = new Map();
   let disposed = false;
   let repeatTimer = null;
   let generationController = new AbortController();
@@ -174,42 +175,83 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     if (!minimapVisible) return;
     if (!fogOfWar) return;
     minimapCanvas.hidden = false;
-    if (minimapCanvas.width !== fogOfWar.minimapColumns) minimapCanvas.width = fogOfWar.minimapColumns;
-    if (minimapCanvas.height !== fogOfWar.minimapRows) minimapCanvas.height = fogOfWar.minimapRows;
+    const bounds = minimapCanvas.getBoundingClientRect();
+    const devicePixelRatio = window.devicePixelRatio || 1;
+    const renderWidth = Math.max(1, Math.round(bounds.width * devicePixelRatio));
+    const renderHeight = Math.max(1, Math.round(bounds.height * devicePixelRatio));
+    if (minimapCanvas.width !== renderWidth) minimapCanvas.width = renderWidth;
+    if (minimapCanvas.height !== renderHeight) minimapCanvas.height = renderHeight;
     const context = minimapCanvas.getContext("2d");
-    const viewport = getMinimapViewport(
-      { columns: fogOfWar.minimapColumns, rows: fogOfWar.minimapRows },
-      {
-        x: Math.floor(playerCell.x / MINIMAP_WORLD_SCALE),
-        y: Math.floor(playerCell.y / MINIMAP_WORLD_SCALE),
-      },
+    context.imageSmoothingEnabled = false;
+    // The minimap owns an independent base grid. It must not inherit the
+    // game's viewport or world zoom: changing game zoom changes only the game.
+    const minimapBaseViewport = createViewportForCanvas(minimapCanvas, 1);
+    const minimapRegion = getMinimapViewport(
+      { columns: minimapBaseViewport.columns, rows: minimapBaseViewport.rows },
+      playerCell,
       minimapZoom,
     );
-    // Depth 0: black base.
+    const sourceColumns = minimapRegion.columns;
+    const sourceRows = minimapRegion.rows;
+    const sourceX = minimapRegion.x;
+    const sourceY = minimapRegion.y;
+    const cellWidth = minimapCanvas.width / sourceColumns;
+    const cellHeight = minimapCanvas.height / sourceRows;
+    // Pass 1: world background.
+    context.globalAlpha = 1;
     context.fillStyle = "#000";
     context.fillRect(0, 0, minimapCanvas.width, minimapCanvas.height);
-    // Depth 10: fog-masked world content.
-    for (let y = 0; y < viewport.rows; y += 1) {
-      for (let x = 0; x < viewport.columns; x += 1) {
-        const sourceCell = { x: viewport.x + x, y: viewport.y + y };
-        const pixel = getMinimapWorldPixel(world, fogOfWar, palette, sourceCell);
-        if (pixel.opacity <= 0) continue;
-        context.globalAlpha = pixel.opacity;
-        context.fillStyle = pixel.color;
-        context.fillRect(x * minimapZoom, y * minimapZoom, minimapZoom, minimapZoom);
+    // Pass 2: discovered world glyph rasters from the same cache as the game renderer.
+    const sourceCells = [];
+    const glyphs = new Set();
+    for (let y = 0; y < sourceRows; y += 1) {
+      for (let x = 0; x < sourceColumns; x += 1) {
+        const sourceCell = { x: sourceX + x, y: sourceY + y };
+        const graphic = getMinimapWorldCellGraphic(world, fogOfWar, palette, sourceCell);
+        if (!graphic) continue;
+        sourceCells.push({ x, y, graphic });
+        glyphs.add(graphic.glyph);
       }
     }
-    // Depths 20, 30, and 40: start, discovered torches, then player.
+    const visual = glyphCache.ensure(DEFAULT_ZOOM, minimapBaseViewport.gridWidth, glyphs);
+    for (const { x, y, graphic } of sourceCells) {
+      const raster = visual.rasters.get(graphic.glyph);
+      if (!raster) continue;
+      const cacheKey = `${graphic.glyph}:${graphic.color}:${raster.width}`;
+      let glyphCanvas = minimapGlyphCanvases.get(cacheKey);
+      if (!glyphCanvas) {
+        glyphCanvas = document.createElement("canvas");
+        glyphCanvas.width = raster.width;
+        glyphCanvas.height = raster.height;
+        const glyphContext = glyphCanvas.getContext("2d");
+        const image = glyphContext.createImageData(raster.width, raster.height);
+        const red = Number.parseInt(graphic.color.slice(1, 3), 16);
+        const green = Number.parseInt(graphic.color.slice(3, 5), 16);
+        const blue = Number.parseInt(graphic.color.slice(5, 7), 16);
+        for (let index = 0; index < raster.pixels.length; index += 4) {
+          image.data[index] = red;
+          image.data[index + 1] = green;
+          image.data[index + 2] = blue;
+          image.data[index + 3] = raster.pixels[index + 3];
+        }
+        glyphContext.putImageData(image, 0, 0);
+        minimapGlyphCanvases.set(cacheKey, glyphCanvas);
+      }
+      context.drawImage(glyphCanvas, x * cellWidth, y * cellHeight, cellWidth, cellHeight);
+    }
+    // Pass 3: markers, painted after world graphics in back-to-front order.
     context.globalAlpha = 1;
     for (const marker of getMinimapMarkers(world, fogOfWar, playerCell)) {
-      if (marker.cell.x < viewport.x || marker.cell.x >= viewport.x + viewport.columns ||
-          marker.cell.y < viewport.y || marker.cell.y >= viewport.y + viewport.rows) continue;
+      const markerWorldX = marker.cell.x * MINIMAP_WORLD_SCALE;
+      const markerWorldY = marker.cell.y * MINIMAP_WORLD_SCALE;
+      if (markerWorldX < sourceX || markerWorldX >= sourceX + sourceColumns ||
+          markerWorldY < sourceY || markerWorldY >= sourceY + sourceRows) continue;
       context.fillStyle = marker.color;
       context.fillRect(
-        (marker.cell.x - viewport.x) * minimapZoom,
-        (marker.cell.y - viewport.y) * minimapZoom,
-        minimapZoom,
-        minimapZoom,
+        (markerWorldX - sourceX) * cellWidth,
+        (markerWorldY - sourceY) * cellHeight,
+        cellWidth,
+        cellHeight,
       );
     }
   };
@@ -729,6 +771,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       if (nextFontId === fontId) return;
       if (layer) removeSpriteRendererLayer(renderer, layer);
       glyphCache.dispose();
+      minimapGlyphCanvases.clear();
       fontId = nextFontId;
       glyphCache = createGlyphVisualCache(engine, {
         fontId, fontFamily: getFontOption(fontId).family, glyphLimit: GLYPHS.length,

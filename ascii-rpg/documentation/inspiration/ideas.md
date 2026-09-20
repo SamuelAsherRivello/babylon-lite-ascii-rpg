@@ -26,6 +26,7 @@ Ways to break the illusion (AVOID THESE?)
 - Combat design reference: [watch video](https://www.youtube.com/watch?v=SDAHRMDgqto)
 - Visual style reference: [watch video](https://www.youtube.com/watch?v=pKw3U0gc-kA)
 - OneBit Adventure reference: [view app](https://play.google.com/store/apps/details?id=com.GalacticSlice.OneBitAdventure)
+- ASCII gameplay reference: [watch video](https://www.youtube.com/watch?v=QyBw8k6g6VU)
 
 # Ideas
 
@@ -52,19 +53,19 @@ Ways to break the illusion (AVOID THESE?)
 21. Experience and leveling. ☐
 22. Farming and gardening. ☐
 23. Fishing. ☐
-24. Fog of war. ☐
+24. Fog of war. ☑
 25. Hidden treasure maps. ☐
 26. Items and inventory. ☐
-27. Lighting and darkness mechanics. ☐
+27. Lighting and darkness mechanics. ☑
 28. Magic spells. ☐
 29. Man-made environments such as houses, homes, and buildings that can be entered. ☐
 30. Melee combat. ☐
 31. Minigames. ☐
-32. Minimap. ☐
+32. Minimap. ☑
 33. Multiple endings. ☐
 34. Multiple playable characters. ☐
 35. Overarching story. ☐
-36. Overworld vs. world vs. underground. ☐
+36. Overworld vs. world vs. underground. ☑
 37. Permadeath mode. ☐
 38. Pick axes. ☐
 39. Procedural dungeons. ☐

@@ -63,7 +63,7 @@ export function createGlyphVisualCache(engine, {
     const atlas = atlasApi.create(engine, [], {
       capacityPx: [ATLAS_WIDTH, height], maxWidthPx: ATLAS_WIDTH, sampling: "linear", paddingPx: 1,
     });
-    entry = { atlas, frames: new Map(), size, bytes: ATLAS_WIDTH * height * 4 };
+    entry = { atlas, frames: new Map(), rasters: new Map(), size, bytes: ATLAS_WIDTH * height * 4 };
     zooms.set(zoom, entry);
     // The UI supports ten integer zooms. Diagnostic values use their own bounded
     // temporary entry; the least recently visited atlas is disposed if needed.
@@ -87,14 +87,16 @@ export function createGlyphVisualCache(engine, {
         continue;
       }
       if (entry.frames.size >= glyphLimit) throw new RangeError("The glyph atlas has no reserved space for another glyph.");
-      const [frame] = atlasApi.append(engine, entry.atlas, [rasterize(glyph, fontFamily, entry.size)]);
+      const raster = rasterize(glyph, fontFamily, entry.size);
+      const [frame] = atlasApi.append(engine, entry.atlas, [raster]);
       entry.frames.set(glyph, frame);
+      entry.rasters.set(glyph, raster);
       stats.misses += 1;
     }
     const elapsed = performance.now() - started;
     const warmupMs = stats.misses > missesBefore ? elapsed : 0;
     stats.warmupMs += warmupMs;
-    return { atlas: entry.atlas, frames: entry.frames, warmupMs };
+    return { atlas: entry.atlas, frames: entry.frames, rasters: entry.rasters, warmupMs };
   }
 
   function snapshot() {
