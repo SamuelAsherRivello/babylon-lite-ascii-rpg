@@ -16,26 +16,26 @@
 
 ## 2. Unified fog behavior
 
-- [ ] 2.1 Route game-view world-cell rendering through the authoritative active
+- [x] 2.1 Route game-view world-cell rendering through the authoritative active
   realm fog predicate while preserving the existing discovery-on-gameplay
   path; verify initially undiscovered cells produce no game-view world draw.
-- [ ] 2.2 Route mini-map world-cell rendering through the same shared fog
+- [x] 2.2 Route mini-map world-cell rendering through the same shared fog
   predicate and preserve its independent crop, scale, and marker overlay;
   verify matching discovered/undiscovered cells produce matching visibility in
   both views.
-- [ ] 2.3 Verify rendering either view never mutates discovery and that
+- [x] 2.3 Verify rendering either view never mutates discovery and that
   discovered cells remain visible after movement away and across redraws;
   extend fog and renderer tests for persistent active-realm discovery.
 
 ## 3. Integration and cleanup
 
-- [ ] 3.1 Replace duplicated game/minimap world-composition branches with the
+- [x] 3.1 Replace duplicated game/minimap world-composition branches with the
   shared renderer while preserving camera, zoom, lighting, canvas bounds, and
   minimap marker behavior; verify focused game-layer and minimap tests pass.
-- [ ] 3.2 Update structural/runtime tests for the shared world-view boundary,
+- [x] 3.2 Update structural/runtime tests for the shared world-view boundary,
   explicit independent source rectangles, common fog behavior, pass ordering,
   and target-specific capabilities; verify the mirrored test layout remains
   intact.
-- [ ] 3.3 Run the full Node test suite, production build, and strict OpenSpec
+- [x] 3.3 Run the full Node test suite, production build, and strict OpenSpec
   validation; manually inspect landscape and portrait views with discovered
   and undiscovered regions and confirm both views respect fog.

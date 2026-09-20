@@ -1171,15 +1171,13 @@ function AppContent() {
         <a className="project_link" href={repositoryUrl} target="_blank" rel="noopener noreferrer" aria-label="View the repository on GitHub" tabIndex={-1}>
           <GitHubMark />
         </a>
-        <HudBlockLayout className="hud_section" id="windows" aria-labelledby="windows_title" titleId="windows_title" title="Windows - 1">
+        <HudBlockLayout className="hud_section" id="windows" aria-labelledby="windows_title" titleId="windows_title" title="Windows">
           <button id="ascii_palette_toggle" className="corner_body settings_option" type="button" tabIndex={-1} onClick={() => setAsciiPaletteOpen(true)}>
             Ascii Settings
           </button>
           <button id="arguments_toggle" className="corner_body settings_option" type="button" tabIndex={-1} onClick={() => setArgumentsOpen(true)}>
             Arguments
           </button>
-        </HudBlockLayout>
-        <HudBlockLayout className="hud_section" id="windows_2" aria-labelledby="windows_2_title" titleId="windows_2_title" title="Windows - 2">
           <SettingTooltipTarget description={settingsHelp.lighting} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
             <button id="lighting_window_toggle" className="corner_body settings_option" type="button" aria-expanded={lightingWindowOpen} aria-controls="lighting_window" aria-description={settingsHelp.lighting} tabIndex={-1} onClick={() => setLightingWindowOpen((isOpen) => !isOpen)}>
               Lighting

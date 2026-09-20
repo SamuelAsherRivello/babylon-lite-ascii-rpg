@@ -147,10 +147,15 @@ test("documents the plain safe-area template", async () => {
   if (!app.includes('id="fps"') || !app.includes("FPS: {fps}") || !app.includes("requestAnimationFrame(updateFps)")) {
     throw new Error("The HUD must display a once-per-second browser FPS counter.");
   }
-  if (!app.includes('id="windows"') || !app.includes('titleId="windows_title"') || !app.includes('title="Windows - 1"')
-    || !app.includes('id="windows_2"') || !app.includes('titleId="windows_2_title"') || !app.includes('title="Windows - 2"')
+  if (!app.includes('id="windows"') || !app.includes('titleId="windows_title"') || !app.includes('title="Windows"')
+    || app.includes('id="windows_2"') || app.includes('titleId="windows_2_title"') || app.includes('title="Windows - 2"')
     || !app.includes('id="settings"') || !app.includes('titleId="settings_title"') || !app.includes('title="Settings"')) {
     throw new Error("The lower-left HUD must include Windows and Settings sections.");
+  }
+  const windowsMarkup = app.slice(app.indexOf('id="windows"'), app.indexOf('id="stats"'));
+  if (windowsMarkup.indexOf('id="ascii_palette_toggle"') > windowsMarkup.indexOf('id="arguments_toggle"')
+    || windowsMarkup.indexOf('id="arguments_toggle"') > windowsMarkup.indexOf('id="lighting_window_toggle"')) {
+    throw new Error("The Windows controls must be ordered Ascii, Arguments, then Lighting.");
   }
   if (!styles.includes(".corner_body") || !styles.includes(".corner_title")
     || !styles.includes(".hud_block_title") || !styles.includes(".hud_block_body")) {

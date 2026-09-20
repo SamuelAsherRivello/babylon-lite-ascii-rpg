@@ -67,10 +67,8 @@ import {
 import { buildGpuLightPassSamples, createGpuLightPassFrame, GPU_LIGHT_PASS_COLOR } from "./gpu-light-pass.js";
 import {
   createFogOfWar,
-  discoverCell,
   discoverFromPlayer,
   isDiscovered,
-  MINIMAP_WORLD_SCALE,
 } from "./systems/fog-of-war-system.js";
 import { getMinimapEdgeIndicators, getMinimapMarkers } from "./systems/minimap-renderer.js";
 import { canHandleMinimapScale, getMinimapCellLayout, getNextMinimapScale, MINIMAP_SCALE_LEVELS } from "./systems/minimap-zoom.js";
