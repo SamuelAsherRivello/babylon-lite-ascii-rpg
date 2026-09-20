@@ -146,7 +146,7 @@ function getStoredZoom() {
 
 function getStoredMinimapZoom() {
   const storedZoom = Number.parseInt(localStorage.getItem(minimapZoomStorageKey), 10);
-  return [1, 5, 10].includes(storedZoom) ? storedZoom : 5;
+  return [2, 4, 1].includes(storedZoom) ? storedZoom : 2;
 }
 
 function getStoredBoolean(storageKey, defaultValue) {
@@ -906,6 +906,8 @@ function AppContent() {
 
   useEffect(() => {
     localStorage.setItem(showUiStorageKey, showHud ? "true" : "false");
+    document.documentElement.dataset.hudHidden = String(!showHud);
+    return () => delete document.documentElement.dataset.hudHidden;
   }, [showHud]);
 
   useEffect(() => {
@@ -1100,7 +1102,7 @@ function AppContent() {
         <CharacterDetails />
         <div className="top_panel_action">Character</div>
       </div>
-      {showHud ? (
+      {true ? (
         <>
           <div
             className="corner corner_top_right"
@@ -1119,7 +1121,7 @@ function AppContent() {
         </>
       ) : null}
       <div className="corner corner_bottom_left">
-        {showHud ? <>
+        {true ? <>
           <a className="project_link" href={repositoryUrl} target="_blank" rel="noopener noreferrer" aria-label="View the repository on GitHub" tabIndex={-1}>
             <GitHubMark />
           </a>
@@ -1312,14 +1314,14 @@ function AppContent() {
           </button>
         )}
       </div>
-      {showHud ? (
+      {true ? (
         <div className="corner corner_bottom_right">
           <span id="version" className="corner_body">
             v{versionNumber}
           </span>
         </div>
       ) : null}
-      {showHud && lightingWindowOpen ? (
+      {true && lightingWindowOpen ? (
         <LightingWindow
           position={lightingWindowPosition}
           onPositionChange={setLightingWindowPosition}

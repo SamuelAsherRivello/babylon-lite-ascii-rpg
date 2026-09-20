@@ -17,4 +17,5 @@
 
 - [x] 3.1 Run the repository Node test suite with `npm.cmd test` and resolve any focused transition, world-realm, bridge, or architecture regressions.
 - [x] 3.2 Run `npm.cmd run build` and verify the production bundle includes the transition integration without a new runtime dependency.
-- [ ] 3.3 Perform manual browser verification on the actual playable project-root URL: enter `S` in both realm directions, observe the feathered 2-second-in/2-second-out red iris, confirm the realm graphics swap at full red coverage, confirm UI remains visible, and confirm input is paused during the animation.
+- [ ] 3.3 Perform manual browser verification on the actual playable project-root URL: enter `S` in both realm directions, observe the feathered 2-second-in/2-second-out red iris centered on the player, confirm the realm graphics swap at full red coverage, confirm UI remains visible, and confirm input is paused during the animation.
+- [x] 3.4 Verify player-centered iris positioning across all 3 camera modes and all 10 zoom levels, including a camera mode where the player is not at the viewport center.

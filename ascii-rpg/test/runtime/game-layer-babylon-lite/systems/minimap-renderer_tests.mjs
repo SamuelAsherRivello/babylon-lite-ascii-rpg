@@ -93,10 +93,10 @@ test("minimap markers use the approved depth order and exact torch discovery", (
 });
 
 test("minimap scale cycles through the designated levels and wraps", () => {
-  assert.equal(getNextMinimapScale(1), 5);
-  assert.equal(getNextMinimapScale(5), 10);
-  assert.equal(getNextMinimapScale(10), 1);
-  assert.equal(getNextMinimapScale(7), 10);
+  assert.equal(getNextMinimapScale(2), 4);
+  assert.equal(getNextMinimapScale(4), 1);
+  assert.equal(getNextMinimapScale(1), 2);
+  assert.equal(getNextMinimapScale(7), 2);
 });
 
 test("minimap zoom changes the rendered viewport without changing canvas bounds", () => {

@@ -16,6 +16,8 @@ UI remains visible above it.
   lifecycle events around the transition.
 - Add a soft-edged red iris mask over the entire game layer, with a 2-second
   closing phase and a 2-second opening phase.
+- Center the iris on the player's rendered screen-space cell center, rather
+  than assuming the viewport or screen center.
 - Use the iris transition for both directions of `S`-cell realm transfer:
   close from a fully visible game view to a character-sized opening, swap the
   active realm while the game view is fully covered, then open from the center
@@ -26,6 +28,8 @@ UI remains visible above it.
   player or retrigger a realm transfer while the transition is running.
 - Preserve the existing paired-stair arrival coordinate, realm persistence,
   fog-of-war isolation, and bridge realm-status update semantics.
+- Preserve the player's screen-space position across the realm swap, including
+  off-center positions within the current camera view.
 
 ## Capabilities
 

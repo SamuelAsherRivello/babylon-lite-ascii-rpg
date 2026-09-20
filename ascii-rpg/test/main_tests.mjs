@@ -328,10 +328,10 @@ test("documents the plain safe-area template", async () => {
     || !platformSettings.includes("showHud: false")) {
     throw new Error("The Settings section must use persisted platform-specific Show UI defaults.");
   }
-  if (!app.includes('{showHud ? (\n        <>\n          <div\n            className="corner corner_top_right"')
-    || !app.includes('{showHud ? (\n        <div className="corner corner_bottom_right"')
-    || !app.includes("{showHud ? <>\n          <a className=\"project_link\"")) {
-    throw new Error("Hiding the UI must remove the upper-right and lower-corner HUD while retaining the lower-left Show UI control.");
+  if (!app.includes('document.documentElement.dataset.hudHidden = String(!showHud)')
+    || !styles.includes('html[data-hud-hidden="true"] .corner_bottom_right')
+    || !styles.includes('#settings > :not(#show_ui_toggle)')) {
+    throw new Error("Hiding the UI must preserve the mounted control tree while leaving only Show UI operable.");
   }
   if (!app.includes('id="camera_mode_toggle"')
     || !camera.includes("CameraMode (Center)")

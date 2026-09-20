@@ -77,4 +77,25 @@ test("requires finite values and positive phase durations", () => {
   const transition = createTransitionSystem();
   assert.throws(() => transition.start({ from: NaN, to: 0 }), TypeError);
   assert.throws(() => transition.start({ from: 1, to: 0, durationOut: 0 }), RangeError);
+  assert.throws(() => transition.start({ from: 1, to: 0, durationCovered: -1 }), RangeError);
+});
+
+test("holds full coverage before opening when a covered duration is requested", () => {
+  const frames = createFakeFrames();
+  const phases = [];
+  const transition = createTransitionSystem({
+    requestFrame: frames.requestFrame,
+    cancelFrame: frames.cancelFrame,
+    onUpdate: ({ phase, progress }) => phases.push({ phase, progress }),
+  });
+
+  transition.start({ from: 100, to: 10, durationCovered: 100 });
+  transition.begin(0);
+  frames.flush(2000);
+  assert.equal(transition.getPhase(), TRANSITION_PHASES.COVERED);
+  frames.flush(2050);
+  assert.equal(transition.getPhase(), TRANSITION_PHASES.COVERED);
+  frames.flush(2100);
+  assert.equal(transition.getPhase(), TRANSITION_PHASES.OPENING);
+  assert.deepEqual(phases.slice(-2).map(({ phase }) => phase), [TRANSITION_PHASES.COVERED, TRANSITION_PHASES.OPENING]);
 });

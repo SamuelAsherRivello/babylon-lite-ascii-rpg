@@ -1,8 +1,9 @@
-export const MINIMAP_SCALE_LEVELS = [1, 5, 10];
+export const MINIMAP_SCALE_LEVELS = [2, 4, 1];
 
 export function getNextMinimapScale(currentScale) {
-  const selected = Number.isFinite(currentScale) ? currentScale : 5;
-  return MINIMAP_SCALE_LEVELS.find((scale) => scale > selected) ?? MINIMAP_SCALE_LEVELS[0];
+  const selected = Number.isFinite(currentScale) ? currentScale : 2;
+  const currentIndex = MINIMAP_SCALE_LEVELS.indexOf(selected);
+  return MINIMAP_SCALE_LEVELS[(currentIndex + 1) % MINIMAP_SCALE_LEVELS.length];
 }
 
 export function canHandleMinimapScale(minimapVisible) {

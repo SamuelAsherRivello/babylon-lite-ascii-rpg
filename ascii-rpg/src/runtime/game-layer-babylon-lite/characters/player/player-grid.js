@@ -214,3 +214,17 @@ export function getCellCenter(cell, viewport) {
     y: cell.y * viewport.gridHeight + viewport.gridHeight / 2,
   };
 }
+
+export function getPlayerScreenCenter(playerCell, viewOrigin, viewport) {
+  return getCellCenter({
+    x: playerCell.x - viewOrigin.x,
+    y: playerCell.y - viewOrigin.y,
+  }, viewport);
+}
+
+export function getViewOriginForPreservedPlayerPosition(playerCell, screenCell, viewport, world) {
+  return clampViewOrigin({
+    x: playerCell.x - screenCell.x,
+    y: playerCell.y - screenCell.y,
+  }, viewport, world);
+}

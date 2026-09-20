@@ -30,13 +30,21 @@ test("fog starts fully undiscovered and records the player's current cell", () =
   assert.equal(isDiscovered(fog, world, { x: 3, y: 2 }), true);
 });
 
-test("fog discovers clear walkable cells within the fixed unclear radius", () => {
+test("fog discovers clear walkable cells within the fixed ten-grid radius", () => {
   const world = createWorld(50, 50);
   const fog = createFogOfWar(world);
   discoverFromPlayer(fog, world, { x: 25, y: 25 });
-  assert.equal(fogUnclearRadius, 20);
-  assert.equal(isDiscovered(fog, world, { x: 44, y: 25 }), true);
-  assert.equal(isDiscovered(fog, world, { x: 45, y: 25 }), false);
+  assert.equal(fogUnclearRadius, 10);
+  assert.equal(isDiscovered(fog, world, { x: 35, y: 25 }), true);
+  assert.equal(isDiscovered(fog, world, { x: 36, y: 25 }), false);
+});
+
+test("discovered cells remain permanently unfogged after the player moves away", () => {
+  const world = createWorld(50, 50);
+  const fog = createFogOfWar(world);
+  discoverFromPlayer(fog, world, { x: 25, y: 25 });
+  discoverFromPlayer(fog, world, { x: 35, y: 25 });
+  assert.equal(isDiscovered(fog, world, { x: 25, y: 25 }), true);
 });
 
 test("walls and unwalkable targets remain fogged regardless of shadow bleed", () => {

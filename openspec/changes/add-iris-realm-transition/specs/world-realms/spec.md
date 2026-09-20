@@ -22,8 +22,9 @@ generation parameters.
 - **WHEN** the player successfully enters an `S` cell and no transition is
   active
 - **THEN** the game starts the realm iris, pauses input, changes to the paired
-  realm only at full iris coverage, arrives on the paired `S` coordinate, and
-  cannot immediately transfer back during that transition
+  realm only at full iris coverage, arrives on the paired `S` coordinate,
+  preserves the player's pre-transfer screen-space position, and cannot
+  immediately transfer back during that transition
 
 #### Scenario: Entering Underground persists active realm
 
@@ -38,4 +39,3 @@ generation parameters.
 - **THEN** the paired-realm transfer uses the same blocking iris sequence,
   preserves discovery of every source-route cell, and arrives at the paired
   coordinate before the opening phase reveals the destination
-

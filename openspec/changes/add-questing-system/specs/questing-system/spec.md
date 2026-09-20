@@ -24,6 +24,24 @@ initial game instance starts.
 - **WHEN** the current quest reaches its target
 - **THEN** the quest SHALL become complete and remain in the active-quest list
 
+### Requirement: Static quest definitions and live state
+
+The system SHALL load static quest definitions from `quest_data.json` and SHALL
+keep mutable active-quest state in memory. A quest definition SHALL be able to
+declare relative or absolute criteria.
+
+#### Scenario: Relative criterion captures a baseline
+
+- **WHEN** a relative gold criterion starts
+- **THEN** the live quest state SHALL capture the character's current gold as
+  its baseline and evaluate completion against baseline plus the target amount
+
+#### Scenario: Absolute criterion evaluates current state
+
+- **WHEN** an absolute criterion requires at least 100 gold
+- **THEN** the quest SHALL complete immediately if the character already has 100
+  or more gold
+
 ### Requirement: Generic collectible pickups
 
 The system SHALL represent a pickup as a world object with an identity, a
@@ -52,7 +70,8 @@ world and SHALL credit the character with exactly one gold when collected.
 
 - **WHEN** the Collect Gold quest starts
 - **THEN** exactly three collectible gold objects SHALL be placed on valid
-  walkable world cells near the configured long-distance placement target
+  walkable cells in the initial active realm at random target distances of
+  approximately 10, 30, and 100 grid cells from the player start
 
 #### Scenario: Gold advances quest progress
 
@@ -78,6 +97,28 @@ state.
 - **WHEN** a pickup updates quest progress
 - **THEN** the bridge SHALL publish the updated quest snapshot for React HUD
   rendering
+
+### Requirement: Quest lifecycle toasts
+
+The system SHALL show a toast when the current quest starts, advances through
+progress, or completes. The initial Collect Gold quest SHALL use the messages
+`Quest Started: Collect Gold.`, `Quest Progress: Collect Gold 1 of 3.`, and
+`Quest Completed: Collect Gold.` for the corresponding transitions.
+
+#### Scenario: Quest starts
+
+- **WHEN** the initial quest transitions from unstarted to pending
+- **THEN** the toast system SHALL show `Quest Started: Collect Gold.`
+
+#### Scenario: Quest advances
+
+- **WHEN** a gold pickup increases progress from zero to one
+- **THEN** the toast system SHALL show `Quest Progress: Collect Gold 1 of 3.`
+
+#### Scenario: Quest completes
+
+- **WHEN** the third gold pickup completes the quest
+- **THEN** the toast system SHALL show `Quest Completed: Collect Gold.`
 
 ### Requirement: Quest HUD tracker
 

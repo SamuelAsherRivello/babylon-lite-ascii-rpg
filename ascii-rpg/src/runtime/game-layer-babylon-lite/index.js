@@ -32,7 +32,9 @@ import {
   getCombinedDirection,
   getDirectionForKey,
   getDirectionForSwipe,
+  getPlayerScreenCenter,
   getRepeatInterval,
+  getViewOriginForPreservedPlayerPosition,
   getViewOriginForCamera,
   moveWorldCell,
 } from "./characters/player/player-grid.js";
@@ -74,6 +76,7 @@ const GLYPHS = ["W", "M", "•", "P", "T", "S", "~", "≈", "▓"];
 const WORLD_ROWS = 512;
 const WORLD_COLUMNS = 512;
 const TORCHES_PER_SCREEN = 3;
+const REALM_TRANSITION_COVER_HOLD_MS = 100;
 
 function createViewportForCanvas(canvas, zoom = DEFAULT_ZOOM) {
   const screenWidth = canvas.clientWidth || window.innerWidth;
@@ -161,7 +164,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   let playerCell = null;
   let fogOfWar = null;
   let minimapVisible = true;
-  let minimapZoom = 5;
+  let minimapZoom = 2;
   let viewOrigin = { x: 0, y: 0 };
   let cameraMode = "center";
   const timeSystem = createTimeSystem();
@@ -345,6 +348,9 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
 
   const activateRealm = (name, arrival = null) => {
     if (!worldRealms?.realms?.[name]) return;
+    const sourceScreenCell = playerCell
+      ? { x: playerCell.x - viewOrigin.x, y: playerCell.y - viewOrigin.y }
+      : null;
     if (world && playerCell) clearCharacter(world, playerCell);
     activeRealm = name;
     world = worldRealms.realms[name];
@@ -353,11 +359,12 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     world.playerCell = playerCell;
     setCharacter(world, playerCell);
     lighting = { ...lighting, ambient: realmAmbient[activeRealm] };
-    viewOrigin = { x: 0, y: 0 };
-    // The transition keeps input/camera updates locked, so the normal helper
-    // intentionally returns early here. Resolve the destination view directly
-    // so the new realm is centered before the opening phase reveals it.
-    viewOrigin = getViewOriginForCamera(cameraMode, playerCell, viewport, world, viewOrigin);
+    // Preserve the player's current screen-cell offset across the realm swap.
+    // This keeps center, deadzone, and locked-camera positions visually stable
+    // instead of recentering the destination realm at its origin.
+    viewOrigin = sourceScreenCell
+      ? getViewOriginForPreservedPlayerPosition(playerCell, sourceScreenCell, viewport, world)
+      : getViewOriginForCamera(cameraMode, playerCell, viewport, world, viewOrigin);
     refreshDiscovery();
     for (const listener of realmListeners) listener(activeRealm);
     // A realm swap changes every visible cell. Reset the submitted sprite
@@ -372,6 +379,11 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       transitionMask.hidden = true;
       return;
     }
+    const playerCenter = playerCell
+      ? getPlayerScreenCenter(playerCell, viewOrigin, viewport)
+      : { x: (canvas.clientWidth || window.innerWidth) / 2, y: (canvas.clientHeight || window.innerHeight) / 2 };
+    transitionMask.style.setProperty("--transition-center-x", `${playerCenter.x}px`);
+    transitionMask.style.setProperty("--transition-center-y", `${playerCenter.y}px`);
     transitionMask.hidden = false;
     transitionMask.style.setProperty("--transition-radius", `${Math.max(0, value)}px`);
   };
@@ -397,6 +409,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       target: "game_layer",
       from: cover,
       to: character,
+      durationCovered: REALM_TRANSITION_COVER_HOLD_MS,
       onStart: () => {
         transitionMask.style.setProperty("--transition-radius", `${cover}px`);
         transitionMask.hidden = false;
@@ -446,7 +459,6 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   const travelToNearestStairs = () => {
     const path = findNearestStairPath();
     if (!path?.length) return;
-    for (const cell of path) discoverCell(fogOfWar, world, cell);
     const stair = path.at(-1);
     clearCharacter(world, playerCell);
     playerCell = stair;

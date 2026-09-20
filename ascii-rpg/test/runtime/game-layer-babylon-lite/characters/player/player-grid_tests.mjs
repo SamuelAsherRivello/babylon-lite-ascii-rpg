@@ -16,7 +16,9 @@ import {
   getCombinedDirection,
   getDirectionForKey,
   getDirectionForSwipe,
+  getPlayerScreenCenter,
   getRepeatInterval,
+  getViewOriginForPreservedPlayerPosition,
   getViewOriginForPlayer,
   getViewOriginForCamera,
   moveCell,
@@ -106,6 +108,55 @@ test("camera lock shifts the viewport to show a player entering from the opposit
     getViewOriginForCamera("lock", { x: -1, y: 20 }, viewport, world, { x: 0, y: 20 }, { x: -1, y: 0 }),
     null,
   );
+});
+
+test("keeps the iris center on the player across every camera mode and zoom", () => {
+  const world = { columns: 256, rows: 256 };
+  const playerCell = { x: 90, y: 70 };
+  const modes = ["center", "deadzone", "lock"];
+  const viewportCenter = { x: 1280 / 2, y: 720 / 2 };
+  let verified = 0;
+
+  for (const mode of modes) {
+    for (let zoom = MIN_ZOOM; zoom <= MAX_ZOOM; zoom += 1) {
+      const viewport = createViewport({ screenWidth: 1280, screenHeight: 720, zoom });
+      const viewOrigin = getViewOriginForCamera(mode, playerCell, viewport, world, { x: 40, y: 30 });
+      const center = getPlayerScreenCenter(playerCell, viewOrigin, viewport);
+
+      assert.ok(Number.isFinite(center.x));
+      assert.ok(Number.isFinite(center.y));
+      assert.deepEqual(center, getCellCenter({
+        x: playerCell.x - viewOrigin.x,
+        y: playerCell.y - viewOrigin.y,
+      }, viewport));
+      verified += 1;
+    }
+  }
+
+  assert.equal(verified, 30);
+  assert.notDeepEqual(
+    getPlayerScreenCenter(playerCell, getViewOriginForCamera("deadzone", playerCell,
+      createViewport({ screenWidth: 1280, screenHeight: 720, zoom: 10 }), world, { x: 40, y: 30 }),
+      createViewport({ screenWidth: 1280, screenHeight: 720, zoom: 10 })),
+    viewportCenter,
+  );
+});
+
+test("preserves the player's screen position when changing realms", () => {
+  const world = { columns: 256, rows: 256 };
+  const viewport = createViewport({ screenWidth: 1280, screenHeight: 720, zoom: 5 });
+  const sourcePlayer = { x: 90, y: 70 };
+  const sourceOrigin = { x: 70, y: 55 };
+  const destinationPlayer = { x: 90, y: 70 };
+  const sourceCenter = getPlayerScreenCenter(sourcePlayer, sourceOrigin, viewport);
+  const destinationOrigin = getViewOriginForPreservedPlayerPosition(
+    destinationPlayer,
+    { x: sourcePlayer.x - sourceOrigin.x, y: sourcePlayer.y - sourceOrigin.y },
+    viewport,
+    world,
+  );
+
+  assert.deepEqual(getPlayerScreenCenter(destinationPlayer, destinationOrigin, viewport), sourceCenter);
 });
 
 test("maps WASD and arrow keys to the same directions", () => {

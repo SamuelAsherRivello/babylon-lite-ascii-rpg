@@ -2,7 +2,7 @@ import { hasClearLightPath } from "../lighting.js";
 
 export const MINIMAP_WORLD_SCALE = 10;
 export const DISCOVERY_LIGHT_CUTOFF = 0.1;
-export const fogUnclearRadius = 20;
+export const fogUnclearRadius = 10;
 
 function getCellIndex(cell, columns) {
   return cell.y * columns + cell.x;
@@ -70,7 +70,7 @@ export function discoverFromPlayer(fog, world, playerCell) {
   for (let y = Math.max(0, playerCell.y - radius); y <= Math.min(world.rows - 1, playerCell.y + radius); y += 1) {
     for (let x = Math.max(0, playerCell.x - radius); x <= Math.min(world.columns - 1, playerCell.x + radius); x += 1) {
       const target = { x, y };
-      if (!isWalkable(world, target) || Math.hypot(target.x - playerCell.x, target.y - playerCell.y) >= fogUnclearRadius) continue;
+      if (!isWalkable(world, target) || Math.hypot(target.x - playerCell.x, target.y - playerCell.y) > fogUnclearRadius) continue;
       if (!hasClearLightPath(playerCell, target, world.terrain)) continue;
       if (discoverCell(fog, world, target)) discovered.push(target);
     }

@@ -33,24 +33,37 @@ is already active.
 ### Requirement: Soft-edged iris presentation
 
 The game-layer iris animation SHALL render red outside a circular reveal
-centered on the game viewport, with a visibly feathered edge rather than a
-hard binary boundary. The closing phase SHALL reduce the reveal to the
+centered on the player's rendered screen-space cell center, with a visibly
+feathered edge rather than a hard binary boundary. The closing phase SHALL reduce the reveal to the
 player-character-sized opening over 2 seconds, and the opening phase SHALL
 expand from that opening to fully reveal the destination game view over 2
 seconds.
 
+#### Scenario: Iris follows the player in every camera mode and zoom
+
+- **WHEN** a realm transition runs with any supported camera mode or zoom
+  level
+- **THEN** the iris center remains at the player's rendered screen-space cell
+  center rather than defaulting to the viewport center
+
 #### Scenario: Iris closes over the source realm
 
 - **WHEN** a realm transition begins from a fully visible game view
-- **THEN** a soft-edged circular reveal centered on the player/camera closes
-  over 2 seconds until the source game view outside the character-sized
-  opening is red
+- **THEN** a soft-edged circular reveal centered on the player's rendered
+  screen-space cell closes over 2 seconds until the source game view outside
+  the character-sized opening is red
 
 #### Scenario: Iris opens over the destination realm
 
 - **WHEN** the destination realm has been selected at full coverage
 - **THEN** the soft-edged circular reveal expands over 2 seconds until
   the destination game view is fully visible and the mask is removed
+
+#### Scenario: Realm remains hidden after loading
+
+- **WHEN** the covered midpoint swaps and renders the destination realm
+- **THEN** the game layer remains fully covered for 100 milliseconds before
+  the opening phase begins
 
 ### Requirement: Transition midpoint hides game-state replacement
 

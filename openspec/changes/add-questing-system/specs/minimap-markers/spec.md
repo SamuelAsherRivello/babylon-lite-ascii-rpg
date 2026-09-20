@@ -32,7 +32,7 @@ The minimap SHALL render a white dot for each generated torch only when that tor
 
 ### Requirement: Marker composition preserves minimap fog behavior
 
-The minimap SHALL compose its layers in the following back-to-front depths: black base at 0, fog-masked world content at 10, green start marker at 20, active quest pickup markers at 30, discovered white torch markers at 35, and yellow player marker at 40. Quest pickup markers SHALL be solid yellow squares or equivalent solid yellow marker pixels. Quest markers SHALL not reveal terrain, modify discovery, change generated world data, or alter minimap visibility behavior. A quest pickup outside the minimap viewport SHALL render a clear yellow edge indicator pointing toward its world position. A yellow player marker SHALL be visible over other markers when the player occupies the same cell.
+The minimap SHALL compose its layers in the following back-to-front depths: black base at 0, fog-masked world content at 10, green start marker at 20, active quest pickup markers at 30, discovered white torch markers at 35, and yellow player marker at 40. Quest pickup markers SHALL be solid yellow squares or equivalent solid yellow marker pixels. Quest markers SHALL not reveal terrain, modify discovery, change generated world data, or alter minimap visibility behavior. A quest pickup outside the minimap viewport SHALL render a clear yellow directional chevron on the minimap edge pointing toward its world position. A yellow player marker SHALL be visible over other markers when the player occupies the same cell.
 
 #### Scenario: Render fogged terrain with markers
 - **WHEN** a minimap render includes fully fogged terrain and fog-independent markers
@@ -46,6 +46,14 @@ The minimap SHALL compose its layers in the following back-to-front depths: blac
 - **WHEN** an active quest pickup lies outside the minimap viewport
 - **THEN** the minimap SHALL render a yellow edge indicator on the minimap boundary in the pickup's direction
 
+#### Scenario: Multiple quest pickups are off-screen
+- **WHEN** multiple active quest pickups project to the same minimap edge region
+- **THEN** the minimap SHALL keep each yellow directional chevron distinguishable
+
 #### Scenario: Player occupies a marked cell
 - **WHEN** the player occupies a quest pickup or discovered torch cell
 - **THEN** the yellow player dot SHALL be visible above the other marker
+
+#### Scenario: Player occupies a discovered torch cell
+- **WHEN** the player occupies a torch cell whose marker is eligible to render
+- **THEN** the yellow player dot is visible at depth 40 above the white torch dot

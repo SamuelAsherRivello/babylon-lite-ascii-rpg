@@ -69,6 +69,26 @@ export function createTransitionSystem({
         phase: TRANSITION_PHASES.COVERED,
         timestamp,
       });
+      if (current.durationCovered > 0) {
+        current.phaseStartedAt = timestamp;
+        current.phaseDuration = current.durationCovered;
+        schedule();
+        return;
+      }
+      current.phase = TRANSITION_PHASES.OPENING;
+      current.phaseStartedAt = timestamp;
+      current.phaseDuration = current.durationIn;
+      update(TRANSITION_PHASES.OPENING, 0, timestamp);
+      schedule();
+      return;
+    }
+
+    if (current.phase === TRANSITION_PHASES.COVERED) {
+      update(TRANSITION_PHASES.COVERED, progress, timestamp);
+      if (progress < 1) {
+        schedule();
+        return;
+      }
       current.phase = TRANSITION_PHASES.OPENING;
       current.phaseStartedAt = timestamp;
       current.phaseDuration = current.durationIn;
@@ -99,6 +119,7 @@ export function createTransitionSystem({
     from,
     to,
     durationOut = DEFAULT_TRANSITION_DURATION_MS,
+    durationCovered = 0,
     durationIn = DEFAULT_TRANSITION_DURATION_MS,
     interpolate = defaultInterpolate,
     onStart,
@@ -109,8 +130,8 @@ export function createTransitionSystem({
     if (!Number.isFinite(from) || !Number.isFinite(to)) {
       throw new TypeError("A transition requires finite from and to values.");
     }
-    if (!(durationOut > 0) || !(durationIn > 0)) {
-      throw new RangeError("Transition durations must be greater than zero.");
+    if (!Number.isFinite(durationCovered) || durationCovered < 0 || !(durationOut > 0) || !(durationIn > 0)) {
+      throw new RangeError("Transition durations must be valid and greater than zero for closing/opening.");
     }
 
     const id = ++nextId;
@@ -120,6 +141,7 @@ export function createTransitionSystem({
       from,
       to,
       interpolate,
+      durationCovered,
       durationIn,
       phase: TRANSITION_PHASES.CLOSING,
       phaseDuration: durationOut,

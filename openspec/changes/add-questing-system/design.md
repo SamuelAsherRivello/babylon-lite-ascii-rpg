@@ -46,16 +46,20 @@ Keeping this state in the game layer follows the existing architecture. A
 React-owned quest model was rejected because it would duplicate the authoritative
 player/world state and make collision-driven updates race the game loop.
 
-### Generic quest conditions with a narrow first objective
+### JSON definitions with in-memory state
 
-Represent the initial quest through generic identity, title, objective,
-current progress, target, state, and update/completion behavior. The first
-condition is “collect pickups of type gold.” The manager should expose a small
-update path that future quest definitions can reuse, but it should not add
-multi-objective sequencing, failure, or forfeiting behavior in this change.
+Store static quest identity, display text, criterion mode, target value, and
+matching event type in `quest_data.json`. At runtime, construct an in-memory
+active quest from that definition and add mutable state such as lifecycle,
+baseline value, current progress, and completion. The first condition is
+“collect pickups of type gold.”
 
-This preserves the user’s future extensibility goal without making the first
-quest depend on a speculative quest scripting or JSON authoring format.
+Relative criteria capture the relevant character value when the quest becomes
+pending and compare against baseline plus target. Absolute criteria compare the
+current value directly and can complete immediately when started. The manager
+should expose a small update path future definitions can reuse, but it should
+not add multi-objective sequencing, failure, or forfeiting behavior in this
+change.
 
 ### Generic pickup records and one-shot effects
 
@@ -73,12 +77,11 @@ an immediate character-gold effect, not item storage.
 ### Generate gold from valid world candidates
 
 After the initial world is available, select three distinct walkable cells in
-the active starting world using the existing seeded random source and candidate
-selection conventions. The candidates are filtered to avoid the player start,
-blocked cells, and other reserved world objects. The exact interpretation of
-“100 units” remains an explicitly tracked design detail; implementation must
-resolve it before coding the placement acceptance test and keep the result
-deterministic for a given world seed.
+the initial active realm using the existing seeded random source and candidate
+selection conventions. Target approximately 10, 30, and 100 grid cells from
+the player start, using a bounded distance tolerance and valid-cell fallback so
+obstacles do not prevent generation. The candidates are filtered to avoid the
+player start, blocked cells, and other reserved world objects.
 
 Gold uses the existing character HUD glyph `◆` and a gold/yellow palette style
 for in-world rendering. Pickup characters must coexist with existing torch,
@@ -88,10 +91,11 @@ stair, and player-character restoration behavior when the player moves away.
 
 Extend the existing bridge with a quest snapshot value and subscription path.
 The snapshot should contain only display/state data such as quest ID, title,
-objective, lifecycle state, current progress, target, and completion. The game
-layer publishes it on initialization, pickup collection, and completion. The
-character gold snapshot should likewise be published when gold changes so the
-existing character panel no longer displays a permanently UI-local value.
+objective, lifecycle state, criterion mode, baseline when relevant, current
+progress, target, and completion. The game layer publishes it on initialization,
+pickup collection, and completion. The character gold snapshot should likewise
+be published when gold changes so the existing character panel no longer
+displays a permanently UI-local value.
 
 React renders the quest tracker from the latest snapshot and retains the
 completed entry. A dedicated snapshot is preferred over exposing a mutable
@@ -105,9 +109,9 @@ must not contribute terrain or discovery. Inside the minimap viewport they are
 painted as solid yellow cells at a quest marker depth below the player. For
 targets outside the viewport, calculate the direction from the player to the
 pickup in minimap coordinates, intersect that ray with the inset minimap
-boundary, and paint a compact yellow edge indicator. If several targets map to
-the same boundary region, apply a deterministic small offset while keeping all
-three indicators visible.
+boundary, and paint a compact yellow directional chevron. If several targets
+map to the same boundary region, apply a deterministic small offset while
+keeping all three indicators visible.
 
 The minimap renderer remains the only owner of canvas projection and marker
 painting. A DOM overlay was rejected because it would introduce a second
@@ -120,6 +124,13 @@ left-side relationship already used by the right-side minimap status. Use a
 25px vertical gap, a bold/title-sized `Question: Collect Gold` line, and a
 smaller body line indented 5px. Completion applies strike-through to the body
 only. The tracker remains visible while the quest is complete.
+
+### Use the existing toast system for quest transitions
+
+On quest start, progress, and completion, publish a toast through the existing
+toast state/provider rather than creating a new notification path. Use the
+state-specific messages defined in the quest specification. This keeps quest
+feedback consistent with other HUD notifications.
 
 ## Risks / Trade-offs
 
@@ -134,8 +145,9 @@ only. The tracker remains visible while the quest is complete.
 - [Risk] Pickup glyph restoration can conflict with torches or stairs. ->
   Mitigation: centralize character-cell restoration precedence and add movement
   tests for pickup-adjacent cells.
-- [Risk] “100 units” is not yet a precise grid contract. -> Mitigation: resolve
-  the placement metric before implementation and encode it in focused tests.
+- [Risk] A target distance may have no valid walkable cell because of terrain.
+  -> Mitigation: use bounded tolerance and deterministic nearest-valid fallback,
+  and test the generated target-distance range.
 
 ## Migration Plan
 
@@ -146,9 +158,6 @@ scoped quest/pickup, bridge, minimap, character-gold, HUD, and test changes.
 
 ## Open Questions
 
-- Define whether “100 units” means Euclidean grid-cell distance, Manhattan
-  distance, or another verified world-space measurement before implementation.
-- Confirm whether quest pickups are restricted to the initial active realm or
-  should remain discoverable across realm transitions; the first implementation
-  can safely restrict them to the starting active world if no cross-realm quest
-  behavior is required.
+- Future quest activation triggers and whether a quest is realm-specific or
+  spans multiple realms remain deferred. This first quest is initial-realm-only;
+  quests will not span separate worlds.
