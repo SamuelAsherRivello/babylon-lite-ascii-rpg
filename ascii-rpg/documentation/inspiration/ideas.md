@@ -39,6 +39,7 @@ Ways to break the illusion (AVOID THESE?)
 - Visual style reference: [watch video](https://www.youtube.com/watch?v=pKw3U0gc-kA)
 - OneBit Adventure reference: [view app](https://play.google.com/store/apps/details?id=com.GalacticSlice.OneBitAdventure)
 - ASCII gameplay reference: [watch video](https://www.youtube.com/watch?v=QyBw8k6g6VU)
+- Gameplay inspiration reference: [watch video](https://www.youtube.com/watch?v=VPvqiTWpDII)
 
 # Possible Features
 

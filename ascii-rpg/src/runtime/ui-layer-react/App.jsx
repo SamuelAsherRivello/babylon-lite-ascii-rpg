@@ -1200,11 +1200,6 @@ function AppContent() {
               {aspectMode === "portrait" ? "Aspect (Portrait)" : "Aspect (Landscape)"}
             </button>
           </SettingTooltipTarget>
-          <SettingTooltipTarget description={settingsHelp.showUi} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
-            <button id="show_ui_toggle" className="corner_body settings_option" type="button" aria-pressed={showHud} aria-description={settingsHelp.showUi} tabIndex={-1} onClick={toggleHud}>
-              <span>Show UI</span><span id="show_ui_checkbox" aria-hidden="true">{showHud ? "☑" : "☐"}</span>
-            </button>
-          </SettingTooltipTarget>
           <SettingTooltipTarget description={settingsHelp.camera} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
             <button id="camera_mode_toggle" className="corner_body settings_option" type="button" aria-label="Camera mode" aria-description={settingsHelp.camera} tabIndex={-1} onClick={cycleCameraMode}>
               {CAMERA_MODE_LABELS[cameraMode] ?? CAMERA_MODE_LABELS[DEFAULT_CAMERA_MODE]}
@@ -1218,6 +1213,11 @@ function AppContent() {
           </div>
           <SettingTooltipTarget description={settingsHelp.reset} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
             <button id="reset_settings" className="corner_body settings_option" type="button" aria-label="Reset Settings" aria-description={settingsHelp.reset} tabIndex={-1} onClick={resetSettings}>Reset Settings</button>
+          </SettingTooltipTarget>
+          <SettingTooltipTarget description={settingsHelp.showUi} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
+            <button id="show_ui_toggle" className="corner_body settings_option" type="button" aria-pressed={showHud} aria-description={settingsHelp.showUi} tabIndex={-1} onClick={toggleHud}>
+              <span>Show UI</span><span id="show_ui_checkbox" aria-hidden="true">{showHud ? "☑" : "☐"}</span>
+            </button>
           </SettingTooltipTarget>
         </HudBlockLayout>
       </CornerLayout>

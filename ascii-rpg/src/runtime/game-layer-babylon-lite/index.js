@@ -53,7 +53,8 @@ import {
 } from "./systems/world-system.js";
 import { createTimeSystem } from "./systems/time-system.js";
 import { createGlyphVisualCache } from "./glyph-visual-cache.js";
-import { collectVisibleGlyphs, getVisibleRegion, getVisibleSlot, shouldUpdateVisibleSprite } from "./visible-region.js";
+import { getVisibleRegion, getVisibleSlot, shouldUpdateVisibleSprite } from "./visible-region.js";
+import { collectWorldViewGlyphs, createWorldViewComposition, renderWorldViewComposition } from "./world-view.js";
 import { colorToLinearRgba, reconcilePaletteColors } from "./palette-color-cache.js";
 import {
   applyLightingToColor,
@@ -68,9 +69,10 @@ import {
   createFogOfWar,
   discoverCell,
   discoverFromPlayer,
+  isDiscovered,
   MINIMAP_WORLD_SCALE,
 } from "./systems/fog-of-war-system.js";
-import { getMinimapEdgeIndicators, getMinimapMarkers, getMinimapWorldCellGraphic } from "./systems/minimap-renderer.js";
+import { getMinimapEdgeIndicators, getMinimapMarkers } from "./systems/minimap-renderer.js";
 import { canHandleMinimapScale, getMinimapCellLayout, getNextMinimapScale, MINIMAP_SCALE_LEVELS } from "./systems/minimap-zoom.js";
 import { createTransitionSystem, TRANSITION_PHASES } from "./systems/transition-system.js";
 import questData from "./data/quest_data.json";
@@ -81,9 +83,9 @@ const GLYPHS = ["W", "M", "•", "P", "T", "S", "◆", "~", "≈", "▓"];
 const WORLD_ROWS = 512;
 const WORLD_COLUMNS = 512;
 const TORCHES_PER_SCREEN = 3;
-const REALM_TRANSITION_CLOSE_MS = 2000;
+const REALM_TRANSITION_CLOSE_MS = 500;
 const REALM_TRANSITION_COVER_HOLD_MS = 100;
-const REALM_TRANSITION_OPEN_MS = 2000;
+const REALM_TRANSITION_OPEN_MS = 500;
 
 function createViewportForCanvas(canvas, zoom = DEFAULT_ZOOM) {
   const screenWidth = canvas.clientWidth || window.innerWidth;
@@ -159,6 +161,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   let touchStart = null;
   let transitionActive = false;
   let transitionSystem = null;
+  let transitionCenter = null;
   let viewport = createViewportForCanvas(canvas);
   let lastCanvasSize = {
     width: Math.max(1, canvas.clientWidth || window.innerWidth),
@@ -268,85 +271,104 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       fixedCellHeight,
     );
     const { cellWidth, cellHeight, offsetX, offsetY } = layout;
-    // Pass 1: world background.
-    context.globalAlpha = 1;
-    context.fillStyle = "#000";
-    context.fillRect(0, 0, minimapCanvas.width, minimapCanvas.height);
-    // Pass 2: discovered world glyph rasters from the same cache as the game renderer.
-    const sourceCells = [];
-    const glyphs = new Set();
-    for (let y = 0; y < sourceRows; y += 1) {
-      for (let x = 0; x < sourceColumns; x += 1) {
-        const sourceCell = { x: sourceX + x, y: sourceY + y };
-        const graphic = getMinimapWorldCellGraphic(world, fogOfWar, palette, sourceCell);
-        if (!graphic) continue;
-        sourceCells.push({ x, y, graphic });
-        glyphs.add(graphic.glyph);
-      }
-    }
-    const visual = glyphCache.ensure(minimapZoom, minimapBaseViewport.gridWidth, glyphs);
-    for (const { x, y, graphic } of sourceCells) {
-      const raster = visual.rasters.get(graphic.glyph);
-      if (!raster) continue;
-      const cacheKey = `${graphic.glyph}:${graphic.color}:${raster.width}`;
-      let glyphCanvas = minimapGlyphCanvases.get(cacheKey);
-      if (!glyphCanvas) {
-        glyphCanvas = document.createElement("canvas");
-        glyphCanvas.width = raster.width;
-        glyphCanvas.height = raster.height;
-        const glyphContext = glyphCanvas.getContext("2d");
-        const image = glyphContext.createImageData(raster.width, raster.height);
-        const red = Number.parseInt(graphic.color.slice(1, 3), 16);
-        const green = Number.parseInt(graphic.color.slice(3, 5), 16);
-        const blue = Number.parseInt(graphic.color.slice(5, 7), 16);
-        for (let index = 0; index < raster.pixels.length; index += 4) {
-          image.data[index] = red;
-          image.data[index + 1] = green;
-          image.data[index + 2] = blue;
-          image.data[index + 3] = raster.pixels[index + 3];
+    const destination = {
+      x: offsetX,
+      y: offsetY,
+      width: sourceColumns * cellWidth,
+      height: sourceRows * cellHeight,
+      cellWidth,
+      cellHeight,
+    };
+    const composition = createWorldViewComposition({
+      world,
+      fog: fogOfWar,
+      source: { x: sourceX, y: sourceY, width: sourceColumns, height: sourceRows },
+      destination,
+      getGlyph: getVisibleGlyph,
+    });
+    const visual = glyphCache.ensure(
+      minimapZoom,
+      minimapBaseViewport.gridWidth,
+      collectWorldViewGlyphs(composition),
+    );
+    renderWorldViewComposition(composition, {
+      drawBackground: () => {
+        context.globalAlpha = 1;
+        context.fillStyle = "#000";
+        context.fillRect(0, 0, minimapCanvas.width, minimapCanvas.height);
+      },
+      drawCell: ({ localX, localY, glyph, discovered }) => {
+        if (!discovered) return;
+        const graphic = { glyph, color: getPaletteStyle(palette, glyph).color };
+        const raster = visual.rasters.get(glyph);
+        if (!raster) return;
+        const cacheKey = `${graphic.glyph}:${graphic.color}:${raster.width}`;
+        let glyphCanvas = minimapGlyphCanvases.get(cacheKey);
+        if (!glyphCanvas) {
+          glyphCanvas = document.createElement("canvas");
+          glyphCanvas.width = raster.width;
+          glyphCanvas.height = raster.height;
+          const glyphContext = glyphCanvas.getContext("2d");
+          const image = glyphContext.createImageData(raster.width, raster.height);
+          const red = Number.parseInt(graphic.color.slice(1, 3), 16);
+          const green = Number.parseInt(graphic.color.slice(3, 5), 16);
+          const blue = Number.parseInt(graphic.color.slice(5, 7), 16);
+          for (let index = 0; index < raster.pixels.length; index += 4) {
+            image.data[index] = red;
+            image.data[index + 1] = green;
+            image.data[index + 2] = blue;
+            image.data[index + 3] = raster.pixels[index + 3];
+          }
+          glyphContext.putImageData(image, 0, 0);
+          minimapGlyphCanvases.set(cacheKey, glyphCanvas);
         }
-        glyphContext.putImageData(image, 0, 0);
-        minimapGlyphCanvases.set(cacheKey, glyphCanvas);
-      }
-      context.drawImage(glyphCanvas, offsetX + x * cellWidth, offsetY + y * cellHeight, cellWidth, cellHeight);
-    }
-    // Pass 3: markers, painted after world graphics in back-to-front order.
-    context.globalAlpha = 1;
-    const markerWidth = cellWidth * 0.5;
-    const markerHeight = cellHeight * 0.5;
-    for (const marker of getMinimapMarkers(world, fogOfWar, playerCell)) {
-      const markerWorldX = marker.cell.x;
-      const markerWorldY = marker.cell.y;
-      if (markerWorldX < sourceX || markerWorldX >= sourceX + sourceColumns ||
-          markerWorldY < sourceY || markerWorldY >= sourceY + sourceRows) continue;
-      context.fillStyle = marker.color;
-      context.fillRect(
-        offsetX + (markerWorldX - sourceX) * cellWidth + (cellWidth - markerWidth) / 2,
-        offsetY + (markerWorldY - sourceY) * cellHeight + (cellHeight - markerHeight) / 2,
-        markerWidth,
-        markerHeight,
-      );
-    }
-    for (const indicator of getMinimapEdgeIndicators(world, playerCell, {
-      x: sourceX, y: sourceY, columns: sourceColumns, rows: sourceRows,
-    })) {
-      const offset = (indicator.offsetIndex % 3 - 1) * Math.min(cellWidth, cellHeight) * 0.55;
-      const edgeX = offsetX + indicator.edge.x * cellWidth + (Math.abs(indicator.direction.x) < Math.abs(indicator.direction.y) ? offset : 0);
-      const edgeY = offsetY + indicator.edge.y * cellHeight + (Math.abs(indicator.direction.x) >= Math.abs(indicator.direction.y) ? offset : 0);
-      const angle = Math.atan2(indicator.direction.y, indicator.direction.x);
-      const size = Math.min(cellWidth, cellHeight) * 0.8;
-      context.save();
-      context.translate(edgeX, edgeY);
-      context.rotate(angle);
-      context.fillStyle = indicator.color;
-      context.beginPath();
-      context.moveTo(size * 0.6, 0);
-      context.lineTo(-size * 0.45, -size * 0.45);
-      context.lineTo(-size * 0.45, size * 0.45);
-      context.closePath();
-      context.fill();
-      context.restore();
-    }
+        context.drawImage(
+          glyphCanvas,
+          offsetX + localX * cellWidth,
+          offsetY + localY * cellHeight,
+          cellWidth,
+          cellHeight,
+        );
+      },
+      drawOverlay: () => {
+        context.globalAlpha = 1;
+        const markerWidth = cellWidth * 0.5;
+        const markerHeight = cellHeight * 0.5;
+        for (const marker of getMinimapMarkers(world, fogOfWar, playerCell)) {
+          const markerWorldX = marker.cell.x;
+          const markerWorldY = marker.cell.y;
+          if (markerWorldX < sourceX || markerWorldX >= sourceX + sourceColumns ||
+              markerWorldY < sourceY || markerWorldY >= sourceY + sourceRows) continue;
+          context.fillStyle = marker.color;
+          context.fillRect(
+            offsetX + (markerWorldX - sourceX) * cellWidth + (cellWidth - markerWidth) / 2,
+            offsetY + (markerWorldY - sourceY) * cellHeight + (cellHeight - markerHeight) / 2,
+            markerWidth,
+            markerHeight,
+          );
+        }
+        for (const indicator of getMinimapEdgeIndicators(world, playerCell, {
+          x: sourceX, y: sourceY, columns: sourceColumns, rows: sourceRows,
+        })) {
+          const offset = (indicator.offsetIndex % 3 - 1) * Math.min(cellWidth, cellHeight) * 0.55;
+          const edgeX = offsetX + indicator.edge.x * cellWidth + (Math.abs(indicator.direction.x) < Math.abs(indicator.direction.y) ? offset : 0);
+          const edgeY = offsetY + indicator.edge.y * cellHeight + (Math.abs(indicator.direction.x) >= Math.abs(indicator.direction.y) ? offset : 0);
+          const angle = Math.atan2(indicator.direction.y, indicator.direction.x);
+          const size = Math.min(cellWidth, cellHeight) * 0.8;
+          context.save();
+          context.translate(edgeX, edgeY);
+          context.rotate(angle);
+          context.fillStyle = indicator.color;
+          context.beginPath();
+          context.moveTo(size * 0.6, 0);
+          context.lineTo(-size * 0.45, -size * 0.45);
+          context.lineTo(-size * 0.45, size * 0.45);
+          context.closePath();
+          context.fill();
+          context.restore();
+        }
+      },
+    });
   };
 
   const schedulePresentation = () => {
@@ -433,12 +455,17 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
 
   const setTransitionMask = ({ phase, value }) => {
     if (phase === TRANSITION_PHASES.IDLE) {
+      transitionMask.classList.remove("game_transition_mask_covered");
       transitionMask.hidden = true;
       return;
     }
-    const playerCenter = playerCell
+    transitionMask.classList.toggle(
+      "game_transition_mask_covered",
+      phase === TRANSITION_PHASES.COVERED,
+    );
+    const playerCenter = transitionCenter ?? (playerCell
       ? getPlayerScreenCenter(playerCell, viewOrigin, viewport)
-      : { x: (canvas.clientWidth || window.innerWidth) / 2, y: (canvas.clientHeight || window.innerHeight) / 2 };
+      : { x: (canvas.clientWidth || window.innerWidth) / 2, y: (canvas.clientHeight || window.innerHeight) / 2 });
     transitionMask.style.setProperty("--transition-center-x", `${playerCenter.x}px`);
     transitionMask.style.setProperty("--transition-center-y", `${playerCenter.y}px`);
     transitionMask.hidden = false;
@@ -462,6 +489,12 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     // Ensure the source realm's latest player position is submitted before the
     // mask becomes visible.
     renderWorld({ refreshLighting: true });
+    // Keep the aperture anchored to the source realm's screen position. The
+    // destination swap changes playerCell/viewOrigin, so recalculating this
+    // during opening makes a second transition appear at the cusp.
+    transitionCenter = playerCell
+      ? getPlayerScreenCenter(playerCell, viewOrigin, viewport)
+      : { x: (canvas.clientWidth || window.innerWidth) / 2, y: (canvas.clientHeight || window.innerHeight) / 2 };
     transitionActive = true;
     const started = transitionSystem.start({
       target: "game_layer",
@@ -473,6 +506,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       durationCovered: REALM_TRANSITION_COVER_HOLD_MS,
       durationIn: REALM_TRANSITION_OPEN_MS,
       onStart: () => {
+        transitionMask.classList.remove("game_transition_mask_covered");
         transitionMask.style.setProperty("--transition-radius", `${cover}px`);
         transitionMask.style.setProperty("--transition-feather-end", `${cover + 12}px`);
         transitionMask.hidden = false;
@@ -482,10 +516,12 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
         transitionActive = false;
         clearMovementInput();
         setTransitionMask({ phase: TRANSITION_PHASES.IDLE, value: 0 });
+        transitionCenter = null;
       },
     });
     if (!started) {
       transitionActive = false;
+      transitionCenter = null;
       return false;
     }
     transitionSystem.begin(performance.now());
@@ -636,7 +672,11 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     }
     ensureGpuLightPass(region.count);
     gpuLightLayer.visible = true;
-    const samples = buildGpuLightPassSamples(region, lightField, lighting.ambient);
+    const samples = buildGpuLightPassSamples(region, lightField, lighting.ambient)
+      .filter((sample) => isDiscovered(fogOfWar, world, {
+        x: region.x + sample.x,
+        y: region.y + sample.y,
+      }));
     const activeSlots = new Set();
     for (const sample of samples) {
       activeSlots.add(sample.slot);
@@ -663,10 +703,16 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     }
   };
 
-  const renderCell = (region, x, y, frames, lightField) => {
+  const hideGameCell = (slot) => {
+    if (!spriteStates[slot]?.visible) return;
+    updateSprite2DIndex(layer, spriteIndexes[slot], { visible: false });
+    spriteStates[slot].visible = false;
+  };
+
+  const renderCell = (region, x, y, frames, lightField, glyphOverride = null) => {
     const slot = y * region.columns + x;
     const cell = { x: region.x + x, y: region.y + y };
-    const glyph = getVisibleGlyph(world, cell);
+    const glyph = glyphOverride ?? getVisibleGlyph(world, cell);
     const frame = frames.get(glyph);
     if (frame === undefined) throw new Error(`Missing cached glyph frame: ${glyph}`);
     const terrain = world.terrain[cell.y][cell.x];
@@ -709,14 +755,34 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
         if (spriteStates[slot]?.visible) spriteStates[slot].lightingFactor = undefined;
       }
     }
-    const glyphs = collectVisibleGlyphs(world, region, getVisibleGlyph);
-    const visual = glyphCache.ensure(zoom, viewport.gridWidth, glyphs);
+    const composition = createWorldViewComposition({
+      world,
+      fog: fogOfWar,
+      source: {
+        x: region.x, y: region.y, width: region.columns, height: region.rows,
+      },
+      destination: {
+        x: 0, y: 0, width: viewport.screenWidth, height: viewport.screenHeight,
+      },
+      getGlyph: getVisibleGlyph,
+    });
+    const visual = glyphCache.ensure(
+      zoom,
+      viewport.gridWidth,
+      collectWorldViewGlyphs(composition),
+    );
     metrics.glyphWarmupMs += visual.warmupMs;
     if (visual.atlas !== atlas) rebuildLayer(visual.atlas);
     const lightField = lightingFieldCache.get(world, region, world.torches, playerCell, lighting);
-    for (let y = 0; y < region.rows; y += 1) {
-      for (let x = 0; x < region.columns; x += 1) renderCell(region, x, y, visual.frames, lightField);
-    }
+    renderWorldViewComposition(composition, {
+      drawCell: ({ localX, localY, slot, glyph, discovered }) => {
+        if (!discovered) {
+          hideGameCell(slot);
+          return;
+        }
+        renderCell(region, localX, localY, visual.frames, lightField, glyph);
+      },
+    });
     for (let slot = region.count; slot < spriteIndexes.length; slot += 1) {
       if (spriteStates[slot]?.visible) {
         updateSprite2DIndex(layer, spriteIndexes[slot], { visible: false });
@@ -761,7 +827,8 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   const renderChangedWorldCells = (cells) => {
     if (!world || !renderer) return;
     const region = getVisibleRegion(viewport, world, viewOrigin);
-    const visibleCells = cells.filter((cell) => getVisibleSlot(region, cell) !== -1);
+    const visibleCells = cells.filter((cell) => getVisibleSlot(region, cell) !== -1 &&
+      isDiscovered(fogOfWar, world, cell));
     if (visibleCells.length === 0) return;
     const glyphs = visibleCells.map((cell) => getVisibleGlyph(world, cell));
     const visual = glyphCache.ensure(zoom, viewport.gridWidth, glyphs);

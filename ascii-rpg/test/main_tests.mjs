@@ -50,6 +50,12 @@ test("documents the plain safe-area template", async () => {
   if (!styles.includes("inset: var(--ui-margin-y, 20px) var(--ui-margin-x, 20px)")) {
     throw new Error("The page must apply percentage-based UI margins with a 20px fallback.");
   }
+  if (!styles.includes("--portrait-ui-width: max(0px, calc(var(--presentation-frame-width) - 2 * var(--ui-margin-x, 20px)))")
+    || !styles.includes("--portrait-ui-height: max(0px, calc(var(--presentation-frame-height) - 2 * var(--ui-margin-y, 20px)))")
+    || !styles.includes("width: var(--portrait-ui-width)")
+    || !styles.includes("height: var(--portrait-ui-height)")) {
+    throw new Error("Portrait HUD regions must share the inset portrait UI frame.");
+  }
   if (!styles.includes(".corner {")) {
     throw new Error("The page must define a reusable corner style.");
   }
@@ -295,6 +301,9 @@ test("documents the plain safe-area template", async () => {
     || !platformSettings.includes("showHud: false")) {
     throw new Error("Show UI must use persisted platform-specific defaults.");
   }
+  if (app.indexOf('id="show_ui_toggle"') < app.indexOf('id="reset_settings"')) {
+    throw new Error("Show UI must remain the bottom item in the lower-left Settings list.");
+  }
   if (!app.includes('document.documentElement.dataset.hudHidden = String(!showHud)')
     || !styles.includes('html[data-hud-hidden="true"] .corner_bottom_left > :not(#settings)')
     || !styles.includes('html[data-hud-hidden="true"] #settings > .hud_block_body > :not(:has(#show_ui_toggle))')
@@ -377,10 +386,11 @@ test("documents the plain safe-area template", async () => {
     || !app.includes("minimapZoomStorageKey")
     || !app.includes("useEffect(() => subscribeToMinimapZoom(setMinimapZoom), [])")
     || !gameLayer.includes("sourceColumns = Math.min(world.columns")
-    || !gameLayer.includes("getMinimapWorldCellGraphic")
-    || !gameLayer.includes("// Pass 1: world background.")
-    || !gameLayer.includes("// Pass 2: discovered world glyph rasters from the same cache as the game renderer.")
-    || !gameLayer.includes("// Pass 3: markers, painted after world graphics in back-to-front order.")
+    || !gameLayer.includes("createWorldViewComposition")
+    || !gameLayer.includes("collectWorldViewGlyphs(composition)")
+    || !gameLayer.includes("renderWorldViewComposition(composition")
+    || !gameLayer.includes("fog: fogOfWar")
+    || !gameLayer.includes("drawOverlay: () =>")
     || styles.includes("--minimap-zoom")
     || styles.includes("transform: scale")) {
     throw new Error("Minimap content zoom must stay hidden, persist independently, preserve canvas bounds, and clean up on disposal.");

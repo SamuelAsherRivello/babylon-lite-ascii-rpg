@@ -47,7 +47,7 @@ html {
   /* Explicitly sit above the GPU canvas and below the minimap. */
   z-index: 1;
   pointer-events: none;
-  --transition-color: #f00;
+  --transition-color: #2f2f2f;
   background: radial-gradient(
     circle at var(--transition-center-x, 50%) var(--transition-center-y, 50%),
     transparent 0,
@@ -59,6 +59,10 @@ html {
 
 .game_transition_mask[hidden] {
   display: none;
+}
+
+.game_transition_mask.game_transition_mask_covered {
+  background: #2f2f2f;
 }
 
 #minimap_canvas {
@@ -428,6 +432,8 @@ html[data-hud-hidden="true"] #settings > .hud_block_body > :has(#show_ui_toggle)
 html[data-presentation-aspect="portrait"] {
   --presentation-frame-width: min(100vw, 56.25vh);
   --presentation-frame-height: min(100vh, 177.78vw);
+  --portrait-ui-width: max(0px, calc(var(--presentation-frame-width) - 2 * var(--ui-margin-x, 20px)));
+  --portrait-ui-height: max(0px, calc(var(--presentation-frame-height) - 2 * var(--ui-margin-y, 20px)));
 }
 
 html[data-presentation-aspect="portrait"] #game_layer {
@@ -443,9 +449,9 @@ html[data-presentation-aspect="portrait"] #ui_layer {
   inset: auto;
   top: 50%;
   left: 50%;
-  width: var(--presentation-frame-width);
-  height: var(--presentation-frame-height);
-  padding: var(--ui-margin-y, 20px) var(--ui-margin-x, 20px);
+  width: var(--portrait-ui-width);
+  height: var(--portrait-ui-height);
+  padding: 0;
   box-sizing: border-box;
   transform: translate(-50%, -50%);
 }
@@ -460,6 +466,9 @@ html[data-presentation-aspect="portrait"] #ui_layer {
 
   html[data-presentation-aspect="portrait"] #ui_layer {
     inset: var(--ui-margin-y, 20px) var(--ui-margin-x, 20px);
+    width: auto;
+    height: auto;
+    transform: none;
   }
 }
 
