@@ -71,7 +71,7 @@ import {
   discoverFromPlayer,
   isDiscovered,
 } from "./systems/fog-of-war-system.js";
-import { getMinimapEdgeIndicators, getMinimapMarkers } from "./systems/minimap-renderer.js";
+import { getMinimapEdgeIndicators, getMinimapMarkers, getMinimapWorldCellGraphic } from "./systems/minimap-renderer.js";
 import { canHandleMinimapScale, getMinimapCellLayout, getNextMinimapScale, MINIMAP_SCALE_LEVELS } from "./systems/minimap-zoom.js";
 import { createTransitionSystem, TRANSITION_PHASES } from "./systems/transition-system.js";
 import questData from "./data/quest_data.json";
@@ -298,7 +298,11 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       },
       drawCell: ({ localX, localY, glyph, discovered }) => {
         if (!discovered) return;
-        const graphic = { glyph, color: getPaletteStyle(palette, glyph).color };
+        const graphic = getMinimapWorldCellGraphic(world, fogOfWar, palette, {
+          x: sourceX + localX,
+          y: sourceY + localY,
+        });
+        if (!graphic) return;
         const raster = visual.rasters.get(glyph);
         if (!raster) return;
         const cacheKey = `${graphic.glyph}:${graphic.color}:${raster.width}`;
