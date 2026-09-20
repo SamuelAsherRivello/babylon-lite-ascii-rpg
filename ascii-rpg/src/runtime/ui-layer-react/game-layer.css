@@ -1,0 +1,113 @@
+/* Game layer styles: Canvas, minimap, and presentation framing. */
+
+#game_layer,
+#game_canvas {
+  display: block;
+}
+
+#game_layer {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+}
+
+#game_canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  image-rendering: auto;
+  touch-action: none;
+}
+
+.game_transition_mask {
+  position: absolute;
+  inset: 0;
+  /* Explicitly sit above the GPU canvas and below the minimap. */
+  z-index: 1;
+  pointer-events: none;
+  --transition-color: #202020;
+  background: radial-gradient(
+    circle at var(--transition-center-x, 50%) var(--transition-center-y, 50%),
+    transparent 0,
+    transparent var(--transition-radius, 0px),
+    var(--transition-color, #202020) var(--transition-feather-end, 12px),
+    var(--transition-color, #202020) 100%
+  );
+}
+
+.game_transition_mask[hidden] {
+  display: none;
+}
+
+.game_transition_mask.game_transition_mask_covered {
+  background: #202020;
+}
+
+#minimap_canvas {
+  position: absolute;
+  top: var(--ui-margin-y, 20px);
+  right: var(--ui-margin-x, 20px);
+  z-index: 2;
+  box-sizing: border-box;
+  width: var(--top-panel-size);
+  height: var(--top-panel-size);
+  border: 1px solid #b3b3b3;
+  background: #000;
+  image-rendering: pixelated;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+#minimap_canvas[hidden] {
+  display: none;
+}
+
+
+html[data-presentation-aspect="portrait"] {
+  --presentation-frame-width: min(100vw, 56.25vh);
+  --presentation-frame-height: min(100vh, 177.78vw);
+  --portrait-ui-width: max(0px, calc(var(--presentation-frame-width) - 2 * var(--ui-margin-x, 20px)));
+  --portrait-ui-height: max(0px, calc(var(--presentation-frame-height) - 2 * var(--ui-margin-y, 20px)));
+}
+
+html[data-presentation-aspect="portrait"] #game_layer {
+  inset: auto;
+  top: 50%;
+  left: 50%;
+  width: var(--presentation-frame-width);
+  height: var(--presentation-frame-height);
+  transform: translate(-50%, -50%);
+}
+
+html[data-presentation-aspect="portrait"] #ui_layer {
+  inset: auto;
+  top: 50%;
+  left: 50%;
+  width: var(--portrait-ui-width);
+  height: var(--portrait-ui-height);
+  padding: 0;
+  box-sizing: border-box;
+  transform: translate(-50%, -50%);
+}
+
+html[data-presentation-aspect="portrait"] .toast {
+  --toast-horizontal-inset: 0px;
+}
+
+@media (pointer: coarse) {
+  html[data-presentation-aspect="portrait"] #game_layer {
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    transform: none;
+  }
+
+  html[data-presentation-aspect="portrait"] #ui_layer {
+    inset: var(--ui-margin-y, 20px) var(--ui-margin-x, 20px);
+    width: auto;
+    height: auto;
+    transform: none;
+  }
+}

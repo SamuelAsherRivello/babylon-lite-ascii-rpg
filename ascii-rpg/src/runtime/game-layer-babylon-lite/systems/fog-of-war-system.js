@@ -43,6 +43,7 @@ export function createFogOfWar(world) {
     walkableCounts,
     minimapColumns,
     minimapRows,
+    fogUnclearRadius: Number.isFinite(world.fogUnclearRadius) ? world.fogUnclearRadius : fogUnclearRadius,
   };
 }
 
@@ -73,11 +74,12 @@ export function discoverFromPlayer(fog, world, playerCell) {
   if (!fog || !isWalkable(world, playerCell)) return [];
   const discovered = [];
   if (discoverCell(fog, world, playerCell)) discovered.push({ ...playerCell });
-  const radius = Math.ceil(fogUnclearRadius);
+  const unclearRadius = Number.isFinite(fog.fogUnclearRadius) ? fog.fogUnclearRadius : fogUnclearRadius;
+  const radius = Math.ceil(unclearRadius);
   for (let y = Math.max(0, playerCell.y - radius); y <= Math.min(world.rows - 1, playerCell.y + radius); y += 1) {
     for (let x = Math.max(0, playerCell.x - radius); x <= Math.min(world.columns - 1, playerCell.x + radius); x += 1) {
       const target = { x, y };
-      if (Math.hypot(target.x - playerCell.x, target.y - playerCell.y) > fogUnclearRadius) continue;
+      if (Math.hypot(target.x - playerCell.x, target.y - playerCell.y) > unclearRadius) continue;
       if (!hasClearLightPath(playerCell, target, world.terrain)) continue;
       if (markDiscovered(fog, world, target, isWalkable(world, target))) discovered.push(target);
     }

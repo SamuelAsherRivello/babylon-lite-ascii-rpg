@@ -8,7 +8,7 @@ export const STAIR_GLYPH = "S";
 export const MOUNTAIN_GLYPH = "△";
 export const SHALLOW_WATER_GLYPH = "~";
 export const MEDIUM_WATER_GLYPH = "≈";
-export const DEEP_WATER_GLYPH = MEDIUM_WATER_GLYPH;
+export const DEEP_WATER_GLYPH = "▓";
 export const DEFAULT_WALL_FILL_PERCENT = 40;
 export const DEFAULT_SMOOTHING_ITERATIONS = 4;
 export const DEFAULT_MIN_WALKABLE_PERCENT = 0.3;
@@ -29,8 +29,8 @@ export const GENERATION_PASSES = Object.freeze([
   "player-position",
 ]);
 export const REALM_PROFILES = Object.freeze({
-  Overground: Object.freeze({ wallFillPercent: 25, minWalkablePercent: 0.55, groundKind: "grass", groundGlyph: FLOOR_GLYPH, groundColor: "#55aa55", blockedKind: "mountain", blockedGlyph: MOUNTAIN_GLYPH }),
-  Underground: Object.freeze({ wallFillPercent: 50, minWalkablePercent: 0.3, groundKind: "dirt", groundGlyph: UNDERGROUND_FLOOR_GLYPH, groundColor: "#8b5a2b", blockedKind: "wall", blockedGlyph: WALL_GLYPH }),
+  Overground: Object.freeze({ wallFillPercent: 25, minWalkablePercent: 0.55, fogUnclearRadius: 7.5, groundKind: "grass", groundGlyph: FLOOR_GLYPH, groundColor: "#55aa55", blockedKind: "mountain", blockedGlyph: MOUNTAIN_GLYPH }),
+  Underground: Object.freeze({ wallFillPercent: 50, minWalkablePercent: 0.3, fogUnclearRadius: 5, groundKind: "dirt", groundGlyph: UNDERGROUND_FLOOR_GLYPH, groundColor: "#8b5a2b", blockedKind: "wall", blockedGlyph: WALL_GLYPH }),
 });
 
 const CARDINAL_DIRECTIONS = [
@@ -916,6 +916,7 @@ function applyRealmProfile(realm, name) {
     if (cell.kind === "wall") { cell.kind = profile.blockedKind; cell.glyph = profile.blockedGlyph; }
   }
   realm.realm = name;
+  realm.fogUnclearRadius = profile.fogUnclearRadius;
   realm.stairs = [];
   return realm;
 }

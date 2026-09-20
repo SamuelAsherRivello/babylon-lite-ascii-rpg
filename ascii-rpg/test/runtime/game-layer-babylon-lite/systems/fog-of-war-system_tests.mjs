@@ -39,6 +39,24 @@ test("fog discovers clear walkable cells within the fixed five-grid radius", () 
   assert.equal(isDiscovered(fog, world, { x: 31, y: 25 }), false);
 });
 
+test("fog uses the realm-specific discovery radius", () => {
+  const underground = createWorld(50, 50);
+  underground.fogUnclearRadius = 5;
+  const undergroundFog = createFogOfWar(underground);
+  discoverFromPlayer(undergroundFog, underground, { x: 25, y: 25 });
+  assert.equal(undergroundFog.fogUnclearRadius, 5);
+  assert.equal(isDiscovered(undergroundFog, underground, { x: 30, y: 25 }), true);
+  assert.equal(isDiscovered(undergroundFog, underground, { x: 31, y: 25 }), false);
+
+  const overground = createWorld(50, 50);
+  overground.fogUnclearRadius = 7.5;
+  const overgroundFog = createFogOfWar(overground);
+  discoverFromPlayer(overgroundFog, overground, { x: 25, y: 25 });
+  assert.equal(overgroundFog.fogUnclearRadius, 7.5);
+  assert.equal(isDiscovered(overgroundFog, overground, { x: 32, y: 25 }), true);
+  assert.equal(isDiscovered(overgroundFog, overground, { x: 33, y: 25 }), false);
+});
+
 test("discovered cells remain permanently unfogged after the player moves away", () => {
   const world = createWorld(50, 50);
   const fog = createFogOfWar(world);

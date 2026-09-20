@@ -3,6 +3,19 @@ import test from "node:test";
 import viteConfig from "../../vite.config.js";
 
 const appRoot = new URL("../", import.meta.url);
+const styleSheetFiles = [
+  "style.css",
+  "game-layer.css",
+  "ui-feedback.css",
+  "windows.css",
+  "palette-editor.css",
+];
+
+async function readStyles() {
+  return (await Promise.all(
+    styleSheetFiles.map((fileName) => readFile(new URL(`src/runtime/ui-layer-react/${fileName}`, appRoot), "utf8")),
+  )).join("\n");
+}
 
 test("builds for the GitHub Pages project path", () => {
   if (viteConfig.base !== "/babylon-lite-ascii-rpg/") {
@@ -17,7 +30,7 @@ test("documents the plain safe-area template", async () => {
   const gameLayer = await readFile(new URL("src/runtime/game-layer-babylon-lite/index.js", appRoot), "utf8");
   const gameBridge = await readFile(new URL("src/runtime/bridge-layer/game-bridge.js", appRoot), "utf8");
   const camera = await readFile(new URL("src/runtime/bridge-layer/camera.js", appRoot), "utf8");
-  const styles = await readFile(new URL("src/runtime/ui-layer-react/style.css", appRoot), "utf8");
+  const styles = await readStyles();
   const hudLayouts = await readFile(new URL("src/runtime/ui-layer-react/HudLayouts.jsx", appRoot), "utf8");
   const fontStore = await readFile(new URL("src/runtime/ui-layer-react/font-store.js", appRoot), "utf8");
   const paletteStore = await readFile(new URL("src/runtime/ui-layer-react/palette-store.js", appRoot), "utf8");
@@ -111,8 +124,11 @@ test("documents the plain safe-area template", async () => {
     || !styles.includes("height: min(calc(100dvh")
     || !styles.includes("flex: 0 0 auto")
     || !styles.includes("height: auto")
-    || !styles.includes("height: min(83px, 32%)")
-    || !styles.includes("grid-template-rows: repeat(4, minmax(0, 1fr))")
+    || !styles.includes("height: calc((var(--character-bar-height) * 4) + (var(--character-bar-gap) * 3))")
+    || !styles.includes("grid-template-rows: repeat(4, var(--character-bar-height))")
+    || !styles.includes("--character-bar-gap: 5px")
+    || !styles.includes(".character_slot")
+    || !styles.includes("width: 28px")
     || !styles.includes("aspect-ratio: 1 / 1")
     || !styles.includes("min-height: 0")) {
     throw new Error("Character resources and empty inventory slots must share a six-cell grid.");
@@ -458,7 +474,7 @@ test("documents the event-only movement tutorial flow", async () => {
   const app = await readFile(new URL("src/runtime/ui-layer-react/App.jsx", appRoot), "utf8");
   const bridge = await readFile(new URL("src/runtime/bridge-layer/game-bridge.js", appRoot), "utf8");
   const gameLayer = await readFile(new URL("src/runtime/game-layer-babylon-lite/index.js", appRoot), "utf8");
-  const styles = await readFile(new URL("src/runtime/ui-layer-react/style.css", appRoot), "utf8");
+  const styles = await readStyles();
   for (const eventName of ["player moved up", "player moved down", "player moved left", "player moved right"]) {
     if (!bridge.includes(eventName) || !gameLayer.includes(`PLAYER_MOVED_EVENTS.`)) {
       throw new Error("The game-to-UI movement contract must expose all four generic player-moved events.");
@@ -497,7 +513,7 @@ test("documents the event-only movement tutorial flow", async () => {
 test("documents the quest tracker, live gold bridge, and quest toasts", async () => {
   const app = await readFile(new URL("src/runtime/ui-layer-react/App.jsx", appRoot), "utf8");
   const bridge = await readFile(new URL("src/runtime/bridge-layer/game-bridge.js", appRoot), "utf8");
-  const styles = await readFile(new URL("src/runtime/ui-layer-react/style.css", appRoot), "utf8");
+  const styles = await readStyles();
   if (!app.includes("Quest: ${quest.title}") || !app.includes("quest_tracker_body_complete")
     || !app.includes("Quest Started: ${quest.title}.") || !app.includes("Quest Progress: ${quest.title}")
     || !app.includes("Quest Completed: ${quest.title}.")) {

@@ -90,7 +90,8 @@ test("runs ordered generation passes and creates nested deterministic water", ()
   assert.equal(shallow[0].color, "#62c7ff");
   assert.equal(medium[0].color, "#247fc3");
   assert.equal(deep[0].color, "#0b3d91");
-  assert.equal(DEEP_WATER_GLYPH, MEDIUM_WATER_GLYPH);
+  assert.equal(DEEP_WATER_GLYPH, "▓");
+  assert.notEqual(DEEP_WATER_GLYPH, MEDIUM_WATER_GLYPH);
   assert.equal(first.terrain[first.playerStart.y][first.playerStart.x].walkable, true);
   assert.notEqual(first.terrain[first.playerStart.y][first.playerStart.x].glyph, MEDIUM_WATER_GLYPH);
   assert.notEqual(first.terrain[first.playerStart.y][first.playerStart.x].glyph, DEEP_WATER_GLYPH);
@@ -265,6 +266,8 @@ test("creates deterministic paired realm stairs on walkable terrain", async () =
   assert.deepEqual(first, second);
   assert.equal(overground.realm, "Overground");
   assert.equal(underground.realm, "Underground");
+  assert.equal(overground.fogUnclearRadius, 7.5);
+  assert.equal(underground.fogUnclearRadius, 5);
   assert.ok(overground.terrain.flat().some((cell) => cell.glyph === FLOOR_GLYPH && cell.walkable));
   assert.ok(underground.terrain.flat().some((cell) => cell.glyph === UNDERGROUND_FLOOR_GLYPH && cell.walkable));
   assert.ok(overground.terrain.flat().some((cell) => cell.glyph === MOUNTAIN_GLYPH));

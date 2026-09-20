@@ -93,7 +93,7 @@ Ways to break the illusion (AVOID THESE?)
 48. Shops. ☐
 49. Skill trees. ☐
 50. Status effects and conditions. ☐
-51. Stealth and detection. ☐
+51. Stealing items. ☐
 52. Supabase database. ☐
     - Cloud-synced world events. ☐
     - Highscore tables / speed runs. ☐
