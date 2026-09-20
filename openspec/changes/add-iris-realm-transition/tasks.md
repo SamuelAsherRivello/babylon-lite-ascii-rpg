@@ -4,7 +4,7 @@
 
 - [x] 1.1 Add a Babylon Lite transition system module that models idle, closing, covered, and opening phases, accepts explicit durations and animation parameters, emits ordered start/covered/complete events, and verifies behavior with focused Node tests.
 - [x] 1.2 Add the pointer-transparent game-layer mask surface and soft radial-gradient styling, including responsive resize handling and disposal, and verify it remains inside `#game_layer`.
-- [x] 1.3 Add transition timing tests for 2-second close, full-coverage midpoint, 2-second open, elapsed-time clamping, and duplicate-request rejection.
+- [x] 1.3 Add transition timing tests for 500ms close, 100ms full-coverage hold, 500ms open, elapsed-time clamping, and duplicate-request rejection.
 
 ## 2. Realm transfer integration
 
@@ -17,5 +17,5 @@
 
 - [x] 3.1 Run the repository Node test suite with `npm.cmd test` and resolve any focused transition, world-realm, bridge, or architecture regressions.
 - [x] 3.2 Run `npm.cmd run build` and verify the production bundle includes the transition integration without a new runtime dependency.
-- [ ] 3.3 Perform manual browser verification on the actual playable project-root URL: enter `S` in both realm directions, observe the feathered 2-second-in/2-second-out red iris centered on the player, confirm the realm graphics swap at full red coverage, confirm UI remains visible, and confirm input is paused during the animation.
+- [ ] 3.3 Perform manual browser verification on the actual playable project-root URL: enter `S` in both realm directions, observe the feathered 500ms-in/500ms-out black iris with a 100ms covered hold centered on the player, confirm the realm graphics swap at full black coverage, confirm UI remains visible, and confirm input is paused during the animation.
 - [x] 3.4 Verify player-centered iris positioning across all 3 camera modes and all 10 zoom levels, including a camera mode where the player is not at the viewport center.

@@ -81,7 +81,9 @@ const GLYPHS = ["W", "M", "•", "P", "T", "S", "◆", "~", "≈", "▓"];
 const WORLD_ROWS = 512;
 const WORLD_COLUMNS = 512;
 const TORCHES_PER_SCREEN = 3;
+const REALM_TRANSITION_CLOSE_MS = 500;
 const REALM_TRANSITION_COVER_HOLD_MS = 100;
+const REALM_TRANSITION_OPEN_MS = 500;
 
 function createViewportForCanvas(canvas, zoom = DEFAULT_ZOOM) {
   const screenWidth = canvas.clientWidth || window.innerWidth;
@@ -449,7 +451,9 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       target: "game_layer",
       from: cover,
       to: character,
+      durationOut: REALM_TRANSITION_CLOSE_MS,
       durationCovered: REALM_TRANSITION_COVER_HOLD_MS,
+      durationIn: REALM_TRANSITION_OPEN_MS,
       onStart: () => {
         transitionMask.style.setProperty("--transition-radius", `${cover}px`);
         transitionMask.style.setProperty("--transition-feather-end", `${cover + 12}px`);

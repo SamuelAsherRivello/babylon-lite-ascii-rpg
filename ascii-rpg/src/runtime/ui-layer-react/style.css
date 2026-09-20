@@ -10,8 +10,10 @@ body {
 html {
   --box-body-font: 5pt;
   --box-action-font: 10pt;
-  --ui-bar-icon-font: 14.4pt;
-  --character-bar-gap: 7px;
+  --hud-title-font: var(--box-action-font);
+  --hud-body-font: var(--box-body-font);
+  --ui-bar-icon-font: 12pt;
+  --character-bar-gap: 2px;
   --character-bar-height: 8.8px;
   --top-panel-gap: 16px;
   --top-panel-size: clamp(96px, 24vmin, 192px);
@@ -46,8 +48,8 @@ html {
     circle at var(--transition-center-x, 50%) var(--transition-center-y, 50%),
     transparent 0,
     transparent var(--transition-radius, 0px),
-    var(--transition-color, #ef3340) var(--transition-feather-end, 12px),
-    var(--transition-color, #ef3340) 100%
+    var(--transition-color, #000) var(--transition-feather-end, 12px),
+    var(--transition-color, #000) 100%
   );
 }
 
@@ -89,6 +91,65 @@ html {
   pointer-events: auto;
 }
 
+.box_layout {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  border: 1px solid #f5f5f5;
+  color: #f5f5f5;
+  font-size: var(--hud-body-font);
+}
+
+.corner_top_left > .box_layout,
+.corner_top_right > .box_layout {
+  padding: 8px;
+}
+
+/* The minimap canvas supplies the map box surface beneath its action label. */
+.corner_top_right > .box_layout {
+  background: transparent;
+  border: 0;
+}
+
+.box_layout_action {
+  position: absolute;
+  bottom: -0.62em;
+  left: 50%;
+  z-index: 2;
+  padding: 0 4px;
+  background: #000;
+  font-size: var(--box-action-font);
+  font-weight: 700;
+  text-align: center;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.hud_block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hud_block_title,
+.hud_block_body {
+  color: #f5f5f5;
+  line-height: 1.4;
+}
+
+.hud_block_title {
+  font-size: var(--hud-title-font);
+  font-weight: 700;
+}
+
+.hud_block_body {
+  display: contents;
+  font-size: var(--hud-body-font);
+  font-weight: 400;
+}
+
 /* Keep the HUD mounted when it is hidden.  Unmounting the control that
    received the click also tears down its tooltip/focus tree mid-event. */
 html[data-hud-hidden="true"] .corner_bottom_right {
@@ -127,11 +188,11 @@ html[data-hud-hidden="true"] #settings > :has(#show_ui_toggle) {
 
 .corner_top_left,
 .corner_top_right {
-  border: 1px solid #b3b3b3;
+  border: 0;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 8px;
+  padding: 0;
   cursor: pointer;
   user-select: none;
 }
@@ -140,7 +201,7 @@ html[data-hud-hidden="true"] #settings > :has(#show_ui_toggle) {
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-  gap: clamp(1px, 0.5vmin, 4px);
+  gap: 5px;
   width: 100%;
   height: 100%;
   font-size: var(--box-body-font);
@@ -149,18 +210,18 @@ html[data-hud-hidden="true"] #settings > :has(#show_ui_toggle) {
   padding: clamp(4px, 0.8vmin, 8px) 0 clamp(8px, 1vmin, 10px);
 }
 
-.character_bar_list,
-.character_resource_list {
+.character_bar_container,
+.character_slots_container {
   display: grid;
   gap: clamp(2px, 0.4vmin, 4px);
 }
 
-.character_bar_list {
+.character_bar_container {
   position: relative;
   flex: 0 0 auto;
   top: -4px;
   left: -4px;
-  height: 98px;
+  height: 83px;
   grid-template-rows: repeat(4, var(--ui-bar-icon-font));
   row-gap: var(--character-bar-gap);
   right: -4px;
@@ -232,22 +293,29 @@ html[data-hud-hidden="true"] #settings > :has(#show_ui_toggle) {
   text-shadow: 1px 1px #000;
 }
 
-.character_resource_list {
-  flex: 0 0 auto;
+.character_slots_container {
+  --character-slot-gap: clamp(2px, 0.4vmin, 4px);
+  flex: 1 1 auto;
   width: 100%;
-  container-type: inline-size;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  grid-template-rows: repeat(2, auto);
-  align-content: start;
   min-height: 0;
+  container-type: size;
+  grid-template-columns: repeat(3, minmax(0, var(--character-slot-size)));
+  grid-template-rows: repeat(2, minmax(0, var(--character-slot-size)));
+  --character-slot-size: min(
+    calc((100cqw - (2 * var(--character-slot-gap))) / 3),
+    calc((100cqh - var(--character-slot-gap)) / 2)
+  );
+  gap: var(--character-slot-gap);
+  justify-content: center;
+  align-content: start;
+  overflow: hidden;
   padding-top: 0;
 }
 
 .character_resource {
   display: flex;
-  min-height: 0;
-  width: 70%;
-  height: auto;
+  width: 100%;
+  height: 100%;
   align-self: start;
   justify-self: center;
   aspect-ratio: 1 / 1;
@@ -426,7 +494,8 @@ html[data-presentation-aspect="portrait"] #ui_layer {
   font-weight: 400;
 }
 
-.hud_section + .hud_section {
+.hud_section + .hud_section,
+.hud_block + .hud_block {
   margin-top: 0.45rem;
 }
 
@@ -477,9 +546,14 @@ html[data-presentation-aspect="portrait"] #ui_layer {
 .toast {
   position: fixed;
   top: var(--ui-margin-y, 20px);
-  --toast-horizontal-inset: 228px;
+  --toast-horizontal-inset: calc(
+    var(--ui-margin-x, 20px) + var(--top-panel-size) + var(--top-panel-gap)
+  );
   right: var(--toast-horizontal-inset);
   left: var(--toast-horizontal-inset);
+  width: 100%;
+  max-width: 460px;
+  margin-inline: auto;
   z-index: 6;
   box-sizing: border-box;
   border: 1px solid #f5f5f5;
@@ -528,37 +602,6 @@ html[data-presentation-aspect="portrait"] #ui_layer {
     min-height: 98px;
     place-items: center;
   }
-}
-
-@media (orientation: landscape) and (min-width: 1024px) {
-  .toast {
-    left: 50%;
-    right: auto;
-    width: min(920px, 100vw);
-    transform: translateX(-50%);
-  }
-
-  .toast_entering {
-    animation-name: toast_descend_wide;
-  }
-
-  .toast_visible {
-    transform: translateX(-50%);
-  }
-
-  .toast_exiting {
-    animation-name: toast_ascend_wide;
-  }
-}
-
-@keyframes toast_descend_wide {
-  from { transform: translate(-50%, var(--toast-exit-offset, -120%)); }
-  to { transform: translate(-50%, 0); }
-}
-
-@keyframes toast_ascend_wide {
-  from { transform: translate(-50%, 0); }
-  to { transform: translate(-50%, var(--toast-exit-offset, -120%)); }
 }
 
 .zoom_control {

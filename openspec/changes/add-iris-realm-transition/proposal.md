@@ -14,8 +14,8 @@ UI remains visible above it.
 - Add a game-layer transition capability that can target a named render layer,
   run a timed animation, pause gameplay input for its active interval, and emit
   lifecycle events around the transition.
-- Add a soft-edged red iris mask over the entire game layer, with a 2-second
-  closing phase and a 2-second opening phase.
+- Add a soft-edged black iris mask over the entire game layer, with a 500ms
+  closing phase, a 100ms fully covered hold, and a 500ms opening phase.
 - Center the iris on the player's rendered screen-space cell center, rather
   than assuming the viewport or screen center.
 - Use the iris transition for both directions of `S`-cell realm transfer:

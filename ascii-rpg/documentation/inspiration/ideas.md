@@ -1,10 +1,18 @@
+# Table of Contents
+
+1. [Philosophy](#philosophy)
+   1. [Embrace ASCII](#embrace-ascii)
+   2. [Don't subvert ASCII (list)](#dont-subvert-ascii-list)
+2. [Workflows](#workflows)
+3. [Possible Features](#possible-features)
+
 # Philosophy
+
+## Embrace ASCII
 
 Maybe: Embrace the limitations of ASCII instead of trying to subvert them by breaking the illusion.
 
-# Workflows
-
-- Workflow inspiration: [watch short](https://www.youtube.com/shorts/lce1edytViI)
+## Don't subvert ASCII (list)
 
 Ways to break the illusion (AVOID THESE?)
 
@@ -17,6 +25,10 @@ Ways to break the illusion (AVOID THESE?)
 - Adding camera shakes, zooms, or transitions that ignore the established grid rhythm.
 - Using lighting and shadows that imply more geometry than the ASCII symbols communicate.
 
+# Workflows
+
+- Workflow inspiration: [watch short](https://www.youtube.com/shorts/lce1edytViI)
+
 # Inspiration
 
 - ASCII game inspiration: [watch video](https://www.youtube.com/watch?v=zjEDWA8uQEw)
@@ -28,7 +40,7 @@ Ways to break the illusion (AVOID THESE?)
 - OneBit Adventure reference: [view app](https://play.google.com/store/apps/details?id=com.GalacticSlice.OneBitAdventure)
 - ASCII gameplay reference: [watch video](https://www.youtube.com/watch?v=QyBw8k6g6VU)
 
-# Ideas
+# Possible Features
 
 1. Achievements. ☐
 2. Audio. ☐

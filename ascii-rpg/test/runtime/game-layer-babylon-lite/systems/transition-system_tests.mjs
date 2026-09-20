@@ -25,7 +25,7 @@ function createFakeFrames() {
   };
 }
 
-test("runs a 2000ms close and 2000ms open with the covered event between them", () => {
+test("runs a 500ms close, 100ms covered hold, and 500ms open", () => {
   const frames = createFakeFrames();
   const updates = [];
   const events = [];
@@ -38,15 +38,18 @@ test("runs a 2000ms close and 2000ms open with the covered event between them", 
   assert.equal(transition.start({
     from: 100,
     to: 10,
+    durationOut: 500,
+    durationCovered: 100,
+    durationIn: 500,
     onStart: () => events.push("start"),
     onCovered: () => events.push("covered"),
     onComplete: () => events.push("complete"),
   }), true);
   assert.equal(transition.begin(0), true);
-  frames.flush(1000);
-  frames.flush(2000);
-  frames.flush(3000);
-  frames.flush(4000);
+  frames.flush(500);
+  frames.flush(550);
+  frames.flush(600);
+  frames.flush(1100);
 
   assert.deepEqual(events, ["start", "covered", "complete"]);
   assert.equal(updates.find((update) => update.phase === TRANSITION_PHASES.COVERED).value, 10);

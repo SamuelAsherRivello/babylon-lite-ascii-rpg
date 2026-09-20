@@ -14,9 +14,9 @@ delta specs for the observable contract.
 
 - Add a reusable game-layer transition primitive with explicit duration,
   animation progress, target layer ownership, and lifecycle events.
-- Implement the first animation as a soft-edged red iris centered on the
-  player's rendered screen-space cell center, with two 2-second phases and a
-  safe midpoint for realm replacement.
+- Implement the first animation as a soft-edged black iris centered on the
+  player's rendered screen-space cell center, with 500ms closing and opening
+  phases plus a 100ms fully covered hold for realm replacement.
 - Keep all movement/input authority and realm state in Babylon Lite.
 - Preserve the existing React HUD, settings, bridge snapshots, paired-stair
   coordinates, fog state, and realm persistence behavior.
@@ -48,9 +48,9 @@ cover the game canvas and minimap while the React UI remains visible.
 
 The transition controller will use an explicit phase state (`closing`,
 `covered`, `opening`, `idle`) and `requestAnimationFrame` timestamps. The
-closing and opening durations are independently represented as 2 seconds,
-making the 4-second total deterministic and leaving room for future transition
-types.
+closing and opening durations are independently represented as 500ms, with a
+100ms covered hold, making the 1100ms realm transition deterministic and leaving
+room for future transition types.
 The iris center is recomputed from the player's rendered cell and current
 view origin, so it remains attached to the player in center, deadzone, and
 free camera modes. The iris radius starts at a viewport-covering value,

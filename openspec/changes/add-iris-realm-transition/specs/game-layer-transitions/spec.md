@@ -32,12 +32,12 @@ is already active.
 
 ### Requirement: Soft-edged iris presentation
 
-The game-layer iris animation SHALL render red outside a circular reveal
+The game-layer iris animation SHALL render black outside a circular reveal
 centered on the player's rendered screen-space cell center, with a visibly
 feathered edge rather than a hard binary boundary. The closing phase SHALL reduce the reveal to the
-player-character-sized opening over 2 seconds, and the opening phase SHALL
-expand from that opening to fully reveal the destination game view over 2
-seconds.
+player-character-sized opening over 500 milliseconds, and the opening phase
+SHALL expand from that opening to fully reveal the destination game view over
+500 milliseconds.
 
 #### Scenario: Iris follows the player in every camera mode and zoom
 
@@ -50,13 +50,13 @@ seconds.
 
 - **WHEN** a realm transition begins from a fully visible game view
 - **THEN** a soft-edged circular reveal centered on the player's rendered
-  screen-space cell closes over 2 seconds until the source game view outside
-  the character-sized opening is red
+  screen-space cell closes over 500 milliseconds until the source game view
+  outside the character-sized opening is black
 
 #### Scenario: Iris opens over the destination realm
 
 - **WHEN** the destination realm has been selected at full coverage
-- **THEN** the soft-edged circular reveal expands over 2 seconds until
+- **THEN** the soft-edged circular reveal expands over 500 milliseconds until
   the destination game view is fully visible and the mask is removed
 
 #### Scenario: Realm remains hidden after loading
@@ -87,7 +87,8 @@ completing it SHALL leave input available for the destination realm.
 
 #### Scenario: Movement is paused during realm transfer
 
-- **WHEN** the player is inside either 2-second iris phase
+- **WHEN** the player is inside either 500-millisecond iris phase or the
+  covered hold
 - **THEN** movement does not change the player cell, advance game time, or
   retrigger a stair transfer
 

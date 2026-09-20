@@ -19,9 +19,11 @@ import {
   getPaletteEntryId,
   PALETTE_WARNING_KEY,
   sortPaletteEntries,
+  getPaletteStyle,
 } from "../bridge-layer/palette.js";
 import { withUrlArgument } from "./url-arguments.js";
 import { ToastProvider, useToast } from "./ToastProvider.jsx";
+import { BoxLayout, CornerLayout, HudBlockLayout } from "./HudLayouts.jsx";
 import { removeFocusableElementsFromTabOrder } from "./button-tab-order.js";
 import { INITIAL_CHARACTER } from "./character-data.js";
 import { deriveBarColors } from "./character-colors.js";
@@ -258,15 +260,16 @@ function CharacterBarRow({ row, data, color }) {
   );
 }
 
-function CharacterDetails({ gold = INITIAL_CHARACTER.gold.currentAmount }) {
+function CharacterDetails({ gold = INITIAL_CHARACTER.gold.currentAmount, palette }) {
+  const goldStyle = getPaletteStyle(palette, "◆");
   return (
     <div className="character_details" aria-label="Character details">
-      <div className="character_bar_list">
+      <div className="character_bar_container">
         {characterBarRows.map((row) => <CharacterBarRow key={row.key} row={row} color={row.color} data={INITIAL_CHARACTER[row.key]} />)}
       </div>
-      <div className="character_resource_list">
+      <div className="character_slots_container">
         <div className="character_resource" data-resource="gold" aria-label="Gold">
-          <span className="character_resource_icon" aria-hidden="true">◆</span>
+          <span className="character_resource_icon" aria-hidden="true" style={{ color: goldStyle.color }}>◆</span>
           <span className="character_resource_value">{gold}</span>
         </div>
         {["Slot 01", "Slot 02"].map((slot) => (
@@ -291,10 +294,16 @@ function CharacterDetails({ gold = INITIAL_CHARACTER.gold.currentAmount }) {
 function QuestTracker({ quest }) {
   if (!quest) return null;
   return (
-    <div className="quest_tracker" aria-label="Current quest">
-      <div className="quest_tracker_title">Question: {quest.title}</div>
-      <div className={`quest_tracker_body${quest.complete ? " quest_tracker_body_complete" : ""}`}>{quest.objective} {quest.current} of {quest.target}</div>
-    </div>
+    <HudBlockLayout
+      as="div"
+      className="quest_tracker"
+      aria-label="Current quest"
+      titleClassName="quest_tracker_title"
+      bodyClassName={`quest_tracker_body${quest.complete ? " quest_tracker_body_complete" : ""}`}
+      title={`Question: ${quest.title}`}
+    >
+      {quest.objective} {quest.current} of {quest.target}
+    </HudBlockLayout>
   );
 }
 
@@ -1117,45 +1126,43 @@ function AppContent() {
 
   return (
     <>
-      <div
-        className="corner corner_top_left"
+      <CornerLayout
+        position="top-left"
         role="button"
         tabIndex={-1}
         aria-label="Character details"
         onClick={activateDetails}
         onKeyDown={(event) => handleTopPanelKeyDown(event, activateDetails)}
       >
-        <CharacterDetails gold={gold} />
-        <div className="top_panel_action">Character</div>
-      </div>
+        <BoxLayout action="Character">
+          <CharacterDetails gold={gold} palette={palette} />
+        </BoxLayout>
+      </CornerLayout>
       <QuestTracker quest={quest} />
       {true ? (
         <>
-          <div
-            className="corner corner_top_right"
+          <CornerLayout
+            position="top-right"
             role="button"
             tabIndex={-1}
             aria-label="Map icon"
             onClick={activateMinimapZoom}
             onKeyDown={(event) => handleTopPanelKeyDown(event, activateMinimapZoom)}
           >
-            <div className="top_panel_action">Map 🔍</div>
-          </div>
+            <BoxLayout action="Map 🔍" />
+          </CornerLayout>
           <div className="minimap_status" aria-label="World status">
             <span>World 1 Floor {activeRealm === "Underground" ? "-1" : "1"}</span>
             <span id="time">Time: {String(worldTime).padStart(5, "0")}</span>
           </div>
         </>
       ) : null}
-      <div className="corner corner_bottom_left">
+      <CornerLayout position="bottom-left">
         {true ? <>
           <a className="project_link" href={repositoryUrl} target="_blank" rel="noopener noreferrer" aria-label="View the repository on GitHub" tabIndex={-1}>
             <GitHubMark />
           </a>
-          <section className="hud_section" id="windows" aria-labelledby="windows_title">
-          <div id="windows_title" className="corner_title">
-            Windows - 1
-          </div>
+          <HudBlockLayout className="hud_section" id="windows" aria-labelledby="windows_title" titleId="windows_title" title="Windows - 1">
           <button
             id="ascii_palette_toggle"
             className="corner_body settings_option"
@@ -1174,11 +1181,8 @@ function AppContent() {
           >
             Arguments
           </button>
-        </section>
-        <section className="hud_section" id="windows_2" aria-labelledby="windows_2_title">
-          <div id="windows_2_title" className="corner_title">
-            Windows - 2
-          </div>
+        </HudBlockLayout>
+        <HudBlockLayout className="hud_section" id="windows_2" aria-labelledby="windows_2_title" titleId="windows_2_title" title="Windows - 2">
           <SettingTooltipTarget description={settingsHelp.lighting} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
             <button
               id="lighting_window_toggle"
@@ -1193,19 +1197,13 @@ function AppContent() {
               Lighting
             </button>
           </SettingTooltipTarget>
-        </section>
-        <section className="hud_section" id="stats" aria-labelledby="stats_title">
-          <div id="stats_title" className="corner_title">
-            Stats
-          </div>
+        </HudBlockLayout>
+        <HudBlockLayout className="hud_section" id="stats" aria-labelledby="stats_title" titleId="stats_title" title="Stats">
           <div id="fps" className="corner_body">
             FPS: {fps}
           </div>
-        </section>
-        <section className="hud_section" id="settings" aria-labelledby="settings_title">
-          <div id="settings_title" className="corner_title">
-            Settings
-          </div>
+        </HudBlockLayout>
+        <HudBlockLayout className="hud_section" id="settings" aria-labelledby="settings_title" titleId="settings_title" title="Settings">
           <SettingTooltipTarget description={settingsHelp.fullscreen} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
             <button
               id="fullscreen_toggle"
@@ -1323,7 +1321,7 @@ function AppContent() {
               Reset Settings
             </button>
           </SettingTooltipTarget>
-        </section>
+        </HudBlockLayout>
         </> : (
           <button
             id="show_ui_toggle"
@@ -1340,13 +1338,13 @@ function AppContent() {
             </span>
           </button>
         )}
-      </div>
+      </CornerLayout>
       {true ? (
-        <div className="corner corner_bottom_right">
+        <CornerLayout position="bottom-right">
           <span id="version" className="corner_body">
             v{versionNumber}
           </span>
-        </div>
+        </CornerLayout>
       ) : null}
       {true && lightingWindowOpen ? (
         <LightingWindow

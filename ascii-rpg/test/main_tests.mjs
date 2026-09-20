@@ -18,6 +18,7 @@ test("documents the plain safe-area template", async () => {
   const gameBridge = await readFile(new URL("src/runtime/bridge-layer/game-bridge.js", appRoot), "utf8");
   const camera = await readFile(new URL("src/runtime/bridge-layer/camera.js", appRoot), "utf8");
   const styles = await readFile(new URL("src/runtime/ui-layer-react/style.css", appRoot), "utf8");
+  const hudLayouts = await readFile(new URL("src/runtime/ui-layer-react/HudLayouts.jsx", appRoot), "utf8");
   const fontStore = await readFile(new URL("src/runtime/ui-layer-react/font-store.js", appRoot), "utf8");
   const paletteStore = await readFile(new URL("src/runtime/ui-layer-react/palette-store.js", appRoot), "utf8");
   const platformSettings = await readFile(new URL("src/runtime/ui-layer-react/platform-settings.js", appRoot), "utf8");
@@ -52,9 +53,14 @@ test("documents the plain safe-area template", async () => {
   if (!styles.includes(".corner {")) {
     throw new Error("The page must define a reusable corner style.");
   }
-  for (const cornerClass of ["corner_top_left", "corner_top_right", "corner_bottom_left", "corner_bottom_right"]) {
-    if (!app.includes(`className="corner ${cornerClass}"`)) {
-      throw new Error(`The page must include a ${cornerClass} corner instance.`);
+  for (const position of ["top-left", "top-right", "bottom-left", "bottom-right"]) {
+    if (!app.includes(`position="${position}"`)) {
+      throw new Error(`The page must include a ${position} corner instance.`);
+    }
+  }
+  for (const component of ["CornerLayout", "BoxLayout", "HudBlockLayout"]) {
+    if (!hudLayouts.includes(`export function ${component}`)) {
+      throw new Error(`The UI layer must export the shared ${component} component.`);
     }
   }
   if (!app.includes('id="version"')) {
@@ -63,8 +69,8 @@ test("documents the plain safe-area template", async () => {
   if (!app.includes("v{versionNumber}")) {
     throw new Error("The version corner must display versions in v0.0.0 format.");
   }
-  if (!app.includes('className="top_panel_action">Character</div>')
-    || !app.includes('className="top_panel_action">Map 🔍</div>')
+  if (!app.includes('action="Character"')
+    || !app.includes('action="Map 🔍"')
     || !app.includes("World 1 Floor {activeRealm === \"Underground\" ? \"-1\" : \"1\"}")
     || !app.includes('String(worldTime).padStart(5, "0")')
     || !styles.includes(".minimap_status")) {
@@ -95,12 +101,16 @@ test("documents the plain safe-area template", async () => {
       throw new Error(`The character info panel must include the empty ${slot} placeholder.`);
     }
   }
-  if (!styles.includes("grid-template-columns: repeat(3, minmax(0, 1fr))")
-    || !styles.includes("grid-template-rows: repeat(2, auto)")
-    || !styles.includes("width: 70%")
+  if (!styles.includes("grid-template-columns: repeat(3, minmax(0, var(--character-slot-size)))")
+    || !styles.includes("grid-template-rows: repeat(2, minmax(0, var(--character-slot-size)))")
+    || !styles.includes("container-type: size")
+    || !styles.includes("--character-slot-size: min(")
+    || !styles.includes("flex: 1 1 auto")
+    || !styles.includes("overflow: hidden")
+    || !styles.includes("width: 100%")
+    || !styles.includes("height: 100%")
     || !styles.includes("aspect-ratio: 1 / 1")
-    || !styles.includes("aspect-ratio: 1 / 1")
-    || !styles.includes("overflow: visible") || !styles.includes("min-height: 0")) {
+    || !styles.includes("min-height: 0")) {
     throw new Error("Character resources and empty inventory slots must share a six-cell grid.");
   }
   for (const requiredFragment of [
@@ -123,7 +133,8 @@ test("documents the plain safe-area template", async () => {
     || !styles.includes("--character-bar-delta") || !styles.includes("--character-bar-unfilled")) {
     throw new Error("Character stat bars must expose current, derived delta, and derived unfilled sections.");
   }
-  if (!styles.includes("--box-body-font") || !styles.includes("font-size: var(--box-body-font)")
+  if (!styles.includes("--box-body-font") || !styles.includes("--hud-title-font") || !styles.includes("--hud-body-font")
+    || !styles.includes("font-size: var(--hud-body-font)")
     || !styles.includes("font-size: var(--box-action-font)")) {
     throw new Error("Character content and box actions must use the shared body and action font sizes.");
   }
@@ -140,8 +151,9 @@ test("documents the plain safe-area template", async () => {
   if (!app.includes('id="settings"') || !app.includes('id="settings_title"') || !app.includes("Settings")) {
     throw new Error("The lower-left HUD must include a Settings section.");
   }
-  if (!styles.includes(".corner_body") || !styles.includes(".corner_title")) {
-    throw new Error("The page must define shared corner body and title text styles.");
+  if (!styles.includes(".corner_body") || !styles.includes(".corner_title")
+    || !styles.includes(".hud_block_title") || !styles.includes(".hud_block_body")) {
+    throw new Error("The page must define shared HUD title and body text styles.");
   }
   if (!app.includes('id="lighting_torch_toggle"') || !app.includes('id="lighting_player_toggle"')
     || !app.includes('id="shadow_torch_toggle"') || !app.includes('id="shadow_player_toggle"')
@@ -168,8 +180,8 @@ test("documents the plain safe-area template", async () => {
     || !gameLayer.includes("new ResizeObserver(handleResize)")) {
     throw new Error("The game viewport must follow the canvas dimensions available in the browser.");
   }
-  const topLeftStart = app.indexOf('className="corner corner_top_left"');
-  const topRightStart = app.indexOf('className="corner corner_top_right"');
+  const topLeftStart = app.indexOf('position="top-left"');
+  const topRightStart = app.indexOf('position="top-right"');
   if (app.slice(topLeftStart, topRightStart).includes('id="fps"')) {
     throw new Error("The upper-left corner must not display the FPS counter.");
   }
@@ -295,7 +307,7 @@ test("documents the plain safe-area template", async () => {
   if (!styles.includes(".prompt_body") || !styles.includes(".prompt_button")) {
     throw new Error("Prompts must define shared body and button styles.");
   }
-  if (!app.includes('id="settings_title"') || !app.includes('className="corner_title"')) {
+  if (!app.includes('titleId="settings_title"') || !app.includes('title="Settings"')) {
     throw new Error("The Settings heading must use the bold corner title style.");
   }
   if (!app.includes('id="fullscreen_toggle"') || !app.includes('className="corner_body settings_option"')) {
@@ -487,5 +499,16 @@ test("documents the quest tracker, live gold bridge, and quest toasts", async ()
   if (!styles.includes(".quest_tracker") || !styles.includes("top: calc(var(--top-panel-size) + 25px)")
     || !styles.includes("margin-left: 5px") || !styles.includes("text-decoration: line-through")) {
     throw new Error("The quest tracker must preserve the requested HUD spacing, indent, and completion style.");
+  }
+});
+
+test("derives the character gold icon color from the shared palette", async () => {
+  const app = await readFile(new URL("src/runtime/ui-layer-react/App.jsx", appRoot), "utf8");
+  const palette = JSON.parse(await readFile(new URL("src/runtime/game-layer-babylon-lite/data/palette_data.json", appRoot), "utf8"));
+  if (!app.includes('getPaletteStyle(palette, "◆")') || !app.includes("style={{ color: goldStyle.color }}")) {
+    throw new Error("The character gold icon must resolve its color from the shared palette.");
+  }
+  if (palette.entries.find((entry) => entry.glyph === "◆")?.color !== "#ffff00") {
+    throw new Error("The bundled gold glyph must default to yellow.");
   }
 });

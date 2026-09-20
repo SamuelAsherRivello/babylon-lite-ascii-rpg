@@ -136,3 +136,12 @@ test("ships blue defaults for the distinct water glyphs", async () => {
     ["~", "≈"],
   );
 });
+
+test("ships a yellow gold glyph for shared HUD and world rendering", async () => {
+  const data = JSON.parse(await readFile(new URL(
+    "../../../src/runtime/game-layer-babylon-lite/data/palette_data.json",
+    import.meta.url,
+  ), "utf8"));
+  const palette = createPalette(data);
+  assert.equal(palette.find((entry) => entry.glyph === "◆").color, "#ffff00");
+});
