@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   DEEP_WATER_GLYPH,
   FLOOR_GLYPH,
+  UNDERGROUND_FLOOR_GLYPH,
   GOLD_GLYPH,
   GENERATION_PASSES,
   MOUNTAIN_GLYPH,
@@ -264,6 +265,8 @@ test("creates deterministic paired realm stairs on walkable terrain", async () =
   assert.deepEqual(first, second);
   assert.equal(overground.realm, "Overground");
   assert.equal(underground.realm, "Underground");
+  assert.ok(overground.terrain.flat().some((cell) => cell.glyph === FLOOR_GLYPH && cell.walkable));
+  assert.ok(underground.terrain.flat().some((cell) => cell.glyph === UNDERGROUND_FLOOR_GLYPH && cell.walkable));
   assert.ok(overground.terrain.flat().some((cell) => cell.glyph === MOUNTAIN_GLYPH));
   assert.ok(underground.terrain.flat().some((cell) => cell.glyph === WALL_GLYPH));
   assert.deepEqual(overground.stairs, underground.stairs);

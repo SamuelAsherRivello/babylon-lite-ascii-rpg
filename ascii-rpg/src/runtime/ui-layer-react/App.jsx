@@ -51,6 +51,7 @@ import {
   sendTorchLightingSnapshot,
   sendTorchShadowSnapshot,
   sendZoomSnapshot,
+  subscribeToPlayerMoved,
   subscribeToTime,
   subscribeToGold,
   subscribeToQuest,
@@ -96,6 +97,7 @@ const gpuLightPassStorageKey = "babylon-lite-ascii-rpg.gpu-light-pass";
 const playerGpuShadowBleedRangeStorageKey = "babylon-lite-ascii-rpg.player-gpu-shadow-bleed-range";
 const minimapZoomStorageKey = "babylon-lite-ascii-rpg.minimap-zoom";
 const lightingWindowPositionStorageKey = "babylon-lite-ascii-rpg.lighting-window-position";
+const tutorialSkipStorageKey = "babylon-lite-ascii-rpg.tutorial-skip";
 const minZoom = 1;
 const maxZoom = 10;
 const repositoryUrl = "https://github.com/SamuelAsherRivello/babylon-lite-ascii-rpg";
@@ -313,6 +315,44 @@ function SettingTooltipTarget({ description, onShow, onHide, children }) {
     >
       {children}
     </span>
+  );
+}
+
+function TutorialWindow({ complete, onConfirm, onSkip }) {
+  const title = complete ? "Tutorial Complete" : "How To Play";
+  const titleId = complete ? "tutorial_complete_title" : "tutorial_title";
+
+  return (
+    <section
+      id={complete ? "tutorial_complete_window" : "tutorial_window"}
+      className="lighting_window tutorial_window"
+      role="dialog"
+      aria-modal="false"
+      aria-labelledby={titleId}
+      onPointerDown={(event) => event.stopPropagation()}
+      onPointerMove={(event) => event.stopPropagation()}
+    >
+      <div className="lighting_window_titlebar tutorial_window_titlebar">
+        <div id={titleId} className="corner_title">{title}</div>
+      </div>
+      <div className="lighting_window_body tutorial_window_body">
+        {!complete ? (
+          <p className="corner_body tutorial_window_copy">
+            Use arrow keys or swipe to move. Hold to move faster.
+          </p>
+        ) : null}
+        <div className="tutorial_window_actions">
+          {complete ? (
+            <button className="corner_body tutorial_window_ok" type="button" onClick={onConfirm}>OK</button>
+          ) : (
+            <>
+              <button className="corner_body tutorial_window_primary" type="button" onClick={onConfirm}>Next</button>
+              <button className="corner_body tutorial_window_secondary" type="button" onClick={onSkip}>Skip Tutorial</button>
+            </>
+          )}
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -830,14 +870,18 @@ function AppContent() {
   const [minimapZoom, setMinimapZoom] = useState(getStoredMinimapZoom);
   const [overgroundAmbient, setOvergroundAmbient] = useState(() => getStoredAmbientLight(overgroundAmbientStorageKey, 0.9));
   const [undergroundAmbient, setUndergroundAmbient] = useState(() => getStoredAmbientLight(undergroundAmbientStorageKey, 0.1));
-  const [gpuLightPass, setGpuLightPass] = useState(() => getStoredBoolean(gpuLightPassStorageKey, false));
+  const [gpuLightPass, setGpuLightPass] = useState(() => getStoredBoolean(gpuLightPassStorageKey, true));
   const [playerGpuShadowBleedRange, setPlayerGpuShadowBleedRange] = useState(getStoredPlayerGpuShadowBleedRange);
-  const [torchLightingIndex, setTorchLightingIndex] = useState(() => getStoredSourceIndex(torchLightingStorageKey, 1));
+  const [torchLightingIndex, setTorchLightingIndex] = useState(() => getStoredSourceIndex(torchLightingStorageKey, 2));
   const [playerLightingIndex, setPlayerLightingIndex] = useState(() => getStoredSourceIndex(playerLightingStorageKey, 4));
   const [torchShadowIndex, setTorchShadowIndex] = useState(() => getStoredSourceIndex(torchShadowStorageKey, 4));
   const [playerShadowIndex, setPlayerShadowIndex] = useState(() => getStoredSourceIndex(playerShadowStorageKey, 3));
   const [lightingWindowOpen, setLightingWindowOpen] = useState(false);
   const [lightingWindowPosition, setLightingWindowPosition] = useState(getStoredLightingWindowPosition);
+  const [tutorialPhase, setTutorialPhase] = useState(() => (
+    getStoredBoolean(tutorialSkipStorageKey, false) ? "finished" : "initial"
+  ));
+  const tutorialDirectionsRef = useRef(new Set());
   const [asciiPaletteOpen, setAsciiPaletteOpen] = useState(false);
   const [argumentsOpen, setArgumentsOpen] = useState(false);
   const [paletteError, setPaletteError] = useState("");
@@ -853,6 +897,20 @@ function AppContent() {
   const [fps, setFps] = useState(0);
 
   const versionNumber = versionText.trim().replace(/^version=/, "").replace(/^v/, "");
+
+  useEffect(() => {
+    if (localStorage.getItem(tutorialSkipStorageKey) === null) {
+      localStorage.setItem(tutorialSkipStorageKey, "false");
+    }
+  }, []);
+
+  useEffect(() => {
+    if (tutorialPhase !== "tracking") return undefined;
+    return subscribeToPlayerMoved((eventName) => {
+      tutorialDirectionsRef.current.add(eventName);
+      if (tutorialDirectionsRef.current.size === 4) setTutorialPhase("complete");
+    });
+  }, [tutorialPhase]);
 
   useLayoutEffect(() => {
     if (!settingTooltip || !settingTooltipRef.current) return;
@@ -1061,7 +1119,6 @@ function AppContent() {
   const activateDetails = () => {};
 
   const activateMinimapZoom = () => {
-    if (!minimap) return;
     setMinimapZoom((currentZoom) => {
       const nextZoom = getNextMinimapScale(currentZoom);
       sendMinimapZoomSnapshot(nextZoom);
@@ -1091,6 +1148,21 @@ function AppContent() {
   const resetSettings = () => {
     localStorage.clear();
     window.location.reload();
+  };
+
+  const confirmTutorial = () => {
+    localStorage.setItem(tutorialSkipStorageKey, "false");
+    if (tutorialPhase === "initial") {
+      tutorialDirectionsRef.current.clear();
+      setTutorialPhase("tracking");
+    } else if (tutorialPhase === "complete") {
+      setTutorialPhase("finished");
+    }
+  };
+
+  const skipTutorial = () => {
+    localStorage.setItem(tutorialSkipStorageKey, "true");
+    setTutorialPhase("finished");
   };
 
   const formatLightingProfile = (index) => {
@@ -1245,6 +1317,13 @@ function AppContent() {
           onUndergroundAmbientChange={(amount) => changeRealmAmbient(setUndergroundAmbient, amount)}
           onShowTooltip={showSettingTooltip}
           onHideTooltip={hideSettingTooltip}
+        />
+      ) : null}
+      {tutorialPhase === "initial" || tutorialPhase === "complete" ? (
+        <TutorialWindow
+          complete={tutorialPhase === "complete"}
+          onConfirm={confirmTutorial}
+          onSkip={skipTutorial}
         />
       ) : null}
       {settingTooltip ? (

@@ -1,7 +1,7 @@
 const FOCUSABLE_SELECTOR = "button, a, input, select, textarea, [tabindex], [contenteditable=\"true\"]";
 
 function removeFromTabOrder(node) {
-  if (node instanceof Element && node.matches(FOCUSABLE_SELECTOR)) {
+  if (node instanceof Element && node.matches(FOCUSABLE_SELECTOR) && node.tabIndex !== -1) {
     node.tabIndex = -1;
   }
 }

@@ -41,6 +41,7 @@ import {
 import { normalizeCameraMode } from "../bridge-layer/camera.js";
 import { getFontOption, validateFontId } from "../bridge-layer/font.js";
 import { getPaletteStyle, validatePaletteEntries } from "../bridge-layer/palette.js";
+import { PLAYER_MOVED_EVENTS, sendPlayerMovedEvent } from "../bridge-layer/game-bridge.js";
 import {
   clearCharacter,
   createGeneratedSeed,
@@ -77,7 +78,7 @@ import questData from "./data/quest_data.json";
 import { createPickupSystem, selectPickupCells } from "./systems/pickup-system.js";
 import { createQuestManager } from "./systems/quest-system.js";
 
-const GLYPHS = ["W", "M", "•", "P", "T", "S", "◆", "~", "≈", "▓"];
+const GLYPHS = ["▒", "△", "•", "P", "T", "S", "◆", "~", "≈", "▓"];
 const WORLD_ROWS = 512;
 const WORLD_COLUMNS = 512;
 const TORCHES_PER_SCREEN = 3;
@@ -866,6 +867,10 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     world.playerCell = playerCell;
     pickupSystem?.collectAtCell(playerCell, { playerCell: { ...playerCell }, world });
     timeSystem.advance();
+    if (direction.x === 0 && direction.y === -1) sendPlayerMovedEvent(PLAYER_MOVED_EVENTS.up);
+    else if (direction.x === 0 && direction.y === 1) sendPlayerMovedEvent(PLAYER_MOVED_EVENTS.down);
+    else if (direction.x === -1 && direction.y === 0) sendPlayerMovedEvent(PLAYER_MOVED_EVENTS.left);
+    else if (direction.x === 1 && direction.y === 0) sendPlayerMovedEvent(PLAYER_MOVED_EVENTS.right);
     viewOrigin = nextOrigin;
     if (world.stairs?.some((stair) => stair.x === playerCell.x && stair.y === playerCell.y)) {
       const destination = activeRealm === "Overground" ? "Underground" : "Overground";

@@ -87,7 +87,8 @@ html {
 #ui_layer {
   position: fixed;
   inset: var(--ui-margin-y, 20px) var(--ui-margin-x, 20px);
-  z-index: 1;
+  /* Keep HTML controls above the game canvas and its transition mask. */
+  z-index: 3;
   pointer-events: none;
 }
 
@@ -402,7 +403,7 @@ html[data-hud-hidden="true"] #settings > .hud_block_body > :has(#show_ui_toggle)
 .quest_tracker_body {
   display: block;
   margin-left: 0;
-  font-size: 6pt;
+  font-size: 8pt;
 }
 
 .quest_tracker_body_complete {
@@ -630,6 +631,8 @@ html[data-presentation-aspect="portrait"] #ui_layer {
 }
 
 .lighting_window {
+  --lighting-title-font: 15pt;
+  --lighting-body-font: 10pt;
   position: fixed;
   z-index: 2;
   box-sizing: border-box;
@@ -640,6 +643,14 @@ html[data-presentation-aspect="portrait"] #ui_layer {
   color: #f5f5f5;
   overflow: auto;
   pointer-events: auto;
+}
+
+.lighting_window .corner_title {
+  font-size: var(--lighting-title-font);
+}
+
+.lighting_window .corner_body {
+  font-size: var(--lighting-body-font);
 }
 
 .lighting_window_titlebar {
@@ -666,8 +677,58 @@ html[data-presentation-aspect="portrait"] #ui_layer {
   display: grid;
   gap: 0.2rem;
   padding: 0.5rem;
-  font-size: 10pt;
+  font-size: var(--lighting-body-font);
   line-height: 1.2;
+}
+
+.tutorial_window {
+  top: 50%;
+  left: 50%;
+  width: 80vw;
+  height: 200%;
+  max-height: calc(100vh - 24px);
+  transform: translate(-50%, -50%);
+}
+
+.tutorial_window_titlebar {
+  cursor: default;
+  touch-action: auto;
+  user-select: text;
+}
+
+.tutorial_window_body {
+  gap: 0.75rem;
+}
+
+.tutorial_window_copy {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.tutorial_window_actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.45rem;
+  justify-content: flex-end;
+}
+
+.tutorial_window_primary,
+.tutorial_window_secondary,
+.tutorial_window_ok {
+  border: 1px solid #f5f5f5;
+  padding: 0.25rem 0.75rem;
+  text-align: center;
+}
+
+.tutorial_window_primary {
+  background: #f5f5f5;
+  color: #2f2f2f;
+}
+
+.tutorial_window_secondary {
+  background: transparent;
+  color: #f5f5f5;
 }
 
 .prompt_window {

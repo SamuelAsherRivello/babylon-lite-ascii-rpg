@@ -1,10 +1,11 @@
-export const WALL_GLYPH = "W";
+export const WALL_GLYPH = "▒";
 export const FLOOR_GLYPH = "•";
+export const UNDERGROUND_FLOOR_GLYPH = "●";
 export const PLAYER_GLYPH = "P";
 export const TORCH_GLYPH = "T";
 export const GOLD_GLYPH = "◆";
 export const STAIR_GLYPH = "S";
-export const MOUNTAIN_GLYPH = "M";
+export const MOUNTAIN_GLYPH = "△";
 export const SHALLOW_WATER_GLYPH = "~";
 export const MEDIUM_WATER_GLYPH = "≈";
 export const DEEP_WATER_GLYPH = MEDIUM_WATER_GLYPH;
@@ -28,8 +29,8 @@ export const GENERATION_PASSES = Object.freeze([
   "player-position",
 ]);
 export const REALM_PROFILES = Object.freeze({
-  Overground: Object.freeze({ wallFillPercent: 25, minWalkablePercent: 0.55, groundKind: "grass", blockedKind: "mountain", blockedGlyph: MOUNTAIN_GLYPH }),
-  Underground: Object.freeze({ wallFillPercent: 50, minWalkablePercent: 0.3, groundKind: "dirt", blockedKind: "wall", blockedGlyph: WALL_GLYPH }),
+  Overground: Object.freeze({ wallFillPercent: 25, minWalkablePercent: 0.55, groundKind: "grass", groundGlyph: FLOOR_GLYPH, groundColor: "#55aa55", blockedKind: "mountain", blockedGlyph: MOUNTAIN_GLYPH }),
+  Underground: Object.freeze({ wallFillPercent: 50, minWalkablePercent: 0.3, groundKind: "dirt", groundGlyph: UNDERGROUND_FLOOR_GLYPH, groundColor: "#8b5a2b", blockedKind: "wall", blockedGlyph: WALL_GLYPH }),
 });
 
 const CARDINAL_DIRECTIONS = [
@@ -907,7 +908,11 @@ export function clearCharacter(world, cell) {
 function applyRealmProfile(realm, name) {
   const profile = REALM_PROFILES[name];
   for (const row of realm.terrain) for (const cell of row) {
-    if (cell.kind === "ground") { cell.kind = profile.groundKind; }
+    if (cell.kind === "ground") {
+      cell.kind = profile.groundKind;
+      cell.glyph = profile.groundGlyph;
+      cell.color = profile.groundColor;
+    }
     if (cell.kind === "wall") { cell.kind = profile.blockedKind; cell.glyph = profile.blockedGlyph; }
   }
   realm.realm = name;

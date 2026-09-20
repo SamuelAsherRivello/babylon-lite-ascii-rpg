@@ -23,6 +23,9 @@ import {
   setGameController,
   subscribeToTime,
   subscribeToMinimapZoom,
+  PLAYER_MOVED_EVENTS,
+  sendPlayerMovedEvent,
+  subscribeToPlayerMoved,
 } from "../../../src/runtime/bridge-layer/game-bridge.js";
 
 test("forwards confirmed palette snapshots without exposing game internals", () => {
@@ -53,6 +56,20 @@ test("publishes time snapshots to subscribers", () => {
   unsubscribe();
   sendTimeSnapshot(3);
   assert.deepEqual(received, [2]);
+});
+
+test("publishes only generic player-moved events to subscribers", () => {
+  const received = [];
+  const unsubscribe = subscribeToPlayerMoved((eventName) => received.push(eventName));
+
+  sendPlayerMovedEvent(PLAYER_MOVED_EVENTS.up);
+  sendPlayerMovedEvent(PLAYER_MOVED_EVENTS.right);
+  sendPlayerMovedEvent("tutorial complete");
+
+  assert.deepEqual(received, [PLAYER_MOVED_EVENTS.up, PLAYER_MOVED_EVENTS.right]);
+  unsubscribe();
+  sendPlayerMovedEvent(PLAYER_MOVED_EVENTS.down);
+  assert.deepEqual(received, [PLAYER_MOVED_EVENTS.up, PLAYER_MOVED_EVENTS.right]);
 });
 
 test("publishes immutable quest and live gold snapshots", () => {

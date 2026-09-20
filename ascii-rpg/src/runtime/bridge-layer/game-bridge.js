@@ -21,6 +21,14 @@ const realmListeners = new Set();
 const minimapZoomListeners = new Set();
 const questListeners = new Set();
 const goldListeners = new Set();
+const playerMovedListeners = new Set();
+
+export const PLAYER_MOVED_EVENTS = Object.freeze({
+  up: "player moved up",
+  down: "player moved down",
+  left: "player moved left",
+  right: "player moved right",
+});
 
 export function setGameController(controller) {
   gameController = controller;
@@ -130,6 +138,16 @@ export function subscribeToGold(listener) { goldListeners.add(listener); return 
 export function sendGoldSnapshot(gold) {
   goldSnapshot = Number(gold) || 0;
   for (const listener of goldListeners) listener();
+}
+
+export function subscribeToPlayerMoved(listener) {
+  playerMovedListeners.add(listener);
+  return () => playerMovedListeners.delete(listener);
+}
+
+export function sendPlayerMovedEvent(eventName) {
+  if (!Object.values(PLAYER_MOVED_EVENTS).includes(eventName)) return;
+  for (const listener of playerMovedListeners) listener(eventName);
 }
 
 export function sendCameraModeSnapshot(mode) {

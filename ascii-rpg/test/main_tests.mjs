@@ -22,6 +22,7 @@ test("documents the plain safe-area template", async () => {
   const fontStore = await readFile(new URL("src/runtime/ui-layer-react/font-store.js", appRoot), "utf8");
   const paletteStore = await readFile(new URL("src/runtime/ui-layer-react/palette-store.js", appRoot), "utf8");
   const platformSettings = await readFile(new URL("src/runtime/ui-layer-react/platform-settings.js", appRoot), "utf8");
+  const buttonTabOrder = await readFile(new URL("src/runtime/ui-layer-react/button-tab-order.js", appRoot), "utf8");
 
   if (!page.includes("<title>Ascii RPG</title>")) {
     throw new Error("The browser title must identify the project.");
@@ -175,6 +176,9 @@ test("documents the plain safe-area template", async () => {
     || !app.includes('id="player_gpu_shadow_bleed_range"')
     || !app.includes("formatLightingProfile") || !app.includes("formatShadowProfile")) {
     throw new Error("The Lighting window must include all independent lighting, shadow, and ambient controls.");
+  }
+  if (!app.includes("getStoredSourceIndex(torchLightingStorageKey, 2)")) {
+    throw new Error("Torch lighting must default to the third profile when no saved value exists.");
   }
   const torchLightingStart = app.indexOf('id="lighting_torch_toggle"');
   const torchShadowStart = app.indexOf('id="shadow_torch_toggle"');
@@ -335,10 +339,10 @@ test("documents the plain safe-area template", async () => {
     throw new Error("The fullscreen setting must persist its preference locally.");
   }
   if (!app.includes('id="gpu_light_pass_toggle"') || !app.includes("GPU Light Pass")
-    || !app.includes("getStoredBoolean(gpuLightPassStorageKey, false)")
+    || !app.includes("getStoredBoolean(gpuLightPassStorageKey, true)")
     || !app.includes("localStorage.setItem(gpuLightPassStorageKey, gpuLightPass ? \"true\" : \"false\")")
     || !app.includes("localStorage.clear()")) {
-    throw new Error("The GPU light pass checkbox must default off, persist, and reset with settings.");
+    throw new Error("The GPU light pass checkbox must default on, persist, and reset with settings.");
   }
   if (!viteConfig.plugins.some((plugin) => plugin?.name === "ascii-palette-persistence")) {
     throw new Error("Vite must provide the local disk persistence plugin for ASCII palette and font edits.");
@@ -410,6 +414,10 @@ test("documents the plain safe-area template", async () => {
   if (!app.includes("tabIndex={-1}")) {
     throw new Error("The corner UI controls must be removed from the tabbing order.");
   }
+  if (!buttonTabOrder.includes("node.tabIndex !== -1")
+    || !buttonTabOrder.includes("attributeFilter: [\"tabindex\"]")) {
+    throw new Error("Dynamic UI controls must be removed from the tab order without creating a MutationObserver feedback loop.");
+  }
   for (const requiredSourceFragment of [
     "touch-action: none",
     "getDirectionForSwipe",
@@ -438,6 +446,36 @@ test("documents the plain safe-area template", async () => {
   }
   if (page.includes('src="/src/main.js"')) {
     throw new Error("The safe-area template should not load an application module.");
+  }
+});
+
+test("documents the event-only movement tutorial flow", async () => {
+  const app = await readFile(new URL("src/runtime/ui-layer-react/App.jsx", appRoot), "utf8");
+  const bridge = await readFile(new URL("src/runtime/bridge-layer/game-bridge.js", appRoot), "utf8");
+  const gameLayer = await readFile(new URL("src/runtime/game-layer-babylon-lite/index.js", appRoot), "utf8");
+  const styles = await readFile(new URL("src/runtime/ui-layer-react/style.css", appRoot), "utf8");
+  for (const eventName of ["player moved up", "player moved down", "player moved left", "player moved right"]) {
+    if (!bridge.includes(eventName) || !gameLayer.includes(`PLAYER_MOVED_EVENTS.`)) {
+      throw new Error("The game-to-UI movement contract must expose all four generic player-moved events.");
+    }
+  }
+  if (!app.includes("subscribeToPlayerMoved") || !app.includes("tutorialDirectionsRef")
+    || !app.includes("Tutorial Complete") || !app.includes("Use arrow keys or swipe to move. Hold to move faster.")
+    || !app.includes("How To Play") || !app.includes("Next") || !app.includes("Skip Tutorial")
+    || !app.includes("tutorialSkipStorageKey") || !app.includes("OK")
+    || app.includes("Don't show me this again")
+    || app.includes('aria-label="Close Tutorial"') || app.includes("onClose={onClose}")) {
+    throw new Error("The tutorial must be event-driven, skippable, and dismissible only with its action buttons.");
+  }
+  if (!styles.includes(".tutorial_window") || styles.includes(".tutorial_window_checkbox")
+    || !styles.includes(".tutorial_window_primary") || !styles.includes(".tutorial_window_secondary")
+    || !styles.includes(".tutorial_window_ok") || !styles.includes("width: 80vw")
+    || !styles.includes("height: 200%") || !styles.includes("font-size: 15pt")
+    || !styles.includes("font-size: 10pt")) {
+    throw new Error("The tutorial window must reuse the compact responsive Lighting window styling.");
+  }
+  if (gameLayer.includes("tutorialPhase") || gameLayer.includes("tutorialSkipStorageKey")) {
+    throw new Error("Tutorial state must remain outside the gameplay layer.");
   }
 });
 

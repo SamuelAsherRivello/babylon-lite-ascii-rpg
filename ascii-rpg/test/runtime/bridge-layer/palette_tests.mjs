@@ -137,6 +137,18 @@ test("ships blue defaults for the distinct water glyphs", async () => {
   );
 });
 
+test("ships distinct green and brown defaults for overground and underground floor glyphs", async () => {
+  const data = JSON.parse(await readFile(new URL(
+    "../../../src/runtime/game-layer-babylon-lite/data/palette_data.json",
+    import.meta.url,
+  ), "utf8"));
+  const palette = createPalette(data);
+  const colors = new Map(palette.map((entry) => [entry.glyph, entry.color]));
+
+  assert.equal(colors.get("•"), "#55aa55");
+  assert.equal(colors.get("●"), "#8b5a2b");
+});
+
 test("ships a yellow gold glyph for shared HUD and world rendering", async () => {
   const data = JSON.parse(await readFile(new URL(
     "../../../src/runtime/game-layer-babylon-lite/data/palette_data.json",

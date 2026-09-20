@@ -390,7 +390,7 @@
       "code": 87,
       "unicode": null,
       "glyph": "W",
-      "color": "#af0000",
+      "color": "#ffffff",
       "alpha": 1
     },
     {
@@ -1020,7 +1020,7 @@
       "code": 177,
       "unicode": null,
       "glyph": "▒",
-      "color": "#ffffff",
+      "color": "#af0000",
       "alpha": 1
     },
     {
@@ -1566,7 +1566,7 @@
       "code": null,
       "unicode": "U+2022",
       "glyph": "•",
-      "color": "#4c4c4c",
+      "color": "#55aa55",
       "alpha": 1
     },
     {
@@ -1776,7 +1776,7 @@
       "code": null,
       "unicode": "U+25CF",
       "glyph": "●",
-      "color": "#ffffff",
+      "color": "#8b5a2b",
       "alpha": 1
     },
     {
