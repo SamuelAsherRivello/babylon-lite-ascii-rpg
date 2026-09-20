@@ -114,7 +114,7 @@ const paletteEditorWidth = 286;
 const paletteEditorHeight = 340;
 const paletteEditorMargin = 16;
 const lightingWindowMargin = 12;
-const defaultLightingWindowPosition = { left: 252, top: 52 };
+const defaultLightingWindowPosition = { left: 180, top: 410 };
 // The full character catalog is still available through the All filter, but
 // opening settings should not synchronously mount hundreds of controls while
 // the WebGPU game is rendering.
@@ -318,41 +318,47 @@ function SettingTooltipTarget({ description, onShow, onHide, children }) {
   );
 }
 
-function TutorialWindow({ complete, onConfirm, onSkip }) {
-  const title = complete ? "Tutorial Complete" : "How To Play";
+function WindowBackdrop({ visible, closesOnClick, onClose }) {
+  if (!visible) return null;
+  return <div className="window_backdrop" aria-hidden="true" onClick={closesOnClick ? onClose : undefined} />;
+}
+
+function TutorialWindow({ complete, onConfirm, onSkip, showCloseButton = false, showBackdrop = true, closeOnBackdropClick = true, onClose }) {
+  const title = "How To Play";
+  const copy = complete ? "Tutorial Complete." : "Use arrow keys or swipe to move. Hold to move faster.";
   const titleId = complete ? "tutorial_complete_title" : "tutorial_title";
 
   return (
-    <section
-      id={complete ? "tutorial_complete_window" : "tutorial_window"}
-      className="lighting_window tutorial_window"
-      role="dialog"
-      aria-modal="false"
-      aria-labelledby={titleId}
-      onPointerDown={(event) => event.stopPropagation()}
-      onPointerMove={(event) => event.stopPropagation()}
-    >
-      <div className="lighting_window_titlebar tutorial_window_titlebar">
-        <div id={titleId} className="corner_title">{title}</div>
-      </div>
-      <div className="lighting_window_body tutorial_window_body">
-        {!complete ? (
-          <p className="corner_body tutorial_window_copy">
-            Use arrow keys or swipe to move. Hold to move faster.
-          </p>
-        ) : null}
-        <div className="tutorial_window_actions">
-          {complete ? (
-            <button className="corner_body tutorial_window_ok" type="button" onClick={onConfirm}>OK</button>
-          ) : (
-            <>
-              <button className="corner_body tutorial_window_primary" type="button" onClick={onConfirm}>Next</button>
-              <button className="corner_body tutorial_window_secondary" type="button" onClick={onSkip}>Skip Tutorial</button>
-            </>
-          )}
+    <>
+      <WindowBackdrop visible={showBackdrop} closesOnClick={closeOnBackdropClick} onClose={onClose} />
+      <section
+        id={complete ? "tutorial_complete_window" : "tutorial_window"}
+        className="lighting_window tutorial_window"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        data-close-button-visible={showCloseButton}
+        onPointerDown={(event) => event.stopPropagation()}
+        onPointerMove={(event) => event.stopPropagation()}
+      >
+        <div className="lighting_window_titlebar tutorial_window_titlebar">
+          <div id={titleId} className="corner_title">{title}</div>
         </div>
-      </div>
-    </section>
+        <div className="lighting_window_body tutorial_window_body">
+          <p className="corner_body tutorial_window_copy">{copy}</p>
+          <div className="tutorial_window_actions">
+            {complete ? (
+              <button className="corner_body tutorial_window_primary tutorial_window_ok" type="button" onClick={onConfirm}>Ok</button>
+            ) : (
+              <>
+                <button className="corner_body tutorial_window_primary" type="button" onClick={onConfirm}>Next</button>
+                <button className="corner_body tutorial_window_secondary" type="button" onClick={onSkip}>Skip Tutorial</button>
+              </>
+            )}
+          </div>
+        </div>
+      </section>
+    </>
   );
 }
 
@@ -378,6 +384,9 @@ function LightingWindow({
   onUndergroundAmbientChange,
   onShowTooltip,
   onHideTooltip,
+  showCloseButton = true,
+  showBackdrop = true,
+  closeOnBackdropClick = true,
 }) {
   const windowRef = useRef(null);
   const dragStartRef = useRef(null);
@@ -426,33 +435,38 @@ function LightingWindow({
   };
 
   return (
-    <section
-      ref={windowRef}
-      id="lighting_window"
-      className="lighting_window"
-      aria-labelledby="lighting_window_title"
-      style={position}
-    >
-      <div
-        className="lighting_window_titlebar"
-        onPointerDown={beginDrag}
-        onPointerMove={moveDrag}
-        onPointerUp={endDrag}
-        onLostPointerCapture={endDrag}
+    <>
+      <WindowBackdrop visible={showBackdrop} closesOnClick={closeOnBackdropClick} onClose={onClose} />
+      <section
+        ref={windowRef}
+        id="lighting_window"
+        className="lighting_window"
+        aria-labelledby="lighting_window_title"
+        style={position}
+        onClick={(event) => event.stopPropagation()}
       >
-        <div id="lighting_window_title" className="corner_title">Lighting</div>
-        <button
-          className="corner_body settings_option lighting_window_close"
-          type="button"
-          aria-label="Close Lighting"
-          tabIndex={-1}
-          onPointerDown={(event) => event.stopPropagation()}
-          onClick={onClose}
+        <div
+          className="lighting_window_titlebar"
+          onPointerDown={beginDrag}
+          onPointerMove={moveDrag}
+          onPointerUp={endDrag}
+          onLostPointerCapture={endDrag}
         >
-          X
-        </button>
-      </div>
-      <div className="lighting_window_body">
+          <div id="lighting_window_title" className="corner_title">Lighting</div>
+          {showCloseButton ? (
+            <button
+              className="corner_body settings_option lighting_window_close"
+              type="button"
+              aria-label="Close Lighting"
+              tabIndex={-1}
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={onClose}
+            >
+              X
+            </button>
+          ) : null}
+        </div>
+        <div className="lighting_window_body">
         <div id="ambient_overground_control" className="corner_body zoom_control" aria-label="Ambient Overground">
           <span>Ambient Overground</span>
           <SettingTooltipTarget description={settingsHelp.ambientIncrease} onShow={onShowTooltip} onHide={onHideTooltip}>
@@ -494,8 +508,9 @@ function LightingWindow({
         <SettingTooltipTarget description={settingsHelp.torchShadow} onShow={onShowTooltip} onHide={onHideTooltip}>
           <button id="shadow_torch_toggle" className="corner_body settings_option" type="button" aria-label="Cycle torch shadow" aria-description={settingsHelp.torchShadow} tabIndex={-1} onClick={onTorchShadowChange}>{torchShadowLabel}</button>
         </SettingTooltipTarget>
-      </div>
-    </section>
+        </div>
+      </section>
+    </>
   );
 }
 
@@ -872,7 +887,7 @@ function AppContent() {
   const [undergroundAmbient, setUndergroundAmbient] = useState(() => getStoredAmbientLight(undergroundAmbientStorageKey, 0.1));
   const [gpuLightPass, setGpuLightPass] = useState(() => getStoredBoolean(gpuLightPassStorageKey, true));
   const [playerGpuShadowBleedRange, setPlayerGpuShadowBleedRange] = useState(getStoredPlayerGpuShadowBleedRange);
-  const [torchLightingIndex, setTorchLightingIndex] = useState(() => getStoredSourceIndex(torchLightingStorageKey, 2));
+  const [torchLightingIndex, setTorchLightingIndex] = useState(() => getStoredSourceIndex(torchLightingStorageKey, 1));
   const [playerLightingIndex, setPlayerLightingIndex] = useState(() => getStoredSourceIndex(playerLightingStorageKey, 4));
   const [torchShadowIndex, setTorchShadowIndex] = useState(() => getStoredSourceIndex(torchShadowStorageKey, 4));
   const [playerShadowIndex, setPlayerShadowIndex] = useState(() => getStoredSourceIndex(playerShadowStorageKey, 3));
@@ -910,6 +925,18 @@ function AppContent() {
       tutorialDirectionsRef.current.add(eventName);
       if (tutorialDirectionsRef.current.size === 4) setTutorialPhase("complete");
     });
+  }, [tutorialPhase]);
+
+  useEffect(() => {
+    if (tutorialPhase !== "initial" && tutorialPhase !== "complete") return undefined;
+    const blockTutorialInput = (event) => {
+      const target = event.target;
+      if (target instanceof HTMLElement && target.closest(".tutorial_window button")) return;
+      event.preventDefault();
+      event.stopPropagation();
+    };
+    window.addEventListener("keydown", blockTutorialInput, true);
+    return () => window.removeEventListener("keydown", blockTutorialInput, true);
   }, [tutorialPhase]);
 
   useLayoutEffect(() => {
@@ -1317,6 +1344,9 @@ function AppContent() {
           onUndergroundAmbientChange={(amount) => changeRealmAmbient(setUndergroundAmbient, amount)}
           onShowTooltip={showSettingTooltip}
           onHideTooltip={hideSettingTooltip}
+          showCloseButton
+          showBackdrop
+          closeOnBackdropClick
         />
       ) : null}
       {tutorialPhase === "initial" || tutorialPhase === "complete" ? (
@@ -1324,6 +1354,10 @@ function AppContent() {
           complete={tutorialPhase === "complete"}
           onConfirm={confirmTutorial}
           onSkip={skipTutorial}
+          showCloseButton={false}
+          showBackdrop
+          closeOnBackdropClick
+          onClose={() => setTutorialPhase("finished")}
         />
       ) : null}
       {settingTooltip ? (

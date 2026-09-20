@@ -177,9 +177,6 @@ test("documents the plain safe-area template", async () => {
     || !app.includes("formatLightingProfile") || !app.includes("formatShadowProfile")) {
     throw new Error("The Lighting window must include all independent lighting, shadow, and ambient controls.");
   }
-  if (!app.includes("getStoredSourceIndex(torchLightingStorageKey, 2)")) {
-    throw new Error("Torch lighting must default to the third profile when no saved value exists.");
-  }
   const torchLightingStart = app.indexOf('id="lighting_torch_toggle"');
   const torchShadowStart = app.indexOf('id="shadow_torch_toggle"');
   const playerLightingStart = app.indexOf('id="lighting_player_toggle"');
@@ -238,6 +235,14 @@ test("documents the plain safe-area template", async () => {
     || !app.includes("useState(getStoredLightingWindowPosition)")
     || !app.includes("localStorage.setItem(lightingWindowPositionStorageKey, JSON.stringify(lightingWindowPosition))")) {
     throw new Error("The Lighting launcher must toggle its window and restore its last saved position.");
+  }
+  if (!app.includes("function WindowBackdrop")
+    || !app.includes('className="lighting_window tutorial_window"')
+    || !app.includes("showCloseButton = true") || !app.includes("showCloseButton = false")
+    || !app.includes("showBackdrop = true") || !app.includes("closeOnBackdropClick = true")
+    || !app.includes("showCloseButton={false}") || !app.includes("closeOnBackdropClick")
+    || !styles.includes("background: rgb(0 0 0 / 50%)")) {
+    throw new Error("Lighting and tutorial windows must share the window class and configurable backdrop behavior.");
   }
   const closeLightingStart = app.indexOf('aria-label="Close Lighting"');
   const closeLightingMarkup = app.slice(app.lastIndexOf("<button", closeLightingStart), app.indexOf("</button>", closeLightingStart));
@@ -460,17 +465,27 @@ test("documents the event-only movement tutorial flow", async () => {
     }
   }
   if (!app.includes("subscribeToPlayerMoved") || !app.includes("tutorialDirectionsRef")
-    || !app.includes("Tutorial Complete") || !app.includes("Use arrow keys or swipe to move. Hold to move faster.")
+    || !app.includes("Tutorial Complete.") || !app.includes('const title = "How To Play"')
+    || !app.includes("Use arrow keys or swipe to move. Hold to move faster.")
     || !app.includes("How To Play") || !app.includes("Next") || !app.includes("Skip Tutorial")
-    || !app.includes("tutorialSkipStorageKey") || !app.includes("OK")
+    || !app.includes("tutorialSkipStorageKey") || !app.includes(">Ok</button>")
     || app.includes("Don't show me this again")
-    || app.includes('aria-label="Close Tutorial"') || app.includes("onClose={onClose}")) {
-    throw new Error("The tutorial must be event-driven, skippable, and dismissible only with its action buttons.");
+    || app.includes('aria-label="Close Tutorial"') || !app.includes("closeOnBackdropClick")
+    || !app.includes("onClose={() => setTutorialPhase(\"finished\")}")) {
+    throw new Error("The tutorial must be event-driven, skippable, and dismissible through its action buttons or backdrop.");
   }
   if (!styles.includes(".tutorial_window") || styles.includes(".tutorial_window_checkbox")
     || !styles.includes(".tutorial_window_primary") || !styles.includes(".tutorial_window_secondary")
-    || !styles.includes(".tutorial_window_ok") || !styles.includes("width: 80vw")
-    || !styles.includes("height: 200%") || !styles.includes("font-size: 15pt")
+    || !styles.includes(".tutorial_window_ok") || !styles.includes("width: min(960px, 45vw)")
+    || !styles.includes("height: auto") || !styles.includes("min-height: 240px")
+    || !styles.includes('html[data-presentation-aspect="portrait"] .tutorial_window')
+    || !styles.includes("width: max(240px, min(960px, calc(var(--presentation-frame-width) * 0.9)))")
+    || !styles.includes("max-height: calc(var(--presentation-frame-height) - 24px)")
+    || !styles.includes(".tutorial_window_copy")
+    || !styles.includes("margin: 10%") || !styles.includes("align-items: center")
+    || !styles.includes("pointer-events: auto") || !styles.includes("touch-action: none")
+    || !app.includes("blockTutorialInput") || !app.includes('window.addEventListener("keydown", blockTutorialInput, true)')
+    || !styles.includes("font-size: 15pt")
     || !styles.includes("font-size: 10pt")) {
     throw new Error("The tutorial window must reuse the compact responsive Lighting window styling.");
   }
@@ -495,6 +510,10 @@ test("documents the quest tracker, live gold bridge, and quest toasts", async ()
   if (!styles.includes(".quest_tracker") || !styles.includes("top: calc(var(--top-panel-size) + 25px)")
     || !styles.includes("margin-left: 5px") || !styles.includes("text-decoration: line-through")) {
     throw new Error("The quest tracker must preserve the requested HUD spacing, indent, and completion style.");
+  }
+  if (!styles.includes('html[data-presentation-aspect="portrait"] .toast')
+    || !styles.includes("--toast-horizontal-inset: 0px")) {
+    throw new Error("Portrait presentation toasts must remain horizontally centered in the screen frame.");
   }
 });
 

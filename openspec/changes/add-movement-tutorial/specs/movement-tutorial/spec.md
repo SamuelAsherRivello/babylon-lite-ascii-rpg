@@ -44,8 +44,10 @@ down`, `player moved left`, and `player moved right` events. It SHALL record
 the directions represented by received events and SHALL not inspect keyboard,
 pointer, swipe, player-coordinate, or collision state directly. Once all four
 directions have been received, the UI SHALL immediately show a second small,
-non-modal floating tutorial window with the exact title `Tutorial Complete` and
-an `OK` action. The completion window SHALL NOT have a close `X` action.
+non-modal floating tutorial window with the exact title `How To Play`, the
+exact body text `Tutorial Complete.`, and only an `Ok` action. The
+completion window SHALL use the same positioning, sizing, typography, spacing,
+and body layout as the initial window, and SHALL NOT have a close `X` action.
 
 #### Scenario: Record all four cardinal directions
 
@@ -68,7 +70,7 @@ an `OK` action. The completion window SHALL NOT have a close `X` action.
 
 #### Scenario: Acknowledge tutorial completion
 
-- **WHEN** the player activates the Tutorial Complete window's `OK` action
+- **WHEN** the player activates the Tutorial Complete window's `Ok` action
 - **THEN** the completion window closes and the tutorial remains finished for
   the current page/game session
 

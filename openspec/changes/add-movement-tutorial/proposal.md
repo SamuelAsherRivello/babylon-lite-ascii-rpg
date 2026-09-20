@@ -20,7 +20,8 @@ movement in every cardinal direction.
   movement in north, south, east, and west directions.
 - Open a second tutorial window as soon as all four cardinal directions have
   been successfully demonstrated. Give it the exact title `Tutorial Complete`
-  and an `OK` action, then finish the tutorial when the player dismisses it.
+  with body text `Tutorial Complete.` and only an `Ok` action, then finish the
+  tutorial when the player dismisses it.
 - Persist the opt-out choice when the player clicks `Skip Tutorial`; the
   current tutorial closes and future sessions do not show it.
 - Ensure tutorial controls consume their own UI interactions without starting
@@ -43,8 +44,7 @@ movement in every cardinal direction.
   contract with generic successful-cardinal-movement events that let React
   track tutorial progress without owning movement.
 - `responsive-ui-layout`: Extends responsive window geometry requirements to
-  cover the tutorial windows and their title, instruction, opt-out checkbox,
-  and `OK` controls.
+  cover the tutorial windows and their title, instruction, and action controls.
 
 ## Impact
 

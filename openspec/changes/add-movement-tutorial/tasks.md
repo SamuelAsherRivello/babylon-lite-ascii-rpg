@@ -11,7 +11,7 @@
 - [x] 2.1 Add React tutorial phases for initial, tracking, complete, and finished, and verify a new page/game session starts in the initial phase without persisted tutorial state.
 - [x] 2.2 Add the initial floating How To Play window using the existing Lighting window styling with exact title, instruction, primary `Next`, and secondary `Skip Tutorial` controls below it, with no close button; verify only those actions dismiss it without starting gameplay input.
 - [x] 2.3 Subscribe the tutorial only to the four generic player-moved events, track each received cardinal direction after dismissal, and verify the completion window appears immediately after all four events.
-- [x] 2.4 Add the Tutorial Complete window with exact title and `OK` control, with no close button; guard the transition so duplicate events cannot reopen it, and verify `OK` finishes the tutorial.
+- [x] 2.4 Add the completion state using the same `How To Play` window title, matching body and sizing, and the same primary button style with only an `Ok` control, with no close button; guard the transition so duplicate events cannot reopen it, and verify `Ok` finishes the tutorial.
 - [x] 2.5 Persist the Skip Tutorial setting with a false default, make it skip the remainder of the current tutorial, and verify a stored true value skips tutorial windows in later sessions.
 
 ## 3. Responsive styling and integration

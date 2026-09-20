@@ -435,6 +435,10 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       ? getViewOriginForPreservedPlayerPosition(playerCell, sourceScreenCell, viewport, world)
       : getViewOriginForCamera(cameraMode, playerCell, viewport, world, viewOrigin);
     for (const listener of realmListeners) listener(activeRealm);
+    // Discover the destination around the arriving player before rendering it.
+    // Rendering first leaves every destination cell hidden until movement causes
+    // the next world repaint, which makes the first transition end on black.
+    refreshDiscovery({ immediate: true });
     // A realm swap changes every visible cell. Clear the submitted sprites in
     // place instead of removing/re-adding the Babylon layer at the exact
     // covered -> opening boundary. Replacing the layer here can expose an
@@ -446,10 +450,6 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     // layer synchronously while the mask is still fully closed, rather than
     // allowing the opening phase to race the normal presentation RAF.
     presentImmediately();
-    // The realm swap changes the game and minimap views as one operation. Do
-    // not defer this repaint to the next animation frame or show the old map
-    // beneath the destination realm while the transition opens.
-    refreshDiscovery({ immediate: true });
   };
 
   const setTransitionMask = ({ phase, value }) => {

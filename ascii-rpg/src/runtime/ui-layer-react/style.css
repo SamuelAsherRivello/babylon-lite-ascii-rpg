@@ -457,6 +457,10 @@ html[data-presentation-aspect="portrait"] #ui_layer {
   transform: translate(-50%, -50%);
 }
 
+html[data-presentation-aspect="portrait"] .toast {
+  --toast-horizontal-inset: 0px;
+}
+
 @media (pointer: coarse) {
   html[data-presentation-aspect="portrait"] #game_layer {
     inset: 0;
@@ -684,8 +688,8 @@ html[data-presentation-aspect="portrait"] #ui_layer {
 .tutorial_window {
   top: 50%;
   left: 50%;
-  width: 80vw;
-  height: 200%;
+  width: min(960px, 45vw);
+  height: auto;
   max-height: calc(100vh - 24px);
   transform: translate(-50%, -50%);
 }
@@ -698,10 +702,27 @@ html[data-presentation-aspect="portrait"] #ui_layer {
 
 .tutorial_window_body {
   gap: 0.75rem;
+  font-size: 10pt;
+}
+
+.tutorial_window_body {
+  min-height: 240px;
+  box-sizing: border-box;
+}
+
+.tutorial_window_titlebar .corner_title {
+  font-size: 15pt;
+}
+
+html[data-presentation-aspect="portrait"] .tutorial_window {
+  width: max(240px, min(960px, calc(var(--presentation-frame-width) * 0.9)));
+  max-height: calc(var(--presentation-frame-height) - 24px);
 }
 
 .tutorial_window_copy {
-  margin: 0;
+  display: flex;
+  align-items: center;
+  margin: 10%;
   overflow-wrap: anywhere;
 }
 
@@ -741,8 +762,10 @@ html[data-presentation-aspect="portrait"] #ui_layer {
 .window_backdrop {
   position: fixed;
   inset: 0;
-  z-index: 0;
-  background: #000;
+  z-index: 1;
+  background: rgb(0 0 0 / 50%);
+  pointer-events: auto;
+  touch-action: none;
 }
 
 .window {

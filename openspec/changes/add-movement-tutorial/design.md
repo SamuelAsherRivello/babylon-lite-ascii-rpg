@@ -48,7 +48,7 @@ after it has been dismissed.
 The tutorial surface will reuse the existing Lighting window frame, title-bar
 layout, compact responsive constraints, and corner text classes. The How To
 Play window exposes primary `Next` and secondary `Skip Tutorial` buttons; the
-completion window exposes `OK`. Neither window has a close `X` or other
+completion window exposes `Ok`. Neither window has a close `X` or other
 dismissal path. A backdrop and modal focus trap
 are excluded because the requested window is a floating, non-modal game
 surface.
@@ -79,7 +79,7 @@ gameplay modules.
 
 The first and completion windows will have no close button. The first
 window's `Next` transitions to tracking. `Skip Tutorial` transitions directly
-to finished and persists the skip. The completion window's `OK` transitions to
+to finished and persists the skip. The completion window's `Ok` transitions to
 finished. These are the only dismissal actions.
 
 ### Keep tutorial controls outside the canvas input surface
@@ -96,14 +96,15 @@ movement or a swipe gesture.
   generic player-moved event there rather than adding independent tutorial
   listeners to input paths.
 - [A generic movement event could arrive while the first dialog is still open]
-  → the tutorial ignores events until it enters the tracking phase; checkbox
-  and `OK` controls remain isolated from canvas input.
+  → the tutorial ignores events until it enters the tracking phase; its action
+  controls remain isolated from canvas input.
 - [The completion dialog could recur after re-render or duplicate bridge
   delivery] → make the four-direction set and tutorial phase monotonic for the
   current session, and guard the transition to completion.
-- [Small portrait viewports may clip the instruction] → use the Lighting
-  window's compact responsive sizing and verify the title, copy, and actions at
-  the project’s existing portrait test presentation.
+- [Responsive proportions differ by orientation] → use a larger centered
+  `min(960px, 45vw)` landscape window and an `80vw` portrait window. Keep the
+  initial tutorial body at a 300px minimum height, let the outer window size to
+  its content, and retain the existing viewport max-height guard.
 
 ## Migration Plan
 
