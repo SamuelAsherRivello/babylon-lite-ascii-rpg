@@ -131,6 +131,21 @@
   }
 }
 
+@media (pointer: coarse) {
+  .toast {
+    left: 20px;
+    right: 20px;
+    width: auto;
+    max-width: calc(100vw - 40px);
+  }
+}
+
+@media (pointer: coarse) and (orientation: portrait) {
+  .toast {
+    min-height: 78px;
+  }
+}
+
 .zoom_control {
   display: flex;
   align-items: center;

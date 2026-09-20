@@ -21,7 +21,7 @@ test("selects platform defaults from the primary pointer capability", () => {
 });
 
 test("uses mobile defaults only when zoom and HUD values are absent", () => {
-  assert.equal(getStoredZoomValue(null, MOBILE_SETTINGS_DEFAULTS.zoom, 1, 10), 7);
+  assert.equal(getStoredZoomValue(null, MOBILE_SETTINGS_DEFAULTS.zoom, 1, 10), 5);
   assert.equal(getStoredBooleanValue(null, MOBILE_SETTINGS_DEFAULTS.showHud), false);
   assert.equal(getStoredZoomValue("4", MOBILE_SETTINGS_DEFAULTS.zoom, 1, 10), 4);
   assert.equal(getStoredBooleanValue("true", MOBILE_SETTINGS_DEFAULTS.showHud), true);

@@ -5,7 +5,7 @@ export const PC_SETTINGS_DEFAULTS = Object.freeze({
 
 export const MOBILE_SETTINGS_DEFAULTS = Object.freeze({
   ...PC_SETTINGS_DEFAULTS,
-  zoom: 7,
+  zoom: 5,
   showHud: false,
 });
 

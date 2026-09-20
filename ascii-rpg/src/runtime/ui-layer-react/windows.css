@@ -85,6 +85,13 @@ html[data-presentation-aspect="portrait"] .tutorial_window {
   max-height: calc(var(--presentation-frame-height) - 24px);
 }
 
+@media (pointer: coarse) {
+  .tutorial_window,
+  html[data-presentation-aspect="portrait"] .tutorial_window {
+    width: calc(100vw - 40px);
+  }
+}
+
 .tutorial_window_copy {
   display: flex;
   align-items: center;

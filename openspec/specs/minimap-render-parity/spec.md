@@ -7,34 +7,96 @@ Ensures the exploration minimap is a faithful miniature of the same world compos
 
 ### Requirement: Minimap world composition matches the game renderer
 
-The minimap SHALL render every eligible world cell in its selected viewport using the same world glyph identity, rasterized glyph asset, and resolved visual color as the game renderer, rather than selecting one representative glyph from a coarse region or re-rasterizing blurry display text. Minimap view `1` SHALL mirror the current game viewport composition within the fixed minimap canvas; views `5` and `10` SHALL show progressively smaller player-centered crops of that same composition. The renderer SHALL paint world background first, world glyphs second, and markers last. Fog SHALL continue to hide undiscovered cells, and minimap markers SHALL remain the only intentional visual overlay.
+The mini-map SHALL render every eligible world cell in its explicitly supplied
+source viewport using the same world glyph identity, rasterized glyph asset,
+and resolved base visual color as the game renderer. The mini-map source
+viewport MAY differ from the game view source viewport, but both SHALL use the
+shared world-view composition and the active realm's authoritative fog state.
+The mini-map SHALL preserve its own scale and canvas bounds, SHALL paint world
+background before world glyphs, and SHALL paint optional mini-map markers last.
+
+#### Scenario: Explicit mini-map crop
+
+- **WHEN** the mini-map receives a source rectangle and destination bounds
+- **THEN** its terrain, water, walls, and objects SHALL correspond to the
+  eligible cells in that supplied crop without rendering outside it
 
 #### Scenario: View 1 mirrors the game viewport
 
-- **WHEN** the minimap is at content zoom `1`
-- **THEN** its visible terrain, water, walls, and objects SHALL correspond to the same current game viewport composition, scaled into the unchanged minimap canvas
+- **WHEN** the mini-map receives a source rectangle matching the current game
+  view at content scale `1`
+- **THEN** its visible terrain, water, walls, and objects SHALL correspond to
+  the same eligible game-view composition within the mini-map canvas
 
-#### Scenario: Matching zooms preserve cell scale
+#### Scenario: Matching source crops preserve cell scale
 
-- **WHEN** the game zoom and minimap content zoom have the same value, including both set to `1`
-- **THEN** a world cell SHALL occupy the same rendered pixel footprint and glyph scale in both views; the minimap SHALL not enlarge cells solely to fill its fixed canvas, and unused canvas area MAY remain letterboxed or the source MAY be cropped consistently
+- **WHEN** the game view and mini-map receive the same source rectangle and
+  compatible content scale
+- **THEN** a world cell SHALL retain the same logical rendered footprint and
+  glyph scale in both views, subject to their destination bounds
 
-#### Scenario: Glyphs remain crisp at minimap size
+#### Scenario: Matching source crops preserve composition
 
-- **WHEN** the minimap renders a glyph at any supported content zoom
-- **THEN** it SHALL use the game's rasterized glyph visual with nearest-neighbor-safe scaling and SHALL not use a separately sized canvas text pass that produces blur
+- **WHEN** the game view and mini-map receive the same source rectangle and
+  compatible scale
+- **THEN** their eligible world cells and glyph identities SHALL correspond,
+  subject only to target-specific rasterization and presentation effects
 
-#### Scenario: Higher minimap zooms crop the same composition
+#### Scenario: Different source crops remain independent
 
-- **WHEN** the minimap advances to content zoom `5` or `10`
-- **THEN** it SHALL show a progressively smaller player-centered crop of the same world-cell graphics without changing the canvas footprint or game zoom
+- **WHEN** the mini-map receives a crop different from the game view
+- **THEN** changing the mini-map crop SHALL not change the game view crop,
+  player position, camera state, or fog discovery state
 
-#### Scenario: Render passes preserve marker visibility
+#### Scenario: Higher mini-map zooms crop the same composition
 
-- **WHEN** world cells and markers overlap
-- **THEN** the background SHALL be painted first, glyphs second, and markers last with player markers remaining topmost
+- **WHEN** the mini-map receives a higher content scale with a smaller
+  player-centered source rectangle
+- **THEN** it SHALL show a progressively smaller crop of the same shared
+  world-cell composition without changing the game view's crop or zoom
+
+#### Scenario: Glyphs remain crisp at mini-map size
+
+- **WHEN** the mini-map renders a glyph at any supported content scale
+- **THEN** it SHALL use the shared rasterized glyph visual with
+  nearest-neighbor-safe scaling and SHALL not use a separately sized text pass
+  that produces blur
+
+#### Scenario: Fog remains authoritative in both views
+
+- **WHEN** a source world cell is undiscovered
+- **THEN** its world background and glyph SHALL remain hidden in both the game
+  view and mini-map view while discovered cells continue to render
 
 #### Scenario: Fog remains authoritative
 
 - **WHEN** a source world cell is undiscovered
-- **THEN** its world background and glyph SHALL remain hidden while discovered cells continue to render
+- **THEN** its world background and glyph SHALL remain hidden in the mini-map
+  and game view while discovered cells continue to render
+
+#### Scenario: Matching zooms preserve cell scale
+
+- **WHEN** the game view and mini-map receive matching source rectangles and
+  content scales
+- **THEN** a world cell SHALL occupy the corresponding logical rendered
+  footprint and glyph scale in both views, subject to destination bounds
+
+#### Scenario: Glyphs remain crisp at minimap size
+
+- **WHEN** the mini-map renders a glyph at any supported content scale
+- **THEN** it SHALL use the shared rasterized glyph visual with
+  nearest-neighbor-safe scaling and SHALL not use a separately sized text pass
+  that produces blur
+
+#### Scenario: Higher minimap zooms crop the same composition
+
+- **WHEN** the mini-map receives a higher content scale with a smaller
+  player-centered source rectangle
+- **THEN** it SHALL show a progressively smaller crop of the same shared
+  world-cell composition without changing the game view's crop or zoom
+
+#### Scenario: Render passes preserve marker visibility
+
+- **WHEN** world cells and mini-map markers overlap
+- **THEN** the shared world background SHALL be painted first, world glyphs
+  second, and enabled markers last with player markers remaining topmost

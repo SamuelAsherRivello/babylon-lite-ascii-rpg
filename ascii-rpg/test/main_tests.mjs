@@ -528,7 +528,10 @@ test("documents the quest tracker, live gold bridge, and quest toasts", async ()
     throw new Error("The quest tracker must preserve the requested HUD spacing, indent, and completion style.");
   }
   if (!styles.includes('html[data-presentation-aspect="portrait"] .toast')
-    || !styles.includes("--toast-horizontal-inset: 0px")) {
+    || !styles.includes("--toast-horizontal-inset: 0px")
+    || !styles.includes("width: calc(100vw - 40px)")
+    || !styles.includes("max-width: calc(100vw - 40px)")
+    || !styles.includes("min-height: 78px")) {
     throw new Error("Portrait presentation toasts must remain horizontally centered in the screen frame.");
   }
 });
