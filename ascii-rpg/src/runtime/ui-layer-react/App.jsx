@@ -295,7 +295,7 @@ function QuestTracker({ quest }) {
       aria-label="Current quest"
       titleClassName="quest_tracker_title"
       bodyClassName={`quest_tracker_body${quest.complete ? " quest_tracker_body_complete" : ""}`}
-      title={`Question: ${quest.title}`}
+      title={`Quest: ${quest.title}`}
     >
       {quest.objective} {quest.current} of {quest.target}
     </HudBlockLayout>

@@ -122,7 +122,7 @@ progress, or completes. The initial Collect Gold quest SHALL use the messages
 ### Requirement: Quest HUD tracker
 
 The HUD SHALL render the current quest 25px below the character box. The title
-line SHALL read `Question: Collect Gold`. The body line SHALL read
+line SHALL read `Quest: Collect Gold`. The body line SHALL read
 `Collect Gold 0 of 3` initially, use a slightly smaller quest body font, and be
 indented 5px. When complete, the HUD SHALL show `Collect Gold 3 of 3` with a
 strike-through on the body while keeping the quest visible.

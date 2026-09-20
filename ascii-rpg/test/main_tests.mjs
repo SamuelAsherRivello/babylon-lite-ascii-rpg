@@ -445,7 +445,7 @@ test("documents the quest tracker, live gold bridge, and quest toasts", async ()
   const app = await readFile(new URL("src/runtime/ui-layer-react/App.jsx", appRoot), "utf8");
   const bridge = await readFile(new URL("src/runtime/bridge-layer/game-bridge.js", appRoot), "utf8");
   const styles = await readFile(new URL("src/runtime/ui-layer-react/style.css", appRoot), "utf8");
-  if (!app.includes("Question: ${quest.title}") || !app.includes("quest_tracker_body_complete")
+  if (!app.includes("Quest: ${quest.title}") || !app.includes("quest_tracker_body_complete")
     || !app.includes("Quest Started: ${quest.title}.") || !app.includes("Quest Progress: ${quest.title}")
     || !app.includes("Quest Completed: ${quest.title}.")) {
     throw new Error("The React HUD must render live quest text and state-specific quest toasts.");
