@@ -19,4 +19,4 @@
 
 - [x] 4.1 Replace minimap fill-to-canvas cell sizing with fixed-footprint placement derived from the shared game zoom/grid contract; keep player-centered crop bounds, fog suppression, and marker ordering intact.
 - [x] 4.2 Add focused regression coverage for equal game/minimap zoom values, including zoom `1`, proving that cell spacing and glyph scale are not enlarged by the minimap canvas.
-- [ ] 4.3 Run the Node suite and production build, then manually compare game/minimap screenshots at matching zooms `1`, `5`, and `10`; do not create or run Playwright tests.
+- [x] 4.3 Run the Node suite and production build, then manually compare game/minimap screenshots at matching zooms `1`, `5`, and `10`; do not create or run Playwright tests.

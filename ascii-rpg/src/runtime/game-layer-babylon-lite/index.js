@@ -291,6 +291,8 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     }
     // Pass 3: markers, painted after world graphics in back-to-front order.
     context.globalAlpha = 1;
+    const markerWidth = cellWidth * 0.5;
+    const markerHeight = cellHeight * 0.5;
     for (const marker of getMinimapMarkers(world, fogOfWar, playerCell)) {
       const markerWorldX = marker.cell.x;
       const markerWorldY = marker.cell.y;
@@ -298,10 +300,10 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
           markerWorldY < sourceY || markerWorldY >= sourceY + sourceRows) continue;
       context.fillStyle = marker.color;
       context.fillRect(
-        offsetX + (markerWorldX - sourceX) * cellWidth,
-        offsetY + (markerWorldY - sourceY) * cellHeight,
-        cellWidth,
-        cellHeight,
+        offsetX + (markerWorldX - sourceX) * cellWidth + (cellWidth - markerWidth) / 2,
+        offsetY + (markerWorldY - sourceY) * cellHeight + (cellHeight - markerHeight) / 2,
+        markerWidth,
+        markerHeight,
       );
     }
   };
