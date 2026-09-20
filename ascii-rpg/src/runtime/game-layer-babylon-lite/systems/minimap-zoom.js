@@ -21,3 +21,14 @@ export function getMinimapViewport({ columns, rows }, focusCell, scale) {
     rows: viewportRows,
   };
 }
+
+export function getMinimapCellLayout({ width, height }, { columns, rows }, cellWidth, cellHeight) {
+  const safeCellWidth = Math.max(1, cellWidth);
+  const safeCellHeight = Math.max(1, cellHeight);
+  return {
+    cellWidth: safeCellWidth,
+    cellHeight: safeCellHeight,
+    offsetX: Math.max(0, (width - columns * safeCellWidth) / 2),
+    offsetY: Math.max(0, (height - rows * safeCellHeight) / 2),
+  };
+}

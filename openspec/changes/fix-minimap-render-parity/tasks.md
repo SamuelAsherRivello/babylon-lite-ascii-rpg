@@ -14,3 +14,9 @@
 
 - [x] 3.1 Run the full Node test suite and production build; verify focused minimap parity tests pass.
 - [x] 3.2 Manually compare the game view and minimap at zooms `1`, `5`, and `10`, including refresh persistence and crisp marker overlays; do not create or run Playwright tests.
+
+## 4. Matching zoom pixel parity
+
+- [x] 4.1 Replace minimap fill-to-canvas cell sizing with fixed-footprint placement derived from the shared game zoom/grid contract; keep player-centered crop bounds, fog suppression, and marker ordering intact.
+- [x] 4.2 Add focused regression coverage for equal game/minimap zoom values, including zoom `1`, proving that cell spacing and glyph scale are not enlarged by the minimap canvas.
+- [ ] 4.3 Run the Node suite and production build, then manually compare game/minimap screenshots at matching zooms `1`, `5`, and `10`; do not create or run Playwright tests.

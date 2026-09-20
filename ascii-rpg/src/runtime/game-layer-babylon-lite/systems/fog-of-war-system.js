@@ -2,6 +2,7 @@ import { hasClearLightPath } from "../lighting.js";
 
 export const MINIMAP_WORLD_SCALE = 10;
 export const DISCOVERY_LIGHT_CUTOFF = 0.1;
+export const fogUnclearRadius = 20;
 
 function getCellIndex(cell, columns) {
   return cell.y * columns + cell.x;
@@ -61,23 +62,15 @@ export function discoverCell(fog, world, cell) {
   return true;
 }
 
-function receivesPlayerDiscovery(source, target, profile) {
-  if (!profile || profile.maximum <= 0) return false;
-  const distance = Math.hypot(target.x - source.x, target.y - source.y);
-  if (distance >= profile.radius) return false;
-  const contribution = profile.maximum * ((1 - distance / profile.radius) ** profile.falloffExponent);
-  return contribution >= DISCOVERY_LIGHT_CUTOFF;
-}
-
-export function discoverFromPlayer(fog, world, playerCell, playerProfile) {
+export function discoverFromPlayer(fog, world, playerCell) {
   if (!fog || !isWalkable(world, playerCell)) return [];
   const discovered = [];
   if (discoverCell(fog, world, playerCell)) discovered.push({ ...playerCell });
-  const radius = Number.isFinite(playerProfile?.radius) ? Math.ceil(playerProfile.radius) : 0;
+  const radius = Math.ceil(fogUnclearRadius);
   for (let y = Math.max(0, playerCell.y - radius); y <= Math.min(world.rows - 1, playerCell.y + radius); y += 1) {
     for (let x = Math.max(0, playerCell.x - radius); x <= Math.min(world.columns - 1, playerCell.x + radius); x += 1) {
       const target = { x, y };
-      if (!isWalkable(world, target) || !receivesPlayerDiscovery(playerCell, target, playerProfile)) continue;
+      if (!isWalkable(world, target) || Math.hypot(target.x - playerCell.x, target.y - playerCell.y) >= fogUnclearRadius) continue;
       if (!hasClearLightPath(playerCell, target, world.terrain)) continue;
       if (discoverCell(fog, world, target)) discovered.push(target);
     }

@@ -15,6 +15,11 @@ The minimap SHALL render every eligible world cell in its selected viewport usin
 - **WHEN** the minimap is at content zoom `1`
 - **THEN** its visible terrain, water, walls, and objects SHALL correspond to the same current game viewport composition, scaled into the unchanged minimap canvas
 
+#### Scenario: Matching zooms preserve cell scale
+
+- **WHEN** the game zoom and minimap content zoom have the same value, including both set to `1`
+- **THEN** a world cell SHALL occupy the same rendered pixel footprint and glyph scale in both views; the minimap SHALL not enlarge cells solely to fill its fixed canvas, and unused canvas area MAY remain letterboxed or the source MAY be cropped consistently
+
 #### Scenario: Glyphs remain crisp at minimap size
 
 - **WHEN** the minimap renders a glyph at any supported content zoom

@@ -10,7 +10,10 @@ import {
   disposeSpriteRenderer,
   removeSpriteRendererLayer,
   registerSpriteRenderer,
+  renderFrame,
+  resizeEngine,
   startEngine,
+  stopEngine,
   spriteBlendAdditive,
   updateSprite2DIndex,
 } from "@babylonjs/lite";
@@ -64,7 +67,8 @@ import {
   MINIMAP_WORLD_SCALE,
 } from "./systems/fog-of-war-system.js";
 import { getMinimapMarkers, getMinimapWorldCellGraphic } from "./systems/minimap-renderer.js";
-import { canHandleMinimapScale, getMinimapViewport, getNextMinimapScale, MINIMAP_SCALE_LEVELS } from "./systems/minimap-zoom.js";
+import { canHandleMinimapScale, getMinimapCellLayout, getNextMinimapScale, MINIMAP_SCALE_LEVELS } from "./systems/minimap-zoom.js";
+import { createTransitionSystem, TRANSITION_PHASES } from "./systems/transition-system.js";
 
 const GLYPHS = ["W", "M", "•", "P", "T", "S", "~", "≈", "▓"];
 const WORLD_ROWS = 512;
@@ -112,7 +116,11 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   const minimapCanvas = document.createElement("canvas");
   minimapCanvas.id = "minimap_canvas";
   minimapCanvas.setAttribute("aria-label", "Exploration minimap");
-  container.replaceChildren(canvas, minimapCanvas);
+  const transitionMask = document.createElement("div");
+  transitionMask.className = "game_transition_mask";
+  transitionMask.setAttribute("aria-hidden", "true");
+  transitionMask.hidden = true;
+  container.replaceChildren(canvas, minimapCanvas, transitionMask);
 
   let engine;
   let renderer;
@@ -121,10 +129,15 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   let glyphCache;
   let gpuLightAtlas;
   let gpuLightLayer;
-  let gpuLightPassEnabled = true;
+  let gpuLightPassEnabled = false;
   const minimapGlyphCanvases = new Map();
   let disposed = false;
   let repeatTimer = null;
+  let movementRenderFrame = null;
+  let minimapRenderFrame = null;
+  let presentationFrame = null;
+  let lastPresentationTime = 0;
+  let movementLightingRefreshPending = false;
   let generationController = new AbortController();
   let generating = false;
   const heldKeys = new Set();
@@ -134,7 +147,13 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   let touchDirection = null;
   let activePointerId = null;
   let touchStart = null;
+  let transitionActive = false;
+  let transitionSystem = null;
   let viewport = createViewportForCanvas(canvas);
+  let lastCanvasSize = {
+    width: Math.max(1, canvas.clientWidth || window.innerWidth),
+    height: Math.max(1, canvas.clientHeight || window.innerHeight),
+  };
   let canvasResizeObserver = null;
   let world = null;
   let worldRealms = null;
@@ -183,20 +202,51 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     if (minimapCanvas.height !== renderHeight) minimapCanvas.height = renderHeight;
     const context = minimapCanvas.getContext("2d");
     context.imageSmoothingEnabled = false;
-    // The minimap owns an independent base grid. It must not inherit the
-    // game's viewport or world zoom: changing game zoom changes only the game.
-    const minimapBaseViewport = createViewportForCanvas(minimapCanvas, 1);
-    const minimapRegion = getMinimapViewport(
-      { columns: minimapBaseViewport.columns, rows: minimapBaseViewport.rows },
-      playerCell,
-      minimapZoom,
+    // The minimap uses the game canvas dimensions to select its source cells,
+    // then maps those cells into its own fixed canvas. This keeps matching
+    // game/minimap zooms on the same viewport composition instead of making a
+    // smaller minimap panel define a different camera.
+    const gameScreenWidth = canvas.clientWidth || window.innerWidth;
+    const gameScreenHeight = canvas.clientHeight || window.innerHeight;
+    const minimapBaseViewport = createViewport({
+      screenWidth: gameScreenWidth,
+      screenHeight: gameScreenHeight,
+      upscale: DEFAULT_UPSCALE,
+      zoom: minimapZoom,
+      fontResolution: DEFAULT_FONT_RESOLUTION,
+      gridWidth: DEFAULT_GRID_WIDTH,
+      gridHeight: DEFAULT_GRID_HEIGHT,
+    });
+    const minimapPixelRatio = devicePixelRatio;
+    const fixedCellWidth = minimapBaseViewport.gridWidth * minimapPixelRatio;
+    const fixedCellHeight = minimapBaseViewport.gridHeight * minimapPixelRatio;
+    const sourceColumns = Math.min(world.columns,
+      Math.max(1, minimapBaseViewport.columns),
+      Math.max(1, Math.floor(minimapCanvas.width / fixedCellWidth)),
     );
-    const sourceColumns = minimapRegion.columns;
-    const sourceRows = minimapRegion.rows;
-    const sourceX = minimapRegion.x;
-    const sourceY = minimapRegion.y;
-    const cellWidth = minimapCanvas.width / sourceColumns;
-    const cellHeight = minimapCanvas.height / sourceRows;
+    const sourceRows = Math.min(
+      world.rows,
+      Math.max(1, minimapBaseViewport.rows),
+      Math.max(1, Math.floor(minimapCanvas.height / fixedCellHeight)),
+    );
+    // A fixed-footprint minimap is necessarily a crop when its panel is
+    // smaller than the game viewport. Keep that crop centered on the player
+    // so it remains useful without changing the cell scale.
+    const sourceX = Math.max(0, Math.min(
+      world.columns - sourceColumns,
+      playerCell.x - Math.floor(sourceColumns / 2),
+    ));
+    const sourceY = Math.max(0, Math.min(
+      world.rows - sourceRows,
+      playerCell.y - Math.floor(sourceRows / 2),
+    ));
+    const layout = getMinimapCellLayout(
+      { width: minimapCanvas.width, height: minimapCanvas.height },
+      { columns: sourceColumns, rows: sourceRows },
+      fixedCellWidth,
+      fixedCellHeight,
+    );
+    const { cellWidth, cellHeight, offsetX, offsetY } = layout;
     // Pass 1: world background.
     context.globalAlpha = 1;
     context.fillStyle = "#000";
@@ -213,7 +263,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
         glyphs.add(graphic.glyph);
       }
     }
-    const visual = glyphCache.ensure(DEFAULT_ZOOM, minimapBaseViewport.gridWidth, glyphs);
+    const visual = glyphCache.ensure(minimapZoom, minimapBaseViewport.gridWidth, glyphs);
     for (const { x, y, graphic } of sourceCells) {
       const raster = visual.rasters.get(graphic.glyph);
       if (!raster) continue;
@@ -237,26 +287,49 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
         glyphContext.putImageData(image, 0, 0);
         minimapGlyphCanvases.set(cacheKey, glyphCanvas);
       }
-      context.drawImage(glyphCanvas, x * cellWidth, y * cellHeight, cellWidth, cellHeight);
+      context.drawImage(glyphCanvas, offsetX + x * cellWidth, offsetY + y * cellHeight, cellWidth, cellHeight);
     }
     // Pass 3: markers, painted after world graphics in back-to-front order.
     context.globalAlpha = 1;
     for (const marker of getMinimapMarkers(world, fogOfWar, playerCell)) {
-      const markerWorldX = marker.cell.x * MINIMAP_WORLD_SCALE;
-      const markerWorldY = marker.cell.y * MINIMAP_WORLD_SCALE;
+      const markerWorldX = marker.cell.x;
+      const markerWorldY = marker.cell.y;
       if (markerWorldX < sourceX || markerWorldX >= sourceX + sourceColumns ||
           markerWorldY < sourceY || markerWorldY >= sourceY + sourceRows) continue;
       context.fillStyle = marker.color;
       context.fillRect(
-        (markerWorldX - sourceX) * cellWidth,
-        (markerWorldY - sourceY) * cellHeight,
+        offsetX + (markerWorldX - sourceX) * cellWidth,
+        offsetY + (markerWorldY - sourceY) * cellHeight,
         cellWidth,
         cellHeight,
       );
     }
   };
 
+  const schedulePresentation = () => {
+    if (!engine || disposed || presentationFrame !== null) return;
+    presentationFrame = window.requestAnimationFrame((now) => {
+      presentationFrame = null;
+      const delta = lastPresentationTime ? now - lastPresentationTime : 16.667;
+      lastPresentationTime = now;
+      resizeEngine(engine);
+      renderFrame(engine, Math.max(0, delta));
+    });
+  };
+
+  // Movement can repeat faster than a display can paint, especially while
+  // Shift is held. Keep the newest world state, but perform at most one
+  // expensive minimap paint per animation frame so input tasks keep yielding.
+  const scheduleMinimapRender = () => {
+    if (minimapRenderFrame !== null) return;
+    minimapRenderFrame = window.requestAnimationFrame(() => {
+      minimapRenderFrame = null;
+      if (!disposed) renderMinimap();
+    });
+  };
+
   const handleMinimapClick = () => {
+    if (transitionActive) return;
     if (!canHandleMinimapScale(minimapVisible)) return;
     const nextZoom = getNextMinimapScale(minimapZoom);
     for (const listener of minimapZoomListeners) listener(nextZoom);
@@ -264,8 +337,8 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
 
   const refreshDiscovery = () => {
     if (!fogOfWar || !world || !playerCell) return;
-    discoverFromPlayer(fogOfWar, world, playerCell, lighting.playerProfile);
-    renderMinimap();
+    discoverFromPlayer(fogOfWar, world, playerCell);
+    scheduleMinimapRender();
   };
 
   const activateRealm = (name, arrival = null) => {
@@ -279,10 +352,66 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     setCharacter(world, playerCell);
     lighting = { ...lighting, ambient: realmAmbient[activeRealm] };
     viewOrigin = { x: 0, y: 0 };
-    resolveViewForPlayer();
+    // The transition keeps input/camera updates locked, so the normal helper
+    // intentionally returns early here. Resolve the destination view directly
+    // so the new realm is centered before the opening phase reveals it.
+    viewOrigin = getViewOriginForCamera(cameraMode, playerCell, viewport, world, viewOrigin);
     refreshDiscovery();
     for (const listener of realmListeners) listener(activeRealm);
+    // A realm swap changes every visible cell. Reset the submitted sprite
+    // state so the destination realm is rendered immediately instead of
+    // waiting for the next movement to invalidate individual cells.
+    if (renderer && layer) rebuildLayer();
     renderWorld({ refreshLighting: true });
+  };
+
+  const setTransitionMask = ({ phase, value }) => {
+    if (phase === TRANSITION_PHASES.IDLE) {
+      transitionMask.hidden = true;
+      return;
+    }
+    transitionMask.hidden = false;
+    transitionMask.style.setProperty("--transition-radius", `${Math.max(0, value)}px`);
+  };
+
+  const getTransitionRadii = () => {
+    const width = Math.max(1, canvas.clientWidth || window.innerWidth);
+    const height = Math.max(1, canvas.clientHeight || window.innerHeight);
+    return {
+      cover: Math.hypot(width, height),
+      character: Math.max(4, Math.max(viewport.gridWidth, viewport.gridHeight) / 2),
+    };
+  };
+
+  const startRealmTransition = (destination, arrival = null) => {
+    if (transitionActive || !transitionSystem || !worldRealms?.realms?.[destination]) return false;
+    const { cover, character } = getTransitionRadii();
+    clearMovementInput();
+    // Ensure the source realm's latest player position is submitted before the
+    // mask becomes visible.
+    renderWorld({ refreshLighting: true });
+    transitionActive = true;
+    const started = transitionSystem.start({
+      target: "game_layer",
+      from: cover,
+      to: character,
+      onStart: () => {
+        transitionMask.style.setProperty("--transition-radius", `${cover}px`);
+        transitionMask.hidden = false;
+      },
+      onCovered: () => activateRealm(destination, arrival),
+      onComplete: () => {
+        transitionActive = false;
+        clearMovementInput();
+        setTransitionMask({ phase: TRANSITION_PHASES.IDLE, value: 0 });
+      },
+    });
+    if (!started) {
+      transitionActive = false;
+      return false;
+    }
+    transitionSystem.begin(performance.now());
+    return true;
   };
 
   const findNearestStairPath = () => {
@@ -325,7 +454,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     resolveViewForPlayer();
     renderMinimap();
     const destination = activeRealm === "Overground" ? "Underground" : "Overground";
-    activateRealm(destination, playerCell);
+    startRealmTransition(destination, playerCell);
   };
 
   const clampViewOrigin = () => {
@@ -341,7 +470,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   };
 
   const resolveViewForPlayer = () => {
-    if (!world || !playerCell) return;
+    if (transitionActive || !world || !playerCell) return;
     viewOrigin = getViewOriginForCamera(cameraMode, playerCell, viewport, world, viewOrigin);
   };
 
@@ -380,6 +509,10 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     clearTouchInput();
     clearRepeat();
   };
+
+  transitionSystem = createTransitionSystem({
+    onUpdate: setTransitionMask,
+  });
 
   const rebuildLayer = (nextAtlas = atlas) => {
     if (renderer && layer) removeSpriteRendererLayer(renderer, layer);
@@ -504,6 +637,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       }
     }
     renderGpuLightPass(region, lightField);
+    schedulePresentation();
     metrics.visibleCells = region.count;
     return {
       renderMs: performance.now() - started,
@@ -511,6 +645,30 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       submittedCells: metrics.submittedCells - submittedBefore,
       skippedCells: metrics.skippedCells - skippedBefore,
     };
+  };
+
+  // Full world lighting and sprite submission are synchronous WebGPU work.
+  // Coalescing movement-driven renders prevents held input from starving
+  // animation frames while preserving the final player position and lighting.
+  const scheduleMovementRender = ({ refreshLighting = false } = {}) => {
+    movementLightingRefreshPending ||= refreshLighting;
+    if (movementRenderFrame !== null) return;
+    movementRenderFrame = window.requestAnimationFrame(() => {
+      movementRenderFrame = null;
+      const shouldRefreshLighting = movementLightingRefreshPending;
+      movementLightingRefreshPending = false;
+      if (!disposed) renderWorld({ refreshLighting: shouldRefreshLighting });
+    });
+  };
+
+  const cancelScheduledRenders = () => {
+    if (movementRenderFrame !== null) window.cancelAnimationFrame(movementRenderFrame);
+    if (minimapRenderFrame !== null) window.cancelAnimationFrame(minimapRenderFrame);
+    if (presentationFrame !== null) window.cancelAnimationFrame(presentationFrame);
+    movementRenderFrame = null;
+    minimapRenderFrame = null;
+    presentationFrame = null;
+    movementLightingRefreshPending = false;
   };
 
   const renderChangedWorldCells = (cells) => {
@@ -558,14 +716,14 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     viewOrigin = nextOrigin;
     if (world.stairs?.some((stair) => stair.x === playerCell.x && stair.y === playerCell.y)) {
       const destination = activeRealm === "Overground" ? "Underground" : "Overground";
-      activateRealm(destination, playerCell);
+      startRealmTransition(destination, playerCell);
       return;
     }
     refreshDiscovery();
     // Player lighting is a moving source. Re-render the complete visible
     // region after every move so cells behind the player lose its former light
     // contribution instead of retaining a trail.
-    renderWorld({ refreshLighting: true });
+    scheduleMovementRender({ refreshLighting: true });
   };
 
   const scheduleRepeat = (delay) => {
@@ -581,6 +739,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   const handleKeyDown = (event) => {
     shiftHeld = event.shiftKey;
     if (!getDirectionForKey(event.key)) return;
+    if (transitionActive) return;
     event.preventDefault();
     const wasHeld = heldKeys.has(event.key);
     heldKeys.add(event.key);
@@ -592,13 +751,14 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   const handleKeyUp = (event) => {
     shiftHeld = event.key !== "Shift" && event.shiftKey;
     if (!getDirectionForKey(event.key)) return;
+    if (transitionActive) return;
     event.preventDefault();
     heldKeys.delete(event.key);
     if (!hasHeldMovement()) clearRepeat();
   };
 
   const handlePointerDown = (event) => {
-    if (!event.isPrimary || activePointerId !== null || (event.pointerType === "mouse" && event.button !== 0)) return;
+    if (transitionActive || !event.isPrimary || activePointerId !== null || (event.pointerType === "mouse" && event.button !== 0)) return;
     event.preventDefault();
     activePointerId = event.pointerId;
     touchStart = { x: event.clientX, y: event.clientY };
@@ -606,7 +766,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   };
 
   const handlePointerMove = (event) => {
-    if (event.pointerId !== activePointerId || !touchStart) return;
+    if (transitionActive || event.pointerId !== activePointerId || !touchStart) return;
     const nextDirection = getDirectionForSwipe(
       event.clientX - touchStart.x,
       event.clientY - touchStart.y,
@@ -626,6 +786,14 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   };
 
   const handleResize = () => {
+    const nextCanvasSize = {
+      width: Math.max(1, canvas.clientWidth || window.innerWidth),
+      height: Math.max(1, canvas.clientHeight || window.innerHeight),
+    };
+    // Babylon updates the canvas backing buffer itself. A ResizeObserver must
+    // not treat that as a new layout and recursively submit another full frame.
+    if (nextCanvasSize.width === lastCanvasSize.width && nextCanvasSize.height === lastCanvasSize.height) return;
+    lastCanvasSize = nextCanvasSize;
     clearTouchInput();
     rebuildViewport();
     renderMinimap();
@@ -637,6 +805,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
 
   const handlePageHide = () => {
     clearMovementInput();
+    cancelScheduledRenders();
     generationController.abort();
   };
   window.addEventListener("pagehide", handlePageHide);
@@ -657,6 +826,8 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     layer = createSprite2DLayer(atlas, { capacity: Math.max(1, viewport.rows * viewport.columns) });
     renderer = createSpriteRenderer(engine, { layers: [layer], clearValue: { r: 0, g: 0, b: 0, a: 1 } });
     registerSpriteRenderer(renderer);
+    await startEngine(engine);
+    stopEngine(engine);
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
     window.addEventListener("resize", handleResize);
@@ -669,7 +840,6 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     canvas.addEventListener("pointercancel", handlePointerStop);
     canvas.addEventListener("lostpointercapture", handlePointerStop);
     minimapCanvas.addEventListener("click", handleMinimapClick);
-    await startEngine(engine);
     generating = true;
     let generationStarted;
     const seed = getRandomSeedFromSearch(window.location.search) ?? createGeneratedSeed();
@@ -728,6 +898,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     }));
   } catch (error) {
     clearMovementInput();
+    cancelScheduledRenders();
     window.removeEventListener("pagehide", handlePageHide);
     window.removeEventListener("blur", handleWindowBlur);
     window.removeEventListener("keydown", handleKeyDown);
@@ -765,6 +936,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       }
       renderMinimap();
       if (gpuLightPassEnabled) renderWorld();
+      else schedulePresentation();
     },
     setFont(nextFontId) {
       validateFontId(nextFontId);
@@ -812,7 +984,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       renderWorld();
     },
     setRealmPreference(realm) {
-      if (realm !== activeRealm && worldRealms) activateRealm(realm);
+      if (realm !== activeRealm && worldRealms) startRealmTransition(realm);
     },
     travelRealm() { travelToNearestStairs(); },
     getRealm() { return activeRealm; },
@@ -886,6 +1058,9 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       canvas.removeEventListener("pointercancel", handlePointerStop);
       canvas.removeEventListener("lostpointercapture", handlePointerStop);
       minimapCanvas.removeEventListener("click", handleMinimapClick);
+      cancelScheduledRenders();
+      transitionSystem.dispose();
+      transitionMask.remove();
       if (typeof disposeGpuLightPass === "function") disposeGpuLightPass();
       disposeSpriteRenderer(renderer);
       glyphCache.dispose();

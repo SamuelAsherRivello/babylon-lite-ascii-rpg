@@ -1,23 +1,25 @@
+const FOCUSABLE_SELECTOR = "button, a, input, select, textarea, [tabindex], [contenteditable=\"true\"]";
+
 function removeFromTabOrder(node) {
-  if (node instanceof HTMLButtonElement) {
+  if (node instanceof Element && node.matches(FOCUSABLE_SELECTOR)) {
     node.tabIndex = -1;
   }
 }
 
-function removeDescendantButtonsFromTabOrder(node) {
+function removeDescendantFocusableElementsFromTabOrder(node) {
   if (!(node instanceof Element)) return;
   removeFromTabOrder(node);
-  node.querySelectorAll("button").forEach(removeFromTabOrder);
+  node.querySelectorAll(FOCUSABLE_SELECTOR).forEach(removeFromTabOrder);
 }
 
 /**
- * Keeps UI buttons out of sequential keyboard navigation, including buttons
- * rendered after the initial application mount.
+ * Keeps game UI controls out of sequential keyboard navigation, including
+ * controls rendered after the initial application mount.
  */
-export function removeButtonsFromTabOrder(root) {
+export function removeFocusableElementsFromTabOrder(root) {
   if (!(root instanceof Element)) return () => {};
 
-  removeDescendantButtonsFromTabOrder(root);
+  removeDescendantFocusableElementsFromTabOrder(root);
 
   const observer = new MutationObserver((records) => {
     for (const record of records) {
@@ -26,7 +28,7 @@ export function removeButtonsFromTabOrder(root) {
         continue;
       }
 
-      record.addedNodes.forEach(removeDescendantButtonsFromTabOrder);
+      record.addedNodes.forEach(removeDescendantFocusableElementsFromTabOrder);
     }
   });
 
@@ -39,3 +41,5 @@ export function removeButtonsFromTabOrder(root) {
 
   return () => observer.disconnect();
 }
+
+export const removeButtonsFromTabOrder = removeFocusableElementsFromTabOrder;

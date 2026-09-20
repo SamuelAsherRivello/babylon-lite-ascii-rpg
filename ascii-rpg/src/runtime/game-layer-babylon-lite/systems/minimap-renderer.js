@@ -26,8 +26,8 @@ function rgbToHex([red, green, blue]) {
 
 function getMinimapMarkerCell(cell) {
   return {
-    x: Math.floor(cell.x / MINIMAP_WORLD_SCALE),
-    y: Math.floor(cell.y / MINIMAP_WORLD_SCALE),
+    x: cell.x,
+    y: cell.y,
   };
 }
 
@@ -38,7 +38,7 @@ function getMinimapMarkerCell(cell) {
 export function getMinimapMarkers(world, fog, playerCell) {
   if (!world || !fog || !playerCell) return [];
   const markers = [];
-  if (world.playerStart) {
+  if (world.playerStart && isDiscovered(fog, world, world.playerStart)) {
     markers.push({
       type: "start", color: MINIMAP_MARKER_COLORS.start,
       depth: MINIMAP_MARKER_DEPTHS.start, cell: getMinimapMarkerCell(world.playerStart),
@@ -51,10 +51,12 @@ export function getMinimapMarkers(world, fog, playerCell) {
       depth: MINIMAP_MARKER_DEPTHS.torch, cell: getMinimapMarkerCell(torch),
     });
   }
-  markers.push({
-    type: "player", color: MINIMAP_MARKER_COLORS.player,
-    depth: MINIMAP_MARKER_DEPTHS.player, cell: getMinimapMarkerCell(playerCell),
-  });
+  if (isDiscovered(fog, world, playerCell)) {
+    markers.push({
+      type: "player", color: MINIMAP_MARKER_COLORS.player,
+      depth: MINIMAP_MARKER_DEPTHS.player, cell: getMinimapMarkerCell(playerCell),
+    });
+  }
   return markers;
 }
 

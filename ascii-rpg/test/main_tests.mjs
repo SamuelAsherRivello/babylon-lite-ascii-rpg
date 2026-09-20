@@ -63,10 +63,72 @@ test("documents the plain safe-area template", async () => {
   if (!app.includes("v{versionNumber}")) {
     throw new Error("The version corner must display versions in v0.0.0 format.");
   }
-  if (!app.includes('id="world" className="corner_body">World: 1</div>')
-    || !app.includes('id="realm" className="corner_body">Realm: {activeRealm}</div>')
-    || !app.includes('id="time"') || !app.includes("Time: {formatWorldTime(worldTime)}")) {
-    throw new Error("The upper-left corner must display the subscribed world time.");
+  if (!app.includes('className="top_panel_action">Character</div>')
+    || !app.includes('className="top_panel_action">Map 🔍</div>')
+    || !app.includes("World 1 Floor {activeRealm === \"Underground\" ? \"-1\" : \"1\"}")
+    || !app.includes('String(worldTime).padStart(5, "0")')
+    || !styles.includes(".minimap_status")) {
+    throw new Error("The top HUD must display box actions with right-aligned world, floor, and time status below the minimap.");
+  }
+  const characterData = await readFile(new URL("src/runtime/ui-layer-react/character-data.js", appRoot), "utf8");
+  for (const requiredFragment of [
+    "startingPercent: 80",
+    "startingPercent: 10",
+    "startingPercent: 0",
+    "pointsNeededForNextLevel: 100",
+    "currentAmount: 0",
+    "currentWeight: 0",
+    "capacity: 0",
+  ]) {
+    if (!characterData.includes(requiredFragment)) {
+      throw new Error(`The character model must define ${requiredFragment}.`);
+    }
+  }
+  if (app.includes('className="character_stat_label"')) {
+    throw new Error("Character stat bars must not render redundant text labels.");
+  }
+  if (app.includes('className="character_resource_label"')) {
+    throw new Error("Character resource rows must not render Gold or Carrying text labels.");
+  }
+  for (const slot of ["Slot 01", "Slot 02", "Slot 03", "Slot 04"]) {
+    if (!app.includes(slot)) {
+      throw new Error(`The character info panel must include the empty ${slot} placeholder.`);
+    }
+  }
+  if (!styles.includes("grid-template-columns: repeat(3, minmax(0, 1fr))")
+    || !styles.includes("grid-template-rows: repeat(2, auto)")
+    || !styles.includes("width: 70%")
+    || !styles.includes("aspect-ratio: 1 / 1")
+    || !styles.includes("aspect-ratio: 1 / 1")
+    || !styles.includes("overflow: visible") || !styles.includes("min-height: 0")) {
+    throw new Error("Character resources and empty inventory slots must share a six-cell grid.");
+  }
+  for (const requiredFragment of [
+    'className="character_details"',
+    'data-stat={row.key}',
+    'role="progressbar"',
+    'data-resource="gold"',
+    'data-resource="carrying"',
+    'icon: "♥"',
+    'icon: "⚔"',
+    'icon: "⛨"',
+    'icon: "✦"',
+    'color={row.color}',
+  ]) {
+    if (!app.includes(requiredFragment)) {
+      throw new Error(`The character details UI must include ${requiredFragment}.`);
+    }
+  }
+  if (!styles.includes(".character_bar_current") || !styles.includes(".character_bar_pending")
+    || !styles.includes("--character-bar-delta") || !styles.includes("--character-bar-unfilled")) {
+    throw new Error("Character stat bars must expose current, derived delta, and derived unfilled sections.");
+  }
+  if (!styles.includes("--box-body-font") || !styles.includes("font-size: var(--box-body-font)")
+    || !styles.includes("font-size: var(--box-action-font)")) {
+    throw new Error("Character content and box actions must use the shared body and action font sizes.");
+  }
+  if (!styles.includes("--ui-bar-icon-font") || !styles.includes("font-size: var(--ui-bar-icon-font)")) {
+    throw new Error("UI bar icons must use their own shared icon font size.");
   }
   if (!app.includes('id="fps"') || !app.includes("FPS: {fps}") || !app.includes("requestAnimationFrame(updateFps)")) {
     throw new Error("The HUD must display a once-per-second browser FPS counter.");
@@ -266,7 +328,7 @@ test("documents the plain safe-area template", async () => {
     || !platformSettings.includes("showHud: false")) {
     throw new Error("The Settings section must use persisted platform-specific Show UI defaults.");
   }
-  if (!app.includes('{showHud ? (\n        <div className="corner corner_top_right"')
+  if (!app.includes('{showHud ? (\n        <>\n          <div\n            className="corner corner_top_right"')
     || !app.includes('{showHud ? (\n        <div className="corner corner_bottom_right"')
     || !app.includes("{showHud ? <>\n          <a className=\"project_link\"")) {
     throw new Error("Hiding the UI must remove the upper-right and lower-corner HUD while retaining the lower-left Show UI control.");
@@ -284,10 +346,9 @@ test("documents the plain safe-area template", async () => {
   if (!app.includes('id="reset_settings"') || !app.includes("localStorage.clear()")) {
     throw new Error("The Settings section must include a local-storage reset control.");
   }
-  if (!app.includes('document.addEventListener("click", requestFullscreenOnFirstClick, true)')
-    || !app.includes('document.removeEventListener("click", requestFullscreenOnFirstClick, true)')
-    || !app.includes("void document.documentElement.requestFullscreen().catch(() => {})")) {
-    throw new Error("Mobile sessions must make one non-blocking fullscreen request from their first click.");
+  if (app.includes('requestFullscreenOnFirstClick')
+    || app.includes('document.addEventListener("click", requestFullscreenOnFirstClick, true)')) {
+    throw new Error("Menu clicks must not trigger an implicit fullscreen request.");
   }
   if (!app.includes("zoomStorageKey") || !app.includes("overgroundAmbientStorageKey") || !app.includes("undergroundAmbientStorageKey")
     || !app.includes("localStorage.setItem(zoomStorageKey")
@@ -304,10 +365,10 @@ test("documents the plain safe-area template", async () => {
     throw new Error("The fullscreen setting must persist its preference locally.");
   }
   if (!app.includes('id="gpu_light_pass_toggle"') || !app.includes("GPU Light Pass")
-    || !app.includes("getStoredBoolean(gpuLightPassStorageKey, true)")
+    || !app.includes("getStoredBoolean(gpuLightPassStorageKey, false)")
     || !app.includes("localStorage.setItem(gpuLightPassStorageKey, gpuLightPass ? \"true\" : \"false\")")
     || !app.includes("localStorage.clear()")) {
-    throw new Error("The GPU light pass checkbox must default on, persist, and reset with settings.");
+    throw new Error("The GPU light pass checkbox must default off, persist, and reset with settings.");
   }
   if (!viteConfig.plugins.some((plugin) => plugin?.name === "ascii-palette-persistence")) {
     throw new Error("Vite must provide the local disk persistence plugin for ASCII palette and font edits.");
@@ -334,6 +395,19 @@ test("documents the plain safe-area template", async () => {
     || gameLayer.includes("context.fillText")) {
     throw new Error("The game layer must own fog discovery and actual world-graphic minimap rendering.");
   }
+  if (!gameLayer.includes('transitionMask.className = "game_transition_mask"')
+    || !gameLayer.includes("createTransitionSystem")
+    || !gameLayer.includes("startRealmTransition")
+    || !gameLayer.includes("onCovered: () => activateRealm")
+    || !gameLayer.includes("transitionActive")) {
+    throw new Error("Realm changes must use a game-layer-owned transition that swaps realms at full coverage and locks input.");
+  }
+  if (!styles.includes(".game_transition_mask")
+    || !styles.includes("pointer-events: none")
+    || !styles.includes("z-index: 2")
+    || !styles.includes("radial-gradient")) {
+    throw new Error("The transition mask must be a pointer-transparent, soft-edged game-layer surface.");
+  }
   if (!gameLayer.includes('minimapCanvas.addEventListener("click", handleMinimapClick)')
     || !gameLayer.includes("canHandleMinimapScale(minimapVisible)")
     || !gameLayer.includes('minimapCanvas.removeEventListener("click", handleMinimapClick)')
@@ -342,7 +416,7 @@ test("documents the plain safe-area template", async () => {
     || !gameBridge.includes("export function subscribeToMinimapZoom(listener)")
     || !app.includes("minimapZoomStorageKey")
     || !app.includes("useEffect(() => subscribeToMinimapZoom(setMinimapZoom), [])")
-    || !gameLayer.includes("getMinimapViewport")
+    || !gameLayer.includes("sourceColumns = Math.min(world.columns")
     || !gameLayer.includes("getMinimapWorldCellGraphic")
     || !gameLayer.includes("// Pass 1: world background.")
     || !gameLayer.includes("// Pass 2: discovered world glyph rasters from the same cache as the game renderer.")
@@ -356,8 +430,8 @@ test("documents the plain safe-area template", async () => {
     throw new Error("The minimap must use responsive pixel-preserving sizing.");
   }
   const bottomLeftStart = app.indexOf('className="corner corner_bottom_left"');
-  if (!app.includes('className="corner corner_top_right" aria-hidden="true"></div>')) {
-    throw new Error("The GitHub link must not remain in the upper-right HUD.");
+  if (!app.includes('aria-label="Map icon"') || !app.includes('onClick={activateMinimapZoom}')) {
+    throw new Error("The upper-right HUD must expose the box-wide minimap map action.");
   }
   const lowerLeftMarkup = app.slice(bottomLeftStart, windowsStart);
   if (!lowerLeftMarkup.includes("GitHubMark")) {

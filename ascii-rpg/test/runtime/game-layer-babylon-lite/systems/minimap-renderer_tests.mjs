@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createFogOfWar, discoverCell } from "../../../../src/runtime/game-layer-babylon-lite/systems/fog-of-war-system.js";
 import { getMinimapMarkers, getMinimapWorldCellGraphic, getMinimapWorldGraphic, getMinimapWorldPixel, MINIMAP_MARKER_DEPTHS } from "../../../../src/runtime/game-layer-babylon-lite/systems/minimap-renderer.js";
-import { canHandleMinimapScale, getMinimapViewport, getNextMinimapScale } from "../../../../src/runtime/game-layer-babylon-lite/systems/minimap-zoom.js";
+import { canHandleMinimapScale, getMinimapCellLayout, getMinimapViewport, getNextMinimapScale } from "../../../../src/runtime/game-layer-babylon-lite/systems/minimap-zoom.js";
 
 function createWorld() {
   return {
@@ -72,9 +72,12 @@ test("minimap markers use the approved depth order and exact torch discovery", (
   const fog = createFogOfWar(world);
   const player = { x: 1, y: 1 };
 
+  assert.deepEqual(getMinimapMarkers(world, fog, player), []);
+
+  discoverCell(fog, world, player);
   assert.deepEqual(getMinimapMarkers(world, fog, player), [
-    { type: "start", color: "#00ff00", depth: MINIMAP_MARKER_DEPTHS.start, cell: { x: 0, y: 0 } },
-    { type: "player", color: "#ffff00", depth: MINIMAP_MARKER_DEPTHS.player, cell: { x: 0, y: 0 } },
+    { type: "start", color: "#00ff00", depth: MINIMAP_MARKER_DEPTHS.start, cell: { x: 1, y: 1 } },
+    { type: "player", color: "#ffff00", depth: MINIMAP_MARKER_DEPTHS.player, cell: { x: 1, y: 1 } },
   ]);
 
   discoverCell(fog, world, { x: 7, y: 8 });
@@ -83,9 +86,9 @@ test("minimap markers use the approved depth order and exact torch discovery", (
   discoverCell(fog, world, world.torches[0]);
   const markers = getMinimapMarkers(world, fog, world.torches[0]);
   assert.deepEqual(markers, [
-    { type: "start", color: "#00ff00", depth: MINIMAP_MARKER_DEPTHS.start, cell: { x: 0, y: 0 } },
-    { type: "torch", color: "#ffffff", depth: MINIMAP_MARKER_DEPTHS.torch, cell: { x: 0, y: 0 } },
-    { type: "player", color: "#ffff00", depth: MINIMAP_MARKER_DEPTHS.player, cell: { x: 0, y: 0 } },
+    { type: "start", color: "#00ff00", depth: MINIMAP_MARKER_DEPTHS.start, cell: { x: 1, y: 1 } },
+    { type: "torch", color: "#ffffff", depth: MINIMAP_MARKER_DEPTHS.torch, cell: { x: 8, y: 8 } },
+    { type: "player", color: "#ffff00", depth: MINIMAP_MARKER_DEPTHS.player, cell: { x: 8, y: 8 } },
   ]);
 });
 
@@ -114,4 +117,18 @@ test("minimap zoom changes the rendered viewport without changing canvas bounds"
 test("hidden minimaps do not accept scale input", () => {
   assert.equal(canHandleMinimapScale(true), true);
   assert.equal(canHandleMinimapScale(false), false);
+});
+
+test("matching minimap zoom keeps the game cell footprint instead of stretching to canvas bounds", () => {
+  assert.deepEqual(getMinimapCellLayout(
+    { width: 320, height: 240 },
+    { columns: 25, rows: 18 },
+    6.4,
+    6.4,
+  ), {
+    cellWidth: 6.4,
+    cellHeight: 6.4,
+    offsetX: 80,
+    offsetY: 62.4,
+  });
 });

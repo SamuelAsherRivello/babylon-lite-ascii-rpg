@@ -12,6 +12,7 @@ The active minimap renderer currently reduces each coarse 10-by-10 world area an
 - Keep view `1`, `5`, and `10` as scale/crop variants of the current game viewport composition.
 - Preserve the explicit background → glyph → marker passes and fog gate.
 - Keep the minimap canvas dimensions and game zoom independent.
+- Preserve the game renderer's cell footprint when placing minimap cells; the fixed minimap canvas must not determine cell size by stretching the selected source region.
 
 **Non-Goals:**
 
@@ -32,6 +33,10 @@ The minimap will consume the same rasterized glyph pixel data produced for the g
 ### Keep minimap zoom as a crop of the game viewport
 
 Zoom `1` maps the current game viewport into the minimap footprint. Zoom `5` and `10` select smaller player-centered source regions from that viewport and rasterize those cells into the same canvas dimensions. CSS transforms and game `setZoom` remain out of scope.
+
+### Use fixed-footprint placement instead of fill-to-canvas scaling
+
+The minimap SHALL derive its cell width and height from the same zoom-scaled grid dimensions used by the game renderer, adjusted only for the minimap canvas pixel density. It SHALL not calculate cell dimensions as `canvasSize / sourceCellCount` when that would enlarge cells beyond the matching game zoom. Source positioning SHALL remain player-centered and bounded; cells that do not fit may be cropped, while remaining canvas space may be letterboxed.
 
 ## Risks / Trade-offs
 

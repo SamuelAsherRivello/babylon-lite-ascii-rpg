@@ -22,7 +22,9 @@ import {
 } from "../bridge-layer/palette.js";
 import { withUrlArgument } from "./url-arguments.js";
 import { ToastProvider, useToast } from "./ToastProvider.jsx";
-import { removeButtonsFromTabOrder } from "./button-tab-order.js";
+import { removeFocusableElementsFromTabOrder } from "./button-tab-order.js";
+import { INITIAL_CHARACTER } from "./character-data.js";
+import { deriveBarColors } from "./character-colors.js";
 import {
   getPlatformSettingsDefaults,
   getStoredAspectMode,
@@ -58,7 +60,7 @@ import {
   getNextCameraMode,
   normalizeCameraMode,
 } from "../bridge-layer/camera.js";
-import { formatWorldTime } from "../game-layer-babylon-lite/systems/time-system.js";
+import { getNextMinimapScale } from "../game-layer-babylon-lite/systems/minimap-zoom.js";
 import {
   AMBIENT_LIGHT_STEP,
   LIGHTING_PROFILES,
@@ -108,7 +110,10 @@ const paletteEditorHeight = 340;
 const paletteEditorMargin = 16;
 const lightingWindowMargin = 12;
 const defaultLightingWindowPosition = { left: 252, top: 52 };
-const defaultPaletteViewState = { filter: "all", sortBy: "index", sortDirection: "ascending" };
+// The full character catalog is still available through the All filter, but
+// opening settings should not synchronously mount hundreds of controls while
+// the WebGPU game is rendering.
+const defaultPaletteViewState = { filter: "in-maps", sortBy: "index", sortDirection: "ascending" };
 const lightingValueHelp = "R Radius · M Maximum · F Falloff";
 const shadowValueHelp = "O Occlusion · B Bleed";
 const ambientValueHelp = "0 dark · 1 bright";
@@ -207,6 +212,75 @@ function GitHubMark() {
     <svg aria-hidden="true" viewBox="0 0 16 16" width="20" height="20" fill="#f5f5f5">
       <path d="M8 0C3.58 0 0 3.64 0 8.13c0 3.59 2.29 6.64 5.47 7.71.4.08.55-.18.55-.4 0-.2-.01-.86-.01-1.56-2.01.38-2.53-.5-2.69-.96-.09-.24-.48-.96-.82-1.15-.28-.15-.68-.53-.01-.54.63-.01 1.08.59 1.23.83.72 1.23 1.87.88 2.33.67.07-.53.28-.88.51-1.08-1.78-.21-3.64-.91-3.64-4.04 0-.89.31-1.62.82-2.19-.08-.2-.36-1.04.08-2.16 0 0 .67-.22 2.2.84A7.5 7.5 0 0 1 8 3.82c.68 0 1.36.09 2 .28 1.53-1.06 2.2-.84 2.2-.84.44 1.12.16 1.96.08 2.16.51.57.82 1.29.82 2.19 0 3.14-1.87 3.83-3.65 4.04.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .22.15.48.55.4A8.02 8.02 0 0 0 16 8.13C16 3.64 12.42 0 8 0Z" />
     </svg>
+  );
+}
+
+const characterBarRows = [
+  { key: "health", label: "Health", icon: "♥", color: "#ef3340" },
+  { key: "offense", label: "Offense", icon: "⚔", color: "#70e85a" },
+  { key: "defense", label: "Defense", icon: "⛨", color: "#49b7ec" },
+  { key: "experience", label: "Experience", icon: "✦", color: "#5f3df5" },
+];
+
+function CharacterBarRow({ row, data, color }) {
+  const text = row.key === "experience" ? `O${data.level}` : null;
+  const derivedColors = deriveBarColors(color);
+  const deltaStart = Math.min(data.currentPercent, data.pendingPercent);
+  const deltaWidth = Math.abs(data.pendingPercent - data.currentPercent);
+  return (
+    <div className="character_bar_row" data-stat={row.key} style={{ "--character-bar-color": color }}>
+      <span className="character_stat_icon" aria-hidden="true">{row.icon}</span>
+      <div
+        className="character_bar"
+        role="progressbar"
+        aria-label={row.label}
+        aria-valuemin="0"
+        aria-valuemax="100"
+        aria-valuenow={data.currentPercent}
+        style={{
+          "--character-bar-color": derivedColors.current,
+          "--character-bar-delta": derivedColors.delta,
+          "--character-bar-unfilled": derivedColors.unfilled,
+          "--character-bar-current": `${data.currentPercent}%`,
+          "--character-bar-delta-start": `${deltaStart}%`,
+          "--character-bar-delta-width": `${deltaWidth}%`,
+        }}
+      >
+        <span className="character_bar_current" />
+        <span className="character_bar_pending" />
+        {text ? <span className="character_bar_text">{text}</span> : null}
+      </div>
+    </div>
+  );
+}
+
+function CharacterDetails() {
+  return (
+    <div className="character_details" aria-label="Character details">
+      <div className="character_bar_list">
+        {characterBarRows.map((row) => <CharacterBarRow key={row.key} row={row} color={row.color} data={INITIAL_CHARACTER[row.key]} />)}
+      </div>
+      <div className="character_resource_list">
+        <div className="character_resource" data-resource="gold" aria-label="Gold">
+          <span className="character_resource_icon" aria-hidden="true">◆</span>
+          <span className="character_resource_value">{INITIAL_CHARACTER.gold.currentAmount}</span>
+        </div>
+        {["Slot 01", "Slot 02"].map((slot) => (
+          <div className="character_resource character_slot" key={slot} aria-label={slot}>
+            <span className="character_slot_text">{slot}</span>
+          </div>
+        ))}
+        <div className="character_resource" data-resource="carrying" aria-label="Carrying weight">
+          <span className="character_resource_icon" aria-hidden="true">▣</span>
+          <span className="character_resource_value">{INITIAL_CHARACTER.carrying.currentWeight}/{INITIAL_CHARACTER.carrying.capacity}</span>
+        </div>
+        {["Slot 03", "Slot 04"].map((slot) => (
+          <div className="character_resource character_slot" key={slot} aria-label={slot}>
+            <span className="character_slot_text">{slot}</span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -737,7 +811,7 @@ function AppContent() {
   const [minimapZoom, setMinimapZoom] = useState(getStoredMinimapZoom);
   const [overgroundAmbient, setOvergroundAmbient] = useState(() => getStoredAmbientLight(overgroundAmbientStorageKey, 0.9));
   const [undergroundAmbient, setUndergroundAmbient] = useState(() => getStoredAmbientLight(undergroundAmbientStorageKey, 0.1));
-  const [gpuLightPass, setGpuLightPass] = useState(() => getStoredBoolean(gpuLightPassStorageKey, true));
+  const [gpuLightPass, setGpuLightPass] = useState(() => getStoredBoolean(gpuLightPassStorageKey, false));
   const [minimap, setMinimap] = useState(() => getStoredBoolean(minimapStorageKey, true));
   const [playerGpuShadowBleedRange, setPlayerGpuShadowBleedRange] = useState(getStoredPlayerGpuShadowBleedRange);
   const [torchLightingIndex, setTorchLightingIndex] = useState(() => getStoredSourceIndex(torchLightingStorageKey, 1));
@@ -902,23 +976,6 @@ function AppContent() {
     return () => document.removeEventListener("fullscreenchange", syncFullscreenState);
   }, []);
 
-  useEffect(() => {
-    if (!isMobilePlatform()) return undefined;
-
-    let attempted = false;
-    const requestFullscreenOnFirstClick = () => {
-      if (attempted) return;
-      attempted = true;
-      document.removeEventListener("click", requestFullscreenOnFirstClick, true);
-      if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
-        void document.documentElement.requestFullscreen().catch(() => {});
-      }
-    };
-
-    document.addEventListener("click", requestFullscreenOnFirstClick, true);
-    return () => document.removeEventListener("click", requestFullscreenOnFirstClick, true);
-  }, []);
-
   const toggleFullscreen = async () => {
     try {
       if (document.fullscreenElement) {
@@ -952,6 +1009,24 @@ function AppContent() {
       if (nextZoom !== currentZoom) sendZoomSnapshot(nextZoom);
       return nextZoom;
     });
+  };
+
+  const activateDetails = () => {};
+
+  const activateMinimapZoom = () => {
+    if (!minimap) return;
+    setMinimapZoom((currentZoom) => {
+      const nextZoom = getNextMinimapScale(currentZoom);
+      sendMinimapZoomSnapshot(nextZoom);
+      return nextZoom;
+    });
+  };
+
+  const handleTopPanelKeyDown = (event, action) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      action();
+    }
   };
 
   const cycleCameraMode = () => setCameraMode((current) => getNextCameraMode(current));
@@ -1014,18 +1089,34 @@ function AppContent() {
 
   return (
     <>
-      <div className="corner corner_top_left">
-        <div id="project_title" className="corner_body">
-          Ascii RPG
-        </div>
-        <div id="world" className="corner_body">World: 1</div>
-        <div id="realm" className="corner_body">Realm: {activeRealm}</div>
-        <div id="time" className="corner_body">
-          Time: {formatWorldTime(worldTime)}
-        </div>
+      <div
+        className="corner corner_top_left"
+        role="button"
+        tabIndex={-1}
+        aria-label="Character details"
+        onClick={activateDetails}
+        onKeyDown={(event) => handleTopPanelKeyDown(event, activateDetails)}
+      >
+        <CharacterDetails />
+        <div className="top_panel_action">Character</div>
       </div>
       {showHud ? (
-        <div className="corner corner_top_right" aria-hidden="true"></div>
+        <>
+          <div
+            className="corner corner_top_right"
+            role="button"
+            tabIndex={-1}
+            aria-label="Map icon"
+            onClick={activateMinimapZoom}
+            onKeyDown={(event) => handleTopPanelKeyDown(event, activateMinimapZoom)}
+          >
+            <div className="top_panel_action">Map 🔍</div>
+          </div>
+          <div className="minimap_status" aria-label="World status">
+            <span>World 1 Floor {activeRealm === "Underground" ? "-1" : "1"}</span>
+            <span id="time">Time: {String(worldTime).padStart(5, "0")}</span>
+          </div>
+        </>
       ) : null}
       <div className="corner corner_bottom_left">
         {showHud ? <>
@@ -1284,7 +1375,7 @@ function AppContent() {
 }
 
 export function App() {
-  useLayoutEffect(() => removeButtonsFromTabOrder(document.getElementById("ui_layer")), []);
+  useLayoutEffect(() => removeFocusableElementsFromTabOrder(document.getElementById("ui_layer")), []);
 
   return (
     <ToastProvider>
