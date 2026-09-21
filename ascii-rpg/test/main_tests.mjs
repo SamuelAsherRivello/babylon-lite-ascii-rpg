@@ -115,9 +115,9 @@ test("documents the plain safe-area template", async () => {
   const characterData = await readFile(new URL("src/runtime/ui-layer-react/character-data.js", appRoot), "utf8");
   for (const requiredFragment of [
     "startingPercent: 100",
-    "startingValue: 25",
+    "startingValue: 50",
     "maximum: 50",
-    "startingPercent: 10",
+    "startingPercent: 25",
     "startingPercent: 0",
     "pointsNeededForNextLevel: 100",
     "currentAmount: 0",
@@ -173,10 +173,12 @@ test("documents the plain safe-area template", async () => {
     }
   }
   if (!styles.includes(".character_bar_current") || !styles.includes(".character_bar_pending")
+    || !styles.includes(".character_bar_current_max") || !styles.includes("--character-bar-current-max")
     || !styles.includes("--character-bar-delta") || !styles.includes("--character-bar-unfilled")) {
-    throw new Error("Character stat bars must expose current, derived delta, and derived unfilled sections.");
+    throw new Error("Character stat bars must expose current, max marker, derived delta, and derived unfilled sections.");
   }
   if (!app.includes("CHARACTER_BAR_DELTA_DURATION_MS")
+    || !app.includes("getCharacterBarMaximumPercent")
     || !app.includes("getCharacterBarSegments")
     || !app.includes("setTransitionPercent(fromPercent)")) {
     throw new Error("Every Character bar must use model-supplied percentages and the transient delta lifecycle.");

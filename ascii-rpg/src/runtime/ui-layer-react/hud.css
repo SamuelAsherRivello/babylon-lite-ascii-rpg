@@ -241,28 +241,32 @@ html[data-hud-hidden="true"] #settings > .hud_block_body > :has(#show_ui_toggle)
 }
 
 .log_box {
-  display: flex;
-  flex-direction: column;
   width: 100%;
   height: 100%;
-  padding: 8px;
+  padding: 0;
   min-height: 0;
   border: 1px solid var(--box-border-color);
   pointer-events: auto;
 }
 
 .log_box_body {
-  flex: 1 1 auto;
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
   width: 100%;
+  height: 100%;
+  padding: 18px 0 0 4px;
   min-height: 0;
   overflow-y: scroll;
   overflow-x: hidden;
-  position: relative;
-  left: 5px;
   color: #c4c4c4;
-  font-size: 6pt;
+  font-size: 5pt;
   font-family: monospace;
   scrollbar-width: thin;
+}
+
+.log_box_body::-webkit-scrollbar {
+  width: 5px;
 }
 
 .log_entry {

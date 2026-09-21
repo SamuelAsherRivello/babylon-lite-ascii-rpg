@@ -10,13 +10,13 @@ import {
   createStaminaSystem,
 } from "../../../../src/runtime/game-layer-babylon-lite/systems/stamina-system.js";
 
-test("starts at 25 stamina against a bounded 50 stamina maximum", () => {
+test("starts at 50 stamina against a bounded 50 stamina maximum", () => {
   const stamina = createStaminaSystem();
 
-  assert.equal(INITIAL_PLAYER_STAMINA, 25);
+  assert.equal(INITIAL_PLAYER_STAMINA, 50);
   assert.equal(MAX_PLAYER_STAMINA, 50);
   assert.equal(STAMINA_BAR_NOMINAL_CAPACITY, 100);
-  assert.deepEqual(stamina.getSnapshot(), { current: 25, maximum: 50, currentPercent: 25 });
+  assert.deepEqual(stamina.getSnapshot(), { current: 50, maximum: 50, currentPercent: 50 });
   assert.equal(Object.isFrozen(stamina.getSnapshot()), true);
 });
 

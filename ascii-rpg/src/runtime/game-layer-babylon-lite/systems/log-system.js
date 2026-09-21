@@ -1,16 +1,12 @@
-export const DEFAULT_LOG_LIMIT = 8;
-
 function normalizeLine(value) {
   if (value === null || value === undefined) return "";
   return String(value).replace(/[\r\n]+/g, " ").trim();
 }
 
 export function createLogSystem({
-  maxEntries = DEFAULT_LOG_LIMIT,
   shouldDisplay = () => true,
   formatMessage = (event) => event.message,
 } = {}) {
-  const limit = Number.isInteger(maxEntries) && maxEntries > 0 ? maxEntries : DEFAULT_LOG_LIMIT;
   const entries = [];
   const listeners = new Set();
   let active = true;
@@ -27,7 +23,6 @@ export function createLogSystem({
       const line = normalizeLine(formatMessage(event));
       if (!line) return null;
       entries.push(line);
-      if (entries.length > limit) entries.shift();
       publish();
       return line;
     },

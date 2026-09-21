@@ -28,10 +28,10 @@ let goldSnapshot = 0;
 let keySnapshot = 0;
 let healthSnapshot = 100;
 let staminaSnapshot = Object.freeze({
-  current: 25,
+  current: 50,
   maximum: 50,
-  currentPercent: 25,
-  previousPercent: 25,
+  currentPercent: 50,
+  previousPercent: 50,
   revision: 0,
 });
 let experienceSnapshot = Object.freeze({
@@ -43,8 +43,8 @@ let experienceSnapshot = Object.freeze({
   revision: 0,
 });
 let combatStatsSnapshot = Object.freeze({
-  offense: Object.freeze({ current: 2.5, maximum: 25, currentPercent: 10, previousPercent: 10, revision: 0 }),
-  defense: Object.freeze({ current: 2.5, maximum: 25, currentPercent: 10, previousPercent: 10, revision: 0 }),
+  offense: Object.freeze({ current: 25, maximum: 25, currentPercent: 25, previousPercent: 25, revision: 0 }),
+  defense: Object.freeze({ current: 25, maximum: 25, currentPercent: 25, previousPercent: 25, revision: 0 }),
 });
 let playerDeadSnapshot = false;
 let logSnapshot = [];

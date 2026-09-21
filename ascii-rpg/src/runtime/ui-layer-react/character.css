@@ -60,7 +60,8 @@
   height: 100%;
   box-sizing: border-box;
   overflow: hidden;
-  border: 1px solid #9da3aa;
+  --character-bar-border: #9da3aa;
+  border: 1px solid var(--character-bar-border);
   background: #000;
 }
 
@@ -79,6 +80,17 @@
   left: var(--character-bar-delta-start);
   width: var(--character-bar-delta-width);
   background: var(--character-bar-delta);
+}
+
+.character_bar_current_max {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--character-bar-current-max);
+  z-index: 1;
+  width: 1px;
+  background: var(--character-bar-border);
+  transform: translateX(-50%);
 }
 
 .character_bar {

@@ -6,6 +6,10 @@ function clampPercent(value) {
   return Math.min(CHARACTER_BAR_PERCENT_MAX, Math.max(0, Number.isFinite(numeric) ? numeric : 0));
 }
 
+export function getCharacterBarMaximumPercent(maximum = 100) {
+  return clampPercent(maximum);
+}
+
 export function getCharacterBarSegments({
   currentPercent,
   transitionPercent = currentPercent,

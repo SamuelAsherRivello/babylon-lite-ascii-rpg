@@ -117,7 +117,7 @@ test("publishes immutable bounded stamina snapshots", () => {
     current: 39,
     maximum: 50,
     currentPercent: 39,
-    previousPercent: 25,
+    previousPercent: 50,
     revision: 1,
   });
   assert.equal(Object.isFrozen(getStaminaSnapshot()), true);
@@ -131,7 +131,7 @@ test("publishes immutable bounded stamina snapshots", () => {
     revision: 2,
   });
   assert.deepEqual(received, [
-    { current: 39, maximum: 50, currentPercent: 39, previousPercent: 25, revision: 1 },
+    { current: 39, maximum: 50, currentPercent: 39, previousPercent: 50, revision: 1 },
     { current: 50, maximum: 50, currentPercent: 75, previousPercent: 39, revision: 2 },
   ]);
 
@@ -151,14 +151,14 @@ test("publishes immutable offense and defense snapshots", () => {
     current: 13,
     maximum: 25,
     currentPercent: 52,
-    previousPercent: 10,
+    previousPercent: 25,
     revision: 1,
   });
   assert.deepEqual(getCombatStatsSnapshot().defense, {
     current: 13,
     maximum: 25,
     currentPercent: 52,
-    previousPercent: 10,
+    previousPercent: 25,
     revision: 1,
   });
   assert.equal(Object.isFrozen(getCombatStatsSnapshot()), true);

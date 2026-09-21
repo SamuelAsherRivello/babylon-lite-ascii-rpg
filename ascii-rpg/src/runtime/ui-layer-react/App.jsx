@@ -29,6 +29,7 @@ import { INITIAL_CHARACTER } from "./character-data.js";
 import { deriveBarColors } from "./character-colors.js";
 import {
   CHARACTER_BAR_DELTA_DURATION_MS,
+  getCharacterBarMaximumPercent,
   getCharacterBarSegments,
 } from "./character-bar-presentation.js";
 import { createGlyphRasterCanvas, rasterizeGlyph, getGlyphRasterSize } from "../game-layer-babylon-lite/glyph-visual-cache.js";
@@ -268,6 +269,8 @@ function CharacterBarRow({ row, data, color }) {
   const text = row.key === "experience" ? `O${data.level}` : null;
   const derivedColors = deriveBarColors(color);
   const currentPercent = data.currentPercent;
+  const initialMaximum = data.maximum ?? data.pointsNeededForNextLevel ?? 100;
+  const [maximumPercent] = useState(() => getCharacterBarMaximumPercent(initialMaximum));
   const [transitionPercent, setTransitionPercent] = useState(currentPercent);
   const settledPercentRef = useRef(currentPercent);
   const previousPercent = data.previousPercent;
@@ -302,12 +305,14 @@ function CharacterBarRow({ row, data, color }) {
           "--character-bar-delta": derivedColors.delta,
           "--character-bar-unfilled": derivedColors.unfilled,
           "--character-bar-current": `${segments.currentPercent}%`,
+          "--character-bar-current-max": `${maximumPercent}%`,
           "--character-bar-delta-start": `${segments.deltaStartPercent}%`,
           "--character-bar-delta-width": `${segments.deltaWidthPercent}%`,
         }}
       >
         <span className="character_bar_current" />
         <span className="character_bar_pending" />
+        <span className="character_bar_current_max" aria-hidden="true" />
         {text ? <span className="character_bar_text">{text}</span> : null}
       </div>
     </div>

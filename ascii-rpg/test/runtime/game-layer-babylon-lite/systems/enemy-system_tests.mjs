@@ -42,13 +42,13 @@ function createHarness({ playerCell = { x: 6, y: 3 }, activeRealm = "Underground
   return { timeSystem, occupancy, system, logs, attacks, damageEvents, getDistanceFieldBuilds: () => distanceFieldBuilds };
 }
 
-test("creates red-E enemies with 100 health and derived age", () => {
+test("creates red-E enemies with 40 health and derived age", () => {
   const harness = createHarness();
   const enemy = harness.system.addEnemy({ id: "enemy-1", realm: "Underground", cell: { x: 2, y: 3 }, bornAtTime: 7 });
 
   assert.equal(enemy.glyph, ENEMY_GLYPH);
-  assert.equal(enemy.health, 100);
-  assert.equal(enemy.maxHealth, 100);
+  assert.equal(enemy.health, 40);
+  assert.equal(enemy.maxHealth, 40);
   assert.equal(enemy.bornAtTime, 7);
   assert.equal(harness.system.getAge("enemy-1", 7), 0);
   assert.equal(harness.system.getAge("enemy-1", 8), 1);
@@ -188,7 +188,7 @@ test("applies defense mitigation to an adjacent enemy attack", () => {
   system.addEnemy({ id: "enemy-defense", realm: "Underground", cell: { x: 2, y: 3 }, bornAtTime: 1 });
 
   harness.timeSystem.advance(2);
-  assert.deepEqual(attacks, [5]);
+  assert.deepEqual(attacks, [4]);
 });
 
 test("damages Player Lifecycle to zero and publishes death once", () => {
@@ -217,17 +217,17 @@ test("removes and unregisters an enemy permanently at zero health", () => {
   const harness = createHarness();
   harness.system.addEnemy({ id: "enemy-1", realm: "Underground", cell: { x: 2, y: 3 }, bornAtTime: 1 });
 
-  assert.equal(harness.system.damage("enemy-1", 95, { attacker: "player", at: 10 })?.health, 5);
+  assert.equal(harness.system.damage("enemy-1", 35, { attacker: "player", at: 10 })?.health, 5);
   assert.equal(harness.system.damage("enemy-1", 5, { attacker: "player", at: 20 }), null);
   harness.timeSystem.advance(10);
   assert.equal(harness.occupancy.get("enemy-1"), null);
-  assert.deepEqual(harness.logs, ["Player hit Enemy for -95 Health", "Player hit Enemy for -5 Health", "Enemy died"]);
+  assert.deepEqual(harness.logs, ["Player hit Enemy for -35 Health", "Player hit Enemy for -5 Health", "Enemy died"]);
   assert.deepEqual(harness.damageEvents.map(({ entity, at }) => ({
     health: entity.health,
     previousHealth: entity.previousHealth,
     at,
   })), [
-    { health: 5, previousHealth: 100, at: 10 },
+    { health: 5, previousHealth: 40, at: 10 },
     { health: 0, previousHealth: 5, at: 20 },
   ]);
 });

@@ -3,8 +3,6 @@ export const INITIAL_DEFENSE_MAXIMUM = 25;
 export const PLAYER_MAX_ATTACK_DAMAGE = 20;
 export const ENEMY_MAX_ATTACK_DAMAGE = 5;
 export const MAX_DEFENSE_MITIGATION = 0.5;
-export const COMBAT_STAT_MINIMUM_PERCENT = 5;
-export const COMBAT_STAT_STAMINA_SWING_PERCENT = 10;
 
 function clamp(value, maximum) {
   const numeric = Number(value);
@@ -17,9 +15,7 @@ function ratio(current, maximum) {
 
 export function deriveCombatStatValue(maximum, staminaCurrent, staminaMaximum) {
   const boundedMaximum = Math.max(0, Number(maximum) || 0);
-  const readinessPercent = COMBAT_STAT_MINIMUM_PERCENT
-    + (COMBAT_STAT_STAMINA_SWING_PERCENT * ratio(staminaCurrent, staminaMaximum));
-  return boundedMaximum * (readinessPercent / 100);
+  return boundedMaximum * ratio(staminaCurrent, staminaMaximum);
 }
 
 export function calculatePlayerAttackDamage(
@@ -42,7 +38,7 @@ export function calculatePlayerDamageTaken(
 }
 
 function createStatSnapshot(current, maximum, previousPercent = null, revision = 0) {
-  const currentPercent = maximum > 0 ? (current * 100) / maximum : 0;
+  const currentPercent = clamp(current, 100);
   return Object.freeze({
     current,
     maximum,
@@ -69,8 +65,8 @@ export function createCombatStatsSystem({
   const notify = (stamina = staminaSystem?.getSnapshot?.() ?? { current: 0, maximum: 0 }) => {
     const nextOffense = deriveCombatStatValue(boundedOffenseMaximum, stamina.current, stamina.maximum);
     const nextDefense = deriveCombatStatValue(boundedDefenseMaximum, stamina.current, stamina.maximum);
-    const nextOffensePercent = boundedOffenseMaximum > 0 ? (nextOffense * 100) / boundedOffenseMaximum : 0;
-    const nextDefensePercent = boundedDefenseMaximum > 0 ? (nextDefense * 100) / boundedDefenseMaximum : 0;
+    const nextOffensePercent = clamp(nextOffense, 100);
+    const nextDefensePercent = clamp(nextDefense, 100);
     const changed = nextOffensePercent !== offenseSnapshot.currentPercent
       || nextDefensePercent !== defenseSnapshot.currentPercent;
     if (!changed) return;

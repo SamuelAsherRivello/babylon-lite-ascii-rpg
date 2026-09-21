@@ -4,6 +4,7 @@ import { deriveBarColors } from "../../../src/runtime/ui-layer-react/character-c
 import {
   CHARACTER_BAR_DELTA_DURATION_MS,
   CHARACTER_BAR_PERCENT_MAX,
+  getCharacterBarMaximumPercent,
   getCharacterBarSegments,
 } from "../../../src/runtime/ui-layer-react/character-bar-presentation.js";
 
@@ -52,4 +53,11 @@ test("bar geometry consumes percentages without interpreting nominal values", ()
 
   assert.deepEqual(fullHealth, fullExperience);
   assert.equal(fullExperience.currentPercent, 100);
+});
+
+test("bar maximum markers use the shared visual scale", () => {
+  assert.equal(getCharacterBarMaximumPercent(50), 50);
+  assert.equal(getCharacterBarMaximumPercent(25), 25);
+  assert.equal(getCharacterBarMaximumPercent(), 100);
+  assert.equal(getCharacterBarMaximumPercent(125), 100);
 });

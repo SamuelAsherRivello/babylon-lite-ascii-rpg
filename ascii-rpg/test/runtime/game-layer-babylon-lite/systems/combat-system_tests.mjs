@@ -48,11 +48,11 @@ test("advances exactly one combat tick for a valid attack and none for a stale t
 
   resolvePlayerCombatTurn({ id: "enemy-1", type: "enemy" }, { timeSystem, staminaSystem, enemySystem });
   assert.equal(timeSystem.getTime(), 2);
-  assert.equal(staminaSystem.getCurrent(), 22.5);
+  assert.equal(staminaSystem.getCurrent(), 45);
   assert.deepEqual(causes, ["combat"]);
   resolvePlayerCombatTurn(null, { timeSystem, staminaSystem, enemySystem });
   assert.equal(timeSystem.getTime(), 2);
-  assert.equal(staminaSystem.getCurrent(), 22.5);
+  assert.equal(staminaSystem.getCurrent(), 45);
 });
 
 test("resolved attacks spend ten percent of current stamina", () => {
@@ -83,7 +83,7 @@ test("player collision damage follows current offense before spending stamina", 
       enemySystem: { damage: (id, amount) => calls.push([id, amount]) || {} },
     },
   );
-  assert.deepEqual(calls, [["enemy-1", 2]]);
+  assert.deepEqual(calls, [["enemy-1", 10]]);
 });
 
 test("awards attack experience and kill-specific experience without changing combat timing", () => {

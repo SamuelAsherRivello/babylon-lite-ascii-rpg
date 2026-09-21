@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createLogSystem, DEFAULT_LOG_LIMIT } from "../../../../src/runtime/game-layer-babylon-lite/systems/log-system.js";
+import { createLogSystem } from "../../../../src/runtime/game-layer-babylon-lite/systems/log-system.js";
 
 test("accepts displayable events in arrival order and publishes immutable snapshots", () => {
   const logSystem = createLogSystem();
@@ -36,21 +36,20 @@ test("normalizes multiline messages to one line", () => {
   assert.deepEqual(logSystem.getSnapshot(), ["Entered Overground realm."]);
 });
 
-test("retains the newest entries up to the default limit", () => {
+test("retains every entry for the full session", () => {
   const logSystem = createLogSystem();
 
-  for (let index = 1; index <= DEFAULT_LOG_LIMIT + 1; index += 1) {
+  for (let index = 1; index <= 24; index += 1) {
     logSystem.log({ message: `Entry ${index}` });
   }
 
-  assert.equal(logSystem.getSnapshot().length, DEFAULT_LOG_LIMIT);
-  assert.equal(logSystem.getSnapshot()[0], "Entry 2");
-  assert.equal(logSystem.getSnapshot().at(-1), `Entry ${DEFAULT_LOG_LIMIT + 1}`);
+  assert.equal(logSystem.getSnapshot().length, 24);
+  assert.equal(logSystem.getSnapshot()[0], "Entry 1");
+  assert.equal(logSystem.getSnapshot().at(-1), "Entry 24");
 });
 
 test("supports custom formatting and disposal", () => {
   const logSystem = createLogSystem({
-    maxEntries: 2,
     formatMessage: ({ source, message }) => `[${source}] ${message}`,
   });
   const received = [];

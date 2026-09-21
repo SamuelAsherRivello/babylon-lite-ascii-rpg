@@ -2,7 +2,7 @@ import { ENEMY_GLYPH } from "./world-system.js";
 import { calculatePlayerDamageTaken } from "./combat-stats-system.js";
 
 export { ENEMY_GLYPH };
-export const ENEMY_HEALTH = 100;
+export const ENEMY_HEALTH = 40;
 export const ENEMY_ATTACK_DAMAGE = 5;
 export const ENEMY_ACTION_INTERVAL = 2;
 export const ENEMY_NAVIGATION_RADIUS = 64;
