@@ -50,6 +50,21 @@ export function createFogOfWar(world) {
   };
 }
 
+/**
+ * Creates one independent fog map for every realm in a generated world.
+ * The returned records are keyed by realm name so a view can never reuse a
+ * discovery map from another realm.
+ */
+export function createFogMapsForWorld(worldRealms) {
+  if (!worldRealms?.realms || typeof worldRealms.realms !== "object") {
+    throw new TypeError("Fog maps require generated world realms.");
+  }
+  return Object.fromEntries(Object.entries(worldRealms.realms).map(([realmName, world]) => [
+    realmName,
+    createFogOfWar(world),
+  ]));
+}
+
 export function isDiscovered(fog, world, cell) {
   return getFogVisibility(fog, world, cell) > 0;
 }

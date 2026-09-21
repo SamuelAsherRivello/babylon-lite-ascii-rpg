@@ -39,6 +39,9 @@ import {
   sendRandomSeedSnapshot,
   subscribeToRandomSeed,
   subscribeToLog,
+  getStaminaSnapshot,
+  sendStaminaSnapshot,
+  subscribeToStamina,
   getKeySnapshot,
   sendKeySnapshot,
   subscribeToKey,
@@ -95,6 +98,36 @@ test("publishes key snapshots to subscribers", () => {
   sendKeySnapshot(-1);
   assert.equal(getKeySnapshot(), 0);
   assert.deepEqual(received, [2, 0]);
+
+  unsubscribe();
+});
+
+test("publishes immutable bounded stamina snapshots", () => {
+  const received = [];
+  const unsubscribe = subscribeToStamina(() => received.push(getStaminaSnapshot()));
+
+  sendStaminaSnapshot({ current: 39, maximum: 50, currentPercent: 39 });
+  assert.deepEqual(getStaminaSnapshot(), {
+    current: 39,
+    maximum: 50,
+    currentPercent: 39,
+    previousPercent: 50,
+    revision: 1,
+  });
+  assert.equal(Object.isFrozen(getStaminaSnapshot()), true);
+
+  sendStaminaSnapshot({ current: 75, maximum: 50, currentPercent: 75 });
+  assert.deepEqual(getStaminaSnapshot(), {
+    current: 50,
+    maximum: 50,
+    currentPercent: 75,
+    previousPercent: 39,
+    revision: 2,
+  });
+  assert.deepEqual(received, [
+    { current: 39, maximum: 50, currentPercent: 39, previousPercent: 50, revision: 1 },
+    { current: 50, maximum: 50, currentPercent: 75, previousPercent: 39, revision: 2 },
+  ]);
 
   unsubscribe();
 });

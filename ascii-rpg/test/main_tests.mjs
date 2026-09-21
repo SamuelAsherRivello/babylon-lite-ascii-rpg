@@ -114,7 +114,9 @@ test("documents the plain safe-area template", async () => {
   }
   const characterData = await readFile(new URL("src/runtime/ui-layer-react/character-data.js", appRoot), "utf8");
   for (const requiredFragment of [
-    "startingPercent: 80",
+    "startingPercent: 100",
+    "startingValue: 50",
+    "maximum: 50",
     "startingPercent: 10",
     "startingPercent: 0",
     "pointsNeededForNextLevel: 100",
@@ -142,11 +144,11 @@ test("documents the plain safe-area template", async () => {
     || !styles.includes("height: min(calc(100dvh")
     || !styles.includes("flex: 0 0 auto")
     || !styles.includes("height: auto")
-    || !styles.includes("height: calc((var(--character-bar-height) * 4) + (var(--character-bar-gap) * 3))")
-    || !styles.includes("grid-template-rows: repeat(4, var(--character-bar-height))")
+    || !styles.includes("height: calc((var(--character-bar-height) * 5) + (var(--character-bar-gap) * 4))")
+    || !styles.includes("grid-template-rows: repeat(5, var(--character-bar-height))")
     || !styles.includes("--character-bar-gap: 5px")
     || !styles.includes(".character_slot")
-    || !styles.includes("width: 28px")
+    || !styles.includes("width: 22.4px")
     || !styles.includes("aspect-ratio: 1 / 1")
     || !styles.includes("min-height: 0")) {
     throw new Error("Character resources and empty inventory slots must share a six-cell grid.");
@@ -159,6 +161,8 @@ test("documents the plain safe-area template", async () => {
     'data-resource="keys"',
     '>⚿</span>',
     'icon: "♥"',
+    'icon: "⚡"',
+    'label: "Stamina"',
     'icon: "⚔"',
     'icon: "⛨"',
     'icon: "✦"',
@@ -171,6 +175,38 @@ test("documents the plain safe-area template", async () => {
   if (!styles.includes(".character_bar_current") || !styles.includes(".character_bar_pending")
     || !styles.includes("--character-bar-delta") || !styles.includes("--character-bar-unfilled")) {
     throw new Error("Character stat bars must expose current, derived delta, and derived unfilled sections.");
+  }
+  if (!app.includes("CHARACTER_BAR_DELTA_DURATION_MS")
+    || !app.includes("getCharacterBarSegments")
+    || !app.includes("setTransitionPercent(fromPercent)")) {
+    throw new Error("Every Character bar must use model-supplied percentages and the transient delta lifecycle.");
+  }
+  if (!app.includes("getStaminaSnapshot") || !app.includes("subscribeToStamina")
+    || !app.includes("aria-valuemax={data.maximum ?? 100}")
+    || !app.includes("currentValue: staminaCurrent")
+    || !app.includes("stamina={stamina}")) {
+    throw new Error("The Character HUD must render authoritative current/max stamina through the narrow bridge.");
+  }
+  for (const requiredFragment of [
+    "createStaminaSystem()",
+    "staminaSystem,",
+    'event?.cause === "movement"',
+    'timeSystem.advance(1, "movement")',
+    "getRepeatInterval(shiftHeld, exhaustedAtAttempt)",
+    "getStaminaSnapshot() { return staminaSystem.getSnapshot(); }",
+  ]) {
+    if (!gameLayer.includes(requiredFragment)) {
+      throw new Error(`The game layer must implement authoritative stamina behavior through ${requiredFragment}.`);
+    }
+  }
+  if (gameLayer.includes("staminaSystem.spendForMovement")) {
+    throw new Error("Walking and sprinting must not spend stamina.");
+  }
+  if (!gameBridge.includes("currentPercent: 50")
+    || !gameBridge.includes("previousPercent: 50")
+    || !gameBridge.includes("export function sendStaminaSnapshot(snapshot)")
+    || !main.includes("controller.subscribeToStamina?.(sendStaminaSnapshot)")) {
+    throw new Error("Stamina must cross the existing immutable game-to-React bridge.");
   }
   if (!styles.includes("--box-body-font") || !styles.includes("--hud-title-font") || !styles.includes("--hud-body-font")
     || !styles.includes("font-size: var(--hud-body-font)")
@@ -424,7 +460,7 @@ test("documents the plain safe-area template", async () => {
   if (app.includes('id="realm_toggle"') || app.includes('id="send_toast"') || app.includes("Send Toast")) {
     throw new Error("Realm and test-toast Settings buttons must not be rendered.");
   }
-  if (!gameLayer.includes('id = "minimap_canvas"') || !gameLayer.includes("createFogOfWar")
+  if (!gameLayer.includes('id = "minimap_canvas"') || !gameLayer.includes("createFogMapsForWorld")
     || !gameLayer.includes("discoverFromPlayer") || !gameLayer.includes("getMinimapWorldCellGraphic")
     || !gameLayer.includes("getMinimapMarkers") || !gameLayer.includes("visual.rasters")
     || gameLayer.includes("context.fillText")) {

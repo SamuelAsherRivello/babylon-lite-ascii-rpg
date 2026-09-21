@@ -1,21 +1,10 @@
 # Table of Contents
 
-1. [Milestone](#milestone)
-   - [Add text log](#add-text-log)
-2. [Philosophy](#philosophy)
+1. [Philosophy](#philosophy)
    1. [Embrace ASCII](#embrace-ascii)
    2. [Don't subvert ASCII (list)](#dont-subvert-ascii-list)
-3. [Workflows](#workflows)
-4. [Possible Features](#possible-features)
-
-# Milestone
-
-1. Add text log. ☑
-2. Add health item and log it. ☑
-3. Add trap that damages health and log it. ☑
-4. Spawn a few health items and traps around the world. ☑
-5. Update log for coin collection. ☑
-6. Update log for realm entry. ☑
+2. [Workflows](#workflows)
+3. [Possible Features](#possible-features)
 
 # Philosophy
 
@@ -54,67 +43,96 @@ Ways to break the illusion (AVOID THESE?)
 
 # Possible Features
 
-1. Achievements. ☐
+1. Add text log. ☑
 2. Audio. ☐
-3. Boats and rafts that can float on water. ☐
-4. Bombs. ☐
-5. Boss phases. ☐
-6. Character building with traits. ☐
-7. Character relationships. ☐
-8. Companion loyalty systems. ☐
-9. Cooking recipes. ☐
-10. Crafting. ☐
-11. Day-and-night cycles. ☐
-12. Dialogue trees for conversations with NPCs and player choices. ☐
-13. Difficulty settings. ☐
-14. Digging. ☐
-15. Disguises and disguisable identities. ☐
-16. Door and key puzzles. ☐
-17. Enemies. ☐
-18. Enemy factions. ☐
-19. Environmental storytelling. ☐
-20. Equipment durability. ☐
-21. Experience and leveling. ☐
-22. Farming and gardening. ☐
-23. Fishing. ☐
-24. Fog of war. ☑
-25. Hidden treasure maps. ☐
-26. Items and inventory. ☐
-27. Lighting and darkness mechanics. ☑
-28. Magic spells. ☐
-29. Man-made environments such as houses, homes, and buildings that can be entered. ☐
-30. Melee combat. ☐
-31. Minigames. ☐
-32. Minimap. ☑
-33. Multiple endings. ☐
-34. Multiple playable characters. ☐
-35. Overarching story. ☐
-36. Overworld vs. world vs. underground. ☑
-37. Permadeath mode. ☐
-38. Pick axes. ☐
-39. Procedural dungeons. ☐
-40. Quests. ☐
-41. Randomly generated story points. ☐
-42. Ranged combat. ☐
-43. Reputation with factions. ☐
-44. Resource gathering. ☐
-45. Save points and campfires. ☐
-46. Secret passages. ☐
-47. Separate combat screen that opens for significant boss battles, with a different gameplay look and feel. ☐
-48. Shops. ☐
-49. Skill trees. ☐
-50. Status effects and conditions. ☐
-51. Stealing items. ☐
-52. Supabase database. ☐
+3. Difficulty settings. ☐
+4. Environmental storytelling. ☐
+5. Equipment durability. ☐
+6. Experience and leveling. ☐
+7. Fog of war. ☑
+8. Lighting and darkness mechanics. ☑
+9. Minimap. ☑
+10. Multiple endings. ☐
+11. Multiple playable characters. ☐
+12. Overarching story. ☐
+13. Permadeath mode. ☐
+14. Reputation with factions. ☐
+15. Save points and campfires. ☐
+16. Secret passages. ☐
+17. Skill trees. ☐
+18. Supabase database. ☐
     - Cloud-synced world events. ☐
     - Highscore tables / speed runs. ☐
     - Player progress. ☐
     - Player settings and preferences. ☐
     - Save game (3 slots). ☐
-53. Terraforming. ☐
-54. Traveling in a group of NPCs. ☐
-55. Vehicles. ☐
-56. View toggles (env only, enemies only, items only). ☐
-57. Weapons and armor. ☐
-58. Weather that affects gameplay. ☐
-59. Working (Chop trees for wood, mine rocks for ore). ☐
+19. View toggles (env only, enemies only, items only). ☐
+
+## BIS integration
+
+20. Achievements. ☐
+21. Arcade assets. ☐
+22. Arcade inventory. ☐
+23. Arcade weapons. ☐
+
+## Enemies
+
+24. Boss phases. ☐
+25. Enemies. ☑
+26. Enemy factions. ☐
+27. Melee combat. ☑
+28. Ranged combat. ☐
+29. Separate combat screen that opens for significant boss battles, with a different gameplay look and feel. ☐
+30. Status effects and conditions. ☐
+
+## NPCs
+
+31. Character relationships. ☐
+32. Companion loyalty systems. ☐
+33. Dialogue trees for conversations with NPCs and player choices. ☐
+34. Shops. ☐
+35. Traveling in a group of NPCs. ☐
+
+## Objects and pickups
+
+36. Add health item and log it. ☑
+37. Add trap that damages health and log it. ☑
+38. Boats and rafts that can float on water. ☐
+39. Bombs. ☐
+40. Disguises and disguisable identities. ☐
+41. Door and key puzzles. ☑
+42. Gold. ☑
+43. Hidden treasure maps. ☐
+44. Items and inventory. ☐
+45. Man-made environments such as houses, homes, and buildings that can be entered. ☐
+46. Pick axes. ☐
+47. Spawn a few health items and traps around the world. ☑
+48. Weapons and armor. ☐
+
+## Player activities
+
+49. Character building with traits. ☐
+50. Cooking recipes. ☐
+51. Crafting. ☐
+52. Digging. ☐
+53. Farming and gardening. ☐
+54. Fishing. ☐
+55. Magic spells. ☐
+56. Minigames. ☐
+57. Quests. ☑
+58. Resource gathering. ☐
+59. Stealing items. ☐
+60. Terraforming. ☐
+61. Update log for coin collection. ☑
+62. Update log for realm entry. ☑
+63. Vehicles. ☐
+64. Working (Chop trees for wood, mine rocks for ore). ☐
+
+## Procedural level generation
+
+65. Day-and-night cycles. ☐
+66. Overworld vs. world vs. underground. ☑
+67. Procedural cafes. ☑
+68. Procedural dungeons. ☐
+69. Randomly generated story points. ☐
+70. Weather that affects gameplay. ☐

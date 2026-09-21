@@ -24,8 +24,8 @@
   flex: 0 0 auto;
   top: -4px;
   left: -4px;
-  height: calc((var(--character-bar-height) * 4) + (var(--character-bar-gap) * 3));
-  grid-template-rows: repeat(4, var(--character-bar-height));
+  height: calc((var(--character-bar-height) * 5) + (var(--character-bar-gap) * 4));
+  grid-template-rows: repeat(5, var(--character-bar-height));
   row-gap: var(--character-bar-gap);
   right: -4px;
   min-height: 0;
@@ -113,7 +113,7 @@
 
 .character_resource {
   display: flex;
-  width: 28px;
+  width: 22.4px;
   height: auto;
   min-height: 0;
   align-self: start;
@@ -129,7 +129,7 @@
 }
 
 .character_slot {
-  width: 28px;
+  width: 22.4px;
 }
 
 .character_resource_icon {

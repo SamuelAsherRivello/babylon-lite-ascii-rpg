@@ -1,4 +1,4 @@
-export const INITIAL_PLAYER_HEALTH = 80;
+export const INITIAL_PLAYER_HEALTH = 100;
 export const MAX_PLAYER_HEALTH = 100;
 
 function clampHealth(value) {

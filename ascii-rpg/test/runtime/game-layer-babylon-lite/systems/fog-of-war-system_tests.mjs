@@ -5,6 +5,8 @@ import {
   fogUnclearRadius,
   MINIMAP_WORLD_SCALE,
   createFogOfWar,
+  createFogMapsForWorld,
+  discoverCell,
   discoverFromPlayer,
   discoverStartingArea,
   getFogVisibility,
@@ -30,6 +32,18 @@ test("fog starts fully undiscovered and records the player's current cell", () =
   discoverFromPlayer(fog, world, { x: 2, y: 2 });
   assert.equal(isDiscovered(fog, world, { x: 2, y: 2 }), true);
   assert.equal(isDiscovered(fog, world, { x: 3, y: 2 }), true);
+});
+
+test("generated world realms receive independent fog maps", () => {
+  const overground = createWorld();
+  const underground = createWorld();
+  const worldRealms = { realms: { Overground: overground, Underground: underground } };
+  const fogMaps = createFogMapsForWorld(worldRealms);
+
+  assert.notEqual(fogMaps.Overground, fogMaps.Underground);
+  discoverCell(fogMaps.Overground, overground, { x: 2, y: 2 });
+  assert.equal(isDiscovered(fogMaps.Overground, overground, { x: 2, y: 2 }), true);
+  assert.equal(isDiscovered(fogMaps.Underground, underground, { x: 2, y: 2 }), false);
 });
 
 test("fog discovers clear walkable cells within the fixed five-grid radius", () => {

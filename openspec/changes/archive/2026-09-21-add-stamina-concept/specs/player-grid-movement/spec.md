@@ -11,18 +11,18 @@ inside the world and walkable. Pressing or holding two orthogonal directions
 SHALL produce one diagonal grid-cell step in the combined direction. A fence
 or closed door SHALL be treated as non-walkable. An attempted move into a
 closed door SHALL resolve its lock interaction before any movement occurs.
-Each successful walking step SHALL consume `1` stamina, each successful sprint step
-SHALL consume `2` stamina, and a same-boundary T tick SHALL recover `10` after
-the movement cost. Unsuccessful movement SHALL not advance world time or
-change stamina; unlocking a door SHALL also leave both unchanged.
+Walking and sprinting SHALL NOT consume stamina. Each successful movement SHALL
+advance a movement T tick that recovers `10` stamina, capped at the current
+maximum. Unsuccessful movement SHALL not advance world time or change stamina;
+unlocking a door SHALL also leave both unchanged.
 
 #### Scenario: Cardinal key press
 
 - **WHEN** the player presses a mapped cardinal key while a destination cell is
   inside the world and walkable
 - **THEN** the player SHALL move immediately by one grid cell in that direction,
-  world time SHALL increase by exactly one, and the stamina system SHALL apply
-  the walking cost before any same-boundary T-tick recovery
+  world time SHALL increase by exactly one, no movement cost SHALL be applied,
+  and the same-boundary movement T tick SHALL recover `10` stamina
 
 #### Scenario: Fence collision
 
@@ -55,16 +55,15 @@ change stamina; unlocking a door SHALL also leave both unchanged.
 
 - **WHEN** the player presses the same direction after the door is open
 - **THEN** the player SHALL move one grid cell through the doorway, world time
-  SHALL increase by exactly one, and the applicable walking or sprint stamina
-  cost SHALL be applied before any same-boundary T-tick recovery
+  SHALL increase by exactly one, no movement cost SHALL be applied, and the
+  same-boundary movement T tick SHALL recover `10` stamina
 
 #### Scenario: Diagonal key combination
 
 - **WHEN** the player holds two mapped orthogonal keys such as `W` and `A` and
   the diagonal destination is walkable
 - **THEN** each movement trigger SHALL move the player exactly one cell
-  diagonally up-left and apply one walking or sprint stamina cost according to
-  the active movement mode
+  diagonally up-left without consuming stamina
 
 #### Scenario: Direction release
 
@@ -76,8 +75,8 @@ change stamina; unlocking a door SHALL also leave both unchanged.
 
 - **WHEN** a held mapped key or key combination produces multiple successful
   walking movement steps
-- **THEN** each successful step SHALL use the normal walking cadence and consume
-  exactly `1` stamina
+- **THEN** each successful step SHALL use the normal walking cadence, consume no
+  stamina, and recover `10` on its movement T tick
 
 ### Requirement: Canvas swipe grid movement
 
@@ -93,15 +92,14 @@ camera, time-advance, and stamina rules as keyboard movement.
 - **WHEN** a player swipes upward on unobstructed game canvas past the gesture
   threshold
 - **THEN** the game immediately attempts one northward grid-cell movement and
-  applies stamina rules only if the destination is walkable
+  recovers stamina only if the destination is walkable and movement succeeds
 
 #### Scenario: Diagonal swipe hold
 
 - **WHEN** a player swipes and holds toward a diagonal octant on unobstructed
   game canvas
 - **THEN** the game immediately attempts one diagonal movement and repeats at
-  the active cadence, applying the relevant stamina cost once per successful
-  step
+  the active cadence without applying a walking or sprinting stamina cost
 
 #### Scenario: Gesture release
 
@@ -125,19 +123,29 @@ camera, time-advance, and stamina rules as keyboard movement.
 ### Requirement: Shift sprinting uses a faster cadence
 
 Holding Shift with a mapped movement input SHALL activate sprint movement. A
-successful sprint step SHALL consume `2` stamina and SHALL use a shorter repeat
-cadence than normal walking. The exact sprint intervals SHALL remain centralized
-and tunable without changing the movement contract.
+successful sprint step SHALL consume no stamina and SHALL use the existing
+centralized `100/3` millisecond later-repeat interval, which is shorter than the
+normal `125` millisecond walking interval.
 
 #### Scenario: Sprint movement
 
 - **WHEN** the player holds Shift and a mapped movement input reaches a valid
   walkable destination
-- **THEN** the player SHALL move one grid cell, consume `2` stamina, and use a
-  cadence faster than ordinary walking
+- **THEN** the player SHALL move one grid cell without consuming stamina and use
+  a cadence faster than ordinary walking
 
 #### Scenario: Sprint release
 
 - **WHEN** the player releases Shift while a movement direction remains held
 - **THEN** subsequent movement SHALL return to the ordinary walking cadence and
-  consume `1` stamina per successful step
+  continue consuming no stamina
+
+#### Scenario: Exhausted walking repeat
+
+- **WHEN** a walking movement attempt begins at `0` stamina and input remains held
+- **THEN** its next later repeat SHALL be scheduled after `375` milliseconds
+
+#### Scenario: Exhausted sprint repeat
+
+- **WHEN** a sprint movement attempt begins at `0` stamina and input remains held
+- **THEN** its next later repeat SHALL be scheduled after `100` milliseconds

@@ -4,6 +4,7 @@ import { createPlayerLifecycle, INITIAL_PLAYER_HEALTH } from "../../../../src/ru
 
 test("starts alive at the initial health and clamps healing to the maximum", () => {
   const lifecycle = createPlayerLifecycle();
+  assert.equal(INITIAL_PLAYER_HEALTH, 100);
   assert.equal(lifecycle.getHealth(), INITIAL_PLAYER_HEALTH);
   assert.equal(lifecycle.isDead(), false);
   lifecycle.applyHealthDelta(100);

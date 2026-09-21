@@ -2,6 +2,8 @@ export const WALL_GLYPH = "▒";
 export const FLOOR_GLYPH = "•";
 export const UNDERGROUND_FLOOR_GLYPH = "●";
 export const PLAYER_GLYPH = "P";
+export const ENEMY_GLYPH = "E";
+export const ENEMY_SPAWNER_GLYPH = "S";
 export const TORCH_GLYPH = "🕯️";
 export const GOLD_GLYPH = "💰";
 export const HEALTH_GLYPH = "♥";
@@ -26,6 +28,8 @@ export const PROJECT_MAP_GLYPHS = Object.freeze([
   FLOOR_GLYPH,
   UNDERGROUND_FLOOR_GLYPH,
   PLAYER_GLYPH,
+  ENEMY_GLYPH,
+  ENEMY_SPAWNER_GLYPH,
   TORCH_GLYPH,
   STAIR_GLYPH,
   GOLD_GLYPH,
@@ -62,6 +66,7 @@ export const GENERATION_PASSES = Object.freeze([
   "player-position",
   "object-spawner",
   "civilization",
+  "enemy-spawner",
 ]);
 export const REALM_PROFILES = Object.freeze({
   Overground: Object.freeze({ wallFillPercent: 25, minWalkablePercent: 0.55, fogUnclearRadius: 11, startingFogClearCoverage: Object.freeze({ x: 0.95, y: 0.95 }), groundKind: "grass", groundGlyph: FLOOR_GLYPH, groundColor: "#55aa55", blockedKind: "mountain", blockedGlyph: MOUNTAIN_GLYPH }),
@@ -931,6 +936,16 @@ export function setCharacter(world, cell, glyph = PLAYER_GLYPH) {
   return true;
 }
 
+export function clearCharacter(world, cell) {
+  if (!world || cell.x < 0 || cell.y < 0 || cell.x >= world.columns || cell.y >= world.rows) return false;
+  const stair = world.stairs?.find((candidate) => isSameCell(candidate, cell));
+  const torch = world.torches?.find((candidate) => isSameCell(candidate, cell));
+  const object = world.objects?.find((candidate) => candidate.active && isSameCell(candidate.cell, cell));
+  const pickup = world.pickups?.find((candidate) => candidate.active && isSameCell(candidate.cell, cell));
+  world.characters[cell.y][cell.x] = stair ? STAIR_GLYPH : torch ? TORCH_GLYPH : object?.glyph ?? pickup?.glyph ?? null;
+  return true;
+}
+
 export function normalizePlayerMarkers(world) {
   if (!world?.characters) return 0;
   let cleared = 0;
@@ -942,16 +957,6 @@ export function normalizePlayerMarkers(world) {
     }
   }
   return cleared;
-}
-
-export function clearCharacter(world, cell) {
-  if (!world || cell.x < 0 || cell.y < 0 || cell.x >= world.columns || cell.y >= world.rows) return false;
-  const stair = world.stairs?.find((candidate) => isSameCell(candidate, cell));
-  const torch = world.torches?.find((candidate) => isSameCell(candidate, cell));
-  const object = world.objects?.find((candidate) => candidate.active && isSameCell(candidate.cell, cell));
-  const pickup = world.pickups?.find((candidate) => candidate.active && isSameCell(candidate.cell, cell));
-  world.characters[cell.y][cell.x] = stair ? STAIR_GLYPH : torch ? TORCH_GLYPH : object?.glyph ?? pickup?.glyph ?? null;
-  return true;
 }
 
 function applyRealmProfile(realm, name) {

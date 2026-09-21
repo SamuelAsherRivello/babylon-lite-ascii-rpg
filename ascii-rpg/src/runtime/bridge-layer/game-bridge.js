@@ -26,7 +26,14 @@ let lightingSnapshot = null;
 let questSnapshot = null;
 let goldSnapshot = 0;
 let keySnapshot = 0;
-let healthSnapshot = 80;
+let healthSnapshot = 100;
+let staminaSnapshot = Object.freeze({
+  current: 50,
+  maximum: 50,
+  currentPercent: 50,
+  previousPercent: 50,
+  revision: 0,
+});
 let playerDeadSnapshot = false;
 let logSnapshot = [];
 const timeListeners = new Set();
@@ -37,6 +44,7 @@ const questEventListeners = new Set();
 const goldListeners = new Set();
 const keyListeners = new Set();
 const healthListeners = new Set();
+const staminaListeners = new Set();
 const playerDeadListeners = new Set();
 const logListeners = new Set();
 const playerMovedListeners = new Set();
@@ -208,6 +216,22 @@ export function subscribeToHealth(listener) { healthListeners.add(listener); ret
 export function sendHealthSnapshot(health) {
   healthSnapshot = Math.max(0, Math.min(100, Number(health) || 0));
   for (const listener of healthListeners) listener();
+}
+
+export function getStaminaSnapshot() { return staminaSnapshot; }
+export function subscribeToStamina(listener) { staminaListeners.add(listener); return () => staminaListeners.delete(listener); }
+export function sendStaminaSnapshot(snapshot) {
+  const maximum = Math.max(0, Number(snapshot?.maximum) || 0);
+  const current = Math.min(maximum, Math.max(0, Number(snapshot?.current) || 0));
+  const currentPercent = Math.min(100, Math.max(0, Number(snapshot?.currentPercent) || 0));
+  staminaSnapshot = Object.freeze({
+    current,
+    maximum,
+    currentPercent,
+    previousPercent: staminaSnapshot.currentPercent,
+    revision: staminaSnapshot.revision + 1,
+  });
+  for (const listener of staminaListeners) listener();
 }
 
 export function getPlayerDeadSnapshot() { return playerDeadSnapshot; }

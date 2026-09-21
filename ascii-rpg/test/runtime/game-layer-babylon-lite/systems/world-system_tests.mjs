@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import paletteData from "../../../../src/runtime/game-layer-babylon-lite/data/palette_data.json" with { type: "json" };
 import {
   DEEP_WATER_GLYPH,
   FLOOR_GLYPH,
@@ -11,6 +12,8 @@ import {
   MEDIUM_WATER_GLYPH,
   OBJECT_DISTRIBUTION_RULES,
   PLAYER_GLYPH,
+  ENEMY_GLYPH,
+  ENEMY_SPAWNER_GLYPH,
   PROJECT_MAP_GLYPHS,
   SHALLOW_WATER_GLYPH,
   TRAP_GLYPH,
@@ -54,6 +57,8 @@ test("publishes every glyph used by the project maps", () => {
     FLOOR_GLYPH,
     UNDERGROUND_FLOOR_GLYPH,
     PLAYER_GLYPH,
+    ENEMY_GLYPH,
+    ENEMY_SPAWNER_GLYPH,
     TORCH_GLYPH,
     STAIR_GLYPH,
     GOLD_GLYPH,
@@ -70,6 +75,8 @@ test("publishes every glyph used by the project maps", () => {
     CLOSED_HORIZONTAL_DOOR_GLYPH,
     OPEN_HORIZONTAL_DOOR_GLYPH,
   ]));
+  assert.equal(paletteData.entries.find(({ glyph }) => glyph === ENEMY_GLYPH)?.color, "#ff3b3b");
+  assert.equal(paletteData.entries.find(({ glyph }) => glyph === ENEMY_SPAWNER_GLYPH)?.color, "#ff3b3b");
 });
 
 test("creates a repeatable bordered world with layered terrain", () => {

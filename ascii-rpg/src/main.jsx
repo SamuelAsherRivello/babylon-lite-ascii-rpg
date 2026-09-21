@@ -2,7 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./runtime/ui-layer-react/App.jsx";
 import { startGameLayer } from "./runtime/game-layer-babylon-lite/index.js";
-import { getCameraModeSnapshot, getGoldSnapshot, getHealthSnapshot, getLogSnapshot, getPlayerDeadSnapshot, getQuestSnapshot, getRealmSnapshot, sendFontSnapshot, sendGoldSnapshot, sendHealthSnapshot, sendLogSnapshot, sendMinimapZoomSnapshot, sendPaletteSnapshot, sendPlayerDeadSnapshot, sendQuestEvent, sendQuestSnapshot, sendRandomSeedSnapshot, sendRealmSnapshot, sendTimeSnapshot, setGameController } from "./runtime/bridge-layer/game-bridge.js";
+import { getCameraModeSnapshot, getGoldSnapshot, getHealthSnapshot, getLogSnapshot, getPlayerDeadSnapshot, getQuestSnapshot, getRealmSnapshot, getStaminaSnapshot, sendFontSnapshot, sendGoldSnapshot, sendHealthSnapshot, sendLogSnapshot, sendMinimapZoomSnapshot, sendPaletteSnapshot, sendPlayerDeadSnapshot, sendQuestEvent, sendQuestSnapshot, sendRandomSeedSnapshot, sendRealmSnapshot, sendStaminaSnapshot, sendTimeSnapshot, setGameController } from "./runtime/bridge-layer/game-bridge.js";
 import { fontReady, getFontId, subscribeToFont } from "./runtime/ui-layer-react/font-store.js";
 import { getPalette, paletteReady, subscribeToPalette } from "./runtime/ui-layer-react/palette-store.js";
 import "./runtime/ui-layer-react/styles.css";
@@ -26,6 +26,8 @@ void Promise.all([paletteReady, fontReady])
     controller.subscribeToGold?.((gold) => sendGoldSnapshot(gold));
     sendHealthSnapshot(controller.getHealth?.() ?? getHealthSnapshot());
     controller.subscribeToHealth?.((health) => sendHealthSnapshot(health));
+    sendStaminaSnapshot(controller.getStaminaSnapshot?.() ?? getStaminaSnapshot());
+    controller.subscribeToStamina?.(sendStaminaSnapshot);
     sendPlayerDeadSnapshot(controller.getPlayerDead?.() ?? getPlayerDeadSnapshot());
     controller.subscribeToPlayerDead?.(() => sendPlayerDeadSnapshot(controller.getPlayerDead?.() === true));
     sendLogSnapshot(controller.getLogSnapshot?.() ?? getLogSnapshot());

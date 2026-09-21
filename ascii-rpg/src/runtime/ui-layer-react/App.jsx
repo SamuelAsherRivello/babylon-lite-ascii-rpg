@@ -27,6 +27,10 @@ import { BoxLayout, CornerLayout, HudBlockLayout } from "./HudLayouts.jsx";
 import { removeFocusableElementsFromTabOrder } from "./button-tab-order.js";
 import { INITIAL_CHARACTER } from "./character-data.js";
 import { deriveBarColors } from "./character-colors.js";
+import {
+  CHARACTER_BAR_DELTA_DURATION_MS,
+  getCharacterBarSegments,
+} from "./character-bar-presentation.js";
 import { createGlyphRasterCanvas, rasterizeGlyph, getGlyphRasterSize } from "../game-layer-babylon-lite/glyph-visual-cache.js";
 import { DEFAULT_ZOOM } from "../game-layer-babylon-lite/zoom-scale.js";
 import {
@@ -42,6 +46,7 @@ import {
   getGoldSnapshot,
   getKeySnapshot,
   getHealthSnapshot,
+  getStaminaSnapshot,
   getLogSnapshot,
   getPlayerDeadSnapshot,
   getRandomSeedSnapshot,
@@ -67,6 +72,7 @@ import {
   subscribeToGold,
   subscribeToKey,
   subscribeToHealth,
+  subscribeToStamina,
   subscribeToLog,
   subscribeToPlayerDead,
   subscribeToRandomSeed,
@@ -248,6 +254,7 @@ function GitHubMark() {
 
 const characterBarRows = [
   { key: "health", label: "Health", tooltip: "Health: The vitality of your character.", icon: "♥", color: "#ef3340" },
+  { key: "stamina", label: "Stamina", tooltip: "Stamina: The movement energy of your character.", icon: "⚡", color: "#f59e0b" },
   { key: "offense", label: "Offense", tooltip: "Offense: The attack power of your character.", icon: "⚔", color: "#70e85a" },
   { key: "defense", label: "Defense", tooltip: "Defense: The protection of your character.", icon: "⛨", color: "#49b7ec" },
   { key: "experience", label: "Experience", tooltip: "Experience: The progress of your character.", icon: "✦", color: "#5f3df5" },
@@ -256,8 +263,25 @@ const characterBarRows = [
 function CharacterBarRow({ row, data, color }) {
   const text = row.key === "experience" ? `O${data.level}` : null;
   const derivedColors = deriveBarColors(color);
-  const deltaStart = Math.min(data.currentPercent, data.pendingPercent);
-  const deltaWidth = Math.abs(data.pendingPercent - data.currentPercent);
+  const currentPercent = data.currentPercent;
+  const [transitionPercent, setTransitionPercent] = useState(currentPercent);
+  const settledPercentRef = useRef(currentPercent);
+  const previousPercent = data.previousPercent;
+  const revision = data.revision;
+  const segments = getCharacterBarSegments({ currentPercent, transitionPercent });
+
+  useEffect(() => {
+    const fromPercent = previousPercent ?? settledPercentRef.current;
+    settledPercentRef.current = currentPercent;
+    setTransitionPercent(fromPercent);
+    if (fromPercent === currentPercent) return undefined;
+
+    const timeoutId = window.setTimeout(() => {
+      setTransitionPercent(currentPercent);
+    }, CHARACTER_BAR_DELTA_DURATION_MS);
+    return () => window.clearTimeout(timeoutId);
+  }, [currentPercent, previousPercent, revision]);
+
   return (
     <div className="character_bar_row" data-stat={row.key} style={{ "--character-bar-color": color }}>
       <span className="character_stat_icon" aria-hidden="true">{row.icon}</span>
@@ -267,15 +291,15 @@ function CharacterBarRow({ row, data, color }) {
         aria-label={row.label}
         title={row.tooltip}
         aria-valuemin="0"
-        aria-valuemax="100"
-        aria-valuenow={data.currentPercent}
+        aria-valuemax={data.maximum ?? 100}
+        aria-valuenow={data.currentValue ?? data.currentPercent}
         style={{
           "--character-bar-color": derivedColors.current,
           "--character-bar-delta": derivedColors.delta,
           "--character-bar-unfilled": derivedColors.unfilled,
-          "--character-bar-current": `${data.currentPercent}%`,
-          "--character-bar-delta-start": `${deltaStart}%`,
-          "--character-bar-delta-width": `${deltaWidth}%`,
+          "--character-bar-current": `${segments.currentPercent}%`,
+          "--character-bar-delta-start": `${segments.deltaStartPercent}%`,
+          "--character-bar-delta-width": `${segments.deltaWidthPercent}%`,
         }}
       >
         <span className="character_bar_current" />
@@ -286,10 +310,32 @@ function CharacterBarRow({ row, data, color }) {
   );
 }
 
-function CharacterDetails({ gold = INITIAL_CHARACTER.gold.currentAmount, keys = INITIAL_CHARACTER.keys.currentAmount, health = INITIAL_CHARACTER.health.currentPercent, palette }) {
+function CharacterDetails({
+  gold = INITIAL_CHARACTER.gold.currentAmount,
+  keys = INITIAL_CHARACTER.keys.currentAmount,
+  health = INITIAL_CHARACTER.health.currentPercent,
+  stamina = INITIAL_CHARACTER.stamina,
+  palette,
+}) {
   const goldStyle = getPaletteStyle(palette, "💰");
   const keyStyle = getPaletteStyle(palette, "⚿");
-  const characterData = { ...INITIAL_CHARACTER, health: { ...INITIAL_CHARACTER.health, currentPercent: health, pendingPercent: health } };
+  const staminaMaximum = Math.max(0, Number(stamina?.maximum) || 0);
+  const staminaCurrent = Math.min(staminaMaximum, Math.max(0, Number(stamina?.current) || 0));
+  const staminaCurrentPercent = Math.min(100, Math.max(0, Number(stamina?.currentPercent) || 0));
+  const staminaPreviousPercent = Math.min(100, Math.max(0, Number(stamina?.previousPercent) || 0));
+  const characterData = {
+    ...INITIAL_CHARACTER,
+    health: { ...INITIAL_CHARACTER.health, currentPercent: health, pendingPercent: health },
+    stamina: {
+      ...INITIAL_CHARACTER.stamina,
+      currentValue: staminaCurrent,
+      maximum: staminaMaximum,
+      previousPercent: staminaPreviousPercent,
+      revision: Number(stamina?.revision) || 0,
+      currentPercent: staminaCurrentPercent,
+      pendingPercent: staminaPreviousPercent,
+    },
+  };
   return (
     <div className="character_details" aria-label="Character details">
       <div className="character_bar_container">
@@ -1193,6 +1239,7 @@ function AppContent() {
   const gold = useSyncExternalStore(subscribeToGold, getGoldSnapshot, getGoldSnapshot);
   const keys = useSyncExternalStore(subscribeToKey, getKeySnapshot, getKeySnapshot);
   const health = useSyncExternalStore(subscribeToHealth, getHealthSnapshot, getHealthSnapshot);
+  const stamina = useSyncExternalStore(subscribeToStamina, getStaminaSnapshot, getStaminaSnapshot);
   const log = useSyncExternalStore(subscribeToLog, getLogSnapshot, getLogSnapshot);
   const playerDead = useSyncExternalStore(subscribeToPlayerDead, getPlayerDeadSnapshot, getPlayerDeadSnapshot);
   const randomSeed = useSyncExternalStore(subscribeToRandomSeed, getRandomSeedSnapshot, getRandomSeedSnapshot);
@@ -1589,7 +1636,7 @@ function AppContent() {
         onKeyDown={(event) => handleTopPanelKeyDown(event, activateDetails)}
       >
         <BoxLayout action="Character">
-          <CharacterDetails gold={gold} keys={keys} health={health} palette={palette} />
+          <CharacterDetails gold={gold} keys={keys} health={health} stamina={stamina} palette={palette} />
         </BoxLayout>
       </CornerLayout>
       <QuestTracker quest={quest} />
