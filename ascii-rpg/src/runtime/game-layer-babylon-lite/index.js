@@ -55,6 +55,7 @@ import {
   STAIR_GLYPH,
   getRandomSeedFromSearch,
   getVisibleGlyph,
+  normalizePlayerMarkers,
   setCharacter,
 } from "./systems/world-system.js";
 import { createTimeSystem } from "./systems/time-system.js";
@@ -568,6 +569,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     realmSystem.enter(activeRealm);
     fogOfWar = world.fog;
     playerCell = arrival ?? world.playerCell ?? world.playerStart;
+    normalizePlayerMarkers(world);
     world.playerCell = playerCell;
     setCharacter(world, playerCell);
     lighting = { ...lighting, ambient: realmAmbient[activeRealm] };
@@ -1502,6 +1504,8 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       localStorage.setItem("babylon-lite-ascii-rpg.default-quest", initialQuestId);
     }
     startQuestInCurrentRealm(initialQuestId);
+    normalizePlayerMarkers(world);
+    setCharacter(world, playerCell);
     notifyGold();
     notifyKeys();
     refreshStartingDiscovery();

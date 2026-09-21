@@ -32,6 +32,7 @@ import {
   getVisibleGlyph,
   isWalkableCell,
   clearCharacter,
+  normalizePlayerMarkers,
   setCharacter,
 } from "../../../../src/runtime/game-layer-babylon-lite/systems/world-system.js";
 import { moveWorldCell } from "../../../../src/runtime/game-layer-babylon-lite/characters/player/player-grid.js";
@@ -259,6 +260,24 @@ test("renders a character above terrain without changing walkability", () => {
   assert.equal(isWalkableCell(world, cell), true);
 });
 
+test("normalizes stale player markers while restoring the underlying cell", () => {
+  const world = createWorld({ rows: 20, columns: 20, seed: "single-player-overlay" });
+  const arrival = world.terrain
+    .flatMap((row, y) => row.map((cell, x) => ({ cell, x, y })))
+    .find(({ cell, x, y }) => cell.walkable && (x !== world.playerStart.x || y !== world.playerStart.y));
+  assert.ok(arrival);
+  world.stairs = [{ x: arrival.x, y: arrival.y }];
+  world.characters[arrival.y][arrival.x] = STAIR_GLYPH;
+  setCharacter(world, arrival, PLAYER_GLYPH);
+
+  assert.equal(normalizePlayerMarkers(world), 2);
+  assert.equal(world.characters[world.playerStart.y][world.playerStart.x], null);
+  assert.equal(world.characters[arrival.y][arrival.x], STAIR_GLYPH);
+  setCharacter(world, arrival, PLAYER_GLYPH);
+  assert.equal(world.characters.flat().filter((glyph) => glyph === PLAYER_GLYPH).length, 1);
+  assert.equal(getVisibleGlyph(world, arrival), PLAYER_GLYPH);
+});
+
 test("blocks world movement into walls and outside bounds", () => {
   const world = createWorld({ rows: 10, columns: 10, seed: "movement" });
   const start = { x: 0, y: 1 };
@@ -315,6 +334,20 @@ test("creates deterministic paired realm stairs on walkable terrain", async () =
     assert.equal(underground.terrain[stair.y][stair.x].walkable, true);
     assert.equal(overground.characters[stair.y][stair.x], STAIR_GLYPH);
     assert.equal(underground.characters[stair.y][stair.x], STAIR_GLYPH);
+  }
+});
+
+test("realm activation state keeps exactly one player at the paired arrival cell", async () => {
+  const { realms } = await createWorldRealms({ rows: 96, columns: 96, torchCount: 2, seed: "single-player-realms" });
+  const overground = realms.Overground;
+  const underground = realms.Underground;
+  const stair = overground.stairs[0];
+
+  for (const realm of [overground, underground, overground, underground]) {
+    normalizePlayerMarkers(realm);
+    setCharacter(realm, stair, PLAYER_GLYPH);
+    assert.equal(realm.characters.flat().filter((glyph) => glyph === PLAYER_GLYPH).length, 1);
+    assert.equal(getVisibleGlyph(realm, stair), PLAYER_GLYPH);
   }
 });
 

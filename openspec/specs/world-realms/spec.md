@@ -10,17 +10,31 @@ Overground and Underground maps without sharing temporary realm state.
 Each newly generated world SHALL contain exactly an `Overground` realm and an
 `Underground` realm. The game SHALL maintain one active world and one active
 realm at a time, and gameplay rendering, movement, lighting, minimap, and
-discovery SHALL use only that active realm.
+discovery SHALL use only that active realm. The active realm SHALL contain
+exactly one rendered player marker, located at the authoritative player
+position; a realm's generated start cell SHALL NOT remain visible as an
+additional player marker after the player arrives elsewhere.
 
 #### Scenario: New game starts in one active realm
 - **WHEN** a new world is ready for play
 - **THEN** it contains Overground and Underground and the player occupies one
-  valid start cell in exactly one active realm
+  valid start cell in exactly one active realm, with exactly one rendered
+  player marker
 
 #### Scenario: Inactive realm does not render
 - **WHEN** the player is active in Overground
 - **THEN** Underground terrain, characters, lighting, and minimap content are
   not rendered as part of the active game view
+
+#### Scenario: Destination start marker is not duplicated
+- **WHEN** the player transfers to the paired stair in the other realm
+- **THEN** the destination active realm renders exactly one player marker at
+  the paired arrival cell and does not render its generated start-cell marker
+
+#### Scenario: Returning to a realm preserves one controllable player
+- **WHEN** the player transfers between realms repeatedly
+- **THEN** the active realm renders exactly one player marker at the current
+  controllable player position after every transfer
 
 ### Requirement: Active world and realm display
 The upper-right Minimap box SHALL display the active world and floor using the compact labels `W: 1` and `F: 1` for Overground or `F: -1` for Underground, alongside the current time. A newly generated world SHALL still start in Overground unless the stored active-realm preference is Underground.

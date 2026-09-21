@@ -931,6 +931,19 @@ export function setCharacter(world, cell, glyph = PLAYER_GLYPH) {
   return true;
 }
 
+export function normalizePlayerMarkers(world) {
+  if (!world?.characters) return 0;
+  let cleared = 0;
+  for (let y = 0; y < world.rows; y += 1) {
+    for (let x = 0; x < world.columns; x += 1) {
+      if (world.characters[y][x] !== PLAYER_GLYPH) continue;
+      clearCharacter(world, { x, y });
+      cleared += 1;
+    }
+  }
+  return cleared;
+}
+
 export function clearCharacter(world, cell) {
   if (!world || cell.x < 0 || cell.y < 0 || cell.x >= world.columns || cell.y >= world.rows) return false;
   const stair = world.stairs?.find((candidate) => isSameCell(candidate, cell));
