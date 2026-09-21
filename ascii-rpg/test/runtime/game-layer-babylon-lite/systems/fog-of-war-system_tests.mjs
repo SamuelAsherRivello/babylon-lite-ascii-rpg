@@ -6,6 +6,7 @@ import {
   MINIMAP_WORLD_SCALE,
   createFogOfWar,
   discoverFromPlayer,
+  getFogVisibility,
   getMinimapCoverage,
   isDiscovered,
 } from "../../../../src/runtime/game-layer-babylon-lite/systems/fog-of-war-system.js";
@@ -57,6 +58,29 @@ test("fog uses the realm-specific discovery radius", () => {
   assert.equal(isDiscovered(overgroundFog, overground, { x: 33, y: 25 }), false);
 });
 
+test("fog uses persistent seventy-percent visibility bands", () => {
+  const world = createWorld(50, 50);
+  world.fogUnclearRadius = 10;
+  const fog = createFogOfWar(world);
+  discoverFromPlayer(fog, world, { x: 25, y: 25 });
+  assert.equal(getFogVisibility(fog, world, { x: 32, y: 25 }), 100);
+  assert.equal(getFogVisibility(fog, world, { x: 33, y: 25 }), 75);
+  assert.equal(getFogVisibility(fog, world, { x: 34, y: 25 }), 50);
+  assert.equal(getFogVisibility(fog, world, { x: 35, y: 25 }), 25);
+  assert.equal(getFogVisibility(fog, world, { x: 36, y: 25 }), 0);
+});
+
+test("fog retains the highest visibility reached by a cell", () => {
+  const world = createWorld(50, 50);
+  world.fogUnclearRadius = 4;
+  const fog = createFogOfWar(world);
+  discoverFromPlayer(fog, world, { x: 25, y: 25 });
+  assert.equal(getFogVisibility(fog, world, { x: 29, y: 25 }), 25);
+  fog.fogUnclearRadius = 1;
+  discoverFromPlayer(fog, world, { x: 20, y: 20 });
+  assert.equal(getFogVisibility(fog, world, { x: 29, y: 25 }), 25);
+});
+
 test("discovered cells remain permanently unfogged after the player moves away", () => {
   const world = createWorld(50, 50);
   const fog = createFogOfWar(world);
@@ -83,4 +107,14 @@ test("minimap coverage uses only discovered walkable cells", () => {
   const coverage = getMinimapCoverage(fog, { x: 0, y: 0 });
   assert.ok(coverage > 0 && coverage < 1);
   assert.equal(getMinimapCoverage(fog, { x: 20, y: 20 }), 0);
+});
+
+test("minimap coverage averages persistent visibility values", () => {
+  const world = createWorld(10, 10);
+  world.fogUnclearRadius = 4;
+  const fog = createFogOfWar(world);
+  discoverFromPlayer(fog, world, { x: 5, y: 5 });
+  const expected = [...fog.visibility].reduce((total, value) => total + value, 0) / (100 * 100);
+  assert.equal(getMinimapCoverage(fog, { x: 0, y: 0 }), expected);
+  assert.ok(expected > 0 && expected < 1);
 });

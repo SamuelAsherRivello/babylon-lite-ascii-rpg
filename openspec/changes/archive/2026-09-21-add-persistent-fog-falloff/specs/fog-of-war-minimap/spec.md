@@ -41,9 +41,9 @@ and SHALL not decrease during that world session.
 The game SHALL calculate a walkable target's newly revealed visibility only
 when it lies within the active player-light profile's range and has an
 unobstructed straight grid path from the player. For a clear target inside the
-radius, visibility SHALL use four distance bands: `100` for the nearest
-quarter of the radius, `75` for the next quarter, `50` for the next quarter,
-and `25` for the outer quarter including the radius boundary. The first
+radius, visibility SHALL use four distance bands: `100` from the player
+through `70%` of the radius, `75` through `80%`, `50` through `90%`, and `25`
+through the radius boundary. The first
 unwalkable cell that blocks a clear path MAY receive its distance-band
 visibility for wall presentation, but unwalkable cells SHALL never contribute
 to minimap walkable opacity. An intervening unwalkable cell SHALL block all
@@ -51,14 +51,14 @@ targets behind it regardless of the selected player shadow-bleed profile.
 
 #### Scenario: Clear in-range walkable tile is discovered
 
-- **WHEN** a walkable target lies within the nearest quarter of the active
+- **WHEN** a walkable target lies within `70%` of the active
   radius and has a clear straight path from the player
 - **THEN** the target receives a newly calculated visibility of `100`
 
 #### Scenario: Clear targets receive stepped falloff
 
-- **WHEN** clear walkable targets lie in successive distance bands from the
-  player
+- **WHEN** clear walkable targets lie in the `70%–80%`, `80%–90%`, and
+  `90%–100%` distance bands from the player
 - **THEN** the targets receive newly calculated visibility values of `75`,
   `50`, and `25` respectively
 

@@ -41,6 +41,21 @@ test("world-view composition shares fog eligibility and excludes hidden glyphs",
   assert.equal(composition.cells.find(({ cell }) => cell.x === 1).glyph, null);
 });
 
+test("world-view composition carries numeric fog visibility", () => {
+  const composition = createWorldViewComposition({
+    world: createWorld(3, 1),
+    fog: {},
+    source: { x: 0, y: 0, width: 3, height: 1 },
+    getGlyph: (_world, cell) => String(cell.x),
+    getVisibility: (_fog, _world, cell) => [100, 50, 0][cell.x],
+  });
+  assert.deepEqual(composition.cells.map(({ discovered, visibility, glyph }) => ({ discovered, visibility, glyph })), [
+    { discovered: true, visibility: 100, glyph: "0" },
+    { discovered: true, visibility: 50, glyph: "1" },
+    { discovered: false, visibility: 0, glyph: null },
+  ]);
+});
+
 test("world-view composition renders background, cells, and overlay in order", () => {
   const order = [];
   const composition = createWorldViewComposition({

@@ -3,6 +3,7 @@ import { hasClearLightPath } from "../lighting.js";
 export const MINIMAP_WORLD_SCALE = 10;
 export const DISCOVERY_LIGHT_CUTOFF = 0.1;
 export const fogUnclearRadius = 5;
+export const FOG_VISIBILITY_LEVELS = Object.freeze([25, 50, 75, 100]);
 
 function getCellIndex(cell, columns) {
   return cell.y * columns + cell.x;
@@ -37,9 +38,11 @@ export function createFogOfWar(world) {
       walkableCounts[getMinimapIndex(getMinimapCell(cell), minimapColumns)] += 1;
     }
   }
+  const visibility = new Uint8Array(world.rows * world.columns);
   return {
-    discovered: new Uint8Array(world.rows * world.columns),
-    discoveredCounts: new Uint16Array(minimapColumns * minimapRows),
+    visibility,
+    discovered: visibility,
+    visibilityTotals: new Uint32Array(minimapColumns * minimapRows),
     walkableCounts,
     minimapColumns,
     minimapRows,
@@ -48,40 +51,59 @@ export function createFogOfWar(world) {
 }
 
 export function isDiscovered(fog, world, cell) {
+  return getFogVisibility(fog, world, cell) > 0;
+}
+
+export function getFogVisibility(fog, world, cell) {
   if (!fog || !world || !Number.isInteger(cell?.x) || !Number.isInteger(cell?.y) ||
-      cell.x < 0 || cell.y < 0 || cell.x >= world.columns || cell.y >= world.rows) return false;
-  return fog.discovered[getCellIndex(cell, world.columns)] === 1;
+      cell.x < 0 || cell.y < 0 || cell.x >= world.columns || cell.y >= world.rows) return 0;
+  return fog.visibility?.[getCellIndex(cell, world.columns)] ?? 0;
 }
 
 export function discoverCell(fog, world, cell) {
   if (!fog || !isWalkable(world, cell)) return false;
-  return markDiscovered(fog, world, cell, true);
+  return markVisibility(fog, world, cell, 100);
 }
 
-function markDiscovered(fog, world, cell, countForMinimap) {
-  if (!fog || !world || cell.x < 0 || cell.y < 0 || cell.x >= world.columns || cell.y >= world.rows) return false;
+function markVisibility(fog, world, cell, candidateVisibility) {
+  if (!fog || !world || !Number.isFinite(candidateVisibility) ||
+      cell.x < 0 || cell.y < 0 || cell.x >= world.columns || cell.y >= world.rows) return false;
   const index = getCellIndex(cell, world.columns);
-  if (fog.discovered[index] === 1) return false;
-  fog.discovered[index] = 1;
-  if (countForMinimap) {
+  const previousVisibility = fog.visibility[index];
+  const nextVisibility = Math.max(previousVisibility, Math.min(100, Math.max(0, Math.round(candidateVisibility))));
+  if (nextVisibility === previousVisibility) return false;
+  fog.visibility[index] = nextVisibility;
+  if (isWalkable(world, cell)) {
     const minimapIndex = getMinimapIndex(getMinimapCell(cell), fog.minimapColumns);
-    fog.discoveredCounts[minimapIndex] += 1;
+    fog.visibilityTotals[minimapIndex] += nextVisibility - previousVisibility;
   }
   return true;
+}
+
+function getVisibilityForDistance(distance, radius) {
+  if (!Number.isFinite(distance) || !Number.isFinite(radius) || radius <= 0 || distance > radius) return 0;
+  const normalizedDistance = distance / radius;
+  if (normalizedDistance <= 0.7) return 100;
+  if (normalizedDistance <= 0.8) return 75;
+  if (normalizedDistance <= 0.9) return 50;
+  return 25;
 }
 
 export function discoverFromPlayer(fog, world, playerCell) {
   if (!fog || !isWalkable(world, playerCell)) return [];
   const discovered = [];
-  if (discoverCell(fog, world, playerCell)) discovered.push({ ...playerCell });
   const unclearRadius = Number.isFinite(fog.fogUnclearRadius) ? fog.fogUnclearRadius : fogUnclearRadius;
   const radius = Math.ceil(unclearRadius);
   for (let y = Math.max(0, playerCell.y - radius); y <= Math.min(world.rows - 1, playerCell.y + radius); y += 1) {
     for (let x = Math.max(0, playerCell.x - radius); x <= Math.min(world.columns - 1, playerCell.x + radius); x += 1) {
       const target = { x, y };
-      if (Math.hypot(target.x - playerCell.x, target.y - playerCell.y) > unclearRadius) continue;
+      const visibility = getVisibilityForDistance(
+        Math.hypot(target.x - playerCell.x, target.y - playerCell.y),
+        unclearRadius,
+      );
+      if (visibility === 0) continue;
       if (!hasClearLightPath(playerCell, target, world.terrain)) continue;
-      if (markDiscovered(fog, world, target, isWalkable(world, target))) discovered.push(target);
+      if (markVisibility(fog, world, target, visibility)) discovered.push(target);
     }
   }
   return discovered;
@@ -93,5 +115,5 @@ export function getMinimapCoverage(fog, minimapCell) {
       minimapCell.x >= fog.minimapColumns || minimapCell.y >= fog.minimapRows) return 0;
   const index = getMinimapIndex(minimapCell, fog.minimapColumns);
   const walkable = fog.walkableCounts[index];
-  return walkable === 0 ? 0 : fog.discoveredCounts[index] / walkable;
+  return walkable === 0 ? 0 : fog.visibilityTotals[index] / (walkable * 100);
 }

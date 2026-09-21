@@ -125,8 +125,9 @@ test("frame checkpoint can yield and reject stale cancelled work", async () => {
 
 test("dirty sprites update only for changed visible glyph, frame, tint, or visibility", () => {
   const color = [1, 1, 1, 1];
-  const state = { glyph: "W", frame: 3, color, baseColor: color, lightingFactor: 1, visible: true };
+  const state = { glyph: "W", frame: 3, color, baseColor: color, lightingFactor: 1, fogVisibility: 100, visible: true };
   assert.equal(shouldUpdateVisibleSprite(state, "W", 3, color, 1), false);
+  assert.equal(shouldUpdateVisibleSprite(state, "W", 3, color, 1, 75), true);
   assert.equal(shouldUpdateVisibleSprite(state, "•", 3, color, 1), true);
   assert.equal(shouldUpdateVisibleSprite(state, "W", 4, color, 1), true);
   assert.equal(shouldUpdateVisibleSprite(state, "W", 3, [1, 1, 1, 0.5], 1), true);

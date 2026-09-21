@@ -1,4 +1,4 @@
-import { isDiscovered } from "./systems/fog-of-war-system.js";
+import { getFogVisibility } from "./systems/fog-of-war-system.js";
 
 function normalizeRectangle(rectangle, world) {
   const width = Math.max(0, Math.min(
@@ -26,7 +26,8 @@ export function createWorldViewComposition({
   source,
   destination = {},
   getGlyph,
-  discovered = isDiscovered,
+  discovered,
+  getVisibility = getFogVisibility,
   onlyDiscovered = false,
 } = {}) {
   if (!world || !Number.isInteger(world.columns) || !Number.isInteger(world.rows)) {
@@ -36,11 +37,15 @@ export function createWorldViewComposition({
     throw new TypeError("World-view composition requires a glyph resolver.");
   }
   const region = normalizeRectangle(source, world);
+  const resolveVisibility = typeof discovered === "function"
+    ? (fogState, currentWorld, cell) => discovered(fogState, currentWorld, cell) ? 100 : 0
+    : getVisibility;
   const cells = [];
   for (let localY = 0; localY < region.height; localY += 1) {
     for (let localX = 0; localX < region.width; localX += 1) {
       const cell = { x: region.x + localX, y: region.y + localY };
-      const isVisible = discovered(fog, world, cell);
+      const visibility = resolveVisibility(fog, world, cell);
+      const isVisible = visibility > 0;
       if (onlyDiscovered && !isVisible) continue;
       cells.push({
         cell,
@@ -48,6 +53,7 @@ export function createWorldViewComposition({
         localY,
         slot: localY * region.width + localX,
         discovered: isVisible,
+        visibility,
         glyph: isVisible ? getGlyph(world, cell) : null,
       });
     }

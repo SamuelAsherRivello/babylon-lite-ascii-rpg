@@ -74,6 +74,7 @@ import { buildGpuLightPassSamples, createGpuLightPassFrame, GPU_LIGHT_PASS_COLOR
 import {
   createFogOfWar,
   discoverFromPlayer,
+  getFogVisibility,
   isDiscovered,
 } from "./systems/fog-of-war-system.js";
 import { getMinimapEdgeIndicators, getMinimapIndicatorSafeArea, getMinimapMarkers, getMinimapWorldCellGraphic, MINIMAP_INDICATOR_MIN_SIZE, MINIMAP_INDICATOR_SAFE_INSET } from "./systems/minimap-renderer.js";
@@ -378,7 +379,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
         context.fillStyle = "#000";
         context.fillRect(0, 0, minimapCanvas.width, minimapCanvas.height);
       },
-      drawCell: ({ localX, localY, glyph, discovered }) => {
+      drawCell: ({ localX, localY, glyph, discovered, visibility }) => {
         if (!discovered) return;
         const graphic = getMinimapWorldCellGraphic(world, fogOfWar, palette, {
           x: sourceX + localX,
@@ -388,13 +389,14 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
         const raster = visual.rasters.get(glyph);
         if (!raster) return;
         const lightingFactor = minimapLightField.getFactor({ x: sourceX + localX, y: sourceY + localY });
+        const fogOpacity = visibility / 100;
         const baseColor = paletteColors.get(glyph) ?? colorToLinearRgba(getPaletteStyle(palette, glyph));
         const litColor = linearRgbaToHex(applyLightingToColor(baseColor, lightingFactor));
-        const cacheKey = `${graphic.glyph}:${litColor}:${lightingFactor.toFixed(6)}:${raster.width}`;
+        const cacheKey = `${graphic.glyph}:${litColor}:${lightingFactor.toFixed(6)}:${fogOpacity.toFixed(2)}:${raster.width}`;
         let glyphCanvas = minimapGlyphCanvases.get(cacheKey);
         if (!glyphCanvas) {
           glyphCanvas = createGlyphRasterCanvas(raster, litColor, {
-            alphaScale: lightingFactor,
+            alphaScale: lightingFactor * fogOpacity,
             colorScale: lightingFactor,
             tint: true,
           });
@@ -874,10 +876,10 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     ensureGpuLightPass(region.count);
     gpuLightLayer.visible = true;
     const samples = buildGpuLightPassSamples(region, lightField, lighting.ambient)
-      .filter((sample) => isDiscovered(fogOfWar, world, {
+      .filter((sample) => getFogVisibility(fogOfWar, world, {
         x: region.x + sample.x,
         y: region.y + sample.y,
-      }));
+      }) > 0);
     const activeSlots = new Set();
     for (const sample of samples) {
       activeSlots.add(sample.slot);
@@ -886,7 +888,12 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
         positionPx: [center.x, center.y],
         sizePx: [viewport.gridWidth, viewport.gridHeight],
         frame: 0,
-        color: [...GPU_LIGHT_PASS_COLOR, Math.min(0.16, sample.intensity * 0.16)],
+        color: [...GPU_LIGHT_PASS_COLOR, Math.min(0.16, sample.intensity * 0.16) * (
+          getFogVisibility(fogOfWar, world, {
+            x: region.x + sample.x,
+            y: region.y + sample.y,
+          }) / 100
+        )],
         visible: true,
       };
       if (gpuLightSpriteIndexes[sample.slot] === undefined) {
@@ -910,7 +917,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     spriteStates[slot].visible = false;
   };
 
-  const renderCell = (region, x, y, frames, lightField, glyphOverride = null) => {
+  const renderCell = (region, x, y, frames, lightField, glyphOverride = null, visibility = 100) => {
     const slot = y * region.columns + x;
     const cell = { x: region.x + x, y: region.y + y };
     const glyph = glyphOverride ?? getVisibleGlyph(world, cell);
@@ -926,13 +933,15 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     if (playerCell && cell.x === playerCell.x && cell.y === playerCell.y) {
       playerRenderCenter = center;
     }
-    if (!shouldUpdateVisibleSprite(previous, glyph, frame, baseColor, lightingFactor)) {
+    if (!shouldUpdateVisibleSprite(previous, glyph, frame, baseColor, lightingFactor, visibility)) {
       metrics.skippedCells += 1;
       return;
     }
-    const color = glyphBackgroundEnabled
+    const fogOpacity = visibility / 100;
+    const litColor = glyphBackgroundEnabled
       ? [lightingFactor, lightingFactor, lightingFactor, lightingFactor]
       : applyLightingToColor(baseColor, lightingFactor);
+    const color = [...litColor.slice(0, 3), litColor[3] * fogOpacity];
     // At displayed zoom 1 the nominal cell is 0.64px wide. Preserve the
     // nominal grid positions, but give each glyph a small screen-space
     // footprint so the explored area at the farthest zoom remains inspectable
@@ -948,7 +957,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     if (spriteIndexes[slot] === undefined) spriteIndexes[slot] = addSprite2DIndex(layer, props);
     else updateSprite2DIndex(layer, spriteIndexes[slot], props);
     spriteStates[slot] = {
-      glyph, frame, color, baseColor, lightingFactor, visible: true,
+      glyph, frame, color, baseColor, lightingFactor, fogVisibility: visibility, visible: true,
     };
     metrics.submittedCells += 1;
   };
@@ -992,12 +1001,12 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     if (visual.atlas !== atlas) rebuildLayer(visual.atlas);
     const lightField = lightingFieldCache.get(world, region, objectSpawnerSystem?.getLightingSources(world) ?? world.torches, playerCell, lighting);
     renderWorldViewComposition(composition, {
-      drawCell: ({ localX, localY, slot, glyph, discovered }) => {
+      drawCell: ({ localX, localY, slot, glyph, discovered, visibility }) => {
         if (!discovered) {
           hideGameCell(slot);
           return;
         }
-        renderCell(region, localX, localY, visual.frames, lightField, glyph);
+        renderCell(region, localX, localY, visual.frames, lightField, glyph, visibility);
       },
     });
     for (let slot = region.count; slot < spriteIndexes.length; slot += 1) {
@@ -1052,7 +1061,15 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     metrics.glyphWarmupMs += visual.warmupMs;
     const lightField = lightingFieldCache.get(world, region, objectSpawnerSystem?.getLightingSources(world) ?? world.torches, playerCell, lighting);
     for (const cell of visibleCells) {
-      renderCell(region, cell.x - region.x, cell.y - region.y, visual.frames, lightField);
+      renderCell(
+        region,
+        cell.x - region.x,
+        cell.y - region.y,
+        visual.frames,
+        lightField,
+        null,
+        getFogVisibility(fogOfWar, world, cell),
+      );
     }
   };
 

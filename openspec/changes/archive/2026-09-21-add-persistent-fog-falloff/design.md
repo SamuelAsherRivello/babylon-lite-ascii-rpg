@@ -50,7 +50,7 @@ the new and old visibility values.
 ### Use explicit normalized distance bands
 
 Use the existing Euclidean grid distance and active realm radius. The band
-boundaries are `0.25`, `0.50`, `0.75`, and `1.00` of the radius. Values at the
+boundaries are `0.70`, `0.80`, `0.90`, and `1.00` of the radius. Values at the
 outer boundary remain `25`; values beyond the radius or behind a blocked path
 produce no increase. Explicit thresholds are preferred over a continuous
 floating-point opacity curve because the requested presentation has four
@@ -107,4 +107,3 @@ composition rather than independently calculating falloff.
   strongly. -> Mitigation: apply the same positive-visibility gate and fog
   factor to world-owned light presentation while leaving markers as the
   existing explicit overlay layer.
-

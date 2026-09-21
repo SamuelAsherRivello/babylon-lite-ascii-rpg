@@ -14,7 +14,8 @@ while retaining the highest visibility they have previously reached.
   value from `0` to `100`, where `0` is fully fogged and `100` is fully
   unfogged.
 - Calculate visibility for clear cells inside the player's existing
-  realm-specific fog radius using four bands: `100`, `75`, `50`, and `25`.
+  realm-specific fog radius using `100` through `70%`, `75` through `80%`,
+  `50` through `90%`, and `25` through the radius edge.
 - Preserve the maximum visibility ever reached for each cell during the world
   session; visibility SHALL NOT decrease when the player moves away.
 - Continue to require a clear straight light path and preserve existing wall
