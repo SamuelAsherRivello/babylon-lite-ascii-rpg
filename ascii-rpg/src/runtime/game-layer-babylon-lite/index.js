@@ -792,7 +792,6 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
         x: 0, y: 0, width: viewport.screenWidth, height: viewport.screenHeight,
       },
       getGlyph: getVisibleGlyph,
-      onlyDiscovered: true,
     });
     const visual = glyphCache.ensure(
       zoom,
