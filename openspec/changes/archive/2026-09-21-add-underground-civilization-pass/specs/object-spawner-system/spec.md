@@ -66,6 +66,10 @@ SHALL not apply a collision consequence.
 - **THEN** the Trap SHALL remain rendered and apply its configured health
   consequence
 
+#### Scenario: Dead player enters a persistent trap
+- **WHEN** a dead player attempts to enter or collide with a Trap cell
+- **THEN** the Trap SHALL not apply another health consequence or log entry
+
 #### Scenario: Player enters a Torch cell
 - **WHEN** the player enters a Torch cell
 - **THEN** the Torch SHALL remain rendered, remain non-interactable, and
@@ -118,6 +122,11 @@ door unlocked.`. All civilization messages SHALL use past-tense wording.
 - **WHEN** the player collects Gold and then Heart
 - **THEN** the log SHALL contain the exact configured capitalization and
   wording for each object
+
+#### Scenario: Exact Trap consequence and log text
+- **WHEN** the player enters a Trap while alive
+- **THEN** health SHALL decrease by `25`, be clamped at `0` when necessary,
+  and the log SHALL contain the exact text `Player lost -25 Health from Trap`
 
 #### Scenario: Realm owns realm-entry log text
 - **WHEN** the game starts in Underground or the player uses Stairs to enter

@@ -27,4 +27,4 @@
 
 - [x] 5.1 Run the focused civilization, object-spawner, world-generation, movement, character-info, bridge, and log tests and resolve any regressions.
 - [x] 5.2 Run the repository's full Node test suite and production build from the repository root, recording any environment-related validation limitation.
-- [ ] 5.3 Manually verify the Underground in the running browser: a generated barrier appears only in Underground, keys collect, the HUD count updates, a locked door logs the locked message, a keyed attempt logs both past-tense unlock messages without moving, and the next movement enters the open door.
+- [x] 5.3 Manually verify the Underground in the running browser: a generated barrier appears only in Underground, keys collect, the HUD count updates, a locked door logs the locked message, a keyed attempt logs both past-tense unlock messages without moving, and the next movement enters the open door.
