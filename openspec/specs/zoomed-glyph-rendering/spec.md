@@ -7,23 +7,23 @@ Provides recognizable, high-fidelity ASCII glyph rendering across the supported 
 ## Requirements
 
 ### Requirement: Zoom-appropriate glyph fidelity
+The game SHALL render the active font and visible glyphs using visual representations appropriate to every effective scale produced by displayed zooms `1` through `10`. The representation SHALL preserve a recognizable glyph silhouette at displayed zoom `1`, SHALL remain consistent with the current zoom-10 appearance at displayed zoom `10`, and SHALL provide usable intermediate fidelity for displayed zooms `2` through `9`.
 
-The game SHALL render the active font and visible glyphs using visual representations appropriate to the current zoom level. The representation SHALL preserve a recognizable glyph silhouette at zoom 1, SHALL remain crisp at the default zoom 5, and SHALL provide visibly smoother or more detailed edges at zoom 10 than the current single-resolution rendering.
-
-#### Scenario: Furthest supported zoom
-
-- **WHEN** the player sets zoom to 1
-- **THEN** visible glyphs SHALL remain recognizable and SHALL not rely only on a severely downscaled copy of the default-resolution glyph bitmap
-
-#### Scenario: Default zoom
-
-- **WHEN** the player sets zoom to 5
-- **THEN** glyph rendering SHALL retain the current acceptable appearance while improving edge consistency where the higher-fidelity representation permits it
+#### Scenario: Farthest supported zoom
+- **WHEN** the player sets displayed zoom to `1`
+- **THEN** visible glyphs SHALL remain recognizable at the new farthest effective scale and SHALL not rely only on a severely downscaled copy of the current default-resolution glyph bitmap
 
 #### Scenario: Closest supported zoom
+- **WHEN** the player sets displayed zoom to `10`
+- **THEN** glyph rendering SHALL match the current zoom-10 path closely enough that the endpoint remains visually familiar
 
-- **WHEN** the player sets zoom to 10
-- **THEN** curved and diagonal glyph features SHALL render with sharper or smoother contours than the current fixed 64x64 bitmap path
+#### Scenario: Furthest supported zoom
+- **WHEN** the player sets displayed zoom to `1`
+- **THEN** visible glyphs SHALL remain recognizable at the farthest effective scale
+
+#### Scenario: Default zoom
+- **WHEN** the player selects the migrated default displayed value
+- **THEN** glyph rendering SHALL retain the current default visual quality
 
 ### Requirement: Reusable zoom-aware glyph cache
 
@@ -50,18 +50,19 @@ The game SHALL reuse a cached glyph visual for repeated renderings with the same
 - **THEN** the runtime SHALL create it on demand and SHALL not require prebuilding the complete palette before rendering the current visible region
 
 ### Requirement: Visible-region rendering
+The game SHALL submit renderable cells only for the current visible region at the effective scale selected by the displayed value, and cells outside that region SHALL not contribute visible sprites to the frame.
 
-The game SHALL submit renderable cells only for the current visible region, and cells outside that region SHALL not contribute visible sprites to the frame.
+#### Scenario: Large visible region
+- **WHEN** displayed zoom `1` produces a substantially larger visible region
+- **THEN** the renderer SHALL cull cells outside the viewport, remain bounded by world dimensions, and preserve correct terrain and character layering
 
 #### Scenario: Large world with normal viewport
-
-- **WHEN** the world dimensions exceed the current viewport
+- **WHEN** world dimensions exceed the current viewport
 - **THEN** cells outside the viewport SHALL be excluded from the visible sprite set
 
 #### Scenario: Diagnostic extreme viewport
-
-- **WHEN** a diagnostic run uses a zoom value below the user-facing minimum to expose a substantially larger visible region
-- **THEN** the renderer SHALL continue to exclude world cells outside the calculated viewport and SHALL remain bounded by the world dimensions
+- **WHEN** a diagnostic run uses an effective scale below the normal current minimum
+- **THEN** culling SHALL remain bounded by world dimensions
 
 ### Requirement: Responsive staged world readiness
 
@@ -107,18 +108,19 @@ The game SHALL reuse unchanged rendering data and SHALL update only cells or reg
 - **THEN** the renderer SHALL update affected visible styles without rebuilding static glyph visuals or refreshing off-screen cells
 
 ### Requirement: Fast cached zoom rerender
+After the required glyph visuals for an effective scale are cached, a displayed zoom change SHALL rebuild and submit only the current visible region without rebuilding complete world data. The interval from the zoom-change request to visible-region submission SHALL target completion within one 60 Hz frame, approximately 16.7 milliseconds, on the baseline development environment. Cold-cache visual generation SHALL be measured separately.
 
-After the required glyph visuals for a supported zoom are cached, a zoom change SHALL rebuild and submit only the current visible region without rebuilding complete world data. The interval from the zoom-change request to visible-region submission SHALL target completion within one 60 Hz frame, approximately 16.7 milliseconds, on the baseline development environment. Cold-cache visual generation SHALL be measured separately and SHALL not invalidate correctness.
+#### Scenario: Adjacent remapped zoom change
+- **WHEN** the player changes by one displayed zoom step
+- **THEN** the runtime SHALL reuse compatible cached glyph visuals where possible, submit the new visible region, and SHALL not regenerate the world
 
 #### Scenario: Cached zoom change
-
-- **WHEN** the player changes between supported zoom levels whose required visible glyph visuals are cached
-- **THEN** the renderer SHALL submit the new visible region without generating the world again and SHALL target approximately 16.7 milliseconds or less
+- **WHEN** required visuals for the destination displayed value are cached
+- **THEN** the new visible region SHALL submit without generating the world again
 
 #### Scenario: Cold zoom change
-
-- **WHEN** the player changes to a zoom whose required glyph visuals are not cached
-- **THEN** the runtime SHALL lazily warm the required visible glyph visuals, report warmup separately, and then submit only the visible region
+- **WHEN** required visuals for the destination displayed value are not cached
+- **THEN** the runtime SHALL warm only required visible visuals and report warmup separately
 
 ### Requirement: Future-effect-safe cache boundary
 
@@ -130,20 +132,20 @@ Static cached glyph visuals SHALL represent glyph shape or base appearance only.
 - **THEN** the effect SHALL be able to vary the presentation without invalidating every reusable static glyph-shape entry
 
 ### Requirement: Rendering stress validation
+The rendering implementation SHALL provide focused validation or diagnostics for displayed zooms `1`, `5`, and `10`, representative intermediate values, and the corresponding minimap state. Validation SHALL cover visible-cell count, cache reuse, culling behavior, redraw work, memory growth, and bounded cache size.
 
-The rendering implementation SHALL provide focused validation or diagnostics for representative supported zooms and at least one substantially farther diagnostic zoom, covering visible-cell count, cache reuse, culling behavior, redraw work, and memory growth or bounded cache size.
+#### Scenario: Remapped-range comparison
+- **WHEN** rendering is validated across displayed zooms `1`, `5`, and `10`
+- **THEN** validation SHALL record effective scale, visible-cell count, cache behavior, culling correctness, and cached rerender timing for each anchor
 
 #### Scenario: Representative zoom comparison
-
-- **WHEN** rendering is validated at zooms 1, 5, and 10
-- **THEN** the validation SHALL record or assert glyph cache behavior and visible rendering correctness for each level
+- **WHEN** representative displayed zooms are validated
+- **THEN** glyph cache behavior and visible rendering correctness SHALL be recorded
 
 #### Scenario: Extreme visible-cell stress
-
-- **WHEN** rendering is validated at a diagnostic zoom below 1
-- **THEN** the validation SHALL demonstrate that off-screen cells remain culled and that cache growth remains bounded by the configured glyph/font/zoom key space rather than by the total world area
+- **WHEN** the farthest displayed zoom exposes a substantially larger visible region
+- **THEN** off-screen cells SHALL remain culled and cache growth SHALL remain bounded
 
 #### Scenario: Readiness and zoom budgets
-
-- **WHEN** performance validation runs on the baseline development environment
-- **THEN** it SHALL report world-data build time, first-visible-render time, total readiness time, cold glyph warmup time, and cached zoom-rerender time against the under-1-second, approximately 0.1-second ideal, and approximately 16.7-millisecond targets
+- **WHEN** performance validation runs
+- **THEN** world readiness, cold warmup, and cached rerender timings SHALL be reported against the existing budgets
