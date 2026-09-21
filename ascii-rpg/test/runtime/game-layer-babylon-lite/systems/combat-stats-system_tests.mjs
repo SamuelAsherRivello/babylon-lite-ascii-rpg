@@ -11,23 +11,23 @@ import {
 import { createStaminaSystem } from "../../../../src/runtime/game-layer-babylon-lite/systems/stamina-system.js";
 
 test("derives current offense and defense from the stamina ratio", () => {
-  assert.equal(deriveCombatStatValue(25, 50, 50), 25);
-  assert.equal(deriveCombatStatValue(25, 25, 50), 13);
-  assert.equal(deriveCombatStatValue(25, 0, 50), 0);
+  assert.equal(deriveCombatStatValue(25, 50, 50), 3.75);
+  assert.equal(deriveCombatStatValue(25, 25, 50), 2.5);
+  assert.equal(deriveCombatStatValue(25, 0, 50), 1.25);
 });
 
 test("publishes immutable initial and stamina-derived stat snapshots", () => {
   const stamina = createStaminaSystem();
   const stats = createCombatStatsSystem({ staminaSystem: stamina });
   assert.deepEqual(stats.getSnapshot(), {
-    offense: { current: 25, maximum: 25, currentPercent: 100, previousPercent: 100, revision: 0 },
-    defense: { current: 25, maximum: 25, currentPercent: 100, previousPercent: 100, revision: 0 },
+    offense: { current: 2.5, maximum: 25, currentPercent: 10, previousPercent: 10, revision: 0 },
+    defense: { current: 2.5, maximum: 25, currentPercent: 10, previousPercent: 10, revision: 0 },
   });
   assert.equal(Object.isFrozen(stats.getSnapshot().offense), true);
   stamina.spendForAttack();
-  assert.equal(stats.getOffenseSnapshot().current, 13);
-  assert.equal(stats.getDefenseSnapshot().current, 13);
-  assert.equal(stats.getOffenseSnapshot().currentPercent, 52);
+  assert.equal(stats.getOffenseSnapshot().current, 1.25);
+  assert.equal(stats.getDefenseSnapshot().current, 1.25);
+  assert.equal(stats.getOffenseSnapshot().currentPercent, 5);
 });
 
 test("uses the requested starting maximums", () => {

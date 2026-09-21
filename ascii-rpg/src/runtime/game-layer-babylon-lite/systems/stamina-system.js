@@ -1,6 +1,7 @@
 export const MAX_PLAYER_STAMINA = 50;
-export const INITIAL_PLAYER_STAMINA = 50;
-export const ATTACK_STAMINA_COST = 25;
+export const INITIAL_PLAYER_STAMINA = 25;
+export const ATTACK_STAMINA_COST_PERCENT = 10;
+export const ATTACK_STAMINA_COST = ATTACK_STAMINA_COST_PERCENT;
 export const STAMINA_PER_TIME_TICK = 10;
 export const STAMINA_BAR_NOMINAL_CAPACITY = 100;
 
@@ -39,7 +40,7 @@ export function createStaminaSystem({
     getMaximum() { return maximum; },
     getSnapshot,
     spendForAttack() {
-      return setCurrent(current - ATTACK_STAMINA_COST);
+      return setCurrent(current * (1 - (ATTACK_STAMINA_COST_PERCENT / 100)));
     },
     recoverForTimeTick() {
       return setCurrent(current + STAMINA_PER_TIME_TICK);

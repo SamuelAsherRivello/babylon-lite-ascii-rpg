@@ -19,15 +19,12 @@ Ways to break the illusion (AVOID THESE?)
 - Using smooth, high-resolution artwork that does not follow the character grid.
 - Rendering non-ASCII sprites, particles, or effects that clash with the glyph language.
 - Allowing subpixel movement, rotation, or scaling that makes the grid feel incidental.
-- Adding detailed portraits, cutscenes, or backgrounds with a separate visual style.
-- Using modern interface elements, gradients, or icons that look disconnected from the ASCII world.
-- Exposing debug overlays, bounding boxes, collision shapes, or engine artifacts.
 - Adding camera shakes, zooms, or transitions that ignore the established grid rhythm.
 - Using lighting and shadows that imply more geometry than the ASCII symbols communicate.
 
 # Workflows
 
-- Workflow inspiration: [watch short](https://www.youtube.com/shorts/lce1edytViI)
+- Openspec AI Workflow inspiration: [watch short](https://www.youtube.com/shorts/lce1edytViI)
 
 # Inspiration
 

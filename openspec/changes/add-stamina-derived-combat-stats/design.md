@@ -76,8 +76,8 @@ targets. A minimum of one keeps exhausted attacks playable and avoids a state
 where the player can spend time but never finish an enemy.
 
 An unnormalized multiplication of maximum damage by the raw Offense value was
-rejected because it would make an Offense value of `20` turn a maximum damage
-of `5` into `100` damage and would couple tuning units unnecessarily.
+rejected because it would make an Offense value of `25` turn a maximum damage
+of `20` into `500` damage and would couple tuning units unnecessarily.
 
 ### Use bounded Defense mitigation
 

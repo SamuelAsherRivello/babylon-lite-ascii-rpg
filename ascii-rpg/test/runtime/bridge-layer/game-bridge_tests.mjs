@@ -42,6 +42,12 @@ import {
   getStaminaSnapshot,
   sendStaminaSnapshot,
   subscribeToStamina,
+  getCombatStatsSnapshot,
+  sendCombatStatsSnapshot,
+  subscribeToCombatStats,
+  getExperienceSnapshot,
+  sendExperienceSnapshot,
+  subscribeToExperience,
   getKeySnapshot,
   sendKeySnapshot,
   subscribeToKey,
@@ -111,7 +117,7 @@ test("publishes immutable bounded stamina snapshots", () => {
     current: 39,
     maximum: 50,
     currentPercent: 39,
-    previousPercent: 50,
+    previousPercent: 25,
     revision: 1,
   });
   assert.equal(Object.isFrozen(getStaminaSnapshot()), true);
@@ -125,10 +131,58 @@ test("publishes immutable bounded stamina snapshots", () => {
     revision: 2,
   });
   assert.deepEqual(received, [
-    { current: 39, maximum: 50, currentPercent: 39, previousPercent: 50, revision: 1 },
+    { current: 39, maximum: 50, currentPercent: 39, previousPercent: 25, revision: 1 },
     { current: 50, maximum: 50, currentPercent: 75, previousPercent: 39, revision: 2 },
   ]);
 
+  unsubscribe();
+});
+
+test("publishes immutable offense and defense snapshots", () => {
+  const received = [];
+  const unsubscribe = subscribeToCombatStats(() => received.push(getCombatStatsSnapshot()));
+
+  sendCombatStatsSnapshot({
+    offense: { current: 13, maximum: 25 },
+    defense: { current: 13, maximum: 25 },
+  });
+
+  assert.deepEqual(getCombatStatsSnapshot().offense, {
+    current: 13,
+    maximum: 25,
+    currentPercent: 52,
+    previousPercent: 10,
+    revision: 1,
+  });
+  assert.deepEqual(getCombatStatsSnapshot().defense, {
+    current: 13,
+    maximum: 25,
+    currentPercent: 52,
+    previousPercent: 10,
+    revision: 1,
+  });
+  assert.equal(Object.isFrozen(getCombatStatsSnapshot()), true);
+  assert.equal(Object.isFrozen(getCombatStatsSnapshot().offense), true);
+  assert.equal(received.length, 1);
+  unsubscribe();
+});
+
+test("publishes experience points and level snapshots", () => {
+  const received = [];
+  const unsubscribe = subscribeToExperience(() => received.push(getExperienceSnapshot()));
+
+  sendExperienceSnapshot({ currentPoints: 25, pointsNeededForNextLevel: 100, level: 1 });
+
+  assert.deepEqual(getExperienceSnapshot(), {
+    currentPoints: 25,
+    pointsNeededForNextLevel: 100,
+    currentPercent: 25,
+    previousPercent: 0,
+    level: 1,
+    revision: 1,
+  });
+  assert.equal(received.length, 1);
+  assert.equal(Object.isFrozen(getExperienceSnapshot()), true);
   unsubscribe();
 });
 

@@ -1,4 +1,5 @@
 import { ENEMY_GLYPH } from "./world-system.js";
+import { calculatePlayerDamageTaken } from "./combat-stats-system.js";
 
 export { ENEMY_GLYPH };
 export const ENEMY_HEALTH = 100;
@@ -87,6 +88,7 @@ export function createEnemySystem({
   occupancy,
   getPlayerState,
   damagePlayer = () => {},
+  combatStatsSystem,
   isWalkable = (cell, realm, world) => defaultWalkable(world, cell),
   isStaticOccupied = () => false,
   isStaticOccupiedIndex = null,
@@ -132,8 +134,12 @@ export function createEnemySystem({
     const player = getPlayerState(enemy.realm);
     if (!player?.alive || player.realm !== enemy.realm) return;
     if (manhattanDistance(enemy.cell, player.cell) === 1) {
-      damagePlayer(ENEMY_ATTACK_DAMAGE, { enemy, event });
-      log(`Enemy hit Player for -${ENEMY_ATTACK_DAMAGE} Health`);
+      const defense = combatStatsSystem?.getDefenseSnapshot?.();
+      const damage = defense
+        ? calculatePlayerDamageTaken(ENEMY_ATTACK_DAMAGE, defense.current, defense.maximum)
+        : ENEMY_ATTACK_DAMAGE;
+      damagePlayer(damage, { enemy, event, maximumDamage: ENEMY_ATTACK_DAMAGE, defense });
+      log(`Enemy hit Player for -${damage} Health`);
       onChange();
       return;
     }

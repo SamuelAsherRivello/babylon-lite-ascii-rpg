@@ -115,7 +115,7 @@ test("documents the plain safe-area template", async () => {
   const characterData = await readFile(new URL("src/runtime/ui-layer-react/character-data.js", appRoot), "utf8");
   for (const requiredFragment of [
     "startingPercent: 100",
-    "startingValue: 50",
+    "startingValue: 25",
     "maximum: 50",
     "startingPercent: 10",
     "startingPercent: 0",
@@ -202,8 +202,8 @@ test("documents the plain safe-area template", async () => {
   if (gameLayer.includes("staminaSystem.spendForMovement")) {
     throw new Error("Walking and sprinting must not spend stamina.");
   }
-  if (!gameBridge.includes("currentPercent: 50")
-    || !gameBridge.includes("previousPercent: 50")
+  if (!gameBridge.includes("currentPercent: 25")
+    || !gameBridge.includes("previousPercent: 25")
     || !gameBridge.includes("export function sendStaminaSnapshot(snapshot)")
     || !main.includes("controller.subscribeToStamina?.(sendStaminaSnapshot)")) {
     throw new Error("Stamina must cross the existing immutable game-to-React bridge.");

@@ -54,7 +54,8 @@ the completed health and stamina rules.
 - Affected runtime areas include the Babylon Lite combat, player lifecycle,
   enemy system, stamina integration, bridge snapshots, and React Character
   bar presentation.
-- The existing `5` maximum damage values remain the initial tuning inputs; the
+- The existing player maximum damage `20` and enemy maximum attack damage `5`
+  remain the initial tuning inputs; the
   new formulas determine the applied amount at the moment of impact.
 - The starting stamina remains `50 / 50`, and the proposed initial Offense and
   Defense maximums are `25` each; exact future level-growth values remain an

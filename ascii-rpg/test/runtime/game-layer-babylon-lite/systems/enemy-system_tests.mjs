@@ -9,6 +9,8 @@ import {
 } from "../../../../src/runtime/game-layer-babylon-lite/systems/enemy-system.js";
 import { createTimeSystem } from "../../../../src/runtime/game-layer-babylon-lite/systems/time-system.js";
 import { createPlayerLifecycle } from "../../../../src/runtime/game-layer-babylon-lite/systems/player-lifecycle.js";
+import { createCombatStatsSystem } from "../../../../src/runtime/game-layer-babylon-lite/systems/combat-stats-system.js";
+import { createStaminaSystem } from "../../../../src/runtime/game-layer-babylon-lite/systems/stamina-system.js";
 
 function createWorld(rows = 7, columns = 9) {
   return {
@@ -164,6 +166,29 @@ test("attacks a cardinally adjacent player for five without sharing the cell", (
   assert.deepEqual(harness.occupancy.get("enemy-1").cell, { x: 2, y: 3 });
   assert.deepEqual(harness.occupancy.get("player").cell, { x: 3, y: 3 });
   assert.deepEqual(harness.logs, ["Enemy hit Player for -5 Health"]);
+});
+
+test("applies defense mitigation to an adjacent enemy attack", () => {
+  const staminaSystem = createStaminaSystem({ initialStamina: 25 });
+  const combatStatsSystem = createCombatStatsSystem({ staminaSystem });
+  const harness = createHarness({ playerCell: { x: 3, y: 3 } });
+  const attacks = [];
+  const system = createEnemySystem({
+    timeSystem: harness.timeSystem,
+    occupancy: harness.occupancy,
+    getPlayerState: () => ({
+      realm: "Underground",
+      cell: { x: 3, y: 3 },
+      world: createWorld(),
+      alive: true,
+    }),
+    damagePlayer: (amount) => attacks.push(amount),
+    combatStatsSystem,
+  });
+  system.addEnemy({ id: "enemy-defense", realm: "Underground", cell: { x: 2, y: 3 }, bornAtTime: 1 });
+
+  harness.timeSystem.advance(2);
+  assert.deepEqual(attacks, [5]);
 });
 
 test("damages Player Lifecycle to zero and publishes death once", () => {

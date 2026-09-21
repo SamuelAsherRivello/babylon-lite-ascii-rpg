@@ -26,6 +26,7 @@ export function resolvePlayerDynamicCollision(occupant, {
 export function resolvePlayerCombatTurn(occupant, {
   timeSystem,
   staminaSystem,
+  experienceSystem,
   enemySystem,
   spawnerSystem,
   combatStatsSystem,
@@ -36,6 +37,11 @@ export function resolvePlayerCombatTurn(occupant, {
     combatStatsSystem,
   });
   if (result.handled) {
+    experienceSystem?.awardAttack?.();
+    if (result.killed) {
+      if (occupant.type === "enemy") experienceSystem?.awardEnemyKill?.();
+      if (occupant.type === "enemy-spawner") experienceSystem?.awardSpawnerKill?.();
+    }
     staminaSystem?.spendForAttack();
     timeSystem?.advance(1, "combat");
   }

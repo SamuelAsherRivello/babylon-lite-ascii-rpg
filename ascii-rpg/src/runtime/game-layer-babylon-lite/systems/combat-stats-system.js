@@ -1,8 +1,10 @@
 export const INITIAL_OFFENSE_MAXIMUM = 25;
 export const INITIAL_DEFENSE_MAXIMUM = 25;
-export const PLAYER_MAX_ATTACK_DAMAGE = 5;
+export const PLAYER_MAX_ATTACK_DAMAGE = 20;
 export const ENEMY_MAX_ATTACK_DAMAGE = 5;
 export const MAX_DEFENSE_MITIGATION = 0.5;
+export const COMBAT_STAT_MINIMUM_PERCENT = 5;
+export const COMBAT_STAT_STAMINA_SWING_PERCENT = 10;
 
 function clamp(value, maximum) {
   const numeric = Number(value);
@@ -15,7 +17,9 @@ function ratio(current, maximum) {
 
 export function deriveCombatStatValue(maximum, staminaCurrent, staminaMaximum) {
   const boundedMaximum = Math.max(0, Number(maximum) || 0);
-  return Math.round(boundedMaximum * ratio(staminaCurrent, staminaMaximum));
+  const readinessPercent = COMBAT_STAT_MINIMUM_PERCENT
+    + (COMBAT_STAT_STAMINA_SWING_PERCENT * ratio(staminaCurrent, staminaMaximum));
+  return boundedMaximum * (readinessPercent / 100);
 }
 
 export function calculatePlayerAttackDamage(
@@ -55,8 +59,11 @@ export function createCombatStatsSystem({
 } = {}) {
   const boundedOffenseMaximum = Math.max(0, Number(offenseMaximum) || 0);
   const boundedDefenseMaximum = Math.max(0, Number(defenseMaximum) || 0);
-  let offenseSnapshot = createStatSnapshot(boundedOffenseMaximum, boundedOffenseMaximum);
-  let defenseSnapshot = createStatSnapshot(boundedDefenseMaximum, boundedDefenseMaximum);
+  const initialStamina = staminaSystem?.getSnapshot?.() ?? { current: 0, maximum: 0 };
+  const initialOffense = deriveCombatStatValue(boundedOffenseMaximum, initialStamina.current, initialStamina.maximum);
+  const initialDefense = deriveCombatStatValue(boundedDefenseMaximum, initialStamina.current, initialStamina.maximum);
+  let offenseSnapshot = createStatSnapshot(initialOffense, boundedOffenseMaximum);
+  let defenseSnapshot = createStatSnapshot(initialDefense, boundedDefenseMaximum);
   const listeners = new Set();
 
   const notify = (stamina = staminaSystem?.getSnapshot?.() ?? { current: 0, maximum: 0 }) => {

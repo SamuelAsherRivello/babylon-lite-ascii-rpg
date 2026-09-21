@@ -43,6 +43,8 @@ import {
 import { MAX_ZOOM, MIN_ZOOM, ZOOM_SCALE_STORAGE_VERSION } from "../game-layer-babylon-lite/zoom-scale.js";
 import {
   getTimeSnapshot,
+  getCombatStatsSnapshot,
+  getExperienceSnapshot,
   getGoldSnapshot,
   getKeySnapshot,
   getHealthSnapshot,
@@ -69,6 +71,8 @@ import {
   sendZoomSnapshot,
   subscribeToPlayerMoved,
   subscribeToTime,
+  subscribeToCombatStats,
+  subscribeToExperience,
   subscribeToGold,
   subscribeToKey,
   subscribeToHealth,
@@ -315,6 +319,8 @@ function CharacterDetails({
   keys = INITIAL_CHARACTER.keys.currentAmount,
   health = INITIAL_CHARACTER.health.currentPercent,
   stamina = INITIAL_CHARACTER.stamina,
+  combatStats = { offense: INITIAL_CHARACTER.offense, defense: INITIAL_CHARACTER.defense },
+  experience = INITIAL_CHARACTER.experience,
   palette,
 }) {
   const goldStyle = getPaletteStyle(palette, "💰");
@@ -334,6 +340,20 @@ function CharacterDetails({
       revision: Number(stamina?.revision) || 0,
       currentPercent: staminaCurrentPercent,
       pendingPercent: staminaPreviousPercent,
+    },
+    offense: {
+      ...INITIAL_CHARACTER.offense,
+      ...(combatStats?.offense ?? {}),
+      currentValue: combatStats?.offense?.current ?? INITIAL_CHARACTER.offense.currentValue,
+    },
+    defense: {
+      ...INITIAL_CHARACTER.defense,
+      ...(combatStats?.defense ?? {}),
+      currentValue: combatStats?.defense?.current ?? INITIAL_CHARACTER.defense.currentValue,
+    },
+    experience: {
+      ...INITIAL_CHARACTER.experience,
+      ...(experience ?? {}),
     },
   };
   return (
@@ -1240,6 +1260,8 @@ function AppContent() {
   const keys = useSyncExternalStore(subscribeToKey, getKeySnapshot, getKeySnapshot);
   const health = useSyncExternalStore(subscribeToHealth, getHealthSnapshot, getHealthSnapshot);
   const stamina = useSyncExternalStore(subscribeToStamina, getStaminaSnapshot, getStaminaSnapshot);
+  const combatStats = useSyncExternalStore(subscribeToCombatStats, getCombatStatsSnapshot, getCombatStatsSnapshot);
+  const experience = useSyncExternalStore(subscribeToExperience, getExperienceSnapshot, getExperienceSnapshot);
   const log = useSyncExternalStore(subscribeToLog, getLogSnapshot, getLogSnapshot);
   const playerDead = useSyncExternalStore(subscribeToPlayerDead, getPlayerDeadSnapshot, getPlayerDeadSnapshot);
   const randomSeed = useSyncExternalStore(subscribeToRandomSeed, getRandomSeedSnapshot, getRandomSeedSnapshot);
@@ -1636,7 +1658,7 @@ function AppContent() {
         onKeyDown={(event) => handleTopPanelKeyDown(event, activateDetails)}
       >
         <BoxLayout action="Character">
-          <CharacterDetails gold={gold} keys={keys} health={health} stamina={stamina} palette={palette} />
+          <CharacterDetails gold={gold} keys={keys} health={health} stamina={stamina} combatStats={combatStats} experience={experience} palette={palette} />
         </BoxLayout>
       </CornerLayout>
       <QuestTracker quest={quest} />

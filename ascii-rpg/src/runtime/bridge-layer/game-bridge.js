@@ -28,11 +28,23 @@ let goldSnapshot = 0;
 let keySnapshot = 0;
 let healthSnapshot = 100;
 let staminaSnapshot = Object.freeze({
-  current: 50,
+  current: 25,
   maximum: 50,
-  currentPercent: 50,
-  previousPercent: 50,
+  currentPercent: 25,
+  previousPercent: 25,
   revision: 0,
+});
+let experienceSnapshot = Object.freeze({
+  currentPoints: 0,
+  pointsNeededForNextLevel: 100,
+  currentPercent: 0,
+  previousPercent: 0,
+  level: 1,
+  revision: 0,
+});
+let combatStatsSnapshot = Object.freeze({
+  offense: Object.freeze({ current: 2.5, maximum: 25, currentPercent: 10, previousPercent: 10, revision: 0 }),
+  defense: Object.freeze({ current: 2.5, maximum: 25, currentPercent: 10, previousPercent: 10, revision: 0 }),
 });
 let playerDeadSnapshot = false;
 let logSnapshot = [];
@@ -45,6 +57,8 @@ const goldListeners = new Set();
 const keyListeners = new Set();
 const healthListeners = new Set();
 const staminaListeners = new Set();
+const experienceListeners = new Set();
+const combatStatsListeners = new Set();
 const playerDeadListeners = new Set();
 const logListeners = new Set();
 const playerMovedListeners = new Set();
@@ -232,6 +246,50 @@ export function sendStaminaSnapshot(snapshot) {
     revision: staminaSnapshot.revision + 1,
   });
   for (const listener of staminaListeners) listener();
+}
+
+export function getExperienceSnapshot() { return experienceSnapshot; }
+export function subscribeToExperience(listener) { experienceListeners.add(listener); return () => experienceListeners.delete(listener); }
+export function sendExperienceSnapshot(snapshot) {
+  const pointsNeededForNextLevel = Math.max(1, Number(snapshot?.pointsNeededForNextLevel) || 100);
+  const currentPoints = Math.min(pointsNeededForNextLevel, Math.max(0, Number(snapshot?.currentPoints) || 0));
+  const currentPercent = Math.min(100, Math.max(0, (currentPoints * 100) / pointsNeededForNextLevel));
+  experienceSnapshot = Object.freeze({
+    currentPoints,
+    pointsNeededForNextLevel,
+    currentPercent,
+    previousPercent: experienceSnapshot.currentPercent,
+    level: Math.max(1, Math.floor(Number(snapshot?.level) || 1)),
+    revision: experienceSnapshot.revision + 1,
+  });
+  for (const listener of experienceListeners) listener();
+}
+
+export function getCombatStatsSnapshot() { return combatStatsSnapshot; }
+export function subscribeToCombatStats(listener) {
+  combatStatsListeners.add(listener);
+  return () => combatStatsListeners.delete(listener);
+}
+export function sendCombatStatsSnapshot(snapshot) {
+  const normalize = (value, fallback) => {
+    const maximum = Math.max(0, Number(value?.maximum) || fallback.maximum);
+    const current = Math.min(maximum, Math.max(0, Number(value?.current) || 0));
+    const currentPercent = maximum > 0
+      ? (current * 100) / maximum
+      : 0;
+    return Object.freeze({
+      current,
+      maximum,
+      currentPercent,
+      previousPercent: fallback.currentPercent,
+      revision: fallback.revision + 1,
+    });
+  };
+  combatStatsSnapshot = Object.freeze({
+    offense: normalize(snapshot?.offense, combatStatsSnapshot.offense),
+    defense: normalize(snapshot?.defense, combatStatsSnapshot.defense),
+  });
+  for (const listener of combatStatsListeners) listener();
 }
 
 export function getPlayerDeadSnapshot() { return playerDeadSnapshot; }

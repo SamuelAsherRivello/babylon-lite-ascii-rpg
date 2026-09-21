@@ -48,14 +48,14 @@ test("advances exactly one combat tick for a valid attack and none for a stale t
 
   resolvePlayerCombatTurn({ id: "enemy-1", type: "enemy" }, { timeSystem, staminaSystem, enemySystem });
   assert.equal(timeSystem.getTime(), 2);
-  assert.equal(staminaSystem.getCurrent(), 25);
+  assert.equal(staminaSystem.getCurrent(), 22.5);
   assert.deepEqual(causes, ["combat"]);
   resolvePlayerCombatTurn(null, { timeSystem, staminaSystem, enemySystem });
   assert.equal(timeSystem.getTime(), 2);
-  assert.equal(staminaSystem.getCurrent(), 25);
+  assert.equal(staminaSystem.getCurrent(), 22.5);
 });
 
-test("resolved attacks remain available below their stamina cost and clamp at zero", () => {
+test("resolved attacks spend ten percent of current stamina", () => {
   const timeSystem = createTimeSystem();
   const staminaSystem = createStaminaSystem({ initialStamina: 10 });
   const enemySystem = { damage: () => ({ id: "enemy-1", type: "enemy", health: 95 }) };
@@ -66,7 +66,7 @@ test("resolved attacks remain available below their stamina cost and clamp at ze
   );
 
   assert.deepEqual(result, { handled: true, killed: false });
-  assert.equal(staminaSystem.getCurrent(), 0);
+  assert.equal(staminaSystem.getCurrent(), 9);
   assert.equal(timeSystem.getTime(), 2);
 });
 
@@ -83,5 +83,28 @@ test("player collision damage follows current offense before spending stamina", 
       enemySystem: { damage: (id, amount) => calls.push([id, amount]) || {} },
     },
   );
-  assert.deepEqual(calls, [["enemy-1", 10]]);
+  assert.deepEqual(calls, [["enemy-1", 2]]);
+});
+
+test("awards attack experience and kill-specific experience without changing combat timing", () => {
+  const awards = [];
+  const experienceSystem = {
+    awardAttack: () => awards.push("attack"),
+    awardEnemyKill: () => awards.push("enemy-kill"),
+    awardSpawnerKill: () => awards.push("spawner-kill"),
+  };
+  const options = {
+    timeSystem: createTimeSystem(),
+    staminaSystem: createStaminaSystem(),
+    experienceSystem,
+    enemySystem: { damage: () => null },
+  };
+
+  resolvePlayerCombatTurn({ id: "enemy-1", type: "enemy" }, options);
+  resolvePlayerCombatTurn({ id: "spawner-1", type: "enemy-spawner" }, {
+    ...options,
+    spawnerSystem: { damage: () => null },
+  });
+
+  assert.deepEqual(awards, ["attack", "enemy-kill", "attack", "spawner-kill"]);
 });

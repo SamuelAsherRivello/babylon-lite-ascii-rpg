@@ -2,7 +2,7 @@ import { ENEMY_SPAWNER_GLYPH } from "./world-system.js";
 
 export { ENEMY_SPAWNER_GLYPH };
 export const ENEMY_SPAWNER_HEALTH = 100;
-export const ENEMY_SPAWN_INTERVAL = 30;
+export const ENEMY_SPAWN_INTERVAL = 100;
 export const MAX_NORMAL_ENEMY_SPAWNERS = 16;
 
 const NEIGHBOR_DIRECTIONS = Object.freeze([

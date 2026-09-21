@@ -34,3 +34,7 @@ stamina is spent and rise when movement-driven recovery restores stamina.
 #### Scenario: Experience bar shows the starting ordinal
 - **WHEN** the experience bar renders at the initial state
 - **THEN** the bar SHALL display `O1` and the data SHALL include zero current points and the points required for the next level
+
+#### Scenario: Enemy damage updates HUD health
+- **WHEN** an enemy attack changes the authoritative player health
+- **THEN** the health bar SHALL render the resulting percentage through the existing immutable health snapshot

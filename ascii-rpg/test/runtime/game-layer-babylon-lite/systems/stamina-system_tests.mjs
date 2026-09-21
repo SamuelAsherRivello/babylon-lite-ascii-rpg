@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   ATTACK_STAMINA_COST,
+  ATTACK_STAMINA_COST_PERCENT,
   INITIAL_PLAYER_STAMINA,
   MAX_PLAYER_STAMINA,
   STAMINA_BAR_NOMINAL_CAPACITY,
@@ -9,30 +10,31 @@ import {
   createStaminaSystem,
 } from "../../../../src/runtime/game-layer-babylon-lite/systems/stamina-system.js";
 
-test("starts at the bounded 50 stamina maximum", () => {
+test("starts at 25 stamina against a bounded 50 stamina maximum", () => {
   const stamina = createStaminaSystem();
 
-  assert.equal(INITIAL_PLAYER_STAMINA, 50);
+  assert.equal(INITIAL_PLAYER_STAMINA, 25);
   assert.equal(MAX_PLAYER_STAMINA, 50);
   assert.equal(STAMINA_BAR_NOMINAL_CAPACITY, 100);
-  assert.deepEqual(stamina.getSnapshot(), { current: 50, maximum: 50, currentPercent: 50 });
+  assert.deepEqual(stamina.getSnapshot(), { current: 25, maximum: 50, currentPercent: 25 });
   assert.equal(Object.isFrozen(stamina.getSnapshot()), true);
 });
 
-test("charges resolved attacks while movement ticks recover", () => {
+test("spends ten percent of current stamina while movement ticks recover", () => {
   const stamina = createStaminaSystem({ initialStamina: 30 });
 
-  assert.equal(ATTACK_STAMINA_COST, 25);
+  assert.equal(ATTACK_STAMINA_COST, 10);
+  assert.equal(ATTACK_STAMINA_COST_PERCENT, 10);
   assert.equal(STAMINA_PER_TIME_TICK, 10);
 
   stamina.spendForAttack();
-  assert.equal(stamina.getCurrent(), 5);
+  assert.equal(stamina.getCurrent(), 27);
   stamina.recoverForTimeTick();
-  assert.equal(stamina.getCurrent(), 15);
+  assert.equal(stamina.getCurrent(), 37);
 });
 
-test("clamps recovery to maximum and attack cost to zero", () => {
-  const full = createStaminaSystem();
+test("clamps recovery and preserves zero stamina", () => {
+  const full = createStaminaSystem({ initialStamina: 50 });
   full.recoverForTimeTick();
   assert.equal(full.getCurrent(), 50);
 
@@ -53,8 +55,8 @@ test("publishes immutable current and maximum snapshots", () => {
 
   assert.deepEqual(received, [
     { current: 5, maximum: 50, currentPercent: 5 },
-    { current: 0, maximum: 50, currentPercent: 0 },
-    { current: 10, maximum: 50, currentPercent: 10 },
+    { current: 4.5, maximum: 50, currentPercent: 4.5 },
+    { current: 14.5, maximum: 50, currentPercent: 14.5 },
   ]);
   assert.equal(received.every(Object.isFrozen), true);
   unsubscribe();

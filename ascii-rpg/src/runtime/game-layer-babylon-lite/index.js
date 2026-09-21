@@ -89,6 +89,8 @@ import { createGameplayEventSystem } from "./systems/gameplay-event-system.js";
 import { createRealmSystem } from "./systems/realm-system.js";
 import { createPlayerLifecycle } from "./systems/player-lifecycle.js";
 import { createStaminaSystem } from "./systems/stamina-system.js";
+import { createExperienceSystem } from "./systems/experience-system.js";
+import { createCombatStatsSystem } from "./systems/combat-stats-system.js";
 import { createCivilizationGroups, isCardinalDirection } from "./systems/civilization-system.js";
 import { createDynamicOccupancy, getDynamicVisibleGlyph } from "./systems/dynamic-occupancy.js";
 import { createEnemySystem } from "./systems/enemy-system.js";
@@ -253,6 +255,8 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   let cameraMode = normalizeCameraMode(initialCameraMode);
   const timeSystem = createTimeSystem();
   const staminaSystem = createStaminaSystem();
+  const experienceSystem = createExperienceSystem();
+  const combatStatsSystem = createCombatStatsSystem({ staminaSystem });
   const stopStaminaTimeRecovery = timeSystem.subscribe((time, event) => {
     if (event?.cause === "movement") staminaSystem.recoverForTimeTick();
   });
@@ -1283,6 +1287,8 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     const collision = resolvePlayerCombatTurn(getOccupancyForWorld()?.getAt(attemptedCell), {
       timeSystem,
       staminaSystem,
+      experienceSystem,
+      combatStatsSystem,
       enemySystem,
       spawnerSystem: enemySpawnerSystem,
     });
@@ -1714,6 +1720,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
         playerLifecycle.applyHealthDelta(-amount);
         if (playerLifecycle.isDead()) clearMovementInput();
       },
+      combatStatsSystem,
       isStaticOccupied,
       isStaticOccupiedIndex,
       log: (message) => logSystem.log({ message }),
@@ -1918,6 +1925,14 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     subscribeToStamina(listener) {
       return staminaSystem.subscribe(listener);
     },
+    getExperienceSnapshot() { return experienceSystem.getSnapshot(); },
+    subscribeToExperience(listener) {
+      return experienceSystem.subscribe(listener);
+    },
+    getCombatStatsSnapshot() { return combatStatsSystem.getSnapshot(); },
+    subscribeToCombatStats(listener) {
+      return combatStatsSystem.subscribe(listener);
+    },
     getPlayerDead() { return playerLifecycle.isDead(); },
     subscribeToPlayerDead(listener) {
       return playerLifecycle.subscribeToDeath(listener);
@@ -2033,6 +2048,8 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       disposeEngine(engine);
       stopStaminaTimeRecovery();
       staminaSystem.dispose();
+      experienceSystem.dispose();
+      combatStatsSystem.dispose();
       healthBarSystem.clear();
       for (const occupancy of dynamicOccupancies.values()) occupancy.clear();
       dynamicOccupancies.clear();

@@ -101,18 +101,18 @@ function createHarness({ validCells = null, random = () => 0 } = {}) {
   return { timeSystem, occupancy, spawned, logs, damageEvents, system };
 }
 
-test("spawns at time 1 and every 30 units without deferred backlog", () => {
+test("spawns at time 1 and every 100 units without deferred backlog", () => {
   const harness = createHarness();
   harness.system.addSpawner({ id: "spawner-1", realm: "Underground", cell: { x: 5, y: 5 }, bornAtTime: 1 });
 
   harness.timeSystem.dispatchCurrent();
   assert.deepEqual(harness.spawned.map(({ bornAtTime }) => bornAtTime), [1]);
-  harness.timeSystem.advance(29);
+  harness.timeSystem.advance(99);
   assert.equal(harness.spawned.length, 1);
   harness.timeSystem.advance();
-  assert.deepEqual(harness.spawned.map(({ bornAtTime }) => bornAtTime), [1, 31]);
-  harness.timeSystem.advance(30);
-  assert.deepEqual(harness.spawned.map(({ bornAtTime }) => bornAtTime), [1, 31, 61]);
+  assert.deepEqual(harness.spawned.map(({ bornAtTime }) => bornAtTime), [1, 101]);
+  harness.timeSystem.advance(100);
+  assert.deepEqual(harness.spawned.map(({ bornAtTime }) => bornAtTime), [1, 101, 201]);
 });
 
 test("uses the sole valid neighboring cell and skips an all-blocked attempt", () => {
@@ -123,7 +123,7 @@ test("uses the sole valid neighboring cell and skips an all-blocked attempt", ()
   harness.timeSystem.dispatchCurrent();
   assert.deepEqual(harness.spawned[0].cell, { x: 6, y: 5 });
   validCells.clear();
-  harness.timeSystem.advance(30);
+  harness.timeSystem.advance(100);
   assert.equal(harness.spawned.length, 1);
 });
 
@@ -180,9 +180,9 @@ test("keeps earlier enemies independently registered across multiple spawn caden
   spawnerSystem.addSpawner({ id: "spawner-1", realm: "Underground", cell: { x: 5, y: 5 } });
 
   timeSystem.dispatchCurrent();
-  timeSystem.advance(60);
+  timeSystem.advance(200);
 
   const enemies = occupancy.getAll("enemy");
   assert.equal(enemies.length, 3);
-  assert.deepEqual(enemies.map((enemy) => enemySystem.getAge(enemy.id, 61)), [60, 30, 0]);
+  assert.deepEqual(enemies.map((enemy) => enemySystem.getAge(enemy.id, 201)), [200, 100, 0]);
 });
