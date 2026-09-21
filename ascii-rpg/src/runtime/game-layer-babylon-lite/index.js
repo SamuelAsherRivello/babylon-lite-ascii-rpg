@@ -36,6 +36,7 @@ import {
   getInitialViewOriginForCamera,
   getViewOriginForPreservedPlayerPosition,
   getViewOriginForCamera,
+  getViewOriginForResize,
   moveWorldCell,
 } from "./characters/player/player-grid.js";
 import { normalizeCameraMode } from "../bridge-layer/camera.js";
@@ -1122,10 +1123,20 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     }
   };
 
-  const rebuildViewport = ({ centerOnPlayer = false, zoomChanged = false } = {}) => {
+  const rebuildViewport = ({ centerOnPlayer = false, zoomChanged = false, recalculateCamera = false } = {}) => {
+    const previousViewport = viewport;
     viewport = createViewportForCanvas(canvas, zoom);
     if (centerOnPlayer) {
       resolveViewForPlayer();
+    } else if (recalculateCamera && world && playerCell) {
+      viewOrigin = getViewOriginForResize(
+        cameraMode,
+        playerCell,
+        previousViewport,
+        viewport,
+        world,
+        viewOrigin,
+      );
     } else {
       clampViewOrigin();
     }
@@ -1260,8 +1271,10 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     const wasMoving = touchDirection !== null;
     touchDirection = nextDirection;
     if (wasMoving) return;
-    movePlayer();
-    scheduleRepeat(INITIAL_REPEAT_DELAY_MS);
+    const exhaustedAtAttempt = movePlayer();
+    scheduleRepeat(exhaustedAtAttempt
+      ? getRepeatInterval(shiftHeld, true)
+      : INITIAL_REPEAT_DELAY_MS);
   };
 
   const handlePointerStop = (event) => {

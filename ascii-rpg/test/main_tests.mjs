@@ -225,6 +225,11 @@ test("documents the plain safe-area template", async () => {
   if (!gameLayer.includes("navigator.gpu") || !gameLayer.includes("container.replaceChildren()")) {
     throw new Error("A WebGPU startup failure must leave the game layer unloaded without a canvas fallback.");
   }
+  if (!gameLayer.includes("getViewOriginForResize")
+    || !gameLayer.includes("recalculateCamera: true")
+    || !gameLayer.includes("world && playerCell")) {
+    throw new Error("Viewport resize must recalculate the active camera only when playable world state exists.");
+  }
   if (!gameLayer.includes("canvas.clientWidth || window.innerWidth")
     || !gameLayer.includes("canvas.clientHeight || window.innerHeight")
     || !gameLayer.includes("new ResizeObserver(handleResize)")) {

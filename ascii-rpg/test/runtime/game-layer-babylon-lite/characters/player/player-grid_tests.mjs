@@ -23,6 +23,7 @@ import {
   getViewOriginForPreservedPlayerPosition,
   getViewOriginForPlayer,
   getViewOriginForCamera,
+  getViewOriginForResize,
   moveCell,
   moveWorldCell,
 } from "../../../../../src/runtime/game-layer-babylon-lite/characters/player/player-grid.js";
@@ -187,6 +188,60 @@ test("preserves the player's screen position when changing realms", () => {
   );
 
   assert.deepEqual(getPlayerScreenCenter(destinationPlayer, destinationOrigin, viewport), sourceCenter);
+});
+
+test("recalculates camera origins for a resized viewport without moving the player", () => {
+  const world = { columns: 256, rows: 256 };
+  const landscape = createViewport({ screenWidth: 640, screenHeight: 352, zoom: 10 });
+  const portrait = createViewport({ screenWidth: 352, screenHeight: 640, zoom: 10 });
+  const playerCell = { x: 90, y: 70 };
+  const previousOrigin = { x: 80, y: 60 };
+
+  const centered = getViewOriginForResize(
+    "center", playerCell, landscape, portrait, world, previousOrigin,
+  );
+  assert.deepEqual(
+    { x: playerCell.x - centered.x, y: playerCell.y - centered.y },
+    getCenterCell(portrait),
+  );
+
+  const deadzone = getViewOriginForResize(
+    "deadzone", playerCell, landscape, portrait, world, previousOrigin,
+  );
+  assert.ok(deadzone.x >= 0 && deadzone.y >= 0);
+  assert.ok(deadzone.x <= world.columns - portrait.columns);
+  assert.ok(deadzone.y <= world.rows - portrait.rows);
+  const deadzoneScreenCell = {
+    x: playerCell.x - deadzone.x,
+    y: playerCell.y - deadzone.y,
+  };
+  const deadzoneHalfWidth = Math.floor(portrait.columns * 0.2);
+  const deadzoneHalfHeight = Math.floor(portrait.rows * 0.2);
+  assert.ok(Math.abs(deadzoneScreenCell.x - Math.floor(portrait.columns / 2)) <= deadzoneHalfWidth);
+  assert.ok(Math.abs(deadzoneScreenCell.y - Math.floor(portrait.rows / 2)) <= deadzoneHalfHeight);
+
+  const locked = getViewOriginForResize(
+    "lock", playerCell, landscape, portrait, world, { x: 89, y: 69 },
+  );
+  assert.deepEqual(locked, { x: 89, y: 69 });
+  assert.deepEqual(
+    { x: playerCell.x - locked.x, y: playerCell.y - locked.y },
+    { x: 1, y: 1 },
+  );
+});
+
+test("recalculates resized camera origins at world boundaries", () => {
+  const world = { columns: 20, rows: 20 };
+  const previousViewport = createViewport({ screenWidth: 640, screenHeight: 352, zoom: 10 });
+  const viewport = createViewport({ screenWidth: 1280, screenHeight: 720, zoom: 10 });
+  const playerCell = { x: 1, y: 1 };
+
+  for (const mode of ["center", "deadzone", "lock"]) {
+    const origin = getViewOriginForResize(
+      mode, playerCell, previousViewport, viewport, world, { x: 0, y: 0 },
+    );
+    assert.deepEqual(origin, { x: 0, y: 0 }, `${mode} resize must clamp at the world boundary`);
+  }
 });
 
 test("maps WASD and arrow keys to the same directions", () => {

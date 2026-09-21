@@ -231,3 +231,25 @@ export function getViewOriginForPreservedPlayerPosition(playerCell, screenCell, 
     y: playerCell.y - screenCell.y,
   }, viewport, world);
 }
+
+export function getViewOriginForResize(mode, playerCell, previousViewport, viewport, world, previousOrigin) {
+  if (mode !== "lock") {
+    return getViewOriginForCamera(mode, playerCell, viewport, world, previousOrigin);
+  }
+
+  const screenCell = {
+    x: playerCell.x - previousOrigin.x,
+    y: playerCell.y - previousOrigin.y,
+  };
+  const previousVisibleColumns = Math.min(previousViewport.columns, world.columns);
+  const previousVisibleRows = Math.min(previousViewport.rows, world.rows);
+  const visibleColumns = Math.min(viewport.columns, world.columns);
+  const visibleRows = Math.min(viewport.rows, world.rows);
+  if (screenCell.x >= 0 && screenCell.x < previousVisibleColumns
+    && screenCell.y >= 0 && screenCell.y < previousVisibleRows
+    && screenCell.x < visibleColumns && screenCell.y < visibleRows) {
+    return getViewOriginForPreservedPlayerPosition(playerCell, screenCell, viewport, world);
+  }
+
+  return getViewOriginForCamera(mode, playerCell, viewport, world, previousOrigin);
+}
