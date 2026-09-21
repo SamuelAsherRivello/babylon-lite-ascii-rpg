@@ -29,6 +29,6 @@
 - [x] 3.1 Extend focused fog, world, and rendering tests for Overground `95%`,
   Underground `60%`, independent X/Y extents, clamping, minimap visibility,
   and inactive-realm isolation
-- [ ] 3.2 Run the repository's documented Node test suite and build command,
+- [x] 3.2 Run the repository's documented Node test suite and build command,
   then manually inspect a fresh Overground and Underground browser start at
   the verified project URL to confirm the initial fog presentation
