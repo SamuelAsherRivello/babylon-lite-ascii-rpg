@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import questData from "../../../../src/runtime/game-layer-babylon-lite/data/quest_data.json" with { type: "json" };
 import { createQuestManager, QUEST_STATES } from "../../../../src/runtime/game-layer-babylon-lite/systems/quest-system.js";
-import { createPickupSystem, selectPickupCells } from "../../../../src/runtime/game-layer-babylon-lite/systems/pickup-system.js";
+import { createObjectSpawnerSystem, selectPickupCells } from "../../../../src/runtime/game-layer-babylon-lite/systems/object-spawner-system.js";
 
 const collectGold = {
   id: "collect-gold", title: "Collect Gold", objective: "Collect Gold",
@@ -39,15 +39,27 @@ test("absolute quests can complete immediately from current values", () => {
   assert.equal(manager.getSnapshot().current, 100);
 });
 
+test("starting a pickup quest requests its configured Gold placements", () => {
+  const requests = [];
+  const manager = createQuestManager([{
+    ...collectGold,
+    pickup: { type: "gold", distances: [10, 30, 100] },
+  }], {}, { requestPickup: (request) => requests.push(request) });
+  manager.startQuest("collect-gold");
+  assert.deepEqual(requests, [{ type: "gold", distances: [10, 30, 100], questId: "collect-gold" }]);
+});
+
 test("pickup collection applies its effect once and emits a collection event", () => {
-  const system = createPickupSystem();
+  const system = createObjectSpawnerSystem({ catalog: [{
+    type: "gold", name: "Gold", glyph: "💰", IsPickup: true, IsLevelSpawned: false,
+  }] });
   let gold = 0;
   const events = [];
   system.subscribe((event) => events.push(event));
-  system.addPickup({ id: "gold-1", type: "gold", cell: { x: 2, y: 3 }, effect: () => { gold += 1; } });
-  assert.ok(system.collectAtCell({ x: 2, y: 3 }));
+  system.addObject({ id: "gold-1", type: "gold", cell: { x: 2, y: 3 }, effect: () => { gold += 1; } });
+  assert.ok(system.collideAtCell({ x: 2, y: 3 }));
   assert.equal(gold, 1);
-  assert.equal(system.collectAtCell({ x: 2, y: 3 }), null);
+  assert.equal(system.collideAtCell({ x: 2, y: 3 }), null);
   assert.equal(gold, 1);
   assert.equal(events[0].pickupType, "gold");
 });

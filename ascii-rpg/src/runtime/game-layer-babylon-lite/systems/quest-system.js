@@ -17,7 +17,7 @@ function getProgress(criterion, values, baseline) {
   return criterion.mode === "relative" ? Math.max(0, value - baseline) : Math.max(0, value);
 }
 
-export function createQuestManager(definitions = [], initialValues = {}) {
+export function createQuestManager(definitions = [], initialValues = {}, { requestPickup = () => {} } = {}) {
   const definitionsById = new Map(definitions.map((definition) => [definition.id, definition]));
   const listeners = new Set();
   let activeQuest = null;
@@ -70,6 +70,7 @@ export function createQuestManager(definitions = [], initialValues = {}) {
         current: 0,
         state: QUEST_STATES.pending,
       };
+      if (definition.pickup) requestPickup(Object.freeze({ ...definition.pickup, questId: definition.id }));
       emit("started");
       evaluate(values, false);
       return snapshot();

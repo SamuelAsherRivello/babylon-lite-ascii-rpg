@@ -48,6 +48,10 @@ import {
   createRandom,
   createWorldRealms,
   GOLD_GLYPH,
+  HEALTH_GLYPH,
+  TRAP_GLYPH,
+  TORCH_GLYPH,
+  STAIR_GLYPH,
   getRandomSeedFromSearch,
   getVisibleGlyph,
   setCharacter,
@@ -75,10 +79,12 @@ import { getMinimapEdgeIndicators, getMinimapIndicatorSafeArea, getMinimapMarker
 import { canHandleMinimapScale, getMinimapCellLayout, getNextMinimapScale, MINIMAP_SCALE_LEVELS } from "./systems/minimap-zoom.js";
 import { createTransitionSystem, TRANSITION_PHASES } from "./systems/transition-system.js";
 import questData from "./data/quest_data.json";
-import { createPickupSystem, selectPickupCells } from "./systems/pickup-system.js";
+import objectData from "./data/object_data.json";
+import { createObjectSpawnerSystem, selectObjectCells } from "./systems/object-spawner-system.js";
 import { createQuestManager } from "./systems/quest-system.js";
+import { createLogSystem } from "./systems/log-system.js";
 
-const GLYPHS = ["▒", "△", "•", "P", "T", "S", "◆", "~", "≈", "▓"];
+const GLYPHS = ["▒", "△", "•", "P", "🕯️", "S", "💰", "~", "≈", "▓", "♥", "☠", "⚔"];
 const WORLD_ROWS = 512;
 const WORLD_COLUMNS = 512;
 const TORCHES_PER_SCREEN = 3;
@@ -121,13 +127,15 @@ function createViewportForCanvas(canvas, zoom = DEFAULT_ZOOM) {
   });
 }
 
-function getTorchCountForViewport(viewport) {
-  const worldArea = WORLD_ROWS * WORLD_COLUMNS;
-  const visibleScreenArea = Math.max(1, viewport.rows * viewport.columns);
-  return Math.max(
-    TORCHES_PER_SCREEN,
-    Math.round((worldArea / visibleScreenArea) * TORCHES_PER_SCREEN),
-  );
+function getObjectDistributionCount(type, seed) {
+  const distribution = objectData.objects.find((object) => object.type === type)?.distribution;
+  if (!distribution?.minCount || !distribution?.maxCount) return 0;
+  return distribution.minCount + Math.floor(createRandom(`${seed}:${type}:count`)() * (distribution.maxCount - distribution.minCount + 1));
+}
+
+function getTorchCountForViewport(viewport, seed) {
+  void viewport;
+  return getObjectDistributionCount("torch", seed);
 }
 
 /**
@@ -192,15 +200,18 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   let activeRealm = initialRealm === "Underground" ? "Underground" : "Overground";
   let playerCell = null;
   let characterGold = 0;
+  let characterHealth = 80;
   let questManager = null;
-  let pickupSystem = null;
+  let objectSpawnerSystem = null;
   const questListeners = new Set();
   const goldListeners = new Set();
+  const healthListeners = new Set();
   let fogOfWar = null;
   let minimapZoom = 2;
   let viewOrigin = { x: 0, y: 0 };
   let cameraMode = "center";
   const timeSystem = createTimeSystem();
+  const logSystem = createLogSystem();
   let palette = initialPalette.map((entry) => ({ ...entry }));
   let paletteColors = reconcilePaletteColors(null, palette).colors;
   let lighting = {
@@ -232,6 +243,10 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
 
   const notifyGold = () => {
     for (const listener of goldListeners) listener(characterGold);
+  };
+
+  const notifyHealth = () => {
+    for (const listener of healthListeners) listener(characterHealth);
   };
 
   const renderMinimap = () => {
@@ -444,6 +459,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     if (world && playerCell) clearCharacter(world, playerCell);
     activeRealm = name;
     world = worldRealms.realms[name];
+    logSystem.log({ message: `Player entered the ${activeRealm} Realm` });
     fogOfWar = world.fog;
     playerCell = arrival ?? world.playerCell ?? world.playerStart;
     world.playerCell = playerCell;
@@ -800,7 +816,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     );
     metrics.glyphWarmupMs += visual.warmupMs;
     if (visual.atlas !== atlas) rebuildLayer(visual.atlas);
-    const lightField = lightingFieldCache.get(world, region, world.torches, playerCell, lighting);
+    const lightField = lightingFieldCache.get(world, region, objectSpawnerSystem?.getLightingSources(world) ?? world.torches, playerCell, lighting);
     renderWorldViewComposition(composition, {
       drawCell: ({ localX, localY, slot, glyph, discovered }) => {
         if (!discovered) {
@@ -860,7 +876,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     const glyphs = visibleCells.map((cell) => getVisibleGlyph(world, cell));
     const visual = glyphCache.ensure(zoom, viewport.gridWidth, glyphs);
     metrics.glyphWarmupMs += visual.warmupMs;
-    const lightField = lightingFieldCache.get(world, region, world.torches, playerCell, lighting);
+    const lightField = lightingFieldCache.get(world, region, objectSpawnerSystem?.getLightingSources(world) ?? world.torches, playerCell, lighting);
     for (const cell of visibleCells) {
       renderCell(region, cell.x - region.x, cell.y - region.y, visual.frames, lightField);
     }
@@ -893,7 +909,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     playerCell = nextCell;
     setCharacter(world, playerCell);
     world.playerCell = playerCell;
-    pickupSystem?.collectAtCell(playerCell, { playerCell: { ...playerCell }, world });
+    objectSpawnerSystem?.collideAtCell(playerCell, { playerCell: { ...playerCell }, world });
     timeSystem.advance();
     if (direction.x === 0 && direction.y === -1) sendPlayerMovedEvent(PLAYER_MOVED_EVENTS.up);
     else if (direction.x === 0 && direction.y === 1) sendPlayerMovedEvent(PLAYER_MOVED_EVENTS.down);
@@ -1039,7 +1055,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
         const candidate = await createWorldRealms({
           rows: WORLD_ROWS,
           columns: WORLD_COLUMNS,
-          torchCount: getTorchCountForViewport(viewport),
+          torchCount: getTorchCountForViewport(viewport, seed),
           seed,
           initialRealm: activeRealm,
         }, {
@@ -1062,34 +1078,75 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     playerCell = world.playerStart;
     world.playerCell = playerCell;
     fogOfWar = world.fog;
-    const collectGoldDefinition = questData.quests.find((quest) => quest.id === "collect-gold");
-    questManager = createQuestManager(questData.quests, { gold: characterGold });
-    pickupSystem = createPickupSystem();
+    objectSpawnerSystem = createObjectSpawnerSystem({ catalog: objectData.objects });
+    const addObjectToRealm = (realm, definition) => {
+      const object = objectSpawnerSystem.addObject({ ...definition, realm });
+      realm.objects.push(object);
+      realm.characters[object.cell.y][object.cell.x] = object.glyph;
+      return object;
+    };
+    const randomObjectCount = (type, seed) => getObjectDistributionCount(type, seed);
+    for (const [realmName, realm] of Object.entries(worldRealms.realms)) {
+      realm.objects = [];
+      realm.pickups = realm.objects;
+      realm.questPickupIds = new Set();
+      for (const torch of realm.torches ?? []) addObjectToRealm(realm, {
+        id: `${realmName.toLowerCase()}-torch-${torch.x}-${torch.y}`,
+        type: "torch", cell: torch, effect: () => {},
+      });
+      for (const stair of realm.stairs ?? []) addObjectToRealm(realm, {
+        id: `${realmName.toLowerCase()}-stairs-${stair.x}-${stair.y}`,
+        type: "stairs", cell: stair, effect: () => {},
+      });
+      const heartCells = selectObjectCells(realm, realm.playerStart, randomObjectCount("heart", realm.options.seed), createRandom(`${realm.options.seed}:heart:placement`), { minimumDistance: 3, reserved: new Set() });
+      heartCells.forEach((cell, index) => addObjectToRealm(realm, {
+        id: `${realmName.toLowerCase()}-heart-${index + 1}`,
+        type: "heart", cell,
+        effect: () => {
+          characterHealth = Math.min(100, characterHealth + 2);
+          notifyHealth();
+          logSystem.log({ message: "Player collected +2 Health from Heart" });
+        },
+      }));
+      const trapCells = selectObjectCells(realm, realm.playerStart, randomObjectCount("trap", realm.options.seed), createRandom(`${realm.options.seed}:trap:placement`), { minimumDistance: 3, reserved: new Set(heartCells.map((cell) => `${cell.x},${cell.y}`)) });
+      trapCells.forEach((cell, index) => addObjectToRealm(realm, {
+        id: `${realmName.toLowerCase()}-trap-${index + 1}`,
+        type: "trap", cell,
+        effect: () => {
+          characterHealth = Math.max(0, characterHealth - 2);
+          notifyHealth();
+          logSystem.log({ message: "Player lost -2 Health from Trap" });
+        },
+      }));
+    }
+    questManager = createQuestManager(questData.quests, { gold: characterGold }, {
+      requestPickup: ({ type, distances }) => {
+        if (type !== "gold") return;
+        const goldObjects = objectSpawnerSystem.requestPickupObjects({
+          type, world, start: world.playerStart, distances,
+          random: createRandom(`${world.options.seed}:quest:collect-gold`),
+          realm: world, idPrefix: `${activeRealm.toLowerCase()}-gold`,
+          effect: () => {
+            characterGold += 1;
+            notifyGold();
+            logSystem.log({ message: "Player collected +1 Gold from Gold" });
+          },
+        });
+        world.objects.push(...goldObjects);
+        for (const object of goldObjects) world.questPickupIds.add(object.id);
+        for (const object of goldObjects) world.characters[object.cell.y][object.cell.x] = object.glyph;
+      },
+    });
     questManager.subscribe(({ snapshot }) => notifyQuest(snapshot));
-    pickupSystem.subscribe((event) => {
+    objectSpawnerSystem.subscribe((event) => {
       questManager.observe(event, { gold: characterGold });
       notifyQuest(questManager.getSnapshot());
       scheduleMinimapRender();
     });
-    world.pickups = [];
-    const questRandom = createRandom(`${world.options.seed}:quest:collect-gold`);
-    const pickupCells = selectPickupCells(world, world.playerStart, collectGoldDefinition.pickup.distances, questRandom);
-    pickupCells.forEach((cell, index) => {
-      const pickup = pickupSystem.addPickup({
-        id: `gold-${index + 1}`,
-        type: "gold",
-        cell,
-        glyph: GOLD_GLYPH,
-        effect: () => {
-          characterGold += 1;
-          notifyGold();
-        },
-      });
-      world.pickups.push(pickup);
-      world.characters[cell.y][cell.x] = GOLD_GLYPH;
-    });
     questManager.startQuest("collect-gold", { gold: characterGold });
+    logSystem.log({ message: `Player entered the ${activeRealm} Realm` });
     notifyGold();
+    notifyHealth();
     refreshDiscovery();
     resolveViewForPlayer();
     const firstRender = renderWorld();
@@ -1214,6 +1271,16 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       listener(characterGold);
       return () => goldListeners.delete(listener);
     },
+    getHealth() { return characterHealth; },
+    subscribeToHealth(listener) {
+      healthListeners.add(listener);
+      listener(characterHealth);
+      return () => healthListeners.delete(listener);
+    },
+    getLogSnapshot() { return logSystem.getSnapshot(); },
+    subscribeToLog(listener) {
+      return logSystem.subscribe(listener);
+    },
     subscribeToRealm(listener) { realmListeners.add(listener); return () => realmListeners.delete(listener); },
     subscribeToMinimapZoom(listener) { minimapZoomListeners.add(listener); return () => minimapZoomListeners.delete(listener); },
     setTorchLighting(profile) {
@@ -1252,8 +1319,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       const selected = normalizeCameraMode(nextMode);
       if (selected === cameraMode) return;
       cameraMode = selected;
-      resolveViewForPlayer();
-      renderWorld();
+      rebuildViewport({ centerOnPlayer: true });
     },
     getTime() {
       return timeSystem.getTime();
@@ -1287,6 +1353,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       glyphCache.dispose();
       disposeEngine(engine);
       timeSystem.dispose();
+      logSystem.dispose();
       container.replaceChildren();
     },
   });

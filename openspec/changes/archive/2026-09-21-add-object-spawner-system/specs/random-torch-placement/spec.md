@@ -1,10 +1,6 @@
-# random-torch-placement Specification
+# Spec Delta
 
-## Purpose
-Provides deterministic, non-interactive torch landmarks in generated ASCII
-levels so later lighting systems can use stable torch positions.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Generated levels use screen-relative torch density
 
@@ -58,15 +54,7 @@ Torch objects SHALL preserve the walkability of their underlying terrain, SHALL 
 - **WHEN** the player enters a walkable Torch cell
 - **THEN** movement SHALL succeed and the Torch SHALL remain present and non-interactable
 
-### Requirement: Paired stairs use torch density target
-The game layer SHALL request the same stair count as its requested
-screen-relative torch count. A shortage of valid paired stair coordinates
-SHALL yield a deterministic valid subset and SHALL NOT invalidate otherwise
-valid realm generation.
-
-#### Scenario: Stairs target torch count
-- **WHEN** the game layer requests a screen-relative torch count for a world
-- **THEN** it requests that same count for synchronized paired stairs
+## ADDED Requirements
 
 ### Requirement: Paired stairs use object-spawner distribution
 

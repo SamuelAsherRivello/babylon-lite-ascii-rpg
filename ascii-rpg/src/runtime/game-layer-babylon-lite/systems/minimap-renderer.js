@@ -7,7 +7,6 @@ export const MINIMAP_MARKER_DEPTHS = Object.freeze({
   world: 10,
   start: 20,
   quest: 30,
-  torch: 35,
   player: 40,
 });
 
@@ -17,9 +16,21 @@ export const MINIMAP_INDICATOR_MIN_SIZE = 9.6;
 const MINIMAP_MARKER_COLORS = Object.freeze({
   start: "#00ff00",
   quest: "#ffff00",
-  torch: "#ffffff",
   player: "#ffff00",
 });
+
+function getWorldObjects(world) {
+  return world?.objects ?? world?.pickups ?? [];
+}
+
+function getPickupObjects(world) {
+  if (world?.objects) {
+    const markerIds = world.questPickupIds;
+    if (!(markerIds instanceof Set) && !Array.isArray(markerIds)) return [];
+    return world.objects.filter((object) => markerIds.has?.(object.id) || markerIds.includes?.(object.id));
+  }
+  return world?.pickups ?? [];
+}
 
 function hexToRgb(color) {
   return [0, 2, 4].map((offset) => Number.parseInt(color.slice(offset + 1, offset + 3), 16));
@@ -49,19 +60,12 @@ export function getMinimapMarkers(world, fog, playerCell) {
       depth: MINIMAP_MARKER_DEPTHS.start, cell: getMinimapMarkerCell(world.playerStart),
     });
   }
-  for (const pickup of world.pickups ?? []) {
+  for (const pickup of getPickupObjects(world)) {
     if (!pickup.active) continue;
     markers.push({
       type: "quest", color: MINIMAP_MARKER_COLORS.quest,
       depth: MINIMAP_MARKER_DEPTHS.quest, pickupId: pickup.id,
       cell: getMinimapMarkerCell(pickup.cell),
-    });
-  }
-  for (const torch of world.torches ?? []) {
-    if (!isDiscovered(fog, world, torch)) continue;
-    markers.push({
-      type: "torch", color: MINIMAP_MARKER_COLORS.torch,
-      depth: MINIMAP_MARKER_DEPTHS.torch, cell: getMinimapMarkerCell(torch),
     });
   }
   if (playerCell) {
@@ -96,7 +100,7 @@ export function getMinimapEdgeIndicators(world, playerCell, viewport) {
   const maximumY = viewport.y + viewport.rows - 1;
   const localPlayer = { x: playerCell.x - minimumX, y: playerCell.y - minimumY };
   const edgeCounts = new Map();
-  for (const pickup of world.pickups ?? []) {
+  for (const pickup of getPickupObjects(world)) {
     if (!pickup.active) continue;
     const localTarget = { x: pickup.cell.x - minimumX, y: pickup.cell.y - minimumY };
     if (localTarget.x >= 0 && localTarget.x < viewport.columns && localTarget.y >= 0 && localTarget.y < viewport.rows) continue;

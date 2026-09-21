@@ -1,0 +1,54 @@
+{
+  "objects": [
+    {
+      "type": "gold",
+      "name": "Gold",
+      "glyph": "💰",
+      "IsPickup": true,
+      "IsLevelSpawned": false,
+      "consequence": { "id": "gold", "amount": 1 },
+      "logText": "Collected +1 Gold from Gold",
+      "distribution": { "distanceTargets": [10, 30, 100] }
+    },
+    {
+      "type": "heart",
+      "name": "Heart",
+      "glyph": "♥",
+      "IsPickup": true,
+      "IsLevelSpawned": true,
+      "consequence": { "id": "health", "amount": 2 },
+      "logText": "Collected +2 Health from Heart",
+      "distribution": { "minCount": 10, "maxCount": 14, "minimumDistance": 3 }
+    },
+    {
+      "type": "torch",
+      "name": "Torch",
+      "glyph": "🕯️",
+      "IsPickup": false,
+      "IsLevelSpawned": true,
+      "consequence": { "id": "torch-light" },
+      "logText": null,
+      "distribution": { "minCount": 10, "maxCount": 14, "minimumDistance": 25, "rule": "wall-adjacent" }
+    },
+    {
+      "type": "trap",
+      "name": "Trap",
+      "glyph": "☠",
+      "IsPickup": false,
+      "IsLevelSpawned": true,
+      "consequence": { "id": "health", "amount": -2 },
+      "logText": "Lost -2 Health from Trap",
+      "distribution": { "minCount": 10, "maxCount": 14, "minimumDistance": 3 }
+    },
+    {
+      "type": "stairs",
+      "name": "Stairs",
+      "glyph": "▤",
+      "IsPickup": false,
+      "IsLevelSpawned": true,
+      "consequence": { "id": "realm-transition" },
+      "logText": null,
+      "distribution": { "minCount": 10, "maxCount": 14, "pairedRealms": true }
+    }
+  ]
+}

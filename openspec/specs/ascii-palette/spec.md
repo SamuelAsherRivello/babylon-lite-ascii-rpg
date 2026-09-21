@@ -380,3 +380,15 @@ The Ascii Settings launcher SHALL open the existing editor without freezing the 
 #### Scenario: Use the editor while open
 - **WHEN** a player switches tabs, filters, sorts, or selects a glyph in the open editor
 - **THEN** the editor SHALL respond normally without freezing or losing the underlying game
+
+### Requirement: Object glyph palette coverage
+
+Every object catalog entry SHALL resolve to an editable ASCII Palette glyph with an explicit base color. The object catalog SHALL use red `♥` for Hearts, `☠` for Traps, `🕯️` for Torches, `🪙` for Gold, and `▤` for Stairs. If `🕯️` is absent from the palette inventory, it SHALL be added before Torch rendering is enabled.
+
+#### Scenario: Heart palette color is shared
+- **WHEN** the character HUD or a world Heart renders
+- **THEN** both SHALL use the same palette-driven red `♥` color
+
+#### Scenario: Torch palette entry exists
+- **WHEN** a Torch object is rendered
+- **THEN** the palette SHALL provide the `🕯️` glyph identity and its configured color

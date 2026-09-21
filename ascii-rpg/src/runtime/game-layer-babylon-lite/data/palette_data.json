@@ -1671,7 +1671,7 @@
       "code": null,
       "unicode": "U+2665",
       "glyph": "♥",
-      "color": "#ffffff",
+      "color": "#ef3340",
       "alpha": 1
     },
     {
@@ -1742,6 +1742,20 @@
       "unicode": "U+1FA99",
       "glyph": "🪙",
       "color": "#ffff00",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+1F4B0",
+      "glyph": "💰",
+      "color": "#ffff00",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+1F56F",
+      "glyph": "🕯️",
+      "color": "#ffcc66",
       "alpha": 1
     },
     {
@@ -2021,6 +2035,13 @@
       "code": null,
       "unicode": "U+262F",
       "glyph": "☯",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+25A4",
+      "glyph": "▤",
       "color": "#ffffff",
       "alpha": 1
     }

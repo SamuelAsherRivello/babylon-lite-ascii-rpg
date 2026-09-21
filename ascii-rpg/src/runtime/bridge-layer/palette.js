@@ -12,7 +12,7 @@ const TEXT_SYMBOL_GLYPHS = [
   "↑", "↓", "←", "→", "↖", "↗", "↘", "↙", "↔", "↕", "⇧", "⇩", "↩", "↪",
   "♥", "♡", "♦", "♢", "♣", "♧", "♠", "♤",
   "◇", "◆", "▲", "▼", "△", "▽", "○", "●", "◉", "◎", "⊙", "⌖", "⌑", "☆", "★", "✦", "✧", "✶",
-  "🪙",
+  "🪙", "💰", "🕯️", "▤",
   "♪", "♫", "☼", "☀", "☾", "☽", "☁", "☂", "☃", "❄", "♨",
   "⚔", "⚒", "⚙", "⚑", "⚐", "⚠", "☠", "☘", "⚖", "⚗", "⚕", "✝", "☯",
 ];
@@ -193,7 +193,7 @@ export function validatePaletteEntries(entries) {
   const expectedIds = new Set(expected.map(getPaletteEntryId));
   const seen = new Set();
   for (const entry of entries) {
-    if (!entry || !isValidIdentity(entry) || typeof entry.glyph !== "string" || [...entry.glyph].length !== 1) {
+    if (!entry || !isValidIdentity(entry) || typeof entry.glyph !== "string" || entry.glyph.length === 0) {
       throw new TypeError("Palette entries need a valid identity and one glyph.");
     }
     if (!expectedIds.has(getPaletteEntryId(entry)) || seen.has(getPaletteEntryId(entry))) {
@@ -211,10 +211,17 @@ export function validatePaletteEntries(entries) {
 }
 
 export function createPalette(data = {}) {
-  const entries = data.entries ?? createDefaultPalette();
+  const defaults = createDefaultPalette();
+  const entries = data.entries ?? defaults;
   const palette = entries.map((entry) => ({ ...entry }));
   if (data.version === 1 && data.entries?.length === LEGACY_PALETTE_SIZE) {
-    palette.push(...createDefaultPalette().slice(LEGACY_PALETTE_SIZE));
+    palette.push(...defaults.slice(LEGACY_PALETTE_SIZE));
+  } else if (data.entries) {
+    const existingIds = new Set(palette.map(getPaletteEntryId));
+    for (const entry of defaults) {
+      const id = getPaletteEntryId(entry);
+      if (!existingIds.has(id)) palette.push({ ...entry });
+    }
   }
   if (data.overrides) {
     for (const [id, override] of Object.entries(data.overrides)) {

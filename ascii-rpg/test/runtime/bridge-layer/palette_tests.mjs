@@ -17,13 +17,13 @@ import {
   validatePaletteEntries,
 } from "../../../src/runtime/bridge-layer/palette.js";
 
-test("creates every visible Code Page 437 entry, the bullet, and 64 text symbols", () => {
+test("creates every visible Code Page 437 entry, the bullet, and 68 text symbols", () => {
   const palette = createDefaultPalette();
   const ids = new Set(palette.map(getPaletteEntryId));
 
-  assert.equal(palette.length, 289);
-  assert.equal(ids.size, 289);
-  assert.equal(new Set(palette.map((entry) => entry.glyph)).size, 289);
+  assert.equal(palette.length, 292);
+  assert.equal(ids.size, 292);
+  assert.equal(new Set(palette.map((entry) => entry.glyph)).size, 292);
   assert.ok(ids.has("32"));
   assert.ok(ids.has("254"));
   assert.ok(ids.has("U+2022"));
@@ -38,9 +38,20 @@ test("migrates saved 224-entry palettes while preserving existing colors", () =>
 
   const palette = createPalette({ version: 1, entries: legacyEntries });
 
-  assert.equal(palette.length, 289);
+  assert.equal(palette.length, 292);
   assert.equal(palette.find((entry) => entry.glyph === "•").color, "#4c4c4c");
   assert.equal(palette.find((entry) => entry.glyph === "↑").color, DEFAULT_PALETTE_COLOR);
+});
+
+test("backfills newly supported identities in an otherwise current palette", () => {
+  const partialEntries = createDefaultPalette().filter((entry) => entry.glyph !== "💰");
+  partialEntries.find((entry) => entry.glyph === "★").color = "#ffff00";
+
+  const palette = createPalette({ version: PALETTE_VERSION, entries: partialEntries });
+
+  assert.equal(palette.length, 292);
+  assert.equal(palette.find((entry) => entry.glyph === "💰").color, DEFAULT_PALETTE_COLOR);
+  assert.equal(palette.find((entry) => entry.glyph === "★").color, "#ffff00");
 });
 
 test("defaults entries to white and fully opaque", () => {
@@ -67,7 +78,7 @@ test("rejects malformed palette entries", () => {
 test("serializes a complete validated palette", () => {
   const serialized = JSON.parse(serializePalette(createDefaultPalette()));
   assert.equal(serialized.version, PALETTE_VERSION);
-  assert.equal(serialized.entries.length, 289);
+  assert.equal(serialized.entries.length, 292);
 });
 
 test("filters the palette by map usage and customized styles", () => {
@@ -155,5 +166,5 @@ test("ships a yellow gold glyph for shared HUD and world rendering", async () =>
     import.meta.url,
   ), "utf8"));
   const palette = createPalette(data);
-  assert.equal(palette.find((entry) => entry.glyph === "◆").color, "#ffff00");
+  assert.equal(palette.find((entry) => entry.glyph === "💰").color, "#ffff00");
 });
