@@ -17,13 +17,20 @@ preference, version display, and GitHub Pages deployment path.
 
 - [Ascii RPG on GitHub Pages](https://samuelasherrivello.github.io/babylon-lite-ascii-rpg/)
 
+## Possible Game Ideas
+
+There are many cool ideas to be added. Here is a list.
+
+- [Possible Game Ideas](ascii-rpg/documentation/inspiration/ideas.md)
+
 ## Table of Contents
 
 1. [Images](#images)
 2. [Live Demo](#live-demo)
-3. [Getting Started](#getting-started)
-4. [Project Details](#project-details)
-5. [Credits](#credits)
+3. [Possible Game Ideas](#possible-game-ideas)
+4. [Getting Started](#getting-started)
+5. [Project Details](#project-details)
+6. [Credits](#credits)
 
 ## Getting Started
 
