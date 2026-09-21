@@ -429,6 +429,9 @@ test("documents the plain safe-area template", async () => {
     || !gameLayer.includes("createTransitionSystem")
     || !gameLayer.includes("startRealmTransition")
     || !gameLayer.includes("onCovered: () => activateRealm")
+    || !gameLayer.includes("onOpening: () =>")
+    || !gameLayer.includes("gameplayInputLocked")
+    || !gameLayer.includes("if (gameplayInputLocked) return;")
     || !gameLayer.includes("transitionActive")
     || !gameLayer.includes("refreshDiscovery({ immediate: true })")) {
     throw new Error("Realm changes must use a game-layer-owned transition that swaps realms at full coverage and locks input.");
@@ -436,8 +439,16 @@ test("documents the plain safe-area template", async () => {
   if (!styles.includes(".game_transition_mask")
     || !styles.includes("pointer-events: none")
     || !styles.includes("z-index: 0")
-    || !styles.includes("radial-gradient")) {
+    || !styles.includes("radial-gradient")
+    || !styles.includes("--transition-color: #000")
+    || !styles.includes("background: #000")) {
     throw new Error("The transition mask must be a pointer-transparent, soft-edged game-only surface above the game canvas and below the minimap.");
+  }
+  if (!gameLayer.includes("const REALM_TRANSITION_CLOSE_MS = 500")
+    || !gameLayer.includes("const REALM_TRANSITION_OPEN_MS = 500")
+    || !gameLayer.includes("const INITIAL_TRANSITION_OPEN_MS = 1000")
+    || !gameLayer.includes("durationIn: INITIAL_TRANSITION_OPEN_MS")) {
+    throw new Error("Realm transitions must use 500ms close/open phases and startup must use a 1000ms reveal.");
   }
   const initialRealmState = gameLayer.indexOf("playerCell = world.playerStart;");
   const initialRealmLog = gameLayer.indexOf("logSystem.log({ message: `Entered the ${activeRealm} Realm` });", initialRealmState);

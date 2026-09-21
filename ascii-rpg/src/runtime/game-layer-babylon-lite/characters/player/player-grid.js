@@ -173,9 +173,8 @@ export function getViewOriginForCamera(mode, playerCell, viewport, world, previo
   return getViewOriginForPlayer(playerCell, viewport, world);
 }
 
-export function getInitialViewOriginForCamera(mode, playerCell, viewport, world) {
-  if (mode === "lock") return getViewOriginForPlayer(playerCell, viewport, world);
-  return getViewOriginForCamera(mode, playerCell, viewport, world, { x: 0, y: 0 });
+export function getInitialViewOriginForCamera(_mode, playerCell, viewport, world) {
+  return getViewOriginForPlayer(playerCell, viewport, world);
 }
 
 export function clampCell(cell, viewport) {

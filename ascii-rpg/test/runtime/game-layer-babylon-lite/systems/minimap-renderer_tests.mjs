@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createFogOfWar, discoverCell } from "../../../../src/runtime/game-layer-babylon-lite/systems/fog-of-war-system.js";
-import { getMinimapEdgeIndicators, getMinimapIndicatorSafeArea, getMinimapMarkers, getMinimapWorldCellGraphic, getMinimapWorldGraphic, getMinimapWorldPixel, MINIMAP_INDICATOR_MIN_SIZE, MINIMAP_INDICATOR_SAFE_INSET, MINIMAP_MARKER_DEPTHS } from "../../../../src/runtime/game-layer-babylon-lite/systems/minimap-renderer.js";
+import { createFogOfWar, discoverCell, discoverFromPlayer, getMinimapCoverage } from "../../../../src/runtime/game-layer-babylon-lite/systems/fog-of-war-system.js";
+import { findNearestNavigationTarget, getMinimapEdgeIndicators, getMinimapIndicatorSafeArea, getMinimapMarkers, getMinimapWorldCellGraphic, getMinimapWorldGraphic, getMinimapWorldPixel, MINIMAP_INDICATOR_MIN_SIZE, MINIMAP_INDICATOR_SAFE_INSET, MINIMAP_MARKER_DEPTHS } from "../../../../src/runtime/game-layer-babylon-lite/systems/minimap-renderer.js";
 import { canHandleMinimapScale, getMinimapCellLayout, getMinimapViewport, getNextMinimapScale, migrateMinimapScale } from "../../../../src/runtime/game-layer-babylon-lite/systems/minimap-zoom.js";
 
 function createWorld() {
@@ -57,6 +57,16 @@ test("minimap uses discovered world content and proportional fog opacity", () =>
   const complete = getMinimapWorldPixel(world, fog, palette, { x: 0, y: 0 });
   assert.equal(complete.opacity, 1);
   assert.equal(complete.color, "#03fc00");
+});
+
+test("minimap pixel opacity follows partial persistent cell visibility", () => {
+  const world = createWorld();
+  world.fogUnclearRadius = 4;
+  const fog = createFogOfWar(world);
+  discoverFromPlayer(fog, world, { x: 5, y: 5 });
+  const pixel = getMinimapWorldPixel(world, fog, palette, { x: 0, y: 0 });
+  assert.equal(pixel.opacity, getMinimapCoverage(fog, { x: 0, y: 0 }));
+  assert.ok(pixel.opacity > 0 && pixel.opacity < 1);
 });
 
 test("unwalkable cells do not contribute content or fog opacity", () => {
@@ -120,6 +130,25 @@ test("nearest-stairs navigation marker is rendered in the viewport or at its edg
   const indicators = getMinimapEdgeIndicators(world, { x: 1, y: 1 }, { x: 0, y: 0, columns: 5, rows: 5 }, { navigationMarkers });
   assert.equal(indicators.at(-1).type, "navigation-edge");
   assert.equal(indicators.at(-1).markerId, "nearest-stairs");
+});
+
+test("active quest navigation resolves the closest one stairs, key, or door", () => {
+  const world = createWorld();
+  world.stairs = [{ x: 8, y: 8 }, { x: 2, y: 1 }];
+  world.objects = [
+    { id: "key-near", type: "key", active: true, cell: { x: 3, y: 1 } },
+    { id: "key-far", type: "key", active: true, cell: { x: 8, y: 8 } },
+    { id: "door-near", type: "door", open: false, active: true, cell: { x: 5, y: 1 } },
+    { id: "door-open", type: "door", open: true, active: true, cell: { x: 2, y: 2 } },
+  ];
+  world.terrain[1][5].walkable = false;
+  assert.deepEqual(findNearestNavigationTarget(world, { x: 1, y: 1 }, "nearest-stairs").cell, { x: 2, y: 1 });
+  assert.deepEqual(findNearestNavigationTarget(world, { x: 1, y: 1 }, "nearest-key").cell, { x: 3, y: 1 });
+  assert.deepEqual(findNearestNavigationTarget(world, { x: 1, y: 1 }, "nearest-door").cell, { x: 5, y: 1 });
+  const markers = getMinimapMarkers(world, createFogOfWar(world), { x: 1, y: 1 }, {
+    navigationMarkers: [{ id: "nearest-key", cell: { x: 3, y: 1 } }],
+  });
+  assert.equal(markers.filter((marker) => marker.type === "navigation").length, 1);
 });
 
 test("minimap markers come from quest-owned pickup ids, not object pickup types", () => {

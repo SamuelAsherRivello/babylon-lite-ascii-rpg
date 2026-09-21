@@ -61,7 +61,7 @@ import { createTimeSystem } from "./systems/time-system.js";
 import { createGlyphRasterCanvas, createGlyphVisualCache, rasterizeCompositeGlyph, rasterizeGlyph } from "./glyph-visual-cache.js";
 import { getVisibleRegion, getVisibleSlot, shouldUpdateVisibleSprite } from "./visible-region.js";
 import { collectWorldViewGlyphs, createWorldViewComposition, renderWorldViewComposition } from "./world-view.js";
-import { colorToLinearRgba, linearRgbaToHex, reconcilePaletteColors } from "./palette-color-cache.js";
+import { colorToLinearRgba, linearRgbaToRendererHex, reconcilePaletteColors } from "./palette-color-cache.js";
 import {
   applyLightingToColor,
   createLightingConfig,
@@ -70,14 +70,15 @@ import {
   getLightingProfile,
   getShadowProfile,
 } from "./lighting.js";
-import { buildGpuLightPassSamples, createGpuLightPassFrame, GPU_LIGHT_PASS_COLOR } from "./gpu-light-pass.js";
+import { buildGpuLightPassSamples, createGpuLightPassFrame, getGpuLightPassAlpha, GPU_LIGHT_PASS_COLOR } from "./gpu-light-pass.js";
 import {
   createFogOfWar,
   discoverFromPlayer,
+  discoverStartingArea,
   getFogVisibility,
   isDiscovered,
 } from "./systems/fog-of-war-system.js";
-import { getMinimapEdgeIndicators, getMinimapIndicatorSafeArea, getMinimapMarkers, getMinimapWorldCellGraphic, MINIMAP_INDICATOR_MIN_SIZE, MINIMAP_INDICATOR_SAFE_INSET } from "./systems/minimap-renderer.js";
+import { findNearestNavigationTarget, getMinimapEdgeIndicators, getMinimapIndicatorSafeArea, getMinimapMarkers, getMinimapWorldCellGraphic, MINIMAP_INDICATOR_MIN_SIZE, MINIMAP_INDICATOR_SAFE_INSET } from "./systems/minimap-renderer.js";
 import { canHandleMinimapScale, getMinimapCellLayout, getNextMinimapScale, MINIMAP_SCALE_LEVELS } from "./systems/minimap-zoom.js";
 import { createTransitionSystem, TRANSITION_PHASES } from "./systems/transition-system.js";
 import questData from "./data/quest_data.json";
@@ -89,15 +90,18 @@ import { createGameplayEventSystem } from "./systems/gameplay-event-system.js";
 import { createRealmSystem } from "./systems/realm-system.js";
 import { createPlayerLifecycle } from "./systems/player-lifecycle.js";
 import { createCivilizationGroups, isCardinalDirection } from "./systems/civilization-system.js";
+import { attachReplacementRendererLayer } from "./systems/renderer-layer-handoff.js";
 
 const GLYPHS = PROJECT_MAP_GLYPHS;
 const WORLD_ROWS = 512;
 const WORLD_COLUMNS = 512;
 const TORCHES_PER_SCREEN = 3;
-const REALM_TRANSITION_CLOSE_MS = 2000;
+const REALM_TRANSITION_CLOSE_MS = 500;
 const REALM_TRANSITION_COVER_HOLD_MS = 100;
-const REALM_TRANSITION_OPEN_MS = 2000;
+const REALM_TRANSITION_OPEN_MS = 500;
+const INITIAL_TRANSITION_OPEN_MS = 1000;
 const INITIAL_SPRITE_LAYER_CAPACITY = 4096;
+const STARTING_FOG_CLEAR_ZOOM = 5;
 
 function getInitialSpriteLayerCapacity(viewport) {
   return Math.max(1, Math.min(INITIAL_SPRITE_LAYER_CAPACITY, viewport.rows * viewport.columns));
@@ -195,6 +199,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   let activePointerId = null;
   let touchStart = null;
   let transitionActive = false;
+  let gameplayInputLocked = false;
   let transitionSystem = null;
   let transitionCenter = null;
   let playerRenderCenter = null;
@@ -220,6 +225,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   let minimapZoom = 2;
   let viewOrigin = { x: 0, y: 0 };
   let initialWorldRenderComplete = false;
+  let startupCameraModeReapplyPending = false;
   let cameraMode = normalizeCameraMode(initialCameraMode);
   const timeSystem = createTimeSystem();
   const logSystem = createLogSystem();
@@ -266,10 +272,10 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
 
   const getMinimapNavigationMarkers = () => {
     const activeStep = questManager?.getSnapshot()?.steps.find((step) => step.active);
-    if (activeStep?.navigation !== "nearest-stairs") return [];
-    const path = findNearestStairPath();
-    const cell = path?.at(-1);
-    return cell ? [{ id: "nearest-stairs", cell }] : [];
+    const navigation = activeStep?.navigation;
+    if (!navigation) return [];
+    const target = findNearestNavigationTarget(world, playerCell, navigation);
+    return target ? [{ id: navigation, cell: target.cell }] : [];
   };
 
   const renderMinimap = () => {
@@ -391,13 +397,16 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
         const lightingFactor = minimapLightField.getFactor({ x: sourceX + localX, y: sourceY + localY });
         const fogOpacity = visibility / 100;
         const baseColor = paletteColors.get(glyph) ?? colorToLinearRgba(getPaletteStyle(palette, glyph));
-        const litColor = linearRgbaToHex(applyLightingToColor(baseColor, lightingFactor));
+        const litColor = linearRgbaToRendererHex(applyLightingToColor(baseColor, lightingFactor));
         const cacheKey = `${graphic.glyph}:${litColor}:${lightingFactor.toFixed(6)}:${fogOpacity.toFixed(2)}:${raster.width}`;
         let glyphCanvas = minimapGlyphCanvases.get(cacheKey);
         if (!glyphCanvas) {
           glyphCanvas = createGlyphRasterCanvas(raster, litColor, {
-            alphaScale: lightingFactor * fogOpacity,
-            colorScale: lightingFactor,
+            // `litColor` already contains the complete game lighting result.
+            // Applying lighting again through alpha or color scaling makes
+            // the minimap differ from the game view.
+            alphaScale: fogOpacity,
+            colorScale: 1,
             tint: true,
           });
           minimapGlyphCanvases.set(cacheKey, glyphCanvas);
@@ -418,11 +427,17 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
           for (const sample of minimapGpuLightSamples) {
             const centerX = offsetX + (sample.x + 0.5) * cellWidth;
             const centerY = offsetY + (sample.y + 0.5) * cellHeight;
-            const radius = Math.max(cellWidth, cellHeight) * 1.5;
+            // Match the game GPU light sprite: one cell footprint and the same
+            // cubic falloff. A broader linear gradient makes neighboring map
+            // cells accumulate extra warm light.
+            const radius = Math.max(cellWidth, cellHeight) * 0.5;
             const glow = context.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
             const alpha = Math.min(0.16, sample.intensity * 0.16);
             const [red, green, blue] = GPU_LIGHT_PASS_COLOR.map((channel) => Math.round(channel * 255));
             glow.addColorStop(0, `rgba(${red}, ${green}, ${blue}, ${alpha})`);
+            for (const distanceRatio of [0.25, 0.5, 0.75]) {
+              glow.addColorStop(distanceRatio, `rgba(${red}, ${green}, ${blue}, ${alpha * getGpuLightPassAlpha(distanceRatio)})`);
+            }
             glow.addColorStop(1, `rgba(${red}, ${green}, ${blue}, 0)`);
             context.fillStyle = glow;
             context.fillRect(centerX - radius, centerY - radius, radius * 2, radius * 2);
@@ -509,7 +524,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   };
 
   const handleMinimapClick = () => {
-    if (transitionActive) return;
+    if (gameplayInputLocked) return;
     if (!canHandleMinimapScale()) return;
     const nextZoom = getNextMinimapScale(minimapZoom);
     for (const listener of minimapZoomListeners) listener(nextZoom);
@@ -520,6 +535,18 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     discoverFromPlayer(fogOfWar, world, playerCell);
     if (immediate) renderMinimap();
     else scheduleMinimapRender();
+  };
+
+  const refreshStartingDiscovery = () => {
+    if (!fogOfWar || !world || !playerCell) return;
+    const coverage = world.startingFogClearCoverage ?? { x: 1, y: 1 };
+    const startingViewport = createViewportForCanvas(canvas, STARTING_FOG_CLEAR_ZOOM);
+    discoverStartingArea(fogOfWar, world, playerCell, {
+      viewportColumns: startingViewport.columns,
+      viewportRows: startingViewport.rows,
+      coverageX: coverage.x,
+      coverageY: coverage.y,
+    });
   };
 
   const activateRealm = (name, arrival = null) => {
@@ -547,6 +574,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     // Discover the destination around the arriving player before rendering it.
     // Rendering first leaves every destination cell hidden until movement causes
     // the next world repaint, which makes the first transition end on black.
+    refreshStartingDiscovery();
     refreshDiscovery({ immediate: true });
     // A realm swap changes every visible cell. Clear the submitted sprites in
     // place instead of removing/re-adding the Babylon layer at the exact
@@ -629,7 +657,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       to: 0,
       durationOut: 1,
       durationCovered: 0,
-      durationIn: REALM_TRANSITION_OPEN_MS,
+      durationIn: INITIAL_TRANSITION_OPEN_MS,
       startPhase: TRANSITION_PHASES.OPENING,
       onStart: () => {
         transitionMask.classList.remove("game_transition_mask_covered");
@@ -664,6 +692,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     // during opening makes a second transition appear at the cusp.
     transitionCenter = getTransitionCenter();
     transitionActive = true;
+    gameplayInputLocked = true;
     const started = transitionSystem.start({
       target: "game_layer",
       from: cover,
@@ -680,8 +709,13 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
         transitionMask.hidden = false;
       },
       onCovered: () => activateRealm(destination, arrival),
+      onOpening: () => {
+        gameplayInputLocked = false;
+        clearMovementInput();
+      },
       onComplete: () => {
         transitionActive = false;
+        gameplayInputLocked = false;
         clearMovementInput();
         setTransitionMask({ phase: TRANSITION_PHASES.IDLE, value: 0 });
         transitionCenter = null;
@@ -689,6 +723,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     });
     if (!started) {
       transitionActive = false;
+      gameplayInputLocked = false;
       transitionCenter = null;
       return false;
     }
@@ -831,10 +866,17 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   };
 
   const rebuildLayer = (nextAtlas = atlas) => {
-    if (renderer && layer) removeSpriteRendererLayer(renderer, layer);
+    const previousLayer = layer;
     atlas = nextAtlas;
-    layer = createSprite2DLayer(atlas, { capacity: getInitialSpriteLayerCapacity(viewport) });
-    if (renderer) addSpriteRendererLayer(renderer, layer);
+    layer = attachReplacementRendererLayer({
+      renderer,
+      currentLayer: previousLayer,
+      nextAtlas: atlas,
+      capacity: getInitialSpriteLayerCapacity(viewport),
+      createLayer: createSprite2DLayer,
+      addLayer: addSpriteRendererLayer,
+      removeLayer: removeSpriteRendererLayer,
+    });
     spriteIndexes.length = 0;
     spriteStates.length = 0;
   };
@@ -1088,7 +1130,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   };
 
   const movePlayer = () => {
-    if (playerLifecycle.isDead()) {
+    if (playerLifecycle.isDead() || gameplayInputLocked) {
       clearMovementInput();
       return;
     }
@@ -1167,7 +1209,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     const movementKey = event.key.toLowerCase();
     if (!getDirectionForKey(movementKey)) return;
     shiftHeld = heldModifierKeys.size > 0 || event.shiftKey;
-    if (transitionActive) return;
+    if (gameplayInputLocked) return;
     event.preventDefault();
     const wasHeld = heldKeys.has(movementKey);
     heldKeys.add(movementKey);
@@ -1185,7 +1227,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     }
     const movementKey = event.key.toLowerCase();
     if (!getDirectionForKey(movementKey)) return;
-    if (transitionActive) return;
+    if (gameplayInputLocked) return;
     event.preventDefault();
     heldKeys.delete(movementKey);
     shiftHeld = heldModifierKeys.size > 0 || event.shiftKey;
@@ -1193,7 +1235,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   };
 
   const handlePointerDown = (event) => {
-    if (playerLifecycle.isDead() || transitionActive || !event.isPrimary || activePointerId !== null || (event.pointerType === "mouse" && event.button !== 0)) return;
+    if (playerLifecycle.isDead() || gameplayInputLocked || !event.isPrimary || activePointerId !== null || (event.pointerType === "mouse" && event.button !== 0)) return;
     event.preventDefault();
     activePointerId = event.pointerId;
     touchStart = { x: event.clientX, y: event.clientY };
@@ -1201,7 +1243,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   };
 
   const handlePointerMove = (event) => {
-    if (playerLifecycle.isDead() || transitionActive || event.pointerId !== activePointerId || !touchStart) return;
+    if (playerLifecycle.isDead() || gameplayInputLocked || event.pointerId !== activePointerId || !touchStart) return;
     const nextDirection = getDirectionForSwipe(
       event.clientX - touchStart.x,
       event.clientY - touchStart.y,
@@ -1447,6 +1489,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     startQuestInCurrentRealm(initialQuestId);
     notifyGold();
     notifyKeys();
+    refreshStartingDiscovery();
     refreshDiscovery();
     resolveViewForPlayer({ initial: true });
     const firstRender = renderWorld();
@@ -1539,7 +1582,17 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       if (selected === zoom) return;
       const started = performance.now();
       zoom = selected;
-      const result = rebuildViewport({ centerOnPlayer: true, zoomChanged: true });
+      let result;
+      if (startupCameraModeReapplyPending) {
+        viewport = createViewportForCanvas(canvas, zoom);
+        if (world && playerCell) {
+          viewOrigin = getInitialViewOriginForCamera(cameraMode, playerCell, viewport, world);
+        }
+        startupCameraModeReapplyPending = false;
+        result = renderer ? renderWorld() : { renderMs: 0, warmupMs: 0 };
+      } else {
+        result = rebuildViewport({ centerOnPlayer: true, zoomChanged: true });
+      }
       metrics.lastZoomWarmupMs = result.warmupMs;
       metrics.lastZoomRerenderMs = performance.now() - started - result.warmupMs;
       console.info("ASCII RPG zoom render", JSON.stringify({
@@ -1666,9 +1719,11 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     setCameraMode(nextMode) {
       const selected = normalizeCameraMode(nextMode);
       if (selected === cameraMode) {
+        startupCameraModeReapplyPending = true;
         if (world && playerCell) rebuildViewport({ centerOnPlayer: true });
         return;
       }
+      startupCameraModeReapplyPending = false;
       cameraMode = selected;
       rebuildViewport({ centerOnPlayer: true });
     },

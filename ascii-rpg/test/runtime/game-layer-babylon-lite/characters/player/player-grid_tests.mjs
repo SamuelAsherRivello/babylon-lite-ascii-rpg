@@ -129,13 +129,11 @@ test("restarts each camera mode with a stable player position and moves one unit
 
     assert.deepEqual(restartedPlayer, initialPlayer, `${mode} restart changed the player cell`);
     assert.deepEqual(movedPlayer, { x: initialPlayer.x + 1, y: initialPlayer.y }, `${mode} input did not move one unit`);
-    if (mode === "center") {
-      assert.deepEqual(
-        getPlayerScreenCenter(restartedPlayer, viewOrigin, viewport),
-        getCellCenter(getCenterCell(viewport), viewport),
-        "center mode must start with the player centered",
-      );
-    }
+    assert.deepEqual(
+      getPlayerScreenCenter(restartedPlayer, viewOrigin, viewport),
+      getCellCenter(getCenterCell(viewport), viewport),
+      `${mode} mode must start with the player centered`,
+    );
     assert.ok(viewOrigin.x >= 0 && viewOrigin.y >= 0, `${mode} startup view must be bounded`);
     assert.ok(viewOrigin.x <= world.columns - viewport.columns, `${mode} startup x view must be bounded`);
     assert.ok(viewOrigin.y <= world.rows - viewport.rows, `${mode} startup y view must be bounded`);

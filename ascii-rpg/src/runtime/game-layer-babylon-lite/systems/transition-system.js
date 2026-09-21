@@ -79,6 +79,12 @@ export function createTransitionSystem({
       current.phaseStartedAt = timestamp;
       current.phaseDuration = current.durationIn;
       update(TRANSITION_PHASES.OPENING, 0, timestamp);
+      emit("opening", {
+        id: current.id,
+        target: current.target,
+        phase: TRANSITION_PHASES.OPENING,
+        timestamp,
+      });
       schedule();
       return;
     }
@@ -93,6 +99,12 @@ export function createTransitionSystem({
       current.phaseStartedAt = timestamp;
       current.phaseDuration = current.durationIn;
       update(TRANSITION_PHASES.OPENING, 0, timestamp);
+      emit("opening", {
+        id: current.id,
+        target: current.target,
+        phase: TRANSITION_PHASES.OPENING,
+        timestamp,
+      });
       schedule();
       return;
     }
@@ -125,6 +137,7 @@ export function createTransitionSystem({
     interpolate = defaultInterpolate,
     onStart,
     onCovered,
+    onOpening,
     onComplete,
   } = {}) => {
     if (active) return false;
@@ -151,7 +164,7 @@ export function createTransitionSystem({
       phaseDuration: startPhase === TRANSITION_PHASES.OPENING ? durationIn : durationOut,
       phaseStartedAt: undefined,
       frame: null,
-      callbacks: { complete: onComplete, covered: onCovered },
+      callbacks: { complete: onComplete, covered: onCovered, opening: onOpening },
     };
     const started = {
       id,

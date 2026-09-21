@@ -43,6 +43,7 @@ test("runs a 500ms close, 100ms covered hold, and 500ms open", () => {
     durationIn: 500,
     onStart: () => events.push("start"),
     onCovered: () => events.push("covered"),
+    onOpening: () => events.push("opening"),
     onComplete: () => events.push("complete"),
   }), true);
   assert.equal(transition.begin(0), true);
@@ -51,7 +52,7 @@ test("runs a 500ms close, 100ms covered hold, and 500ms open", () => {
   frames.flush(600);
   frames.flush(1100);
 
-  assert.deepEqual(events, ["start", "covered", "complete"]);
+  assert.deepEqual(events, ["start", "covered", "opening", "complete"]);
   assert.equal(updates.find((update) => update.phase === TRANSITION_PHASES.COVERED).value, 10);
   assert.equal(updates.at(-1).phase, TRANSITION_PHASES.IDLE);
   assert.equal(transition.isActive(), false);

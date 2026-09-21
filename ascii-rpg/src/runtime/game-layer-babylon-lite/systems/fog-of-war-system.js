@@ -89,6 +89,27 @@ function getVisibilityForDistance(distance, radius) {
   return 25;
 }
 
+function getStartingFootprintExtent(viewportExtent, coverage, worldExtent) {
+  if (!Number.isFinite(viewportExtent) || viewportExtent <= 0) return 1;
+  const safeCoverage = Number.isFinite(coverage) ? Math.max(0, Math.min(1, coverage)) : 1;
+  return Math.max(1, Math.min(worldExtent, Math.round(viewportExtent * safeCoverage)));
+}
+
+function getStartingFootprintBounds(playerCoordinate, footprintExtent, worldExtent) {
+  const halfExtent = Math.floor(footprintExtent / 2);
+  const maximumStart = Math.max(0, worldExtent - footprintExtent);
+  const start = Math.min(Math.max(playerCoordinate - halfExtent, 0), maximumStart);
+  return { start, end: start + footprintExtent - 1 };
+}
+
+function getStartingVisibility(target, playerCell, footprintWidth, footprintHeight) {
+  const halfWidth = Math.max((footprintWidth - 1) / 2, 0);
+  const halfHeight = Math.max((footprintHeight - 1) / 2, 0);
+  const normalizedX = halfWidth === 0 ? (target.x === playerCell.x ? 0 : Infinity) : Math.abs(target.x - playerCell.x) / halfWidth;
+  const normalizedY = halfHeight === 0 ? (target.y === playerCell.y ? 0 : Infinity) : Math.abs(target.y - playerCell.y) / halfHeight;
+  return getVisibilityForDistance(Math.min(1, Math.max(normalizedX, normalizedY)), 1);
+}
+
 export function discoverFromPlayer(fog, world, playerCell) {
   if (!fog || !isWalkable(world, playerCell)) return [];
   const discovered = [];
@@ -103,6 +124,29 @@ export function discoverFromPlayer(fog, world, playerCell) {
       );
       if (visibility === 0) continue;
       if (!hasClearLightPath(playerCell, target, world.terrain)) continue;
+      if (markVisibility(fog, world, target, visibility)) discovered.push(target);
+    }
+  }
+  return discovered;
+}
+
+export function discoverStartingArea(fog, world, playerCell, {
+  viewportColumns,
+  viewportRows,
+  coverageX = 1,
+  coverageY = 1,
+} = {}) {
+  if (!fog || !isWalkable(world, playerCell)) return [];
+  const footprintWidth = getStartingFootprintExtent(viewportColumns, coverageX, world.columns);
+  const footprintHeight = getStartingFootprintExtent(viewportRows, coverageY, world.rows);
+  const xBounds = getStartingFootprintBounds(playerCell.x, footprintWidth, world.columns);
+  const yBounds = getStartingFootprintBounds(playerCell.y, footprintHeight, world.rows);
+  const discovered = [];
+  for (let y = yBounds.start; y <= yBounds.end; y += 1) {
+    for (let x = xBounds.start; x <= xBounds.end; x += 1) {
+      const target = { x, y };
+      const visibility = getStartingVisibility(target, playerCell, footprintWidth, footprintHeight);
+      if (visibility === 0 || !hasClearLightPath(playerCell, target, world.terrain)) continue;
       if (markVisibility(fog, world, target, visibility)) discovered.push(target);
     }
   }

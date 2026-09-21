@@ -20,6 +20,9 @@ mechanics discoverable and gives the player a clear completion goal.
 - Ensure the Gameplay Settings `Quests` tab renders every quest definition in
   `quest_data.json`, including both the existing and new quests, as selectable
   cards.
+- Show exactly one nearest minimap navigation marker for the active task:
+  stairs for Underground entry, a key for key collection, and a door for door
+  opening.
 - Preserve the existing quest selector, Default Quest persistence, ordered
   quest advancement, immutable bridge snapshot, HUD presentation, lifecycle
   toasts, and runtime-only progress behavior.

@@ -108,3 +108,35 @@ progress, and completed styling as the HUD for every quest.
   progress
 - **THEN** the new game instance starts the saved valid Default Quest with
   fresh runtime quest progress and newly generated world-object state
+
+### Requirement: Active task navigation marker
+
+The active `Unlock A Door` step SHALL provide exactly one nearest navigation
+marker on the minimap. `Enter Underground Realm` SHALL target the closest
+reachable stairs, `Collect Key` SHALL target the closest active key, and `Open
+a door` SHALL target the closest closed door. Completed or inactive steps SHALL
+not add navigation markers.
+
+#### Scenario: Underground entry marks one stairs
+
+- **WHEN** `Enter Underground Realm` is the active step
+- **THEN** the minimap shows exactly one navigation marker for the closest
+  reachable stairs
+
+#### Scenario: Key collection marks one key
+
+- **WHEN** `Collect Key 0 of 1` is the active step
+- **THEN** the minimap shows exactly one navigation marker for the closest
+  active key
+
+#### Scenario: Door opening marks one door
+
+- **WHEN** `Open a door` is the active step
+- **THEN** the minimap shows exactly one navigation marker for the closest
+  closed door
+
+#### Scenario: Marker follows active-step changes
+
+- **WHEN** a quest step completes or the player selects another quest
+- **THEN** the previous task marker is removed and only the new active task's
+  marker remains

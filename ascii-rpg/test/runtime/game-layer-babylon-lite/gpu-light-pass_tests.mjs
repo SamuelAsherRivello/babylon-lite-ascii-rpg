@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildGpuLightPassSamples, createGpuLightPassFrame } from "../../../src/runtime/game-layer-babylon-lite/gpu-light-pass.js";
+import { buildGpuLightPassSamples, createGpuLightPassFrame, getGpuLightPassAlpha } from "../../../src/runtime/game-layer-babylon-lite/gpu-light-pass.js";
 
 test("GPU light samples use visible, shadow-aware source contributions without mutation", () => {
   const region = { rows: 1, columns: 3 };
@@ -22,6 +22,12 @@ test("GPU light frame is a centered soft mask suitable for additive composition"
   assert.equal(frame.pixels.length, 100);
   assert.equal(frame.pixels[(2 * 5 + 2) * 4 + 3], 255);
   assert.equal(frame.pixels[3], 0);
+});
+
+test("GPU light falloff is shared by the game sprite and minimap glow", () => {
+  assert.equal(getGpuLightPassAlpha(0), 1);
+  assert.equal(getGpuLightPassAlpha(0.5), 0.125);
+  assert.equal(getGpuLightPassAlpha(1), 0);
 });
 
 test("GPU light samples continuously use remaining ambient headroom", () => {

@@ -26,13 +26,17 @@
 - [x] 2.4 Verify every quest definition in `quest_data.json` appears in the
   Gameplay Settings `Quests` tab, can be selected as Default Quest, persists
   by ID, and restores with fresh runtime progress after refresh.
+- [x] 2.5 Add active-step navigation metadata and nearest-target minimap
+  resolution, and verify exactly one stairs, key, or door marker follows the
+  active quest step.
 
 ## 3. Validation and live behavior
 
 - [x] 3.1 Run the focused quest, gameplay-event, realm, pickup, and door tests
   and verify they pass without regressions.
-- [ ] 3.2 Run `npm.cmd test` and `npm.cmd run build` from the repository root,
+- [x] 3.2 Run `npm.cmd test` and `npm.cmd run build` from the repository root,
   recording any environment-related validation limitation.
 - [ ] 3.3 Manually inspect the running app in both initial realms and verify
-  the quest tracker shows the correct active step, the existing key is counted,
+  the quest tracker shows the correct active step, exactly one closest marker
+  targets stairs, key, or door as appropriate, the existing key is counted,
   the door-unlocked event completes the quest, and refresh resets progress.

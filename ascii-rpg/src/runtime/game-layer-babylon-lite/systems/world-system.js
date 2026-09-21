@@ -64,8 +64,8 @@ export const GENERATION_PASSES = Object.freeze([
   "civilization",
 ]);
 export const REALM_PROFILES = Object.freeze({
-  Overground: Object.freeze({ wallFillPercent: 25, minWalkablePercent: 0.55, fogUnclearRadius: 7.5, groundKind: "grass", groundGlyph: FLOOR_GLYPH, groundColor: "#55aa55", blockedKind: "mountain", blockedGlyph: MOUNTAIN_GLYPH }),
-  Underground: Object.freeze({ wallFillPercent: 50, minWalkablePercent: 0.3, fogUnclearRadius: 5, groundKind: "dirt", groundGlyph: UNDERGROUND_FLOOR_GLYPH, groundColor: "#8b5a2b", blockedKind: "wall", blockedGlyph: WALL_GLYPH }),
+  Overground: Object.freeze({ wallFillPercent: 25, minWalkablePercent: 0.55, fogUnclearRadius: 11, startingFogClearCoverage: Object.freeze({ x: 0.95, y: 0.95 }), groundKind: "grass", groundGlyph: FLOOR_GLYPH, groundColor: "#55aa55", blockedKind: "mountain", blockedGlyph: MOUNTAIN_GLYPH }),
+  Underground: Object.freeze({ wallFillPercent: 50, minWalkablePercent: 0.3, fogUnclearRadius: 6, startingFogClearCoverage: Object.freeze({ x: 0.6, y: 0.6 }), groundKind: "dirt", groundGlyph: UNDERGROUND_FLOOR_GLYPH, groundColor: "#8b5a2b", blockedKind: "wall", blockedGlyph: WALL_GLYPH }),
 });
 
 const CARDINAL_DIRECTIONS = [
@@ -953,6 +953,7 @@ function applyRealmProfile(realm, name) {
   }
   realm.realm = name;
   realm.fogUnclearRadius = profile.fogUnclearRadius;
+  realm.startingFogClearCoverage = profile.startingFogClearCoverage;
   realm.stairs = [];
   return realm;
 }

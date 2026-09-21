@@ -56,6 +56,7 @@ export function createQuestManager(definitions = [], initialValues = {}, { reque
       current: step.current,
       target: step.definition.criterion.target ?? 1,
       complete: step.state === QUEST_STATES.complete,
+      ...(step.definition.showProgress ? { showProgress: true } : {}),
     }));
     return freezeSnapshot({
       id: activeQuest.definition.id,

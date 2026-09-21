@@ -20,6 +20,8 @@ door behavior is owned by the game layer and must remain outside React.
   without waiting for a second realm transition.
 - Ensure Gameplay Settings derives its quest cards from the complete quest
   definition catalog rather than maintaining a separate registration list.
+- Derive one closest reachable target from the active step and pass it through
+  the existing minimap navigation-marker path.
 - Verify the catalog, event sequencing, HUD snapshot, selector, toast path, and
   runtime reset without adding dependencies.
 
@@ -56,6 +58,11 @@ door behavior is owned by the game layer and must remain outside React.
    card, and toasts. Gameplay Settings will map the full `quest_data.json`
    catalog, so every current and future quest definition appears in the
    `Quests` tab without a second registration surface.
+
+5. **Use the active step's navigation identity.** Quest definitions declare
+   `nearest-stairs`, `nearest-key`, or `nearest-door`; the game layer resolves
+   the closest reachable target from authoritative realm objects and the
+   minimap renders one navigation marker. The UI does not inspect coordinates.
 
 ## Risks / Trade-offs
 

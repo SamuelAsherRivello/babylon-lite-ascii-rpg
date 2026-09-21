@@ -42,6 +42,7 @@
         {
           "id": "enter-underground",
           "label": "Enter Underground Realm",
+          "navigation": "nearest-stairs",
           "criterion": {
             "mode": "event",
             "eventType": "realm-entered",
@@ -52,6 +53,8 @@
         {
           "id": "collect-key",
           "label": "Collect Key",
+          "showProgress": true,
+          "navigation": "nearest-key",
           "criterion": {
             "mode": "event",
             "eventType": "pickup-collected",
@@ -62,6 +65,7 @@
         {
           "id": "open-door",
           "label": "Open a door",
+          "navigation": "nearest-door",
           "criterion": {
             "mode": "event",
             "eventType": "door-unlocked",

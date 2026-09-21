@@ -21,4 +21,4 @@
 
 - [x] 4.1 Update mirrored Node tests for trap damage, health floor, death idempotence, bridge publication, prompt copy, and restart wiring, then verify `npm.cmd test` passes
 - [x] 4.2 Run `npm.cmd run build`, `git diff --check`, and `openspec validate "add-player-lifecycle" --strict`, then verify only scoped lifecycle artifacts and implementation files are attributable to this change
-- [ ] 4.3 Manually verify the running browser game can trigger a lethal Trap, shows the exact Adventure prompt, blocks gameplay, and reloads to a fresh run without creating Playwright tests
+- [x] 4.3 Manually verify the running browser game can trigger a lethal Trap, shows the exact Adventure prompt, blocks gameplay, and reloads to a fresh run without creating Playwright tests

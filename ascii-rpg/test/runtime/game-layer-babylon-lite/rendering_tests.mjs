@@ -3,7 +3,7 @@ import test from "node:test";
 import { createGlyphVisualCache, darkenGlyphColor, getGlyphRasterSize, tintGlyphRgb } from "../../../src/runtime/game-layer-babylon-lite/glyph-visual-cache.js";
 import { collectVisibleGlyphs, getVisibleRegion, getVisibleSlot, shouldUpdateVisibleSprite } from "../../../src/runtime/game-layer-babylon-lite/visible-region.js";
 import { createFrameCheckpoint, getVisibleGlyph } from "../../../src/runtime/game-layer-babylon-lite/systems/world-system.js";
-import { colorToLinearRgba, linearRgbaToHex, reconcilePaletteColors } from "../../../src/runtime/game-layer-babylon-lite/palette-color-cache.js";
+import { colorToLinearRgba, linearRgbaToHex, linearRgbaToRendererHex, reconcilePaletteColors } from "../../../src/runtime/game-layer-babylon-lite/palette-color-cache.js";
 import { applyLightingToColor, createSceneLightingFieldCache, LIGHTING_PRESETS } from "../../../src/runtime/game-layer-babylon-lite/lighting.js";
 
 function fakeAtlasApi() {
@@ -85,6 +85,13 @@ test("minimap base colors use the same transient lighting modulation as the game
   assert.notEqual(ambientColor, "#808040");
   assert.equal(litColor, "#808040");
   assert.deepEqual(baseColor, colorToLinearRgba({ color: "#808040", alpha: 1 }));
+});
+
+test("minimap renderer colors preserve the game renderer's raw linear channels", () => {
+  const baseColor = colorToLinearRgba({ color: "#808040", alpha: 1 });
+  const litColor = applyLightingToColor(baseColor, 0.25);
+  assert.equal(linearRgbaToRendererHex(litColor), "#0e0e03");
+  assert.notEqual(linearRgbaToHex(litColor), linearRgbaToRendererHex(litColor));
 });
 
 test("visible-region collection and slot resolution never touch off-screen cells", () => {

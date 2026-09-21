@@ -318,6 +318,14 @@ test("creates deterministic paired realm stairs on walkable terrain", async () =
   }
 });
 
+test("realm profiles expose independent starting fog coverage", async () => {
+  const { realms } = await createWorldRealms({ rows: 32, columns: 48, torchCount: 1, seed: "starting-fog-coverage" });
+  assert.deepEqual(realms.Overground.startingFogClearCoverage, { x: 0.95, y: 0.95 });
+  assert.deepEqual(realms.Underground.startingFogClearCoverage, { x: 0.6, y: 0.6 });
+  assert.equal(Number.isFinite(realms.Overground.fogUnclearRadius), true);
+  assert.equal(Number.isFinite(realms.Underground.fogUnclearRadius), true);
+});
+
 test("uses the configured stairs glyph instead of the legacy S glyph", () => {
   assert.equal(STAIR_GLYPH, "▤");
 });

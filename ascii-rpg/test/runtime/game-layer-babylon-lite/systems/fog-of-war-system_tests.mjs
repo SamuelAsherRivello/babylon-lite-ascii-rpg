@@ -6,6 +6,7 @@ import {
   MINIMAP_WORLD_SCALE,
   createFogOfWar,
   discoverFromPlayer,
+  discoverStartingArea,
   getFogVisibility,
   getMinimapCoverage,
   isDiscovered,
@@ -42,20 +43,52 @@ test("fog discovers clear walkable cells within the fixed five-grid radius", () 
 
 test("fog uses the realm-specific discovery radius", () => {
   const underground = createWorld(50, 50);
-  underground.fogUnclearRadius = 5;
+  underground.fogUnclearRadius = 6;
   const undergroundFog = createFogOfWar(underground);
   discoverFromPlayer(undergroundFog, underground, { x: 25, y: 25 });
-  assert.equal(undergroundFog.fogUnclearRadius, 5);
-  assert.equal(isDiscovered(undergroundFog, underground, { x: 30, y: 25 }), true);
-  assert.equal(isDiscovered(undergroundFog, underground, { x: 31, y: 25 }), false);
+  assert.equal(undergroundFog.fogUnclearRadius, 6);
+  assert.equal(isDiscovered(undergroundFog, underground, { x: 31, y: 25 }), true);
+  assert.equal(isDiscovered(undergroundFog, underground, { x: 32, y: 25 }), false);
 
   const overground = createWorld(50, 50);
-  overground.fogUnclearRadius = 7.5;
+  overground.fogUnclearRadius = 11;
   const overgroundFog = createFogOfWar(overground);
   discoverFromPlayer(overgroundFog, overground, { x: 25, y: 25 });
-  assert.equal(overgroundFog.fogUnclearRadius, 7.5);
-  assert.equal(isDiscovered(overgroundFog, overground, { x: 32, y: 25 }), true);
-  assert.equal(isDiscovered(overgroundFog, overground, { x: 33, y: 25 }), false);
+  assert.equal(overgroundFog.fogUnclearRadius, 11);
+  assert.equal(isDiscovered(overgroundFog, overground, { x: 36, y: 25 }), true);
+  assert.equal(isDiscovered(overgroundFog, overground, { x: 37, y: 25 }), false);
+});
+
+test("starting fog reveal uses independent coverage extents and existing falloff", () => {
+  const world = createWorld(30, 40);
+  const fog = createFogOfWar(world);
+  discoverStartingArea(fog, world, { x: 20, y: 15 }, {
+    viewportColumns: 20,
+    viewportRows: 10,
+    coverageX: 0.5,
+    coverageY: 0.6,
+  });
+  assert.equal(isDiscovered(fog, world, { x: 15, y: 12 }), true);
+  assert.equal(isDiscovered(fog, world, { x: 24, y: 17 }), true);
+  assert.equal(isDiscovered(fog, world, { x: 14, y: 15 }), false);
+  assert.equal(isDiscovered(fog, world, { x: 20, y: 18 }), false);
+  assert.equal(getFogVisibility(fog, world, { x: 20, y: 15 }), 100);
+  assert.equal(getFogVisibility(fog, world, { x: 15, y: 15 }), 25);
+});
+
+test("starting fog reveal clamps its footprint and does not reveal another fog record", () => {
+  const world = createWorld(8, 10);
+  const fog = createFogOfWar(world);
+  const inactiveFog = createFogOfWar(world);
+  discoverStartingArea(fog, world, { x: 1, y: 1 }, {
+    viewportColumns: 20,
+    viewportRows: 20,
+    coverageX: 0.95,
+    coverageY: 0.95,
+  });
+  assert.equal([...fog.visibility].some((value) => value > 0), true);
+  assert.equal([...inactiveFog.visibility].some((value) => value > 0), false);
+  assert.equal(getFogVisibility(fog, world, { x: 9, y: 7 }) > 0, true);
 });
 
 test("fog uses persistent seventy-percent visibility bands", () => {
