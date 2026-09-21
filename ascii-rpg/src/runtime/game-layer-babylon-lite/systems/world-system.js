@@ -6,16 +6,47 @@ export const TORCH_GLYPH = "🕯️";
 export const GOLD_GLYPH = "💰";
 export const HEALTH_GLYPH = "♥";
 export const TRAP_GLYPH = "☠";
-export const STAIR_GLYPH = "S";
+export const STAIR_GLYPH = "▤";
+export const KEY_GLYPH = "⚿";
+export const HORIZONTAL_FENCE_GLYPH = "─";
+export const VERTICAL_FENCE_GLYPH = "│";
+export const CLOSED_VERTICAL_DOOR_GLYPH = "█";
+export const OPEN_VERTICAL_DOOR_GLYPH = "□";
+export const CLOSED_HORIZONTAL_DOOR_GLYPH = "█";
+export const OPEN_HORIZONTAL_DOOR_GLYPH = "□";
 export const MOUNTAIN_GLYPH = "△";
 export const SHALLOW_WATER_GLYPH = "~";
 export const MEDIUM_WATER_GLYPH = "≈";
 export const DEEP_WATER_GLYPH = "▓";
+// The complete glyph inventory used by the generated overground and
+// underground maps, including terrain and map characters placed at runtime.
+export const PROJECT_MAP_GLYPHS = Object.freeze([
+  WALL_GLYPH,
+  MOUNTAIN_GLYPH,
+  FLOOR_GLYPH,
+  UNDERGROUND_FLOOR_GLYPH,
+  PLAYER_GLYPH,
+  TORCH_GLYPH,
+  STAIR_GLYPH,
+  GOLD_GLYPH,
+  SHALLOW_WATER_GLYPH,
+  MEDIUM_WATER_GLYPH,
+  DEEP_WATER_GLYPH,
+  HEALTH_GLYPH,
+  TRAP_GLYPH,
+  KEY_GLYPH,
+  HORIZONTAL_FENCE_GLYPH,
+  VERTICAL_FENCE_GLYPH,
+  CLOSED_VERTICAL_DOOR_GLYPH,
+  OPEN_VERTICAL_DOOR_GLYPH,
+  CLOSED_HORIZONTAL_DOOR_GLYPH,
+  OPEN_HORIZONTAL_DOOR_GLYPH,
+]);
 export const DEFAULT_WALL_FILL_PERCENT = 40;
 export const DEFAULT_SMOOTHING_ITERATIONS = 4;
 export const DEFAULT_MIN_WALKABLE_PERCENT = 0.3;
 // Normal worlds always include water; callers can still explicitly request a dry world.
-export const DEFAULT_WATER_FILL_PERCENT = 100;
+export const DEFAULT_WATER_FILL_PERCENT = 30;
 export const MIN_WATER_LAKE_SIZE = 50;
 export const MAX_WATER_LAKE_SIZE = 240;
 export const OCCASIONAL_LARGE_WATER_LAKE_SIZE = 480;
@@ -30,6 +61,7 @@ export const GENERATION_PASSES = Object.freeze([
   "walkability",
   "player-position",
   "object-spawner",
+  "civilization",
 ]);
 export const REALM_PROFILES = Object.freeze({
   Overground: Object.freeze({ wallFillPercent: 25, minWalkablePercent: 0.55, fogUnclearRadius: 7.5, groundKind: "grass", groundGlyph: FLOOR_GLYPH, groundColor: "#55aa55", blockedKind: "mountain", blockedGlyph: MOUNTAIN_GLYPH }),

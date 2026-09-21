@@ -58,7 +58,7 @@ feature occurrence probabilities and parameters.
   respective profiles and mountains and walls remain non-walkable
 
 ### Requirement: Synchronized paired stairs
-Each world SHALL generate non-blocking `S` stairs in both realms at the same
+Each world SHALL generate non-blocking `▤` stairs in both realms at the same
 grid coordinates. The requested stair count SHALL equal the requested torch
 count, subject to valid placement capacity. Every accepted paired coordinate
 SHALL be walkable and reachable in both realms, SHALL not be either realm's
@@ -67,7 +67,7 @@ generation parameters.
 
 #### Scenario: Stairs match across realms
 - **WHEN** a generated world's stair coordinates are inspected
-- **THEN** each Overground `S` has an Underground `S` at the identical
+- **THEN** each Overground `▤` has an Underground `▤` at the identical
   coordinate and both underlying terrain cells are walkable
 
 #### Scenario: Entering stairs transfers realms once
@@ -103,3 +103,30 @@ persisted and generated first after refresh.
 - **THEN** the game uses the shortest walkable path to an `S` cell and arrives
   in Underground at the paired `S` coordinate, with every route cell retained
   as discovered in Overground
+
+### Requirement: Realm entry events
+
+The realm system SHALL emit a generic immutable realm-entry event whenever a
+game instance establishes or changes its active realm. The event SHALL identify
+the entered realm and SHALL be available to gameplay consumers without exposing
+realm cells, fog data, or transition internals.
+
+#### Scenario: Initial Overground realm is observable
+
+- **WHEN** a new game instance is initialized with Overground active
+- **THEN** the realm system SHALL emit a realm-entry event identifying Overground
+
+#### Scenario: Initial Underground realm is observable
+
+- **WHEN** a new game instance is initialized with Underground active
+- **THEN** the realm system SHALL emit a realm-entry event identifying Underground
+
+#### Scenario: Stair transfer is observable
+
+- **WHEN** the player transfers from one realm through paired stairs
+- **THEN** the realm system SHALL emit one realm-entry event identifying the destination realm after the destination becomes active
+
+#### Scenario: Realm event has no quest ownership
+
+- **WHEN** a realm-entry event is emitted
+- **THEN** the realm system SHALL publish only the generic realm fact and SHALL not inspect quest definitions, spawn gold, or update quest progress

@@ -5,6 +5,8 @@ import {
   sendRealmAmbientSnapshot,
   sendCameraModeSnapshot,
   sendGpuLightPassSnapshot,
+  sendGlyphBackgroundSnapshot,
+  sendBackgroundDarknessSnapshot,
   sendMinimapZoomSnapshot,
   sendFontSnapshot,
   sendPlayerLightingSnapshot,
@@ -16,17 +18,41 @@ import {
   sendTimeSnapshot,
   sendQuestSnapshot,
   sendGoldSnapshot,
+  sendPlayerDeadSnapshot,
   getQuestSnapshot,
   getGoldSnapshot,
+  getPlayerDeadSnapshot,
   subscribeToQuest,
   subscribeToGold,
+  subscribeToPlayerDead,
   setGameController,
   subscribeToTime,
   subscribeToMinimapZoom,
   PLAYER_MOVED_EVENTS,
   sendPlayerMovedEvent,
   subscribeToPlayerMoved,
+  getLogSnapshot,
+  sendLogSnapshot,
+  getRandomSeedSnapshot,
+  sendRandomSeedSnapshot,
+  subscribeToRandomSeed,
+  subscribeToLog,
+  getKeySnapshot,
+  sendKeySnapshot,
+  subscribeToKey,
+  startQuest,
 } from "../../../src/runtime/bridge-layer/game-bridge.js";
+
+test("publishes the current session random seed", () => {
+  const received = [];
+  const unsubscribe = subscribeToRandomSeed(() => received.push(getRandomSeedSnapshot()));
+
+  sendRandomSeedSnapshot("session-seed");
+
+  assert.equal(getRandomSeedSnapshot(), "session-seed");
+  assert.deepEqual(received, ["session-seed"]);
+  unsubscribe();
+});
 
 test("forwards confirmed palette snapshots without exposing game internals", () => {
   const palette = [{ glyph: "W", color: "#909090", alpha: 1 }];
@@ -58,6 +84,19 @@ test("publishes time snapshots to subscribers", () => {
   assert.deepEqual(received, [2]);
 });
 
+test("publishes key snapshots to subscribers", () => {
+  const received = [];
+  const unsubscribe = subscribeToKey(() => received.push(getKeySnapshot()));
+
+  sendKeySnapshot(2);
+  assert.equal(getKeySnapshot(), 2);
+  sendKeySnapshot(-1);
+  assert.equal(getKeySnapshot(), 0);
+  assert.deepEqual(received, [2, 0]);
+
+  unsubscribe();
+});
+
 test("publishes only generic player-moved events to subscribers", () => {
   const received = [];
   const unsubscribe = subscribeToPlayerMoved((eventName) => received.push(eventName));
@@ -86,6 +125,55 @@ test("publishes immutable quest and live gold snapshots", () => {
   assert.deepEqual(gold, [1]);
   stopQuest();
   stopGold();
+});
+
+test("forwards quest selection without exposing game internals", () => {
+  let selected = null;
+  setGameController({ startQuest(id) { selected = id; return { id }; } });
+
+  assert.deepEqual(startQuest("collect-gold"), { id: "collect-gold" });
+  assert.equal(selected, "collect-gold");
+});
+
+test("publishes the terminal player-dead snapshot", () => {
+  const received = [];
+  const unsubscribe = subscribeToPlayerDead(() => received.push(getPlayerDeadSnapshot()));
+
+  sendPlayerDeadSnapshot(true);
+  assert.equal(getPlayerDeadSnapshot(), true);
+  assert.deepEqual(received, [true]);
+
+  unsubscribe();
+  sendPlayerDeadSnapshot(false);
+  assert.deepEqual(received, [true]);
+});
+
+test("freezes ordered quest steps at the bridge boundary", () => {
+  const snapshot = {
+    id: "collect-gold",
+    title: "Collect Gold",
+    steps: [{ id: "enter-overground", label: "Enter Overground Realm", complete: true }],
+  };
+  sendQuestSnapshot(snapshot);
+  assert.equal(Object.isFrozen(getQuestSnapshot()), true);
+  assert.equal(Object.isFrozen(getQuestSnapshot().steps), true);
+  assert.equal(Object.isFrozen(getQuestSnapshot().steps[0]), true);
+});
+
+test("publishes immutable ordered log snapshots and supports cleanup", () => {
+  const received = [];
+  const unsubscribe = subscribeToLog(() => received.push(getLogSnapshot()));
+
+  sendLogSnapshot(["Older", "Newest"]);
+
+  assert.deepEqual(getLogSnapshot(), ["Older", "Newest"]);
+  assert.equal(Object.isFrozen(getLogSnapshot()), true);
+  assert.throws(() => getLogSnapshot().push("mutated"), TypeError);
+  assert.deepEqual(received, [["Older", "Newest"]]);
+
+  unsubscribe();
+  sendLogSnapshot(["After cleanup"]);
+  assert.deepEqual(received, [["Older", "Newest"]]);
 });
 
 test("forwards zoom changes to the game layer", () => {
@@ -132,6 +220,24 @@ test("forwards GPU light pass state and reapplies it to a new controller", () =>
   let restored = null;
   setGameController({ setGpuLightPass(enabled) { restored = enabled; } });
   assert.equal(restored, true);
+});
+
+test("forwards glyph background preferences and reapplies the latest values", () => {
+  const received = {};
+  setGameController({
+    setGlyphBackground(value) { received.enabled = value; },
+    setBackgroundDarkness(value) { received.darkness = value; },
+  });
+  sendGlyphBackgroundSnapshot(false);
+  sendBackgroundDarknessSnapshot(75);
+  assert.deepEqual(received, { enabled: false, darkness: 75 });
+
+  const restored = {};
+  setGameController({
+    setGlyphBackground(value) { restored.enabled = value; },
+    setBackgroundDarkness(value) { restored.darkness = value; },
+  });
+  assert.deepEqual(restored, { enabled: false, darkness: 75 });
 });
 
 test("forwards realm ambient and independent source lighting and shadow profiles to the game layer", () => {

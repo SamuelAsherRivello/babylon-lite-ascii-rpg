@@ -1,10 +1,21 @@
 # Table of Contents
 
-1. [Philosophy](#philosophy)
+1. [Milestone](#milestone)
+   - [Add text log](#add-text-log)
+2. [Philosophy](#philosophy)
    1. [Embrace ASCII](#embrace-ascii)
    2. [Don't subvert ASCII (list)](#dont-subvert-ascii-list)
-2. [Workflows](#workflows)
-3. [Possible Features](#possible-features)
+3. [Workflows](#workflows)
+4. [Possible Features](#possible-features)
+
+# Milestone
+
+1. Add text log. ☑
+2. Add health item and log it. ☑
+3. Add trap that damages health and log it. ☑
+4. Spawn a few health items and traps around the world. ☑
+5. Update log for coin collection. ☑
+6. Update log for realm entry. ☑
 
 # Philosophy
 

@@ -108,6 +108,20 @@ test("quest pickup markers ignore fog and project off-screen as directional chev
   assert.equal(indicators[0].pickupId, "gold-2");
 });
 
+test("nearest-stairs navigation marker is rendered in the viewport or at its edge", () => {
+  const world = createWorld();
+  const fog = createFogOfWar(world);
+  const navigationMarkers = [{ id: "nearest-stairs", cell: { x: 8, y: 8 } }];
+  const markers = getMinimapMarkers(world, fog, { x: 1, y: 1 }, { navigationMarkers });
+  assert.deepEqual(markers.at(-2), {
+    type: "navigation", color: "#ffff00", depth: MINIMAP_MARKER_DEPTHS.quest,
+    markerId: "nearest-stairs", cell: { x: 8, y: 8 },
+  });
+  const indicators = getMinimapEdgeIndicators(world, { x: 1, y: 1 }, { x: 0, y: 0, columns: 5, rows: 5 }, { navigationMarkers });
+  assert.equal(indicators.at(-1).type, "navigation-edge");
+  assert.equal(indicators.at(-1).markerId, "nearest-stairs");
+});
+
 test("minimap markers come from quest-owned pickup ids, not object pickup types", () => {
   const world = createWorld();
   world.objects = [

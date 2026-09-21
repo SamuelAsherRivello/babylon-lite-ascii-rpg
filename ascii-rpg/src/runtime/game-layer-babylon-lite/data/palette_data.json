@@ -1748,7 +1748,7 @@
       "code": null,
       "unicode": "U+1F4B0",
       "glyph": "💰",
-      "color": "#ffff00",
+      "color": "#ffffff",
       "alpha": 1
     },
     {
@@ -1776,7 +1776,7 @@
       "code": null,
       "unicode": "U+25B3",
       "glyph": "△",
-      "color": "#ffffff",
+      "color": "#5a3700",
       "alpha": 1
     },
     {
@@ -2042,6 +2042,48 @@
       "code": null,
       "unicode": "U+25A4",
       "glyph": "▤",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+25AC",
+      "glyph": "▬",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+25AD",
+      "glyph": "▭",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+25AE",
+      "glyph": "▮",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+25AF",
+      "glyph": "▯",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+26BF",
+      "glyph": "⚿",
+      "color": "#858585",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+25A1",
+      "glyph": "□",
       "color": "#ffffff",
       "alpha": 1
     }

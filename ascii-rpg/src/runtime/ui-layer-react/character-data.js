@@ -11,5 +11,5 @@ export const INITIAL_CHARACTER = Object.freeze({
     pointsNeededForNextLevel: 100,
   }),
   gold: Object.freeze({ startingAmount: 0, currentAmount: 0 }),
-  carrying: Object.freeze({ currentWeight: 0, capacity: 0 }),
+  keys: Object.freeze({ startingAmount: 0, currentAmount: 0 }),
 });

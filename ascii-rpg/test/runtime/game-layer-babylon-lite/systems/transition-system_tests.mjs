@@ -102,3 +102,30 @@ test("holds full coverage before opening when a covered duration is requested", 
   assert.equal(transition.getPhase(), TRANSITION_PHASES.OPENING);
   assert.deepEqual(phases.slice(-2).map(({ phase }) => phase), [TRANSITION_PHASES.COVERED, TRANSITION_PHASES.OPENING]);
 });
+
+test("can start directly with a player reveal opening", () => {
+  const frames = createFakeFrames();
+  const updates = [];
+  const transition = createTransitionSystem({
+    requestFrame: frames.requestFrame,
+    cancelFrame: frames.cancelFrame,
+    onUpdate: (update) => updates.push(update),
+  });
+
+  transition.start({
+    from: 100,
+    to: 0,
+    durationOut: 1,
+    durationIn: 500,
+    startPhase: TRANSITION_PHASES.OPENING,
+  });
+  transition.begin(0);
+  frames.flush(0);
+  frames.flush(250);
+  frames.flush(500);
+
+  assert.equal(updates[0].phase, TRANSITION_PHASES.OPENING);
+  assert.equal(updates[0].value, 0);
+  assert.equal(updates[2].value, 50);
+  assert.equal(updates.at(-1).phase, TRANSITION_PHASES.IDLE);
+});

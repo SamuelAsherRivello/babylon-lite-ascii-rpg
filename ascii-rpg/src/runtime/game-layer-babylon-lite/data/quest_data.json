@@ -4,18 +4,71 @@
       "id": "collect-gold",
       "title": "Collect Gold",
       "objective": "Collect Gold",
-      "criterion": {
-        "mode": "relative",
-        "subject": "gold",
-        "eventType": "pickup-collected",
-        "pickupType": "gold",
-        "target": 3
-      },
-      "pickup": {
-        "type": "gold",
-        "count": 3,
-        "distances": [10, 30, 100]
-      }
+      "steps": [
+        {
+          "id": "enter-overground",
+          "label": "Enter Overground Realm",
+          "navigation": "nearest-stairs",
+          "criterion": {
+            "mode": "event",
+            "eventType": "realm-entered",
+            "realm": "Overground",
+            "target": 1
+          }
+        },
+        {
+          "id": "collect-gold",
+          "label": "Collect Gold",
+          "criterion": {
+            "mode": "relative",
+            "subject": "gold",
+            "eventType": "pickup-collected",
+            "pickupType": "gold",
+            "target": 3
+          },
+          "pickup": {
+            "type": "gold",
+            "count": 3,
+            "distances": [10, 30, 100]
+          }
+        }
+      ]
+    },
+    {
+      "id": "unlock-a-door",
+      "title": "Unlock A Door",
+      "objective": "Unlock A Door",
+      "steps": [
+        {
+          "id": "enter-underground",
+          "label": "Enter Underground Realm",
+          "criterion": {
+            "mode": "event",
+            "eventType": "realm-entered",
+            "realm": "Underground",
+            "target": 1
+          }
+        },
+        {
+          "id": "collect-key",
+          "label": "Collect Key",
+          "criterion": {
+            "mode": "event",
+            "eventType": "pickup-collected",
+            "pickupType": "key",
+            "target": 1
+          }
+        },
+        {
+          "id": "open-door",
+          "label": "Open a door",
+          "criterion": {
+            "mode": "event",
+            "eventType": "door-unlocked",
+            "target": 1
+          }
+        }
+      ]
     }
   ],
   "criterionExamples": [

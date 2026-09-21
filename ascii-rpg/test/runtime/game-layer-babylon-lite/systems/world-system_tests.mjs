@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   DEEP_WATER_GLYPH,
   FLOOR_GLYPH,
+  HEALTH_GLYPH,
   UNDERGROUND_FLOOR_GLYPH,
   GOLD_GLYPH,
   GENERATION_PASSES,
@@ -10,10 +11,20 @@ import {
   MEDIUM_WATER_GLYPH,
   OBJECT_DISTRIBUTION_RULES,
   PLAYER_GLYPH,
+  PROJECT_MAP_GLYPHS,
   SHALLOW_WATER_GLYPH,
+  TRAP_GLYPH,
   TORCH_GLYPH,
   STAIR_GLYPH,
+  KEY_GLYPH,
+  HORIZONTAL_FENCE_GLYPH,
+  VERTICAL_FENCE_GLYPH,
+  CLOSED_VERTICAL_DOOR_GLYPH,
+  OPEN_VERTICAL_DOOR_GLYPH,
+  CLOSED_HORIZONTAL_DOOR_GLYPH,
+  OPEN_HORIZONTAL_DOOR_GLYPH,
   WALL_GLYPH,
+  DEFAULT_WATER_FILL_PERCENT,
   createWorld,
   createWorldCooperative,
   createWorldRealms,
@@ -34,6 +45,31 @@ function assertMinimumTorchDistance(torches, minimumDistance = OBJECT_DISTRIBUTI
     }
   }
 }
+
+test("publishes every glyph used by the project maps", () => {
+  assert.deepEqual(new Set(PROJECT_MAP_GLYPHS), new Set([
+    WALL_GLYPH,
+    MOUNTAIN_GLYPH,
+    FLOOR_GLYPH,
+    UNDERGROUND_FLOOR_GLYPH,
+    PLAYER_GLYPH,
+    TORCH_GLYPH,
+    STAIR_GLYPH,
+    GOLD_GLYPH,
+    SHALLOW_WATER_GLYPH,
+    MEDIUM_WATER_GLYPH,
+    DEEP_WATER_GLYPH,
+    HEALTH_GLYPH,
+    TRAP_GLYPH,
+    KEY_GLYPH,
+    HORIZONTAL_FENCE_GLYPH,
+    VERTICAL_FENCE_GLYPH,
+    CLOSED_VERTICAL_DOOR_GLYPH,
+    OPEN_VERTICAL_DOOR_GLYPH,
+    CLOSED_HORIZONTAL_DOOR_GLYPH,
+    OPEN_HORIZONTAL_DOOR_GLYPH,
+  ]));
+});
 
 test("creates a repeatable bordered world with layered terrain", () => {
   const first = createWorld({ rows: 12, columns: 20, seed: "cave" });
@@ -123,14 +159,15 @@ test("generates the production-sized world with sparse large-body water populati
   assert.ok(world.waterLakes.every((lake) => lake.length >= 50 && lake.length <= 480));
 });
 
-test("includes restrained water in every default world", () => {
+test("uses restrained water frequency in default worlds", () => {
   const worlds = Array.from({ length: 100 }, (_, index) => createWorld({
     rows: 40,
     columns: 60,
     seed: `water-frequency-${index}`,
   }));
   const waterWorlds = worlds.filter((world) => world.waterCells.length > 0);
-  assert.equal(waterWorlds.length, worlds.length, "every default world should include water");
+  assert.equal(DEFAULT_WATER_FILL_PERCENT, 30);
+  assert.ok(waterWorlds.length > 10 && waterWorlds.length < 60, "default water frequency should be near 30%");
   assert.ok(waterWorlds.every((world) => world.waterLakes.length >= 1 && world.waterLakes.length <= 2));
 });
 
@@ -279,6 +316,10 @@ test("creates deterministic paired realm stairs on walkable terrain", async () =
     assert.equal(overground.characters[stair.y][stair.x], STAIR_GLYPH);
     assert.equal(underground.characters[stair.y][stair.x], STAIR_GLYPH);
   }
+});
+
+test("uses the configured stairs glyph instead of the legacy S glyph", () => {
+  assert.equal(STAIR_GLYPH, "▤");
 });
 
 test("aborted generation never publishes a partial world and a replacement can finish", async () => {

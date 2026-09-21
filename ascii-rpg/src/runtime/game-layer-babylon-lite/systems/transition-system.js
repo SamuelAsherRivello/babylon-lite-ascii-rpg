@@ -121,6 +121,7 @@ export function createTransitionSystem({
     durationOut = DEFAULT_TRANSITION_DURATION_MS,
     durationCovered = 0,
     durationIn = DEFAULT_TRANSITION_DURATION_MS,
+    startPhase = TRANSITION_PHASES.CLOSING,
     interpolate = defaultInterpolate,
     onStart,
     onCovered,
@@ -133,6 +134,9 @@ export function createTransitionSystem({
     if (!Number.isFinite(durationCovered) || durationCovered < 0 || !(durationOut > 0) || !(durationIn > 0)) {
       throw new RangeError("Transition durations must be valid and greater than zero for closing/opening.");
     }
+    if (startPhase !== TRANSITION_PHASES.CLOSING && startPhase !== TRANSITION_PHASES.OPENING) {
+      throw new RangeError("A transition must start in its closing or opening phase.");
+    }
 
     const id = ++nextId;
     active = {
@@ -143,8 +147,8 @@ export function createTransitionSystem({
       interpolate,
       durationCovered,
       durationIn,
-      phase: TRANSITION_PHASES.CLOSING,
-      phaseDuration: durationOut,
+      phase: startPhase,
+      phaseDuration: startPhase === TRANSITION_PHASES.OPENING ? durationIn : durationOut,
       phaseStartedAt: undefined,
       frame: null,
       callbacks: { complete: onComplete, covered: onCovered },
@@ -152,7 +156,7 @@ export function createTransitionSystem({
     const started = {
       id,
       target,
-      phase: TRANSITION_PHASES.CLOSING,
+      phase: startPhase,
     };
     onStart?.(started);
     emit("start", started);
@@ -162,7 +166,7 @@ export function createTransitionSystem({
   const begin = (timestamp) => {
     if (!active || active.phaseStartedAt !== undefined) return false;
     active.phaseStartedAt = timestamp;
-    update(TRANSITION_PHASES.CLOSING, 0, timestamp);
+    update(active.phase, 0, timestamp);
     schedule();
     return true;
   };

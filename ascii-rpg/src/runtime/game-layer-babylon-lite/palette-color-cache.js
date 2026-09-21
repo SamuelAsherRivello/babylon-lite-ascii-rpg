@@ -5,6 +5,14 @@ export function colorToLinearRgba({ color, alpha }) {
   return [...channels.map((channel) => channel ** 2.2), 1];
 }
 
+export function linearRgbaToHex([red, green, blue]) {
+  const channels = [red, green, blue].map((channel) => {
+    if (!Number.isFinite(channel)) throw new TypeError("Linear color channels must be finite.");
+    return Math.round((Math.min(1, Math.max(0, channel)) ** (1 / 2.2)) * 255);
+  });
+  return `#${channels.map((channel) => channel.toString(16).padStart(2, "0")).join("")}`;
+}
+
 export function reconcilePaletteColors(previousColors, entries) {
   const colors = new Map();
   const changed = new Set();

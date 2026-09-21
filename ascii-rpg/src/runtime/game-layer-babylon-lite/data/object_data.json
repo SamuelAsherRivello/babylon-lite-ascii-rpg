@@ -36,8 +36,8 @@
       "glyph": "☠",
       "IsPickup": false,
       "IsLevelSpawned": true,
-      "consequence": { "id": "health", "amount": -2 },
-      "logText": "Lost -2 Health from Trap",
+      "consequence": { "id": "health", "amount": -25 },
+      "logText": "Lost -25 Health from Trap",
       "distribution": { "minCount": 10, "maxCount": 14, "minimumDistance": 3 }
     },
     {
@@ -49,6 +49,40 @@
       "consequence": { "id": "realm-transition" },
       "logText": null,
       "distribution": { "minCount": 10, "maxCount": 14, "pairedRealms": true }
+    },
+    {
+      "type": "key",
+      "name": "Key",
+      "glyph": "⚿",
+      "IsPickup": true,
+      "IsLevelSpawned": false,
+      "consequence": { "id": "key", "amount": 1 },
+      "logText": "The key was collected.",
+      "distribution": { "minimumDistance": 1 }
+    },
+    {
+      "type": "fence",
+      "name": "Fence",
+      "glyph": "│",
+      "alternateGlyph": "─",
+      "IsPickup": false,
+      "IsLevelSpawned": false,
+      "consequence": { "id": "blocked" },
+      "logText": null,
+      "distribution": {}
+    },
+    {
+      "type": "door",
+      "name": "Door",
+      "glyph": "█",
+      "openGlyph": "□",
+      "alternateGlyph": "█",
+      "alternateOpenGlyph": "□",
+      "IsPickup": false,
+      "IsLevelSpawned": false,
+      "consequence": { "id": "door" },
+      "logText": null,
+      "distribution": {}
     }
   ]
 }

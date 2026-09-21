@@ -27,7 +27,7 @@
   /* Explicitly sit above the GPU canvas and below the minimap. */
   z-index: 1;
   pointer-events: none;
-  --transition-color: #101010;
+  --transition-color: #ff0000;
   background: radial-gradient(
     circle at var(--transition-center-x, 50%) var(--transition-center-y, 50%),
     transparent 0,
@@ -53,7 +53,7 @@
   box-sizing: border-box;
   width: var(--top-panel-size);
   height: var(--top-panel-size);
-  border: 1px solid #b3b3b3;
+  border: 1px solid var(--box-border-color);
   background: #000;
   image-rendering: pixelated;
   pointer-events: auto;

@@ -87,12 +87,30 @@ test("documents the plain safe-area template", async () => {
   if (!app.includes('id="version"') || !app.includes("v{versionNumber}")) {
     throw new Error("The page must show the version footer.");
   }
+  const statsMarkup = app.slice(app.indexOf('id="stats"'), app.indexOf('id="settings"'));
+  if (statsMarkup.indexOf('id="fps"') > statsMarkup.indexOf('id="version"')
+    || app.slice(app.indexOf('id="settings"'), app.indexOf('position="bottom-right"')).includes('id="version"')) {
+    throw new Error("The version display must be directly below FPS in the Stats section.");
+  }
   if (!app.includes('action="Character"')
     || !app.includes('action="Map 🔍"')
     || !app.includes("World 1 Floor {activeRealm === \"Underground\" ? \"-1\" : \"1\"}")
     || !app.includes('String(worldTime).padStart(5, "0")')
     || !styles.includes(".minimap_status")) {
     throw new Error("The top HUD must display box actions with right-aligned world, floor, and time status below the minimap.");
+  }
+  if (!gameLayer.includes('import { createLogSystem } from "./systems/log-system.js"')
+    || !gameLayer.includes("const logSystem = createLogSystem()")
+    || gameLayer.includes("const appendLog =")
+    || !gameBridge.includes("Object.freeze(Array.isArray(entries) ? [...entries] : [])")
+    || !app.includes("function LogBody({ entries })")
+    || !app.includes("isLogScrollAtBottom(body)")
+    || !app.includes("SIGNED_NUMBER_PATTERN")
+    || !app.includes("log_number_positive")
+    || !app.includes("log_number_negative")
+    || !styles.includes(".log_number_positive")
+    || !styles.includes(".log_number_negative")) {
+    throw new Error("The Log System must own game log events, immutable bridge snapshots, and scroll-aware React rendering.");
   }
   const characterData = await readFile(new URL("src/runtime/ui-layer-react/character-data.js", appRoot), "utf8");
   for (const requiredFragment of [
@@ -101,8 +119,7 @@ test("documents the plain safe-area template", async () => {
     "startingPercent: 0",
     "pointsNeededForNextLevel: 100",
     "currentAmount: 0",
-    "currentWeight: 0",
-    "capacity: 0",
+    "keys: Object.freeze({ startingAmount: 0, currentAmount: 0 })",
   ]) {
     if (!characterData.includes(requiredFragment)) {
       throw new Error(`The character model must define ${requiredFragment}.`);
@@ -139,7 +156,8 @@ test("documents the plain safe-area template", async () => {
     'data-stat={row.key}',
     'role="progressbar"',
     'data-resource="gold"',
-    'data-resource="carrying"',
+    'data-resource="keys"',
+    '>⚿</span>',
     'icon: "♥"',
     'icon: "⚔"',
     'icon: "⛨"',
@@ -269,8 +287,9 @@ test("documents the plain safe-area template", async () => {
   if (!app.includes('id="arguments_title"') || !app.includes("randomSeed")) {
     throw new Error("The Arguments window must document the randomSeed URL argument.");
   }
-  if (!app.includes('value: "123"') || !app.includes("?randomSeed=123")) {
-    throw new Error("The randomSeed URL argument example must use 123 as its default.");
+  if (!app.includes("getRandomSeedSnapshot") || !app.includes("subscribeToRandomSeed")
+    || !app.includes("encodeURIComponent(seedValue)") || !app.includes("randomSeed={randomSeed}")) {
+    throw new Error("The randomSeed URL argument example must use the current session seed.");
   }
   if (!app.includes('className="argument_code"') || !app.includes("window.location.assign") || !app.includes("withUrlArgument")) {
     throw new Error("Argument examples must be clickable URL actions that preserve and update query arguments.");
@@ -290,7 +309,7 @@ test("documents the plain safe-area template", async () => {
   if (!app.includes("paletteViewState") || !app.includes("setPaletteViewState") || app.includes("sessionStorage")) {
     throw new Error("Palette filter and sort choices must last for the page session without surviving refresh.");
   }
-  if (!app.includes("HexColorPicker") || app.includes("palette_alpha_control") || !app.includes("Confirm") || !app.includes("Reset") || !app.includes("Cancel")) {
+  if (!app.includes("HexColorPicker") || !app.includes("createGlyphRasterCanvas") || !app.includes('rasterizeGlyph(glyph, fontFamily, size, colorize ? "#ffffff" : color)') || !app.includes("{ tint: true }") || !app.includes("const displayColor = entryId === selectedEntryId && draft ? draft.color : entry.color") || !app.includes("<PaletteGlyph glyph={selectedEntry.glyph}") || !app.includes("colorize fontFamily") || app.includes("palette_alpha_control") || !app.includes("Confirm") || !app.includes("Reset") || !app.includes("Cancel")) {
     throw new Error("The palette glyph editor must include a color picker, no alpha control, Confirm, Reset, and Cancel controls.");
   }
   const confirmStart = app.indexOf("confirmEdit = async");
@@ -306,6 +325,12 @@ test("documents the plain safe-area template", async () => {
   }
   if (!app.includes('aria-label="Close Ascii Settings"') || !app.includes(">\n              X\n")) {
     throw new Error("The Ascii Settings overlay must provide an X close control.");
+  }
+  if (!app.includes(">\n                Layout\n") || !app.includes("Glyph Background") || !app.includes("Background Darkness")
+    || !app.includes('min="0"') || !app.includes('max="100"') || !app.includes('step="1"')
+    || !app.includes("DEFAULT_GLYPH_BACKGROUND") || !app.includes("DEFAULT_BACKGROUND_DARKNESS")
+    || !app.includes("glyphBackgroundStorageKey") || !app.includes("backgroundDarknessStorageKey")) {
+    throw new Error("The Ascii Settings Layout tab must expose persisted glyph background and darkness controls.");
   }
   if (!app.includes('className="window_backdrop" aria-hidden="true" onClick={onClose}') || !app.includes("event.stopPropagation()")) {
     throw new Error("Clicks outside the Ascii Palette window must close it without closing from inside the window.");
@@ -325,21 +350,26 @@ test("documents the plain safe-area template", async () => {
   if (!styles.includes(".prompt_body") || !styles.includes(".prompt_button")) {
     throw new Error("Prompts must define shared body and button styles.");
   }
-  if (!app.includes('id="show_ui_toggle"') || !app.includes("Show UI") || !app.includes("getPlatformSettingsDefaults().showHud")
+  if (!app.includes('id="show_ui_toggle"') || !app.includes("Developer") || !app.includes("getPlatformSettingsDefaults().showHud")
     || !app.includes("localStorage.setItem(showUiStorageKey, showHud ? \"true\" : \"false\")")
     || !app.includes("const toggleHud") || !app.includes("setShowHud((currentShowHud) => !currentShowHud)")
     || !platformSettings.includes('matchMedia("(pointer: coarse)")') || !platformSettings.includes("zoom: 5")
     || !platformSettings.includes("showHud: false")) {
-    throw new Error("Show UI must use persisted platform-specific defaults.");
+    throw new Error("Developer must use persisted platform-specific defaults.");
+  }
+  if (!app.includes("logOpenStorageKey")
+    || !app.includes("useState(() => getStoredBoolean(logOpenStorageKey, true))")
+    || !app.includes("localStorage.setItem(logOpenStorageKey, logOpen ? \"true\" : \"false\")")) {
+    throw new Error("The Log corner open state must persist and restore locally.");
   }
   if (app.indexOf('id="show_ui_toggle"') < app.indexOf('id="reset_settings"')) {
-    throw new Error("Show UI must remain the bottom item in the lower-left Settings list.");
+    throw new Error("Developer must remain the bottom item in the lower-left Settings list.");
   }
   if (!app.includes('document.documentElement.dataset.hudHidden = String(!showHud)')
     || !styles.includes('html[data-hud-hidden="true"] .corner_bottom_left > :not(#settings)')
     || !styles.includes('html[data-hud-hidden="true"] #settings > .hud_block_body > :not(:has(#show_ui_toggle))')
     || !styles.includes('html[data-hud-hidden="true"] #settings > .hud_block_body > :has(#show_ui_toggle)')) {
-    throw new Error("Hiding the UI must preserve the Show UI control in the lower-left Settings HUD.");
+    throw new Error("Hiding the UI must preserve the Developer control in the lower-left Settings HUD.");
   }
   if (!app.includes("requestFullscreenOnFirstInteraction")
     || !app.includes('document.addEventListener("pointerdown", requestFullscreenOnFirstInteraction, { capture: true, once: true })')
@@ -363,8 +393,9 @@ test("documents the plain safe-area template", async () => {
   if (!app.includes('id="gpu_light_pass_toggle"') || !app.includes("GPU Light Pass")
     || !app.includes("getStoredBoolean(gpuLightPassStorageKey, true)")
     || !app.includes("localStorage.setItem(gpuLightPassStorageKey, gpuLightPass ? \"true\" : \"false\")")
-    || !app.includes("localStorage.clear()")) {
-    throw new Error("The GPU light pass checkbox must default on, persist, and reset with settings.");
+    || !app.includes("localStorage.clear()")
+    || !app.includes('localStorage.setItem(realmStorageKey, "Overground")')) {
+    throw new Error("The GPU light pass checkbox must default on, persist, and reset with settings, including an Overground realm.");
   }
   if (!viteConfig.plugins.some((plugin) => plugin?.name === "ascii-palette-persistence")) {
     throw new Error("Vite must provide the local disk persistence plugin for ASCII palette and font edits.");
@@ -408,6 +439,12 @@ test("documents the plain safe-area template", async () => {
     || !styles.includes("radial-gradient")) {
     throw new Error("The transition mask must be a pointer-transparent, soft-edged game-only surface above the game canvas and below the minimap.");
   }
+  const initialRealmState = gameLayer.indexOf("playerCell = world.playerStart;");
+  const initialRealmLog = gameLayer.indexOf("logSystem.log({ message: `Entered the ${activeRealm} Realm` });", initialRealmState);
+  const objectSpawnerSetup = gameLayer.indexOf("objectSpawnerSystem = createObjectSpawnerSystem", initialRealmState);
+  if (initialRealmState < 0 || initialRealmLog < 0 || objectSpawnerSetup < 0 || initialRealmLog > objectSpawnerSetup) {
+    throw new Error("The initial realm must be logged as soon as the player enters it during game startup.");
+  }
   if (!gameLayer.includes('minimapCanvas.addEventListener("click", handleMinimapClick)')
     || !gameLayer.includes("canHandleMinimapScale()")
     || !gameLayer.includes('minimapCanvas.removeEventListener("click", handleMinimapClick)')
@@ -422,6 +459,9 @@ test("documents the plain safe-area template", async () => {
     || !gameLayer.includes("renderWorldViewComposition(composition")
     || !gameLayer.includes("fog: fogOfWar")
     || !gameLayer.includes("drawOverlay: () =>")
+    || !gameLayer.includes("rasterizeCompositeGlyph(glyph, family, size, paletteColors.get(glyph)")
+    || !gameLayer.includes("buildGpuLightPassSamples(minimapRegion, minimapLightField, lighting.ambient)")
+    || !gameLayer.includes('context.globalCompositeOperation = "lighter"')
     || styles.includes("--minimap-zoom")
     || styles.includes("transform: scale")) {
     throw new Error("Minimap content zoom must stay hidden, persist independently, preserve canvas bounds, and clean up on disposal.");
@@ -450,6 +490,10 @@ test("documents the plain safe-area template", async () => {
     "window.addEventListener(\"orientationchange\"",
     "const handlePageHide = () => {\n    clearMovementInput();",
     "const clearKeyboardInput = () => {\n    heldKeys.clear();\n    shiftHeld = false;",
+    "const heldModifierKeys = new Set();",
+    "heldModifierKeys.clear();",
+    'const isShiftKey = event.key === "Shift" || event.code === "ShiftLeft" || event.code === "ShiftRight";',
+    "shiftHeld = heldModifierKeys.size > 0 || event.shiftKey;",
     "const handleWindowBlur = () => {\n    clearMovementInput();",
     "window.addEventListener(\"blur\", handleWindowBlur)",
     "window.removeEventListener(\"blur\", handleWindowBlur)",
@@ -511,12 +555,43 @@ test("documents the event-only movement tutorial flow", async () => {
   }
 });
 
+test("documents the player death lifecycle and recovery prompt", async () => {
+  const app = await readFile(new URL("src/runtime/ui-layer-react/App.jsx", appRoot), "utf8");
+  const bridge = await readFile(new URL("src/runtime/bridge-layer/game-bridge.js", appRoot), "utf8");
+  const main = await readFile(new URL("src/main.jsx", appRoot), "utf8");
+  const gameLayer = await readFile(new URL("src/runtime/game-layer-babylon-lite/index.js", appRoot), "utf8");
+  const objectData = await readFile(new URL("src/runtime/game-layer-babylon-lite/data/object_data.json", appRoot), "utf8");
+  const styles = await readStyles();
+  if (!objectData.includes('"amount": -25') || !objectData.includes('"Lost -25 Health from Trap"')
+    || !gameLayer.includes("createPlayerLifecycle") || !gameLayer.includes("playerLifecycle.isDead()")
+    || !gameLayer.includes("applyHealthDelta(-25)")) {
+    throw new Error("The game layer must own the lethal Trap consequence and player-death boundary.");
+  }
+  if (!bridge.includes("getPlayerDeadSnapshot") || !bridge.includes("subscribeToPlayerDead")
+    || !bridge.includes("sendPlayerDeadSnapshot") || !main.includes("sendPlayerDeadSnapshot")) {
+    throw new Error("The bridge must expose the immutable player-dead snapshot to React.");
+  }
+  if (!app.includes("function DeathWindow") || !app.includes(">Adventure</div>")
+    || !app.includes("You have died.") || !app.includes("<li>XP: 00</li>")
+    || !app.includes("<li>Gold: 00</li>") || !app.includes("<li>Time: 00</li>")
+    || !app.includes(">Restart Game</button>") || !app.includes("window.location.reload()")
+    || !app.includes("blockDeadRunInput")) {
+    throw new Error("The death prompt must preserve the exact Adventure copy and restart behavior.");
+  }
+  if (!styles.includes(".death_window_summary")) {
+    throw new Error("The death prompt summary must have dedicated compact list styling.");
+  }
+});
+
 test("documents the quest tracker, live gold bridge, and quest toasts", async () => {
   const app = await readFile(new URL("src/runtime/ui-layer-react/App.jsx", appRoot), "utf8");
   const bridge = await readFile(new URL("src/runtime/bridge-layer/game-bridge.js", appRoot), "utf8");
   const styles = await readStyles();
-  if (!app.includes("Quest: ${quest.title}") || !app.includes("quest_tracker_body_complete")
-    || !app.includes("Quest Started: ${quest.title}.") || !app.includes("Quest Progress: ${quest.title}")
+  if (!app.includes("Quest: ${quest.title}") || !app.includes("quest_tracker_step_complete")
+    || !app.includes("quest_tracker_title_complete")
+    || !app.includes("quest_tracker_marker") || !app.includes("isActiveStep") || !app.includes('quest.state === "pending"')
+    || !app.includes("quest.steps") || !app.includes("step.label")
+    || !app.includes("Quest Started: ${quest.title}.") || !app.includes("Quest Progress: ${changedStep.label}")
     || !app.includes("Quest Completed: ${quest.title}.")) {
     throw new Error("The React HUD must render live quest text and state-specific quest toasts.");
   }
@@ -524,7 +599,9 @@ test("documents the quest tracker, live gold bridge, and quest toasts", async ()
     || !bridge.includes("getGoldSnapshot") || !bridge.includes("subscribeToGold")) {
     throw new Error("The bridge must expose quest and runtime gold snapshots.");
   }
-  if (!styles.includes(".quest_tracker") || !styles.includes("top: calc(var(--top-panel-size) + 25px)")
+  if (!styles.includes(".quest_tracker") || !styles.includes(".quest_tracker_marker")
+    || !styles.includes(".quest_tracker_title_complete")
+    || !styles.includes("border-left: 7px solid #ffff00") || !styles.includes("top: calc(var(--top-panel-size) + 12.5px)")
     || !styles.includes("margin-left: 5px") || !styles.includes("text-decoration: line-through")) {
     throw new Error("The quest tracker must preserve the requested HUD spacing, indent, and completion style.");
   }
@@ -537,13 +614,44 @@ test("documents the quest tracker, live gold bridge, and quest toasts", async ()
   }
 });
 
+test("documents the Gameplay Settings quest selector and default persistence", async () => {
+  const app = await readFile(new URL("src/runtime/ui-layer-react/App.jsx", appRoot), "utf8");
+  const questData = JSON.parse(await readFile(new URL("src/runtime/game-layer-babylon-lite/data/quest_data.json", appRoot), "utf8"));
+  const gameLayer = await readFile(new URL("src/runtime/game-layer-babylon-lite/index.js", appRoot), "utf8");
+  const bridge = await readFile(new URL("src/runtime/bridge-layer/game-bridge.js", appRoot), "utf8");
+  const styles = await readStyles();
+  if (!app.includes('id="gameplay_settings_toggle"') || !app.includes("Gameplay Settings")
+    || !app.includes('id="gameplay_settings_title"') || !app.includes(">Quests</h2>")
+    || !app.includes('role="tablist" aria-label="Gameplay settings sections"')
+    || !app.includes('className="prompt_tab" type="button" role="tab" aria-selected="true"')
+    || !app.includes("questData.quests.map") || !app.includes("Default Quest")
+    || !app.includes("defaultQuestStorageKey") || !app.includes("localStorage.setItem(defaultQuestStorageKey, id)")
+    || !app.includes("startQuest(id)") || !app.includes("QuestLayout")) {
+    throw new Error("Gameplay Settings must provide the quest catalog, selection, and default persistence.");
+  }
+  if (questData.quests.length < 2 || !questData.quests.some((definition) => definition.id === "unlock-a-door")) {
+    throw new Error("The Gameplay Settings quest tab must be backed by the complete quest catalog, including Unlock A Door.");
+  }
+  if (!gameLayer.includes('babylon-lite-ascii-rpg.default-quest') || !gameLayer.includes("initialQuestId")
+    || !gameLayer.includes("startQuest(id)")) {
+    throw new Error("The game layer must restore and validate the saved default quest.");
+  }
+  if (!bridge.includes("export function startQuest(id)")) {
+    throw new Error("The bridge must expose quest selection without exposing game internals.");
+  }
+  if (!styles.includes(".quest_settings_card") || !styles.includes(".quest_settings_list")
+    || !styles.includes(".gameplay_settings_body") || !styles.includes("overflow: auto")) {
+    throw new Error("Gameplay Settings must use a bounded, scrollable quest card layout.");
+  }
+});
+
 test("derives the character gold icon color from the shared palette", async () => {
   const app = await readFile(new URL("src/runtime/ui-layer-react/App.jsx", appRoot), "utf8");
   const palette = JSON.parse(await readFile(new URL("src/runtime/game-layer-babylon-lite/data/palette_data.json", appRoot), "utf8"));
-  if (!app.includes('getPaletteStyle(palette, "🪙")') || !app.includes("style={{ color: goldStyle.color }}")) {
+  if (!app.includes('getPaletteStyle(palette, "💰")') || !app.includes("style={{ color: goldStyle.color }}")) {
     throw new Error("The character gold icon must resolve its color from the shared palette.");
   }
-  if (palette.entries.find((entry) => entry.glyph === "🪙")?.color !== "#ffff00") {
+  if (palette.entries.find((entry) => entry.glyph === "💰")?.color !== "#ffff00") {
     throw new Error("The bundled gold glyph must default to yellow.");
   }
 });

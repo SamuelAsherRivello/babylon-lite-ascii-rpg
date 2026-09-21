@@ -10,9 +10,9 @@ without replacing settings that a player has already chosen and saved.
 ### Requirement: Platform-specific unset-setting defaults
 The game SHALL classify a browser as Mobile when its primary pointing input is
 coarse; all other browsers SHALL be classified as PC. When a persisted setting
-is absent, PC SHALL use the current PC default values and Mobile SHALL use the
-same values except that Show UI SHALL default to
-off. Existing persisted values SHALL take precedence over platform defaults,
+is absent, both platforms SHALL use the current default values, including Show
+UI defaulting to off. Existing persisted values SHALL take precedence over
+platform defaults,
 and first-run defaults SHALL be persisted using the existing settings storage
 so Reset Settings causes the applicable platform defaults to be selected again.
 
@@ -23,7 +23,7 @@ so Reset Settings causes the applicable platform defaults to be selected again.
 
 #### Scenario: First PC visit
 - **WHEN** a PC browser opens the game with no persisted settings
-- **THEN** the game starts with Zoom `5`, Show UI on, and every other setting
+- **THEN** the game starts with Zoom `5`, Show UI off, and every other setting
   at its existing PC default
 
 #### Scenario: Saved setting survives a platform default

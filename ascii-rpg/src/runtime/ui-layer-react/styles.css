@@ -26,4 +26,32 @@ html {
   --character-bar-height: 8.8px;
   --top-panel-gap: 16px;
   --top-panel-size: clamp(96px, 24vmin, 192px);
+  --box-border-color: #555;
+}
+
+/* Keep every scrollable surface inside the dark UI on the same grey palette. */
+*,
+*::before,
+*::after {
+  scrollbar-color: #777 #1b1b1b;
+  scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: #1b1b1b;
+}
+
+*::-webkit-scrollbar-thumb {
+  border: 2px solid #1b1b1b;
+  border-radius: 5px;
+  background: #777;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: #999;
 }

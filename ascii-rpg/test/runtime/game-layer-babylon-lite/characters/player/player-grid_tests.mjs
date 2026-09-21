@@ -17,12 +17,14 @@ import {
   getCombinedDirection,
   getDirectionForKey,
   getDirectionForSwipe,
+  getInitialViewOriginForCamera,
   getPlayerScreenCenter,
   getRepeatInterval,
   getViewOriginForPreservedPlayerPosition,
   getViewOriginForPlayer,
   getViewOriginForCamera,
   moveCell,
+  moveWorldCell,
 } from "../../../../../src/runtime/game-layer-babylon-lite/characters/player/player-grid.js";
 
 test("creates remapped and upscaled logical viewports", () => {
@@ -109,6 +111,35 @@ test("camera lock shifts the viewport to show a player entering from the opposit
     getViewOriginForCamera("lock", { x: -1, y: 20 }, viewport, world, { x: 0, y: 20 }, { x: -1, y: 0 }),
     null,
   );
+});
+
+test("restarts each camera mode with a stable player position and moves one unit", () => {
+  const viewport = createViewport({ screenWidth: 1280, screenHeight: 720, zoom: 10 });
+  const world = {
+    columns: 100,
+    rows: 80,
+    terrain: Array.from({ length: 80 }, () => Array.from({ length: 100 }, () => ({ walkable: true }))),
+  };
+  const initialPlayer = { x: 60, y: 40 };
+
+  for (const mode of ["center", "deadzone", "lock"]) {
+    const viewOrigin = getInitialViewOriginForCamera(mode, initialPlayer, viewport, world);
+    const restartedPlayer = { ...initialPlayer };
+    const movedPlayer = moveWorldCell(restartedPlayer, { x: 1, y: 0 }, world);
+
+    assert.deepEqual(restartedPlayer, initialPlayer, `${mode} restart changed the player cell`);
+    assert.deepEqual(movedPlayer, { x: initialPlayer.x + 1, y: initialPlayer.y }, `${mode} input did not move one unit`);
+    if (mode === "center") {
+      assert.deepEqual(
+        getPlayerScreenCenter(restartedPlayer, viewOrigin, viewport),
+        getCellCenter(getCenterCell(viewport), viewport),
+        "center mode must start with the player centered",
+      );
+    }
+    assert.ok(viewOrigin.x >= 0 && viewOrigin.y >= 0, `${mode} startup view must be bounded`);
+    assert.ok(viewOrigin.x <= world.columns - viewport.columns, `${mode} startup x view must be bounded`);
+    assert.ok(viewOrigin.y <= world.rows - viewport.rows, `${mode} startup y view must be bounded`);
+  }
 });
 
 test("keeps the iris center on the player across every camera mode and zoom", () => {

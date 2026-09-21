@@ -42,10 +42,56 @@ export function rasterizeGlyph(glyph, fontFamily, size, color = "#ffffff") {
   return { pixels: context.getImageData(0, 0, size, size).data, width: size, height: size, name: glyph };
 }
 
+export function darkenGlyphColor(color, darkness = 50) {
+  if (!Array.isArray(color) || color.length < 3 || color.some((channel) => !Number.isFinite(channel))) {
+    throw new TypeError("Glyph color must contain finite RGB channels.");
+  }
+  if (!Number.isInteger(darkness) || darkness < 0 || darkness > 100) {
+    throw new RangeError("Background darkness must be an integer from 0 through 100.");
+  }
+  const scale = 1 - darkness / 100;
+  return [color[0] * scale, color[1] * scale, color[2] * scale];
+}
+
+export function tintGlyphRgb(rgb, color) {
+  if ((!Array.isArray(rgb) && !ArrayBuffer.isView(rgb)) || rgb.length < 3 || rgb.some((channel) => !Number.isFinite(channel))) {
+    throw new TypeError("Glyph RGB channels must be finite.");
+  }
+  if (!Array.isArray(color) || color.length < 3 || color.some((channel) => !Number.isFinite(channel) || channel < 0 || channel > 1)) {
+    throw new TypeError("Glyph tint channels must be finite values from 0 through 1.");
+  }
+  return [
+    Math.round(rgb[0] * color[0]),
+    Math.round(rgb[1] * color[1]),
+    Math.round(rgb[2] * color[2]),
+  ];
+}
+
+export function rasterizeCompositeGlyph(glyph, fontFamily, size, color, darkness = 50) {
+  const glyphRaster = rasterizeGlyph(glyph, fontFamily, size, "#ffffff");
+  const background = darkenGlyphColor(color, darkness);
+  const pixels = new Uint8ClampedArray(glyphRaster.pixels.length);
+  for (let index = 0; index < glyphRaster.pixels.length; index += 4) {
+    const glyphAlpha = glyphRaster.pixels[index + 3] / 255;
+    const tinted = tintGlyphRgb(glyphRaster.pixels.slice(index, index + 3), color).map((channel) => channel / 255);
+    pixels[index] = Math.round(((background[0] * (1 - glyphAlpha)) + (tinted[0] * glyphAlpha)) * 255);
+    pixels[index + 1] = Math.round(((background[1] * (1 - glyphAlpha)) + (tinted[1] * glyphAlpha)) * 255);
+    pixels[index + 2] = Math.round(((background[2] * (1 - glyphAlpha)) + (tinted[2] * glyphAlpha)) * 255);
+    pixels[index + 3] = 255;
+  }
+  return { ...glyphRaster, pixels, composite: true };
+}
+
 // Canvas views and the sprite atlas both consume the same rasterized glyph.
 // Keeping this conversion here prevents a destination renderer from inventing
 // a second glyph-painting algorithm.
-export function createGlyphRasterCanvas(raster, color = "#ffffff") {
+export function createGlyphRasterCanvas(raster, color = "#ffffff", { alphaScale = 1, colorScale = 1, tint = false } = {}) {
+  if (!Number.isFinite(alphaScale) || alphaScale < 0 || alphaScale > 1) {
+    throw new RangeError("Glyph alpha scale must be finite and between 0 and 1.");
+  }
+  if (!Number.isFinite(colorScale) || colorScale < 0 || colorScale > 1) {
+    throw new RangeError("Glyph color scale must be finite and between 0 and 1.");
+  }
   const glyphCanvas = document.createElement("canvas");
   glyphCanvas.width = raster.width;
   glyphCanvas.height = raster.height;
@@ -56,10 +102,16 @@ export function createGlyphRasterCanvas(raster, color = "#ffffff") {
   const green = Number.parseInt(color.slice(3, 5), 16);
   const blue = Number.parseInt(color.slice(5, 7), 16);
   for (let index = 0; index < raster.pixels.length; index += 4) {
-    image.data[index] = red;
-    image.data[index + 1] = green;
-    image.data[index + 2] = blue;
-    image.data[index + 3] = raster.pixels[index + 3];
+    image.data[index] = raster.composite
+      ? Math.round(raster.pixels[index] * colorScale)
+      : tint ? Math.round((raster.pixels[index] * red) / 255) : red;
+    image.data[index + 1] = raster.composite
+      ? Math.round(raster.pixels[index + 1] * colorScale)
+      : tint ? Math.round((raster.pixels[index + 1] * green) / 255) : green;
+    image.data[index + 2] = raster.composite
+      ? Math.round(raster.pixels[index + 2] * colorScale)
+      : tint ? Math.round((raster.pixels[index + 2] * blue) / 255) : blue;
+    image.data[index + 3] = Math.round(raster.pixels[index + 3] * alphaScale);
   }
   glyphContext.putImageData(image, 0, 0);
   return glyphCanvas;

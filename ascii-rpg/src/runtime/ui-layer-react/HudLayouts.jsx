@@ -20,11 +20,11 @@ export function CornerLayout({ position, className, children, ...props }) {
   );
 }
 
-export function BoxLayout({ action, className, children, ...props }) {
+export function BoxLayout({ action, actionPosition = "bottom", className, children, ...props }) {
   return (
     <div {...props} className={joinClassNames("box_layout", className)}>
       {children}
-      {action ? <div className="box_layout_action">{action}</div> : null}
+      {action ? <div className={joinClassNames("box_layout_action", `box_layout_action_${actionPosition}`)}>{action}</div> : null}
     </div>
   );
 }

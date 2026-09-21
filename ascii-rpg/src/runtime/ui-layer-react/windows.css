@@ -107,6 +107,19 @@ html[data-presentation-aspect="portrait"] .tutorial_window {
   justify-content: flex-end;
 }
 
+.death_window_summary {
+  margin: 0 10% 0.5rem;
+  padding-left: 1.25rem;
+}
+
+.death_window .tutorial_window_copy {
+  margin: 0 10%;
+}
+
+.death_window_summary li + li {
+  margin-top: 0.25rem;
+}
+
 .tutorial_window_primary,
 .tutorial_window_secondary,
 .tutorial_window_ok {
@@ -203,6 +216,52 @@ html[data-presentation-aspect="portrait"] .tutorial_window {
 
 .prompt_body {
   padding: 12px 16px;
+}
+
+.gameplay_settings_body {
+  max-width: 720px;
+}
+
+.gameplay_settings_hint {
+  margin: 0 0 1rem;
+  color: #bdbdbd;
+}
+
+.quest_settings_list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.quest_settings_card {
+  position: relative;
+  border: 1px solid #555;
+  padding: 0.65rem;
+  background: #1b1b1b;
+  cursor: pointer;
+}
+
+.quest_settings_card:hover,
+.quest_settings_card:focus-visible,
+.quest_settings_card_selected {
+  border-color: #f5f5f5;
+}
+
+.quest_settings_card:focus-visible {
+  outline: 2px solid #f5f5f5;
+  outline-offset: 3px;
+}
+
+.quest_settings_card .quest_tracker {
+  position: static;
+  white-space: normal;
+}
+
+.quest_settings_default {
+  display: block;
+  margin-top: 0.5rem;
+  color: #bdbdbd;
+  font-size: 8pt;
+  text-transform: uppercase;
 }
 
 .prompt_body h2 {
@@ -390,8 +449,14 @@ html[data-presentation-aspect="portrait"] .tutorial_window {
 .palette_preview {
   margin-bottom: 0.5rem;
   background: #1b1b1b;
-  font: 32pt/1.2 monospace;
+  min-height: 115px;
   text-align: center;
+}
+
+.palette_preview .palette_glyph_canvas {
+  width: 115px;
+  height: 115px;
+  margin: 0 auto;
 }
 
 .palette_editor .react-colorful {
@@ -453,6 +518,39 @@ html[data-presentation-aspect="portrait"] .tutorial_window {
   font-size: clamp(20pt, 10vw, 32pt);
   text-align: center;
   overflow-wrap: anywhere;
+}
+
+.layout_editor_body {
+  display: grid;
+  gap: 1.25rem;
+  box-sizing: border-box;
+  width: min(100%, 420px);
+  max-width: 420px;
+  padding: 24px 16px;
+}
+
+.layout_control_group {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.layout_control_label {
+  font-weight: 700;
+}
+
+.layout_choice_group {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.layout_slider_value {
+  color: #bdbdbd;
+  font-variant-numeric: tabular-nums;
+}
+
+.layout_editor_body input[type="range"] {
+  width: 100%;
+  accent-color: #f5f5f5;
 }
 
 .palette_warning,

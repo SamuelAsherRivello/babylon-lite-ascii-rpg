@@ -51,7 +51,7 @@ function getMinimapMarkerCell(cell) {
  * Returns minimap markers from back to front so later entries visibly cover
  * earlier entries in the same coarse minimap pixel.
  */
-export function getMinimapMarkers(world, fog, playerCell) {
+export function getMinimapMarkers(world, fog, playerCell, { navigationMarkers = [] } = {}) {
   if (!world || !fog || !playerCell) return [];
   const markers = [];
   if (world.playerStart) {
@@ -66,6 +66,14 @@ export function getMinimapMarkers(world, fog, playerCell) {
       type: "quest", color: MINIMAP_MARKER_COLORS.quest,
       depth: MINIMAP_MARKER_DEPTHS.quest, pickupId: pickup.id,
       cell: getMinimapMarkerCell(pickup.cell),
+    });
+  }
+  for (const navigationMarker of navigationMarkers) {
+    if (!navigationMarker?.cell) continue;
+    markers.push({
+      type: "navigation", color: navigationMarker.color ?? MINIMAP_MARKER_COLORS.quest,
+      depth: MINIMAP_MARKER_DEPTHS.quest, markerId: navigationMarker.id,
+      cell: getMinimapMarkerCell(navigationMarker.cell),
     });
   }
   if (playerCell) {
@@ -91,7 +99,7 @@ export function getMinimapIndicatorSafeArea(width, height, inset = MINIMAP_INDIC
   };
 }
 
-export function getMinimapEdgeIndicators(world, playerCell, viewport) {
+export function getMinimapEdgeIndicators(world, playerCell, viewport, { navigationMarkers = [] } = {}) {
   if (!world || !playerCell || !viewport) return [];
   const indicators = [];
   const minimumX = viewport.x;
@@ -124,6 +132,31 @@ export function getMinimapEdgeIndicators(world, playerCell, viewport) {
       edge, direction, offsetIndex,
     });
   }
+  for (const navigationMarker of navigationMarkers) {
+    if (!navigationMarker?.cell) continue;
+    const localTarget = { x: navigationMarker.cell.x - minimumX, y: navigationMarker.cell.y - minimumY };
+    if (localTarget.x >= 0 && localTarget.x < viewport.columns && localTarget.y >= 0 && localTarget.y < viewport.rows) continue;
+    const direction = { x: localTarget.x - localPlayer.x, y: localTarget.y - localPlayer.y };
+    if (direction.x === 0 && direction.y === 0) continue;
+    const factors = [];
+    if (direction.x > 0) factors.push((viewport.columns - 1 - localPlayer.x) / direction.x);
+    if (direction.x < 0) factors.push((0 - localPlayer.x) / direction.x);
+    if (direction.y > 0) factors.push((viewport.rows - 1 - localPlayer.y) / direction.y);
+    if (direction.y < 0) factors.push((0 - localPlayer.y) / direction.y);
+    const factor = Math.min(...factors.filter((candidate) => candidate >= 0));
+    const edge = {
+      x: clamp(localPlayer.x + direction.x * factor, 0, viewport.columns - 1),
+      y: clamp(localPlayer.y + direction.y * factor, 0, viewport.rows - 1),
+    };
+    const edgeKey = `${Math.round(edge.x === 0 || edge.x === viewport.columns - 1 ? edge.x : edge.y)}:${edge.x === 0 || edge.x === viewport.columns - 1 ? "x" : "y"}`;
+    const offsetIndex = edgeCounts.get(edgeKey) ?? 0;
+    edgeCounts.set(edgeKey, offsetIndex + 1);
+    indicators.push({
+      type: "navigation-edge", markerId: navigationMarker.id,
+      color: navigationMarker.color ?? MINIMAP_MARKER_COLORS.quest,
+      edge, direction, offsetIndex,
+    });
+  }
   return indicators;
 }
 
@@ -146,8 +179,10 @@ export function getMinimapWorldPixel(world, fog, palette, minimapCell) {
   for (let y = minimumY; y < maximumY; y += 1) {
     for (let x = minimumX; x < maximumX; x += 1) {
       const cell = { x, y };
-      if (!world.terrain[y][x].walkable || !isDiscovered(fog, world, cell)) continue;
-      const color = getPaletteStyle(palette, getVisibleGlyph(world, cell)).color;
+      if (!isDiscovered(fog, world, cell)) continue;
+      const glyph = getVisibleGlyph(world, cell);
+      if (!world.terrain[y][x].walkable && glyph === world.terrain[y][x].glyph) continue;
+      const color = getPaletteStyle(palette, glyph).color;
       const channels = hexToRgb(color);
       total[0] += channels[0];
       total[1] += channels[1];
@@ -171,8 +206,9 @@ export function getMinimapWorldGraphic(world, fog, palette, minimapCell) {
   for (let y = minimumY; y < maximumY; y += 1) {
     for (let x = minimumX; x < maximumX; x += 1) {
       const cell = { x, y };
-      if (!world.terrain[y][x].walkable || !isDiscovered(fog, world, cell)) continue;
+      if (!isDiscovered(fog, world, cell)) continue;
       const glyph = getVisibleGlyph(world, cell);
+      if (!world.terrain[y][x].walkable && glyph === world.terrain[y][x].glyph) continue;
       return { glyph, color: getPaletteStyle(palette, glyph).color };
     }
   }

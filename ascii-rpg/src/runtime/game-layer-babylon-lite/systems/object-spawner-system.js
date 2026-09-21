@@ -75,7 +75,7 @@ export function selectPickupCells(world, start, distances, random = Math.random,
   }).filter(Boolean);
 }
 
-export function createObjectSpawnerSystem({ catalog = [] } = {}) {
+export function createObjectSpawnerSystem({ catalog = [], eventSystem = null } = {}) {
   validateCatalog(catalog);
   const definitions = new Map(catalog.map((entry) => [entry.type, Object.freeze({ ...entry })]));
   const objects = new Map();
@@ -85,9 +85,10 @@ export function createObjectSpawnerSystem({ catalog = [] } = {}) {
   const emit = (event) => {
     const frozen = Object.freeze({ ...event, cell: event.cell ? Object.freeze({ ...event.cell }) : undefined });
     for (const listener of listeners) listener(frozen);
+    eventSystem?.publish?.(frozen);
   };
 
-  const addObject = ({ id, type, cell, effect = () => {}, realm = null } = {}) => {
+  const addObject = ({ id, type, cell, glyph = null, openGlyph = null, orientation = null, effect = () => {}, realm = null } = {}) => {
     const definition = definitions.get(type);
     if (!definition) throw new RangeError(`Unknown object type: ${type}.`);
     if (!cell || !Number.isInteger(cell.x) || !Number.isInteger(cell.y)) throw new TypeError("An object needs an integer cell.");
@@ -97,7 +98,12 @@ export function createObjectSpawnerSystem({ catalog = [] } = {}) {
       id: objectId,
       type,
       name: definition.name,
-      glyph: definition.glyph,
+      glyph: glyph ?? definition.glyph,
+      openGlyph: openGlyph ?? definition.openGlyph ?? null,
+      alternateGlyph: definition.alternateGlyph ?? null,
+      alternateOpenGlyph: definition.alternateOpenGlyph ?? null,
+      orientation,
+      open: false,
       IsPickup: definition.IsPickup,
       IsLevelSpawned: definition.IsLevelSpawned,
       cell: { x: cell.x, y: cell.y },
@@ -145,10 +151,39 @@ export function createObjectSpawnerSystem({ catalog = [] } = {}) {
     return selected.map((cell, index) => addObject({ id: `${idPrefix}-${index + 1}`, type, cell, realm, effect }));
   };
 
+  const getActiveObjectAtCell = (cell, context = {}) => [...objects.values()].find((candidate) => candidate.active
+    && (!context.world || candidate.realm === context.world)
+    && sameCell(candidate.cell, cell)) ?? null;
+
+  const interactAtCell = (cell, {
+    world = null,
+    keyCount = 0,
+    spendKey = () => false,
+    log = () => {},
+  } = {}) => {
+    const object = getActiveObjectAtCell(cell, { world });
+    if (!object || object.type !== "door" || object.open) return null;
+    if (keyCount <= 0 || !spendKey()) {
+      log("The door is locked.");
+      return { handled: true, opened: false, object };
+    }
+    object.open = true;
+    object.glyph = object.openGlyph ?? object.glyph;
+    if (world?.terrain?.[cell.y]?.[cell.x]) world.terrain[cell.y][cell.x].walkable = true;
+    if (world?.characters?.[cell.y]) world.characters[cell.y][cell.x] = object.glyph;
+    log("A key was spent.");
+    log("The door unlocked.");
+    emit({
+      type: "door-unlocked",
+      objectId: object.id,
+      objectType: object.type,
+      cell: { ...object.cell },
+    });
+    return { handled: true, opened: true, object };
+  };
+
   const collideAtCell = (cell, context = {}) => {
-    const object = [...objects.values()].find((candidate) => candidate.active
-      && (!context.world || candidate.realm === context.world)
-      && sameCell(candidate.cell, cell));
+    const object = getActiveObjectAtCell(cell, context);
     if (!object) return null;
     if (object.IsPickup) object.active = false;
     object.effect(context);
@@ -170,6 +205,8 @@ export function createObjectSpawnerSystem({ catalog = [] } = {}) {
     addCatalogObjects,
     requestPickupObjects,
     collideAtCell,
+    getActiveObjectAtCell,
+    interactAtCell,
     getCatalog() { return Object.freeze([...definitions.values()]); },
     getObjects() { return Object.freeze([...objects.values()].map(({ effect, definition, realm, ...object }) => freezeObject(object))); },
     getActiveObjects(realm = null) { return Object.freeze([...objects.values()].filter((object) => object.active && (!realm || object.realm === realm)).map(({ effect, definition, realm: objectRealm, ...object }) => freezeObject(object))); },
@@ -181,7 +218,9 @@ export function createObjectSpawnerSystem({ catalog = [] } = {}) {
 export function validateObjectPalette(catalog, palette = []) {
   const glyphs = new Set(palette.map((entry) => entry.glyph));
   for (const entry of validateCatalog(catalog)) {
-    if (!glyphs.has(entry.glyph)) throw new Error(`Object glyph is missing from the palette: ${entry.glyph}`);
+    for (const glyph of [entry.glyph, entry.openGlyph, entry.alternateGlyph, entry.alternateOpenGlyph].filter(Boolean)) {
+      if (!glyphs.has(glyph)) throw new Error(`Object glyph is missing from the palette: ${glyph}`);
+    }
   }
   return true;
 }

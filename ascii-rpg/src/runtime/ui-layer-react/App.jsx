@@ -27,7 +27,7 @@ import { BoxLayout, CornerLayout, HudBlockLayout } from "./HudLayouts.jsx";
 import { removeFocusableElementsFromTabOrder } from "./button-tab-order.js";
 import { INITIAL_CHARACTER } from "./character-data.js";
 import { deriveBarColors } from "./character-colors.js";
-import { rasterizeGlyph, getGlyphRasterSize } from "../game-layer-babylon-lite/glyph-visual-cache.js";
+import { createGlyphRasterCanvas, rasterizeGlyph, getGlyphRasterSize } from "../game-layer-babylon-lite/glyph-visual-cache.js";
 import { DEFAULT_ZOOM } from "../game-layer-babylon-lite/zoom-scale.js";
 import {
   getPlatformSettingsDefaults,
@@ -40,12 +40,20 @@ import { MAX_ZOOM, MIN_ZOOM, ZOOM_SCALE_STORAGE_VERSION } from "../game-layer-ba
 import {
   getTimeSnapshot,
   getGoldSnapshot,
+  getKeySnapshot,
+  getHealthSnapshot,
+  getLogSnapshot,
+  getPlayerDeadSnapshot,
+  getRandomSeedSnapshot,
   getQuestSnapshot,
+  startQuest,
   getRealmSnapshot,
   sendRealmAmbientSnapshot,
   sendRealmPreferenceSnapshot,
   sendCameraModeSnapshot,
   sendGpuLightPassSnapshot,
+  sendGlyphBackgroundSnapshot,
+  sendBackgroundDarknessSnapshot,
   sendMinimapZoomSnapshot,
   sendPlayerGpuShadowBleedRangeSnapshot,
   sendPlayerLightingSnapshot,
@@ -57,6 +65,11 @@ import {
   subscribeToPlayerMoved,
   subscribeToTime,
   subscribeToGold,
+  subscribeToKey,
+  subscribeToHealth,
+  subscribeToLog,
+  subscribeToPlayerDead,
+  subscribeToRandomSeed,
   subscribeToQuest,
   subscribeToRealm,
   subscribeToMinimapZoom,
@@ -69,6 +82,7 @@ import {
   normalizeCameraMode,
 } from "../bridge-layer/camera.js";
 import { getNextMinimapScale, migrateMinimapScale } from "../game-layer-babylon-lite/systems/minimap-zoom.js";
+import { isLogScrollAtBottom } from "./log-scroll.js";
 import {
   AMBIENT_LIGHT_STEP,
   LIGHTING_PROFILES,
@@ -77,17 +91,14 @@ import {
   PLAYER_GPU_SHADOW_BLEED_RANGES,
 } from "../game-layer-babylon-lite/lighting.js";
 import {
-  DEEP_WATER_GLYPH,
-  FLOOR_GLYPH,
-  MEDIUM_WATER_GLYPH,
-  PLAYER_GLYPH,
-  SHALLOW_WATER_GLYPH,
-  WALL_GLYPH,
+  PROJECT_MAP_GLYPHS,
 } from "../game-layer-babylon-lite/systems/world-system.js";
+import questData from "../game-layer-babylon-lite/data/quest_data.json";
 
 const fullscreenStorageKey = "babylon-lite-ascii-rpg.fullscreen";
 const aspectStorageKey = "babylon-lite-ascii-rpg.aspect";
 const showUiStorageKey = "babylon-lite-ascii-rpg.show-ui";
+const logOpenStorageKey = "babylon-lite-ascii-rpg.log-open";
 const zoomStorageKey = "babylon-lite-ascii-rpg.zoom";
 const zoomStorageVersionKey = "babylon-lite-ascii-rpg.zoom-version";
 const overgroundAmbientStorageKey = "babylon-lite-ascii-rpg.ambient-overground";
@@ -99,26 +110,24 @@ const torchShadowStorageKey = "babylon-lite-ascii-rpg.torch-shadow";
 const playerShadowStorageKey = "babylon-lite-ascii-rpg.player-shadow";
 const gpuLightPassStorageKey = "babylon-lite-ascii-rpg.gpu-light-pass";
 const playerGpuShadowBleedRangeStorageKey = "babylon-lite-ascii-rpg.player-gpu-shadow-bleed-range";
+const glyphBackgroundStorageKey = "babylon-lite-ascii-rpg.glyph-background";
+const backgroundDarknessStorageKey = "babylon-lite-ascii-rpg.background-darkness";
 const minimapZoomStorageKey = "babylon-lite-ascii-rpg.minimap-zoom";
 const lightingWindowPositionStorageKey = "babylon-lite-ascii-rpg.lighting-window-position";
 const tutorialSkipStorageKey = "babylon-lite-ascii-rpg.tutorial-skip";
+const defaultQuestStorageKey = "babylon-lite-ascii-rpg.default-quest";
 const minZoom = MIN_ZOOM;
 const maxZoom = MAX_ZOOM;
 const repositoryUrl = "https://github.com/SamuelAsherRivello/babylon-lite-ascii-rpg";
 const uiMarginPixels = 20;
-const mapGlyphs = new Set([
-  WALL_GLYPH,
-  FLOOR_GLYPH,
-  PLAYER_GLYPH,
-  SHALLOW_WATER_GLYPH,
-  MEDIUM_WATER_GLYPH,
-  DEEP_WATER_GLYPH,
-]);
+const mapGlyphs = new Set(PROJECT_MAP_GLYPHS);
 const paletteEditorWidth = 286;
 const paletteEditorHeight = 340;
 const paletteEditorMargin = 16;
 const lightingWindowMargin = 12;
 const defaultLightingWindowPosition = { left: 180, top: 410 };
+const DEFAULT_GLYPH_BACKGROUND = true;
+const DEFAULT_BACKGROUND_DARKNESS = 50;
 // The full character catalog is still available through the All filter, but
 // opening settings should not synchronously mount hundreds of controls while
 // the WebGPU game is rendering.
@@ -129,7 +138,7 @@ const ambientValueHelp = "0 dark · 1 bright";
 const settingsHelp = Object.freeze({
   fullscreen: "Toggle fullscreen.",
   aspect: "Switch between landscape and portrait testing presentation.",
-  showUi: "Show or hide the HUD.",
+  showUi: "Show or hide the HUD for developer use.",
   lighting: "Open lighting controls.",
   closeLighting: "Close lighting controls.",
   gpuLightPass: "Toggle soft GPU light glow.",
@@ -162,6 +171,16 @@ function getStoredMinimapZoom() {
 
 function getStoredBoolean(storageKey, defaultValue) {
   return getStoredBooleanValue(localStorage.getItem(storageKey), defaultValue);
+}
+
+function getStoredBackgroundDarkness() {
+  const storedValue = localStorage.getItem(backgroundDarknessStorageKey);
+  if (storedValue === null || storedValue.trim() === "") return DEFAULT_BACKGROUND_DARKNESS;
+
+  const stored = Number(storedValue);
+  return Number.isInteger(stored) && stored >= 0 && stored <= 100
+    ? stored
+    : DEFAULT_BACKGROUND_DARKNESS;
 }
 
 function getStoredAmbientLight(storageKey, fallback) {
@@ -266,16 +285,18 @@ function CharacterBarRow({ row, data, color }) {
   );
 }
 
-function CharacterDetails({ gold = INITIAL_CHARACTER.gold.currentAmount, palette }) {
-  const goldStyle = getPaletteStyle(palette, "🪙");
+function CharacterDetails({ gold = INITIAL_CHARACTER.gold.currentAmount, keys = INITIAL_CHARACTER.keys.currentAmount, health = INITIAL_CHARACTER.health.currentPercent, palette }) {
+  const goldStyle = getPaletteStyle(palette, "💰");
+  const keyStyle = getPaletteStyle(palette, "⚿");
+  const characterData = { ...INITIAL_CHARACTER, health: { ...INITIAL_CHARACTER.health, currentPercent: health, pendingPercent: health } };
   return (
     <div className="character_details" aria-label="Character details">
       <div className="character_bar_container">
-        {characterBarRows.map((row) => <CharacterBarRow key={row.key} row={row} color={row.color} data={INITIAL_CHARACTER[row.key]} />)}
+        {characterBarRows.map((row) => <CharacterBarRow key={row.key} row={row} color={row.color} data={characterData[row.key]} />)}
       </div>
       <div className="character_slots_container">
         <div className="character_resource" data-resource="gold" aria-label="Gold" title="Gold: The currency of your character.">
-          <span className="character_resource_icon" aria-hidden="true" style={{ color: goldStyle.color }}>🪙</span>
+          <span className="character_resource_icon" aria-hidden="true" style={{ color: goldStyle.color }}>💰</span>
           <span className="character_resource_value">{gold}</span>
         </div>
         {["Slot 01", "Slot 02"].map((slot) => (
@@ -283,9 +304,9 @@ function CharacterDetails({ gold = INITIAL_CHARACTER.gold.currentAmount, palette
             <span className="character_slot_text">{slot}</span>
           </div>
         ))}
-        <div className="character_resource" data-resource="carrying" aria-label="Carrying weight" title="Carrying: The load your character is carrying.">
-          <span className="character_resource_icon" aria-hidden="true">▣</span>
-          <span className="character_resource_value">{INITIAL_CHARACTER.carrying.currentWeight}/{INITIAL_CHARACTER.carrying.capacity}</span>
+        <div className="character_resource" data-resource="keys" aria-label="Keys" title="Keys: The keys your character is holding.">
+          <span className="character_resource_icon" aria-hidden="true" style={{ color: keyStyle.color }}>⚿</span>
+          <span className="character_resource_value">{keys}</span>
         </div>
         {["Slot 03", "Slot 04"].map((slot) => (
           <div className="character_resource character_slot" key={slot} aria-label={slot} title={slot}>
@@ -299,17 +320,102 @@ function CharacterDetails({ gold = INITIAL_CHARACTER.gold.currentAmount, palette
 
 function QuestTracker({ quest }) {
   if (!quest) return null;
+  return <QuestLayout quest={quest} className="quest_tracker" ariaLabel="Current quest" />;
+}
+
+function QuestLayout({ quest, className = "", ariaLabel, onClick, onKeyDown }) {
+  const steps = quest.steps ?? [{
+    id: quest.id,
+    label: quest.objective,
+    state: quest.state,
+    current: quest.current,
+    target: quest.target,
+    complete: quest.complete,
+  }];
   return (
     <HudBlockLayout
       as="div"
-      className="quest_tracker"
-      aria-label="Current quest"
-      titleClassName="quest_tracker_title"
-      bodyClassName={`quest_tracker_body${quest.complete ? " quest_tracker_body_complete" : ""}`}
+      className={className}
+      aria-label={ariaLabel}
+      titleClassName={`quest_tracker_title${quest.complete ? " quest_tracker_title_complete" : ""}`}
+      bodyClassName="quest_tracker_body"
       title={`Quest: ${quest.title}`}
+      onClick={onClick}
+      onKeyDown={onKeyDown}
     >
-      {quest.objective} {quest.current} of {quest.target}
+      {steps.map((step) => {
+        const isActiveStep = step.active ?? (step.id === quest.activeStepId || steps.length === 1);
+        return (
+        <div key={step.id} className={`quest_tracker_step${step.complete ? " quest_tracker_step_complete" : ""}`}>
+          <span className={`quest_tracker_marker${quest.state === "pending" && !quest.complete && isActiveStep ? "" : " quest_tracker_marker_empty"}`} aria-hidden="true" />
+          <span className="quest_tracker_step_label">{step.label}{step.target > 1 ? ` ${step.current} of ${step.target}` : ""}</span>
+        </div>
+        );
+      })}
     </HudBlockLayout>
+  );
+}
+
+function getQuestPreview(definition, activeQuest) {
+  if (definition.id === activeQuest?.id) return activeQuest;
+  return {
+    ...definition,
+    state: "unstarted",
+    complete: false,
+    steps: (definition.steps ?? [{ id: definition.id, label: definition.objective, criterion: definition.criterion }]).map((step) => ({
+      id: step.id,
+      label: step.label,
+      current: 0,
+      target: step.criterion?.target ?? 1,
+      complete: false,
+    })),
+  };
+}
+
+const SIGNED_NUMBER_PATTERN = /[+-]\d+(?:\.\d+)?/g;
+
+function renderLogEntry(entry) {
+  const text = String(entry);
+  const parts = text.split(SIGNED_NUMBER_PATTERN);
+  const numbers = text.match(SIGNED_NUMBER_PATTERN) ?? [];
+
+  return parts.reduce((rendered, part, index) => {
+    rendered.push(part);
+    const number = numbers[index];
+    if (number) {
+      rendered.push(<span className={number.startsWith("+") ? "log_number_positive" : "log_number_negative"} key={`${number}-${index}`}>{number}</span>);
+    }
+    return rendered;
+  }, []);
+}
+
+function LogBody({ entries }) {
+  const bodyRef = useRef(null);
+  const followBottomRef = useRef(true);
+
+  useLayoutEffect(() => {
+    if (followBottomRef.current && bodyRef.current) {
+      bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
+    }
+  }, [entries]);
+
+  useEffect(() => {
+    const body = bodyRef.current;
+    if (!body) return undefined;
+
+    const updateScrollState = () => {
+      followBottomRef.current = isLogScrollAtBottom(body);
+    };
+
+    updateScrollState();
+    body.addEventListener("scroll", updateScrollState, { passive: true });
+    return () => body.removeEventListener("scroll", updateScrollState);
+  }, []);
+
+  return (
+    <div ref={bodyRef} className="log_box_body" aria-label="Log entries">
+      {entries?.length ? entries.map((entry, index) => <div className="log_entry" key={`${entry}-${index}`}>{renderLogEntry(entry)}</div>) : null}
+    </div>
   );
 }
 
@@ -364,6 +470,38 @@ function TutorialWindow({ complete, onConfirm, onSkip, showCloseButton = false, 
                 <button className="corner_body tutorial_window_secondary" type="button" onClick={onSkip}>Skip Tutorial</button>
               </>
             )}
+          </div>
+        </div>
+      </section>
+    </>
+  );
+}
+
+function DeathWindow({ onRestart }) {
+  return (
+    <>
+      <WindowBackdrop visible closesOnClick={false} />
+      <section
+        id="death_window"
+        className="lighting_window tutorial_window death_window"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="death_title"
+        onPointerDown={(event) => event.stopPropagation()}
+        onPointerMove={(event) => event.stopPropagation()}
+      >
+        <div className="lighting_window_titlebar tutorial_window_titlebar">
+          <div id="death_title" className="corner_title">Adventure</div>
+        </div>
+        <div className="lighting_window_body tutorial_window_body">
+          <p className="corner_body tutorial_window_copy">You have died.</p>
+          <ul className="corner_body death_window_summary">
+            <li>XP: 00</li>
+            <li>Gold: 00</li>
+            <li>Time: 00</li>
+          </ul>
+          <div className="tutorial_window_actions">
+            <button className="corner_body tutorial_window_primary" type="button" onClick={onRestart}>Restart Game</button>
           </div>
         </div>
       </section>
@@ -523,21 +661,25 @@ function LightingWindow({
   );
 }
 
-function PaletteGlyph({ glyph, color, fontFamily }) {
+function PaletteGlyph({ glyph, color, fontFamily, colorize = false }) {
   const canvasRef = useRef(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return undefined;
     const size = getGlyphRasterSize(DEFAULT_ZOOM, 32);
-    const raster = rasterizeGlyph(glyph, fontFamily, size, color);
+    const raster = rasterizeGlyph(glyph, fontFamily, size, colorize ? "#ffffff" : color);
     canvas.width = raster.width;
     canvas.height = raster.height;
     const context = canvas.getContext("2d");
     if (!context) return undefined;
-    context.putImageData(new ImageData(raster.pixels, raster.width, raster.height), 0, 0);
+    if (colorize) {
+      context.drawImage(createGlyphRasterCanvas(raster, color, { tint: true }), 0, 0);
+    } else {
+      context.putImageData(new ImageData(raster.pixels, raster.width, raster.height), 0, 0);
+    }
     return undefined;
-  }, [color, fontFamily, glyph]);
+  }, [color, colorize, fontFamily, glyph]);
 
   return <canvas ref={canvasRef} className="palette_glyph_canvas" aria-label={glyph} />;
 }
@@ -638,7 +780,7 @@ export class PromptWindow extends Component {
   };
 
   render() {
-    const { onClose, palette, viewState, fontId } = this.props;
+    const { onClose, palette, viewState, fontId, glyphBackground, backgroundDarkness, onGlyphBackgroundChange, onBackgroundDarknessChange } = this.props;
     const {
       selectedEntryId,
       draft,
@@ -688,6 +830,16 @@ export class PromptWindow extends Component {
                 onClick={() => this.selectTab("font")}
               >
                 Fonts
+              </button>
+              <span aria-hidden="true"> / </span>
+              <button
+                className="prompt_tab"
+                type="button"
+                role="tab"
+                aria-selected={activeTab === "layout"}
+                onClick={() => this.selectTab("layout")}
+              >
+                Layout
               </button>
             </div>
             <button
@@ -749,6 +901,7 @@ export class PromptWindow extends Component {
           <div className="palette_grid" data-grouped={sortBy === "group" ? "true" : "false"}>
             {visibleEntries.map((entry, index) => {
               const entryId = getPaletteEntryId(entry);
+              const displayColor = entryId === selectedEntryId && draft ? draft.color : entry.color;
               const groupHeaderVisible = sortBy === "group"
                 && (index === 0 || getPaletteGroup(entry) !== getPaletteGroup(visibleEntries[index - 1]));
               return (
@@ -768,7 +921,7 @@ export class PromptWindow extends Component {
                   >
                     <span className="palette_index">{entry.code ?? entry.unicode}</span>
                     <span className="palette_glyph">
-                      <PaletteGlyph glyph={entry.glyph} color={entry.color} fontFamily={getFontOption(fontId).family} />
+                      <PaletteGlyph glyph={entry.glyph} color={displayColor} colorize fontFamily={getFontOption(fontId).family} />
                     </span>
                   </button>
                 </Fragment>
@@ -781,8 +934,8 @@ export class PromptWindow extends Component {
               style={{ top: `${editorPosition.top}px`, left: `${editorPosition.left}px` }}
               onClick={(event) => event.stopPropagation()}
             >
-              <div className="palette_preview" style={{ color: draft.color }}>
-                {selectedEntry.glyph}
+              <div className="palette_preview">
+                <PaletteGlyph glyph={selectedEntry.glyph} color={draft.color} colorize fontFamily={getFontOption(fontId).family} />
               </div>
               <HexColorPicker color={draft.color} onChange={this.updateColor} />
               <div className="palette_editor_actions">
@@ -792,7 +945,7 @@ export class PromptWindow extends Component {
               </div>
             </div>
           ) : null}
-          </> : (
+          </> : activeTab === "font" ? (
             <div className="font_editor_body">
               <label className="font_select_label" htmlFor="ascii_font_select">Font</label>
               <select
@@ -811,6 +964,38 @@ export class PromptWindow extends Component {
                 <button type="button" onClick={this.resetFontDraft}>Reset</button>
                 <button type="button" onClick={this.cancelFontEdit}>Cancel</button>
               </div>
+            </div>
+          ) : (
+            <div className="layout_editor_body">
+              <div className="layout_control_group" role="group" aria-labelledby="glyph_background_label">
+                <span id="glyph_background_label" className="layout_control_label">Glyph Background</span>
+                <div className="layout_choice_group">
+                  {[true, false].map((enabled) => (
+                    <button
+                      key={String(enabled)}
+                      className="content_option_button"
+                      type="button"
+                      aria-pressed={glyphBackground === enabled}
+                      onClick={() => onGlyphBackgroundChange(enabled)}
+                    >
+                      {enabled ? "On" : "Off"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <label className="layout_control_group" htmlFor="background_darkness">
+                <span className="layout_control_label">Background Darkness</span>
+                <span className="layout_slider_value">{backgroundDarkness}</span>
+                <input
+                  id="background_darkness"
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="1"
+                  value={backgroundDarkness}
+                  onChange={(event) => onBackgroundDarknessChange(Number(event.target.value))}
+                />
+              </label>
             </div>
           )}
           {warningVisible ? (
@@ -839,8 +1024,6 @@ const argumentBlocks = [
   {
     name: "RandomSeed",
     parameter: "randomSeed",
-    value: "123",
-    example: "?randomSeed=123",
     description: "fixes the generated level seed.",
   },
 ];
@@ -850,7 +1033,8 @@ function applyUrlArgument(name, value) {
   window.location.assign(nextUrl.href);
 }
 
-export function ArgumentsWindow({ onClose }) {
+export function ArgumentsWindow({ onClose, randomSeed }) {
+  const seedValue = randomSeed ?? "";
   return (
     <div className="prompt_window" role="presentation">
       <div className="window_backdrop" aria-hidden="true" onClick={onClose} />
@@ -873,7 +1057,9 @@ export function ArgumentsWindow({ onClose }) {
           </button>
         </div>
         <div className="prompt_body window_body">
-          {argumentBlocks.map((argument) => (
+          {argumentBlocks.map((argument) => {
+            const example = `?${argument.parameter}=${encodeURIComponent(seedValue)}`;
+            return (
             <section className="argument_block" key={argument.parameter}>
               <h2>{argument.name}</h2>
               <ul className="window_list">
@@ -881,16 +1067,72 @@ export function ArgumentsWindow({ onClose }) {
                   <button
                     className="argument_code"
                     type="button"
-                    onClick={() => applyUrlArgument(argument.parameter, argument.value)}
+                    disabled={!seedValue}
+                    onClick={() => applyUrlArgument(argument.parameter, seedValue)}
                   >
-                    <code>{argument.example}</code>
+                    <code>{example}</code>
                   </button>{" "}
                   {argument.description}
                 </li>
                 <li>Without it, each new level receives a fresh random seed.</li>
               </ul>
             </section>
-          ))}
+            );
+          })}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+export function GameplaySettingsWindow({ quest, defaultQuestId, onSelectQuest, onClose }) {
+  return (
+    <div className="prompt_window" role="presentation">
+      <div className="window_backdrop" aria-hidden="true" onClick={onClose} />
+      <section
+        className="window gameplay_settings_window"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="gameplay_settings_title"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="window_header">
+          <h1 id="gameplay_settings_title" className="prompt_title">Gameplay Settings</h1>
+          <div className="title_tabs" role="tablist" aria-label="Gameplay settings sections">
+            <button className="prompt_tab" type="button" role="tab" aria-selected="true">
+              Quests
+            </button>
+          </div>
+          <button className="prompt_button window_close" type="button" aria-label="Close Gameplay Settings" onClick={onClose}>X</button>
+        </div>
+        <div className="prompt_body gameplay_settings_body">
+          <h2>Quests</h2>
+          <p className="gameplay_settings_hint">Select a quest to set it as the Default Quest.</p>
+          <div className="quest_settings_list">
+            {questData.quests.map((definition) => {
+              const preview = getQuestPreview(definition, quest);
+              const selected = defaultQuestId === definition.id;
+              return (
+                <div
+                  key={definition.id}
+                  className={`quest_settings_card${selected ? " quest_settings_card_selected" : ""}`}
+                  role="button"
+                  tabIndex={0}
+                  aria-pressed={selected}
+                  onClick={() => onSelectQuest(definition.id)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      onSelectQuest(definition.id);
+                    }
+                  }}
+                >
+                  <QuestLayout quest={preview} ariaLabel={`Quest ${definition.title}`} />
+                  {selected ? <span className="quest_settings_default">Default Quest</span> : null}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </section>
     </div>
@@ -915,17 +1157,28 @@ function AppContent() {
   const [undergroundAmbient, setUndergroundAmbient] = useState(() => getStoredAmbientLight(undergroundAmbientStorageKey, 0.1));
   const [gpuLightPass, setGpuLightPass] = useState(() => getStoredBoolean(gpuLightPassStorageKey, true));
   const [playerGpuShadowBleedRange, setPlayerGpuShadowBleedRange] = useState(getStoredPlayerGpuShadowBleedRange);
+  const [glyphBackground, setGlyphBackground] = useState(() => getStoredBoolean(glyphBackgroundStorageKey, DEFAULT_GLYPH_BACKGROUND));
+  const [backgroundDarkness, setBackgroundDarkness] = useState(getStoredBackgroundDarkness);
   const [torchLightingIndex, setTorchLightingIndex] = useState(() => getStoredSourceIndex(torchLightingStorageKey, 1));
   const [playerLightingIndex, setPlayerLightingIndex] = useState(() => getStoredSourceIndex(playerLightingStorageKey, 4));
   const [torchShadowIndex, setTorchShadowIndex] = useState(() => getStoredSourceIndex(torchShadowStorageKey, 4));
   const [playerShadowIndex, setPlayerShadowIndex] = useState(() => getStoredSourceIndex(playerShadowStorageKey, 3));
   const [lightingWindowOpen, setLightingWindowOpen] = useState(false);
+  const [logOpen, setLogOpen] = useState(() => getStoredBoolean(logOpenStorageKey, true));
   const [lightingWindowPosition, setLightingWindowPosition] = useState(getStoredLightingWindowPosition);
   const [tutorialPhase, setTutorialPhase] = useState(() => (
     getStoredBoolean(tutorialSkipStorageKey, false) ? "finished" : "initial"
   ));
   const tutorialDirectionsRef = useRef(new Set());
   const [asciiPaletteOpen, setAsciiPaletteOpen] = useState(false);
+  const [gameplaySettingsOpen, setGameplaySettingsOpen] = useState(false);
+  const [defaultQuestId, setDefaultQuestId] = useState(() => {
+    const stored = localStorage.getItem(defaultQuestStorageKey);
+    const fallback = questData.quests[0]?.id ?? "";
+    const next = questData.quests.some((definition) => definition.id === stored) ? stored : fallback;
+    if (next && stored !== next) localStorage.setItem(defaultQuestStorageKey, next);
+    return next;
+  });
   const [argumentsOpen, setArgumentsOpen] = useState(false);
   const [paletteError, setPaletteError] = useState("");
   const [paletteViewState, setPaletteViewState] = useState(defaultPaletteViewState);
@@ -936,6 +1189,11 @@ function AppContent() {
   const activeRealm = useSyncExternalStore(subscribeToRealm, getRealmSnapshot, getRealmSnapshot);
   const quest = useSyncExternalStore(subscribeToQuest, getQuestSnapshot, getQuestSnapshot);
   const gold = useSyncExternalStore(subscribeToGold, getGoldSnapshot, getGoldSnapshot);
+  const keys = useSyncExternalStore(subscribeToKey, getKeySnapshot, getKeySnapshot);
+  const health = useSyncExternalStore(subscribeToHealth, getHealthSnapshot, getHealthSnapshot);
+  const log = useSyncExternalStore(subscribeToLog, getLogSnapshot, getLogSnapshot);
+  const playerDead = useSyncExternalStore(subscribeToPlayerDead, getPlayerDeadSnapshot, getPlayerDeadSnapshot);
+  const randomSeed = useSyncExternalStore(subscribeToRandomSeed, getRandomSeedSnapshot, getRandomSeedSnapshot);
   const previousQuestRef = useRef(null);
   const [fps, setFps] = useState(0);
 
@@ -966,6 +1224,22 @@ function AppContent() {
     window.addEventListener("keydown", blockTutorialInput, true);
     return () => window.removeEventListener("keydown", blockTutorialInput, true);
   }, [tutorialPhase]);
+
+  useEffect(() => {
+    if (!playerDead) return undefined;
+    const blockDeadRunInput = (event) => {
+      const target = event.target;
+      if (target instanceof HTMLElement && target.closest(".death_window button")) return;
+      event.preventDefault();
+      event.stopPropagation();
+    };
+    window.addEventListener("keydown", blockDeadRunInput, true);
+    window.addEventListener("pointerdown", blockDeadRunInput, true);
+    return () => {
+      window.removeEventListener("keydown", blockDeadRunInput, true);
+      window.removeEventListener("pointerdown", blockDeadRunInput, true);
+    };
+  }, [playerDead]);
 
   useLayoutEffect(() => {
     if (!settingTooltip || !settingTooltipRef.current) return;
@@ -1021,7 +1295,18 @@ function AppContent() {
     const previous = previousQuestRef.current;
     if (!previous && quest.state === "pending") enqueueToast(`Quest Started: ${quest.title}.`);
     else if (quest.state === "complete" && previous?.state !== "complete") enqueueToast(`Quest Completed: ${quest.title}.`);
-    else if (previous && quest.current > previous.current) enqueueToast(`Quest Progress: ${quest.title} ${quest.current} of ${quest.target}.`);
+    else if (previous) {
+      const previousSteps = new Map((previous.steps ?? []).map((step) => [step.id, step]));
+      const changedStep = (quest.steps ?? []).find((step) => {
+        const prior = previousSteps.get(step.id);
+        return prior && (step.current > prior.current || (step.complete && !prior.complete));
+      });
+      if (changedStep) {
+        enqueueToast(changedStep.target > 1
+          ? `Quest Progress: ${changedStep.label} ${changedStep.current} of ${changedStep.target}.`
+          : `Quest Progress: ${changedStep.label}.`);
+      }
+    }
     previousQuestRef.current = quest;
   }, [enqueueToast, quest]);
 
@@ -1054,6 +1339,10 @@ function AppContent() {
   }, [showHud]);
 
   useEffect(() => {
+    localStorage.setItem(logOpenStorageKey, logOpen ? "true" : "false");
+  }, [logOpen]);
+
+  useEffect(() => {
     localStorage.setItem(CAMERA_STORAGE_KEY, cameraMode);
     sendCameraModeSnapshot(cameraMode);
   }, [cameraMode]);
@@ -1083,6 +1372,16 @@ function AppContent() {
     localStorage.setItem(playerGpuShadowBleedRangeStorageKey, String(playerGpuShadowBleedRange));
     sendPlayerGpuShadowBleedRangeSnapshot(playerGpuShadowBleedRange);
   }, [playerGpuShadowBleedRange]);
+
+  useEffect(() => {
+    localStorage.setItem(glyphBackgroundStorageKey, glyphBackground ? "true" : "false");
+    sendGlyphBackgroundSnapshot(glyphBackground);
+  }, [glyphBackground]);
+
+  useEffect(() => {
+    localStorage.setItem(backgroundDarknessStorageKey, String(backgroundDarkness));
+    sendBackgroundDarknessSnapshot(backgroundDarkness);
+  }, [backgroundDarkness]);
 
   useEffect(() => {
     localStorage.setItem(torchLightingStorageKey, String(torchLightingIndex));
@@ -1203,7 +1502,15 @@ function AppContent() {
 
   const resetSettings = () => {
     localStorage.clear();
+    localStorage.setItem(realmStorageKey, "Overground");
     window.location.reload();
+  };
+
+  const selectDefaultQuest = (id) => {
+    if (!questData.quests.some((definition) => definition.id === id)) return;
+    localStorage.setItem(defaultQuestStorageKey, id);
+    setDefaultQuestId(id);
+    startQuest(id);
   };
 
   const confirmTutorial = () => {
@@ -1273,7 +1580,7 @@ function AppContent() {
         onKeyDown={(event) => handleTopPanelKeyDown(event, activateDetails)}
       >
         <BoxLayout action="Character">
-          <CharacterDetails gold={gold} palette={palette} />
+          <CharacterDetails gold={gold} keys={keys} health={health} palette={palette} />
         </BoxLayout>
       </CornerLayout>
       <QuestTracker quest={quest} />
@@ -1303,6 +1610,9 @@ function AppContent() {
           <button id="ascii_palette_toggle" className="corner_body settings_option" type="button" tabIndex={-1} onClick={() => setAsciiPaletteOpen(true)}>
             Ascii Settings
           </button>
+          <button id="gameplay_settings_toggle" className="corner_body settings_option" type="button" tabIndex={-1} onClick={() => setGameplaySettingsOpen(true)}>
+            Gameplay Settings
+          </button>
           <button id="arguments_toggle" className="corner_body settings_option" type="button" tabIndex={-1} onClick={() => setArgumentsOpen(true)}>
             Arguments
           </button>
@@ -1314,6 +1624,7 @@ function AppContent() {
         </HudBlockLayout>
         <HudBlockLayout className="hud_section" id="stats" aria-labelledby="stats_title" titleId="stats_title" title="Stats">
           <div id="fps" className="corner_body">FPS: {fps}</div>
+          <span id="version" className="corner_body">v{versionNumber}</span>
         </HudBlockLayout>
         <HudBlockLayout className="hud_section" id="settings" aria-labelledby="settings_title" titleId="settings_title" title="Settings">
           <SettingTooltipTarget description={settingsHelp.fullscreen} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
@@ -1342,13 +1653,28 @@ function AppContent() {
           </SettingTooltipTarget>
           <SettingTooltipTarget description={settingsHelp.showUi} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
             <button id="show_ui_toggle" className="corner_body settings_option" type="button" aria-pressed={showHud} aria-description={settingsHelp.showUi} tabIndex={-1} onClick={toggleHud}>
-              <span>Show UI</span><span id="show_ui_checkbox" aria-hidden="true">{showHud ? "☑" : "☐"}</span>
+              <span>Developer</span><span id="show_ui_checkbox" aria-hidden="true">{showHud ? "☑" : "☐"}</span>
             </button>
           </SettingTooltipTarget>
         </HudBlockLayout>
       </CornerLayout>
-      <CornerLayout position="bottom-right">
-        <span id="version" className="corner_body">v{versionNumber}</span>
+      <CornerLayout
+        position="bottom-right"
+        className={`log_panel ${logOpen ? "log_panel_open" : "log_panel_closed"}`}
+        aria-label="Log"
+      >
+        {logOpen ? (
+          <BoxLayout
+            id="log_box"
+            className="log_box"
+            actionPosition="top"
+            action={<button className="log_action" type="button" aria-expanded="true" aria-controls="log_box" onClick={() => setLogOpen(false)}>Log</button>}
+          >
+            <LogBody entries={log} />
+          </BoxLayout>
+        ) : (
+          <button className="log_action log_launcher" type="button" aria-expanded="false" aria-controls="log_box" onClick={() => setLogOpen(true)}>Log</button>
+        )}
       </CornerLayout>
       {true && lightingWindowOpen ? (
         <LightingWindow
@@ -1378,7 +1704,7 @@ function AppContent() {
           closeOnBackdropClick
         />
       ) : null}
-      {tutorialPhase === "initial" || tutorialPhase === "complete" ? (
+      {!playerDead && (tutorialPhase === "initial" || tutorialPhase === "complete") ? (
         <TutorialWindow
           complete={tutorialPhase === "complete"}
           onConfirm={confirmTutorial}
@@ -1389,6 +1715,7 @@ function AppContent() {
           onClose={() => setTutorialPhase("finished")}
         />
       ) : null}
+      {playerDead ? <DeathWindow onRestart={() => window.location.reload()} /> : null}
       {settingTooltip ? (
         <div
           ref={settingTooltipRef}
@@ -1404,6 +1731,10 @@ function AppContent() {
           palette={palette}
           fontId={fontId}
           savedFontId={savedFontId}
+          glyphBackground={glyphBackground}
+          backgroundDarkness={backgroundDarkness}
+          onGlyphBackgroundChange={setGlyphBackground}
+          onBackgroundDarknessChange={setBackgroundDarkness}
           viewState={paletteViewState}
           onViewStateChange={setPaletteViewState}
           error={paletteError}
@@ -1414,7 +1745,15 @@ function AppContent() {
           onClose={() => setAsciiPaletteOpen(false)}
         />
       ) : null}
-      {argumentsOpen ? <ArgumentsWindow onClose={() => setArgumentsOpen(false)} /> : null}
+      {argumentsOpen ? <ArgumentsWindow onClose={() => setArgumentsOpen(false)} randomSeed={randomSeed} /> : null}
+      {gameplaySettingsOpen ? (
+        <GameplaySettingsWindow
+          quest={quest}
+          defaultQuestId={defaultQuestId}
+          onSelectQuest={selectDefaultQuest}
+          onClose={() => setGameplaySettingsOpen(false)}
+        />
+      ) : null}
     </>
   );
 }

@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createGlyphVisualCache, getGlyphRasterSize } from "../../../src/runtime/game-layer-babylon-lite/glyph-visual-cache.js";
+import { createGlyphVisualCache, darkenGlyphColor, getGlyphRasterSize, tintGlyphRgb } from "../../../src/runtime/game-layer-babylon-lite/glyph-visual-cache.js";
 import { collectVisibleGlyphs, getVisibleRegion, getVisibleSlot, shouldUpdateVisibleSprite } from "../../../src/runtime/game-layer-babylon-lite/visible-region.js";
 import { createFrameCheckpoint, getVisibleGlyph } from "../../../src/runtime/game-layer-babylon-lite/systems/world-system.js";
-import { reconcilePaletteColors } from "../../../src/runtime/game-layer-babylon-lite/palette-color-cache.js";
+import { colorToLinearRgba, linearRgbaToHex, reconcilePaletteColors } from "../../../src/runtime/game-layer-babylon-lite/palette-color-cache.js";
 import { applyLightingToColor, createSceneLightingFieldCache, LIGHTING_PRESETS } from "../../../src/runtime/game-layer-babylon-lite/lighting.js";
 
 function fakeAtlasApi() {
@@ -63,6 +63,28 @@ test("raster footprints are scaled for distant and close zooms", () => {
   assert.equal(getGlyphRasterSize(1, 6.4), 64);
   assert.equal(getGlyphRasterSize(5, 32), 128);
   assert.equal(getGlyphRasterSize(10, 64), 128);
+});
+
+test("glyph background darkness moves palette colors toward black", () => {
+  assert.deepEqual(darkenGlyphColor([1, 0.5, 0.2], 0), [1, 0.5, 0.2]);
+  assert.deepEqual(darkenGlyphColor([1, 0.5, 0.2], 50), [0.5, 0.25, 0.1]);
+  assert.deepEqual(darkenGlyphColor([1, 0.5, 0.2], 100), [0, 0, 0]);
+  assert.throws(() => darkenGlyphColor([1, 0.5, 0.2], 101), /0 through 100/);
+});
+
+test("glyph tinting preserves source artwork while applying palette color", () => {
+  assert.deepEqual(tintGlyphRgb([255, 128, 64], [1, 1, 1]), [255, 128, 64]);
+  assert.deepEqual(tintGlyphRgb([255, 128, 64], [0.5, 1, 0.25]), [128, 128, 16]);
+});
+
+test("minimap base colors use the same transient lighting modulation as the game view", () => {
+  const baseColor = colorToLinearRgba({ color: "#808040", alpha: 1 });
+  const ambientColor = linearRgbaToHex(applyLightingToColor(baseColor, 0.25));
+  const litColor = linearRgbaToHex(applyLightingToColor(baseColor, 1));
+
+  assert.notEqual(ambientColor, "#808040");
+  assert.equal(litColor, "#808040");
+  assert.deepEqual(baseColor, colorToLinearRgba({ color: "#808040", alpha: 1 }));
 });
 
 test("visible-region collection and slot resolution never touch off-screen cells", () => {

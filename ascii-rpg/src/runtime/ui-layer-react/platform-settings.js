@@ -8,7 +8,7 @@ import {
 
 export const PC_SETTINGS_DEFAULTS = Object.freeze({
   zoom: 5,
-  showHud: true,
+  showHud: false,
 });
 
 export const MOBILE_SETTINGS_DEFAULTS = Object.freeze({
