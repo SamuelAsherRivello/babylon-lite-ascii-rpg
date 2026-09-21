@@ -145,7 +145,7 @@ html[data-hud-hidden="true"] #settings > .hud_block_body > :has(#show_ui_toggle)
   font-size: var(--box-action-font);
   line-height: 1.2;
   text-align: right;
-  white-space: nowrap;
+  white-space: pre;
 }
 
 .quest_tracker {

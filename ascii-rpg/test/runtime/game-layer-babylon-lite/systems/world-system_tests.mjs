@@ -303,8 +303,8 @@ test("creates deterministic paired realm stairs on walkable terrain", async () =
   assert.deepEqual(first, second);
   assert.equal(overground.realm, "Overground");
   assert.equal(underground.realm, "Underground");
-  assert.equal(overground.fogUnclearRadius, 7.5);
-  assert.equal(underground.fogUnclearRadius, 5);
+  assert.equal(overground.fogUnclearRadius, 11);
+  assert.equal(underground.fogUnclearRadius, 6);
   assert.ok(overground.terrain.flat().some((cell) => cell.glyph === FLOOR_GLYPH && cell.walkable));
   assert.ok(underground.terrain.flat().some((cell) => cell.glyph === UNDERGROUND_FLOOR_GLYPH && cell.walkable));
   assert.ok(overground.terrain.flat().some((cell) => cell.glyph === MOUNTAIN_GLYPH));

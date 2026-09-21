@@ -138,6 +138,32 @@ test("completed quests advance to the next available definition and otherwise re
   assert.equal(manager.startNextQuest().id, "next-quest");
 });
 
+test("completed quest definitions are skipped during later session advancement", () => {
+  const firstQuest = {
+    id: "first-quest", title: "First Quest", objective: "First Quest",
+    criterion: { mode: "event", eventType: "first-event", target: 1 },
+  };
+  const alreadyCompletedQuest = {
+    id: "already-completed", title: "Already Completed", objective: "Already Completed",
+    criterion: { mode: "event", eventType: "skipped-event", target: 1 },
+  };
+  const finalQuest = {
+    id: "final-quest", title: "Final Quest", objective: "Final Quest",
+    criterion: { mode: "event", eventType: "final-event", target: 1 },
+  };
+  const manager = createQuestManager([firstQuest, alreadyCompletedQuest, finalQuest]);
+
+  manager.startQuest("already-completed");
+  manager.observe({ type: "skipped-event" });
+  manager.startQuest("first-quest");
+  manager.observe({ type: "first-event" });
+
+  assert.equal(manager.startNextQuest().id, "final-quest");
+  manager.observe({ type: "final-event" });
+  assert.equal(manager.startNextQuest().id, "final-quest");
+  assert.equal(manager.getSnapshot().complete, true);
+});
+
 test("absolute legacy definitions can complete immediately", () => {
   const definition = { id: "own-gold", title: "Own Gold", objective: "Own 100+ Gold", criterion: { mode: "absolute", subject: "gold", target: 100, eventType: "gold-changed" } };
   const manager = createQuestManager([definition]);

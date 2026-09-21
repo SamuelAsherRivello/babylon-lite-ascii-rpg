@@ -33,6 +33,7 @@ const timeListeners = new Set();
 const realmListeners = new Set();
 const minimapZoomListeners = new Set();
 const questListeners = new Set();
+const questEventListeners = new Set();
 const goldListeners = new Set();
 const keyListeners = new Set();
 const healthListeners = new Set();
@@ -172,6 +173,7 @@ export function sendBackgroundDarknessSnapshot(darkness) {
 
 export function getQuestSnapshot() { return questSnapshot; }
 export function subscribeToQuest(listener) { questListeners.add(listener); return () => questListeners.delete(listener); }
+export function subscribeToQuestEvent(listener) { questEventListeners.add(listener); return () => questEventListeners.delete(listener); }
 export function startQuest(id) {
   return gameController?.startQuest?.(id) ?? null;
 }
@@ -181,6 +183,10 @@ export function sendQuestSnapshot(snapshot) {
     steps: Object.freeze((snapshot.steps ?? []).map((step) => Object.freeze({ ...step }))),
   });
   for (const listener of questListeners) listener();
+}
+
+export function sendQuestEvent(event) {
+  for (const listener of questEventListeners) listener(event);
 }
 
 export function getGoldSnapshot() { return goldSnapshot; }

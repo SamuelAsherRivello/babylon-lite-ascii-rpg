@@ -71,6 +71,7 @@ import {
   subscribeToPlayerDead,
   subscribeToRandomSeed,
   subscribeToQuest,
+  subscribeToQuestEvent,
   subscribeToRealm,
   subscribeToMinimapZoom,
 } from "../bridge-layer/game-bridge.js";
@@ -1292,10 +1293,17 @@ function AppContent() {
   }, []);
 
   useEffect(() => {
+    return subscribeToQuestEvent((event) => {
+      const quest = event.snapshot;
+      if (event.type === "completed") enqueueToast(`Quest Completed: ${quest.title}.`);
+      else if (event.type === "started") enqueueToast(`Quest Started: ${quest.title}.`);
+    });
+  }, [enqueueToast]);
+
+  useEffect(() => {
     if (!quest) return;
     const previous = previousQuestRef.current;
     if (!previous && quest.state === "pending") enqueueToast(`Quest Started: ${quest.title}.`);
-    else if (quest.state === "complete" && previous?.state !== "complete") enqueueToast(`Quest Completed: ${quest.title}.`);
     else if (previous) {
       const previousSteps = new Map((previous.steps ?? []).map((step) => [step.id, step]));
       const changedStep = (quest.steps ?? []).find((step) => {
@@ -1598,7 +1606,7 @@ function AppContent() {
             <BoxLayout action="Map 🔍" />
           </CornerLayout>
           <div className="minimap_status" aria-label="World status">
-            <span>World 1 Floor {activeRealm === "Underground" ? "-1" : "1"}</span>
+            <span>World: 1   Floor: {activeRealm === "Underground" ? "-1" : "1"}</span>
             <span id="time">Time: {String(worldTime).padStart(5, "0")}</span>
           </div>
         </>

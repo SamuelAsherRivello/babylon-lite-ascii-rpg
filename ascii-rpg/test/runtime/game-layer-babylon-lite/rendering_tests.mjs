@@ -158,15 +158,16 @@ test("visible light refresh clears old player light and glyph changes keep terra
   };
   const cache = createSceneLightingFieldCache();
   const oldField = cache.get(world, region, torches, { x: 5, y: 2 }, settings);
-  const nextField = cache.get(world, region, torches, { x: 2, y: 2 }, settings);
   const shadowed = { x: 4, y: 2 };
-  assert.ok(oldField.getFactor(shadowed) > 0);
+  const oldShadowedFactor = oldField.getFactor(shadowed);
+  const nextField = cache.get(world, region, torches, { x: 2, y: 2 }, settings);
+  assert.ok(oldShadowedFactor > 0);
   assert.equal(nextField.getFactor(shadowed), 0);
   assert.ok(nextField.getFactor({ x: 3, y: 2 }) > 0);
 
   const baseColor = [0.8, 0.6, 0.2, 1];
   const previous = {
-    glyph: "•", frame: 0, baseColor, lightingFactor: oldField.getFactor(shadowed), visible: true,
+    glyph: "•", frame: 0, baseColor, lightingFactor: oldShadowedFactor, visible: true,
   };
   assert.equal(shouldUpdateVisibleSprite(previous, "•", 0, baseColor, nextField.getFactor(shadowed)), true);
   const changedCell = { x: 2, y: 1 };

@@ -91,6 +91,7 @@ import { createRealmSystem } from "./systems/realm-system.js";
 import { createPlayerLifecycle } from "./systems/player-lifecycle.js";
 import { createCivilizationGroups, isCardinalDirection } from "./systems/civilization-system.js";
 import { attachReplacementRendererLayer } from "./systems/renderer-layer-handoff.js";
+import { createCoalescedFrameScheduler } from "./movement-render-scheduler.js";
 
 const GLYPHS = PROJECT_MAP_GLYPHS;
 const WORLD_ROWS = 512;
@@ -181,13 +182,13 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   let gpuLightLayer;
   let gpuLightPassEnabled = false;
   const minimapGlyphCanvases = new Map();
+  const minimapGpuLightSamples = [];
   let disposed = false;
   let repeatTimer = null;
-  let movementRenderFrame = null;
   let minimapRenderFrame = null;
   let presentationFrame = null;
   let lastPresentationTime = 0;
-  let movementLightingRefreshPending = false;
+  let movementRenderScheduler = null;
   let generationController = new AbortController();
   let generating = false;
   const heldKeys = new Set();
@@ -220,6 +221,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   let questManager = null;
   let objectSpawnerSystem = null;
   const questListeners = new Set();
+  const questEventListeners = new Set();
   const goldListeners = new Set();
   let fogOfWar = null;
   let minimapZoom = 2;
@@ -251,6 +253,8 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   const spriteStates = [];
   const gpuLightSpriteIndexes = [];
   const gpuLightSpriteStates = [];
+  const gpuLightSamples = [];
+  let gpuLightActiveSlots = new Uint8Array(0);
   const metrics = {
     visibleCells: 0, submittedCells: 0, skippedCells: 0, glyphWarmupMs: 0,
     generationMs: null, firstVisibleRenderMs: null, totalReadyMs: null,
@@ -280,7 +284,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
 
   const renderMinimap = () => {
     if (!fogOfWar) return;
-    minimapGlyphCanvases.clear();
+    if (minimapGlyphCanvases.size > 8192) minimapGlyphCanvases.clear();
     minimapCanvas.hidden = false;
     const bounds = minimapCanvas.getBoundingClientRect();
     const devicePixelRatio = window.devicePixelRatio || 1;
@@ -367,13 +371,16 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       playerCell,
       lighting,
     );
-    const minimapGpuLightSamples = gpuLightPassEnabled
-      ? buildGpuLightPassSamples(minimapRegion, minimapLightField, lighting.ambient)
-        .filter((sample) => isDiscovered(fogOfWar, world, {
+    minimapGpuLightSamples.length = 0;
+    if (gpuLightPassEnabled) {
+      const samples = buildGpuLightPassSamples(minimapRegion, minimapLightField, lighting.ambient, gpuLightSamples);
+      for (const sample of samples) {
+        if (isDiscovered(fogOfWar, world, {
           x: sourceX + sample.x,
           y: sourceY + sample.y,
-        }))
-      : [];
+        })) minimapGpuLightSamples.push(sample);
+      }
+    }
     const visual = minimapGlyphCache.ensure(
       minimapZoom,
       minimapBaseViewport.gridWidth,
@@ -896,6 +903,8 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     gpuLightLayer = undefined;
     gpuLightSpriteIndexes.length = 0;
     gpuLightSpriteStates.length = 0;
+    gpuLightSamples.length = 0;
+    gpuLightActiveSlots = new Uint8Array(0);
     if (gpuLightAtlas) disposeSpriteAtlas(gpuLightAtlas);
     gpuLightAtlas = undefined;
   };
@@ -917,25 +926,21 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     }
     ensureGpuLightPass(region.count);
     gpuLightLayer.visible = true;
-    const samples = buildGpuLightPassSamples(region, lightField, lighting.ambient)
-      .filter((sample) => getFogVisibility(fogOfWar, world, {
+    if (gpuLightActiveSlots.length < region.count) gpuLightActiveSlots = new Uint8Array(region.count);
+    const samples = buildGpuLightPassSamples(region, lightField, lighting.ambient, gpuLightSamples);
+    for (const sample of samples) {
+      const visibility = getFogVisibility(fogOfWar, world, {
         x: region.x + sample.x,
         y: region.y + sample.y,
-      }) > 0);
-    const activeSlots = new Set();
-    for (const sample of samples) {
-      activeSlots.add(sample.slot);
+      });
+      if (visibility <= 0) continue;
+      gpuLightActiveSlots[sample.slot] = 1;
       const center = getCellCenter(sample, viewport);
       const props = {
         positionPx: [center.x, center.y],
         sizePx: [viewport.gridWidth, viewport.gridHeight],
         frame: 0,
-        color: [...GPU_LIGHT_PASS_COLOR, Math.min(0.16, sample.intensity * 0.16) * (
-          getFogVisibility(fogOfWar, world, {
-            x: region.x + sample.x,
-            y: region.y + sample.y,
-          }) / 100
-        )],
+        color: [...GPU_LIGHT_PASS_COLOR, Math.min(0.16, sample.intensity * 0.16) * (visibility / 100)],
         visible: true,
       };
       if (gpuLightSpriteIndexes[sample.slot] === undefined) {
@@ -946,10 +951,11 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       gpuLightSpriteStates[sample.slot] = true;
     }
     for (let slot = 0; slot < gpuLightSpriteIndexes.length; slot += 1) {
-      if (gpuLightSpriteStates[slot] && !activeSlots.has(slot)) {
+      if (gpuLightSpriteStates[slot] && gpuLightActiveSlots[slot] !== 1) {
         updateSprite2DIndex(gpuLightLayer, gpuLightSpriteIndexes[slot], { visible: false });
         gpuLightSpriteStates[slot] = false;
       }
+      gpuLightActiveSlots[slot] = 0;
     }
   };
 
@@ -1068,28 +1074,27 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     };
   };
 
+  movementRenderScheduler = createCoalescedFrameScheduler({
+    scheduleFrame: (callback) => window.requestAnimationFrame(callback),
+    cancelFrame: (handle) => window.cancelAnimationFrame(handle),
+    render: ({ refreshLighting = false } = {}) => {
+      if (!disposed) renderWorld({ refreshLighting });
+    },
+  });
+
   // Full world lighting and sprite submission are synchronous WebGPU work.
   // Coalescing movement-driven renders prevents held input from starving
   // animation frames while preserving the final player position and lighting.
   const scheduleMovementRender = ({ refreshLighting = false } = {}) => {
-    movementLightingRefreshPending ||= refreshLighting;
-    if (movementRenderFrame !== null) return;
-    movementRenderFrame = window.requestAnimationFrame(() => {
-      movementRenderFrame = null;
-      const shouldRefreshLighting = movementLightingRefreshPending;
-      movementLightingRefreshPending = false;
-      if (!disposed) renderWorld({ refreshLighting: shouldRefreshLighting });
-    });
+    movementRenderScheduler?.schedule({ refreshLighting });
   };
 
   const cancelScheduledRenders = () => {
-    if (movementRenderFrame !== null) window.cancelAnimationFrame(movementRenderFrame);
+    movementRenderScheduler?.cancel();
     if (minimapRenderFrame !== null) window.cancelAnimationFrame(minimapRenderFrame);
     if (presentationFrame !== null) window.cancelAnimationFrame(presentationFrame);
-    movementRenderFrame = null;
     minimapRenderFrame = null;
     presentationFrame = null;
-    movementLightingRefreshPending = false;
   };
 
   const renderChangedWorldCells = (cells) => {
@@ -1463,10 +1468,20 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       },
     });
     questManager.subscribe((event) => {
-      const snapshot = event.type === "completed"
-        ? questManager.startNextQuest({ gold: characterGold })
-        : event.snapshot;
-      notifyQuest(snapshot);
+      if (event.type === "completed") {
+        notifyQuest(event.snapshot);
+        for (const listener of questEventListeners) listener(event);
+        const nextSnapshot = questManager.startNextQuest({ gold: characterGold });
+        if (nextSnapshot?.id !== event.snapshot?.id) {
+          notifyQuest(nextSnapshot);
+          for (const listener of questEventListeners) listener(Object.freeze({ type: "started", snapshot: nextSnapshot }));
+        }
+      } else {
+        notifyQuest(event.snapshot);
+        if (event.type === "started") {
+          for (const listener of questEventListeners) listener(event);
+        }
+      }
       scheduleMinimapRender();
     });
     gameplayEvents.subscribe((event) => {
@@ -1636,6 +1651,10 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       questListeners.add(listener);
       if (questManager?.getSnapshot()) listener(questManager.getSnapshot());
       return () => questListeners.delete(listener);
+    },
+    subscribeToQuestEvent(listener) {
+      questEventListeners.add(listener);
+      return () => questEventListeners.delete(listener);
     },
     getGold() { return characterGold; },
     subscribeToGold(listener) {

@@ -170,6 +170,32 @@ test("visible lighting field matches direct scene factors inside region bounds",
   }
 });
 
+test("cached split player fields preserve direct and hard-shadow output", () => {
+  const terrain = makeTerrain(7, 7);
+  terrain[3][3] = { walkable: false };
+  const world = { terrain };
+  const region = { x: 1, y: 1, columns: 5, rows: 5 };
+  const player = { x: 1, y: 3 };
+  const settings = { ...darkScene, playerProfile: LIGHTING_PRESETS[3].config };
+  const field = createSceneLightingFieldCache().get(world, region, [], player, settings);
+  const hardShadowSettings = { ...settings, playerShadow: DEFAULT_SHADOW_SETTINGS };
+
+  for (let y = region.y; y < region.y + region.rows; y += 1) {
+    for (let x = region.x; x < region.x + region.columns; x += 1) {
+      const cell = { x, y };
+      const slot = (y - region.y) * region.columns + x - region.x;
+      assert.equal(
+        field.getFactor(cell),
+        getSceneLightingFactor(cell, [], player, settings, terrain),
+      );
+      assert.equal(
+        field.playerGpuDirectContributions[slot],
+        getSceneLightingFactor(cell, [], player, hardShadowSettings, terrain),
+      );
+    }
+  }
+});
+
 test("torch and player fields invalidate independently for their changing inputs", () => {
   const world = { terrain: makeTerrain() };
   const region = { x: 1, y: 1, columns: 4, rows: 3 };
@@ -178,30 +204,37 @@ test("torch and player fields invalidate independently for their changing inputs
   const settings = { ...darkScene, playerProfile: LIGHTING_PRESETS[2].config };
   const cache = createSceneLightingFieldCache();
   const first = cache.get(world, region, torches, player, settings);
+  const firstTorchValues = [...first.torchContributions];
+  const firstPlayerValues = [...first.playerContributions];
+  const firstPlayerFactor = first.getFactor({ x: 4, y: 2 });
   const ambientChanged = cache.get(world, region, torches, player, { ...settings, ambient: 0.4 });
   assert.equal(ambientChanged.torchContributions, first.torchContributions);
   assert.equal(ambientChanged.playerContributions, first.playerContributions);
   assert.ok(ambientChanged.getFactor({ x: 3, y: 2 }) > first.getFactor({ x: 3, y: 2 }));
 
   const moved = cache.get(world, region, torches, { x: 4, y: 3 }, settings);
-  assert.equal(moved.torchContributions, first.torchContributions);
-  assert.notEqual(moved.playerContributions, first.playerContributions);
-  assert.notEqual(moved.getFactor({ x: 4, y: 2 }), first.getFactor({ x: 4, y: 2 }));
+  assert.deepEqual([...moved.torchContributions], firstTorchValues);
+  assert.notDeepEqual([...moved.playerContributions], firstPlayerValues);
+  assert.notEqual(moved.getFactor({ x: 4, y: 2 }), firstPlayerFactor);
+  const movedTorchValues = [...moved.torchContributions];
+  const movedPlayerValues = [...moved.playerContributions];
 
   const torchChanged = cache.get(world, region, torches, { x: 4, y: 3 }, {
     ...settings, torchProfile: LIGHTING_PRESETS[1].config,
   });
-  assert.notEqual(torchChanged.torchContributions, moved.torchContributions);
-  assert.equal(torchChanged.playerContributions, moved.playerContributions);
+  assert.notDeepEqual([...torchChanged.torchContributions], movedTorchValues);
+  assert.deepEqual([...torchChanged.playerContributions], movedPlayerValues);
+  const torchChangedValues = [...torchChanged.torchContributions];
+  const torchChangedPlayerValues = [...torchChanged.playerContributions];
 
   const shifted = cache.get(world, { ...region, x: 2 }, torches, { x: 4, y: 3 }, settings);
-  assert.notEqual(shifted.torchContributions, torchChanged.torchContributions);
-  assert.notEqual(shifted.playerContributions, torchChanged.playerContributions);
+  assert.notDeepEqual([...shifted.torchContributions], torchChangedValues);
+  assert.notDeepEqual([...shifted.playerContributions], torchChangedPlayerValues);
 
   const newTerrain = makeTerrain();
   newTerrain[2][3] = { walkable: false };
   const replaced = cache.get({ terrain: newTerrain }, region, torches, player, settings);
-  assert.notEqual(replaced.torchContributions, first.torchContributions);
+  assert.notDeepEqual([...replaced.torchContributions], firstTorchValues);
   assert.equal(replaced.torchContributions[7], 0);
 });
 

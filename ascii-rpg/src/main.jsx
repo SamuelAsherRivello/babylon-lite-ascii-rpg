@@ -2,7 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./runtime/ui-layer-react/App.jsx";
 import { startGameLayer } from "./runtime/game-layer-babylon-lite/index.js";
-import { getCameraModeSnapshot, getGoldSnapshot, getHealthSnapshot, getLogSnapshot, getPlayerDeadSnapshot, getQuestSnapshot, getRealmSnapshot, sendFontSnapshot, sendGoldSnapshot, sendHealthSnapshot, sendLogSnapshot, sendMinimapZoomSnapshot, sendPaletteSnapshot, sendPlayerDeadSnapshot, sendQuestSnapshot, sendRandomSeedSnapshot, sendRealmSnapshot, sendTimeSnapshot, setGameController } from "./runtime/bridge-layer/game-bridge.js";
+import { getCameraModeSnapshot, getGoldSnapshot, getHealthSnapshot, getLogSnapshot, getPlayerDeadSnapshot, getQuestSnapshot, getRealmSnapshot, sendFontSnapshot, sendGoldSnapshot, sendHealthSnapshot, sendLogSnapshot, sendMinimapZoomSnapshot, sendPaletteSnapshot, sendPlayerDeadSnapshot, sendQuestEvent, sendQuestSnapshot, sendRandomSeedSnapshot, sendRealmSnapshot, sendTimeSnapshot, setGameController } from "./runtime/bridge-layer/game-bridge.js";
 import { fontReady, getFontId, subscribeToFont } from "./runtime/ui-layer-react/font-store.js";
 import { getPalette, paletteReady, subscribeToPalette } from "./runtime/ui-layer-react/palette-store.js";
 import "./runtime/ui-layer-react/styles.css";
@@ -21,6 +21,7 @@ void Promise.all([paletteReady, fontReady])
     controller.subscribeToTime((time) => sendTimeSnapshot(time));
     sendQuestSnapshot(controller.getQuestSnapshot?.());
     controller.subscribeToQuest?.((quest) => sendQuestSnapshot(quest));
+    controller.subscribeToQuestEvent?.(sendQuestEvent);
     sendGoldSnapshot(controller.getGold?.() ?? getGoldSnapshot());
     controller.subscribeToGold?.((gold) => sendGoldSnapshot(gold));
     sendHealthSnapshot(controller.getHealth?.() ?? getHealthSnapshot());

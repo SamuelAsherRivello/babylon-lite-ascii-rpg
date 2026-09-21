@@ -17,12 +17,14 @@ import {
   sendZoomSnapshot,
   sendTimeSnapshot,
   sendQuestSnapshot,
+  sendQuestEvent,
   sendGoldSnapshot,
   sendPlayerDeadSnapshot,
   getQuestSnapshot,
   getGoldSnapshot,
   getPlayerDeadSnapshot,
   subscribeToQuest,
+  subscribeToQuestEvent,
   subscribeToGold,
   subscribeToPlayerDead,
   setGameController,
@@ -125,6 +127,21 @@ test("publishes immutable quest and live gold snapshots", () => {
   assert.deepEqual(gold, [1]);
   stopQuest();
   stopGold();
+});
+
+test("publishes quest transition events separately from HUD snapshots", () => {
+  const events = [];
+  const stop = subscribeToQuestEvent((event) => events.push(event));
+  const completedSnapshot = Object.freeze({ id: "first-quest", title: "First Quest", state: "complete" });
+  const nextSnapshot = Object.freeze({ id: "next-quest", title: "Next Quest", state: "pending" });
+  const completedEvent = Object.freeze({ type: "completed", snapshot: completedSnapshot });
+  const startedEvent = Object.freeze({ type: "started", snapshot: nextSnapshot });
+
+  sendQuestEvent(completedEvent);
+  sendQuestEvent(startedEvent);
+
+  assert.deepEqual(events, [completedEvent, startedEvent]);
+  stop();
 });
 
 test("forwards quest selection without exposing game internals", () => {

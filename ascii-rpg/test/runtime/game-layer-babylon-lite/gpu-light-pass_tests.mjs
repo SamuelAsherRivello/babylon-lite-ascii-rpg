@@ -36,3 +36,20 @@ test("GPU light samples continuously use remaining ambient headroom", () => {
   assert.deepEqual(buildGpuLightPassSamples(region, field, 0.25), [{ slot: 0, x: 0, y: 0, intensity: 0.75 }]);
   assert.deepEqual(buildGpuLightPassSamples(region, field, 1), []);
 });
+
+test("GPU light samples can reuse caller-owned sample objects", () => {
+  const region = { rows: 1, columns: 2 };
+  const field = { torchContributions: new Float64Array([1, 0.5]) };
+  const samples = [];
+  const first = buildGpuLightPassSamples(region, field, 0, samples);
+  const firstSample = first[0];
+  const second = buildGpuLightPassSamples(region, field, 0.25, samples);
+
+  assert.equal(first, samples);
+  assert.equal(second, samples);
+  assert.equal(second[0], firstSample);
+  assert.deepEqual(second, [
+    { slot: 0, x: 0, y: 0, intensity: 0.75 },
+    { slot: 1, x: 1, y: 0, intensity: 0.375 },
+  ]);
+});

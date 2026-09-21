@@ -94,7 +94,7 @@ test("documents the plain safe-area template", async () => {
   }
   if (!app.includes('action="Character"')
     || !app.includes('action="Map 🔍"')
-    || !app.includes("World 1 Floor {activeRealm === \"Underground\" ? \"-1\" : \"1\"}")
+    || !app.includes("World: 1   Floor: {activeRealm === \"Underground\" ? \"-1\" : \"1\"}")
     || !app.includes('String(worldTime).padStart(5, "0")')
     || !styles.includes(".minimap_status")) {
     throw new Error("The top HUD must display box actions with right-aligned world, floor, and time status below the minimap.");
@@ -432,6 +432,8 @@ test("documents the plain safe-area template", async () => {
     || !gameLayer.includes("onOpening: () =>")
     || !gameLayer.includes("gameplayInputLocked")
     || !gameLayer.includes("if (gameplayInputLocked) return;")
+    || !gameLayer.includes("attachReplacementRendererLayer")
+    || !gameLayer.includes("presentImmediately();")
     || !gameLayer.includes("transitionActive")
     || !gameLayer.includes("refreshDiscovery({ immediate: true })")) {
     throw new Error("Realm changes must use a game-layer-owned transition that swaps realms at full coverage and locks input.");
@@ -471,7 +473,7 @@ test("documents the plain safe-area template", async () => {
     || !gameLayer.includes("fog: fogOfWar")
     || !gameLayer.includes("drawOverlay: () =>")
     || !gameLayer.includes("rasterizeCompositeGlyph(glyph, family, size, paletteColors.get(glyph)")
-    || !gameLayer.includes("buildGpuLightPassSamples(minimapRegion, minimapLightField, lighting.ambient)")
+    || !gameLayer.includes("buildGpuLightPassSamples(minimapRegion, minimapLightField, lighting.ambient")
     || !gameLayer.includes('context.globalCompositeOperation = "lighter"')
     || styles.includes("--minimap-zoom")
     || styles.includes("transform: scale")) {
@@ -602,7 +604,7 @@ test("documents the quest tracker, live gold bridge, and quest toasts", async ()
     || !app.includes("quest_tracker_title_complete")
     || !app.includes("quest_tracker_marker") || !app.includes("isActiveStep") || !app.includes('quest.state === "pending"')
     || !app.includes("quest.steps") || !app.includes("step.label")
-    || !app.includes("Quest Started: ${quest.title}.") || !app.includes("Quest Progress: ${changedStep.label}")
+    || !app.includes("subscribeToQuestEvent") || !app.includes("Quest Started: ${quest.title}.") || !app.includes("Quest Progress: ${changedStep.label}")
     || !app.includes("Quest Completed: ${quest.title}.")) {
     throw new Error("The React HUD must render live quest text and state-specific quest toasts.");
   }

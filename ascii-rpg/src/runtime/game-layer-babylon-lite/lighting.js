@@ -67,23 +67,22 @@ function blocksLight(terrain, x, y) {
   return terrain[y]?.[x]?.walkable !== true;
 }
 
-function getLightPathBlockerCount(source, target, terrain) {
-  if (!Array.isArray(terrain) || !source || !target ||
-      !Number.isInteger(source.x) || !Number.isInteger(source.y) ||
-      !Number.isInteger(target.x) || !Number.isInteger(target.y) ||
-      !terrain[source.y]?.[source.x] || !terrain[target.y]?.[target.x]) return null;
+function getLightPathBlockerCountAt(sourceX, sourceY, targetX, targetY, terrain) {
+  if (!Array.isArray(terrain) || !Number.isInteger(sourceX) || !Number.isInteger(sourceY) ||
+      !Number.isInteger(targetX) || !Number.isInteger(targetY) ||
+      !terrain[sourceY]?.[sourceX] || !terrain[targetY]?.[targetX]) return null;
 
-  const stepX = Math.sign(target.x - source.x);
-  const stepY = Math.sign(target.y - source.y);
-  const countX = Math.abs(target.x - source.x);
-  const countY = Math.abs(target.y - source.y);
-  let x = source.x;
-  let y = source.y;
+  const stepX = Math.sign(targetX - sourceX);
+  const stepY = Math.sign(targetY - sourceY);
+  const countX = Math.abs(targetX - sourceX);
+  const countY = Math.abs(targetY - sourceY);
+  let x = sourceX;
+  let y = sourceY;
   let crossedX = 0;
   let crossedY = 0;
 
   const isInterveningBlocker = (cellX, cellY) =>
-    (cellX !== target.x || cellY !== target.y) && blocksLight(terrain, cellX, cellY);
+    (cellX !== targetX || cellY !== targetY) && blocksLight(terrain, cellX, cellY);
   let blockers = 0;
 
   while (crossedX < countX || crossedY < countY) {
@@ -108,22 +107,29 @@ function getLightPathBlockerCount(source, target, terrain) {
   return blockers;
 }
 
+function getLightPathBlockerCount(source, target, terrain) {
+  if (!source || !target) return null;
+  return getLightPathBlockerCountAt(source.x, source.y, target.x, target.y, terrain);
+}
+
 export function hasClearLightPath(source, target, terrain) {
   return getLightPathBlockerCount(source, target, terrain) === 0;
 }
 
 /** Returns grid steps beyond the first intervening blocker, or zero when clear. */
-export function getShadowDistanceBeyondFirstBlocker(source, target, terrain) {
-  if (!Array.isArray(terrain) || !source || !target || !terrain[source.y]?.[source.x] || !terrain[target.y]?.[target.x]) return null;
-  const stepX = Math.sign(target.x - source.x);
-  const stepY = Math.sign(target.y - source.y);
-  const countX = Math.abs(target.x - source.x);
-  const countY = Math.abs(target.y - source.y);
-  let x = source.x; let y = source.y; let crossedX = 0; let crossedY = 0;
+function getShadowDistanceBeyondFirstBlockerAt(sourceX, sourceY, targetX, targetY, terrain) {
+  if (!Array.isArray(terrain) || !Number.isInteger(sourceX) || !Number.isInteger(sourceY) ||
+      !Number.isInteger(targetX) || !Number.isInteger(targetY) ||
+      !terrain[sourceY]?.[sourceX] || !terrain[targetY]?.[targetX]) return null;
+  const stepX = Math.sign(targetX - sourceX);
+  const stepY = Math.sign(targetY - sourceY);
+  const countX = Math.abs(targetX - sourceX);
+  const countY = Math.abs(targetY - sourceY);
+  let x = sourceX; let y = sourceY; let crossedX = 0; let crossedY = 0;
   let foundBlocker = false; let distance = 0;
   const visit = (cellX, cellY) => {
     if (foundBlocker) { distance += 1; return; }
-    if (cellX === target.x && cellY === target.y) return;
+    if (cellX === targetX && cellY === targetY) return;
     if (!foundBlocker && blocksLight(terrain, cellX, cellY)) foundBlocker = true;
   };
   while (crossedX < countX || crossedY < countY) {
@@ -137,6 +143,11 @@ export function getShadowDistanceBeyondFirstBlocker(source, target, terrain) {
     visit(x, y);
   }
   return foundBlocker ? distance : 0;
+}
+
+export function getShadowDistanceBeyondFirstBlocker(source, target, terrain) {
+  if (!source || !target) return null;
+  return getShadowDistanceBeyondFirstBlockerAt(source.x, source.y, target.x, target.y, terrain);
 }
 
 function getShadowTransmission(blockerCount, shadow = DEFAULT_SHADOW_SETTINGS) {
@@ -207,8 +218,16 @@ function sameRegion(left, right) {
     left.columns === right.columns && left.rows === right.rows;
 }
 
-function buildVisibleSourceField(terrain, region, sources, profile, shadow) {
-  const values = new Float64Array(region.columns * region.rows);
+function getReusableFieldValues(previous, length) {
+  if (previous?.length === length) {
+    previous.fill(0);
+    return previous;
+  }
+  return new Float64Array(length);
+}
+
+function buildVisibleSourceField(terrain, region, sources, profile, shadow, previous = null) {
+  const values = getReusableFieldValues(previous, region.columns * region.rows);
   if (!Array.isArray(terrain) || !Array.isArray(sources) || profile.maximum <= 0) return values;
   const radiusSquared = profile.radius ** 2;
   const regionRight = region.x + region.columns - 1;
@@ -226,7 +245,7 @@ function buildVisibleSourceField(terrain, region, sources, profile, shadow) {
       for (let x = left; x <= right; x += 1) {
         const distanceSquared = (x - source.x) ** 2 + (y - source.y) ** 2;
         if (distanceSquared >= radiusSquared) continue;
-        const blockerCount = getLightPathBlockerCount(source, { x, y }, terrain);
+        const blockerCount = getLightPathBlockerCountAt(source.x, source.y, x, y, terrain);
         if (blockerCount === null) continue;
         const distanceRatio = Math.sqrt(distanceSquared) / profile.radius;
         const contribution = profile.maximum * ((1 - distanceRatio) ** profile.falloffExponent) *
@@ -239,15 +258,51 @@ function buildVisibleSourceField(terrain, region, sources, profile, shadow) {
   return values;
 }
 
-function buildPlayerPenumbraField(terrain, region, playerCell, profile, range) {
-  const values = new Float64Array(region.columns * region.rows);
+function buildVisibleSourceFields(terrain, region, sources, profile, shadow, gpuShadow, previous = {}) {
+  previous ??= {};
+  const values = getReusableFieldValues(previous.values, region.columns * region.rows);
+  const gpuDirectValues = getReusableFieldValues(previous.gpuDirectValues, region.columns * region.rows);
+  if (!Array.isArray(terrain) || !Array.isArray(sources) || profile.maximum <= 0) {
+    return { values, gpuDirectValues };
+  }
+  const radiusSquared = profile.radius ** 2;
+  const regionRight = region.x + region.columns - 1;
+  const regionBottom = region.y + region.rows - 1;
+
+  for (const source of sources) {
+    if (!source || !Number.isInteger(source.x) || !Number.isInteger(source.y)) continue;
+    const left = Math.max(region.x, Math.floor(source.x - profile.radius));
+    const right = Math.min(regionRight, Math.ceil(source.x + profile.radius));
+    const top = Math.max(region.y, Math.floor(source.y - profile.radius));
+    const bottom = Math.min(regionBottom, Math.ceil(source.y + profile.radius));
+    if (left > right || top > bottom) continue;
+
+    for (let y = top; y <= bottom; y += 1) {
+      for (let x = left; x <= right; x += 1) {
+        const distanceSquared = (x - source.x) ** 2 + (y - source.y) ** 2;
+        if (distanceSquared >= radiusSquared) continue;
+        const blockerCount = getLightPathBlockerCountAt(source.x, source.y, x, y, terrain);
+        if (blockerCount === null) continue;
+        const distanceRatio = Math.sqrt(distanceSquared) / profile.radius;
+        const baseContribution = profile.maximum * ((1 - distanceRatio) ** profile.falloffExponent);
+        const slot = (y - region.y) * region.columns + x - region.x;
+        values[slot] = Math.max(values[slot], baseContribution * getShadowTransmission(blockerCount, shadow));
+        gpuDirectValues[slot] = Math.max(gpuDirectValues[slot], baseContribution * getShadowTransmission(blockerCount, gpuShadow));
+      }
+    }
+  }
+  return { values, gpuDirectValues };
+}
+
+function buildPlayerPenumbraField(terrain, region, playerCell, profile, range, previous = null) {
+  const values = getReusableFieldValues(previous, region.columns * region.rows);
   if (!playerCell || profile.maximum <= 0 || range === 0) return values;
   const radiusSquared = profile.radius ** 2;
   for (let y = region.y; y < region.y + region.rows; y += 1) {
     for (let x = region.x; x < region.x + region.columns; x += 1) {
       const distanceSquared = (x - playerCell.x) ** 2 + (y - playerCell.y) ** 2;
       if (distanceSquared >= radiusSquared) continue;
-      const shadowDistance = getShadowDistanceBeyondFirstBlocker(playerCell, { x, y }, terrain);
+      const shadowDistance = getShadowDistanceBeyondFirstBlockerAt(playerCell.x, playerCell.y, x, y, terrain);
       if (!shadowDistance || shadowDistance > range) continue;
       const distanceRatio = Math.sqrt(distanceSquared) / profile.radius;
       const fade = (1 - shadowDistance / (range + 1)) ** 2;
@@ -259,8 +314,19 @@ function buildPlayerPenumbraField(terrain, region, playerCell, profile, range) {
 }
 
 export function createSceneLightingFieldCache() {
-  let torchEntry = null;
-  let playerEntry = null;
+  const torchEntries = [];
+  const playerEntries = [];
+  const MAX_REGION_ENTRIES = 4;
+
+  const findRegionEntry = (entries, region) =>
+    entries.find((entry) => sameRegion(entry.region, region)) ?? null;
+
+  const rememberRegionEntry = (entries, entry) => {
+    const existingIndex = entries.findIndex((candidate) => sameRegion(candidate.region, entry.region));
+    if (existingIndex >= 0) entries[existingIndex] = entry;
+    else if (entries.length < MAX_REGION_ENTRIES) entries.push(entry);
+    else entries.shift(), entries.push(entry);
+  };
 
   return {
     get(world, region, torches, playerCell, settings = {}) {
@@ -275,23 +341,45 @@ export function createSceneLightingFieldCache() {
       const terrain = world?.terrain;
       if (!Array.isArray(terrain)) throw new TypeError("Scene lighting requires terrain walkability.");
 
+      let torchEntry = findRegionEntry(torchEntries, region);
       if (!torchEntry || torchEntry.world !== world || torchEntry.sources !== torches ||
           torchEntry.profile !== torchProfile || torchEntry.shadow !== torchShadow || !sameRegion(torchEntry.region, region)) {
-        torchEntry = {
+        const nextTorchEntry = {
           world, sources: torches, profile: torchProfile, shadow: torchShadow, region: { ...region },
-          values: buildVisibleSourceField(terrain, region, torches, torchProfile, torchShadow),
+          values: buildVisibleSourceField(terrain, region, torches, torchProfile, torchShadow, torchEntry?.values),
         };
+        rememberRegionEntry(torchEntries, nextTorchEntry);
+        torchEntry = nextTorchEntry;
       }
+      let playerEntry = findRegionEntry(playerEntries, region);
       if (!playerEntry || playerEntry.world !== world || playerEntry.profile !== playerProfile || playerEntry.shadow !== playerShadow || playerEntry.range !== playerGpuShadowBleedRange ||
           playerEntry.x !== playerCell?.x || playerEntry.y !== playerCell?.y ||
           !sameRegion(playerEntry.region, region)) {
-        playerEntry = {
+        const playerFields = buildVisibleSourceFields(
+          terrain,
+          region,
+          playerCell ? [playerCell] : [],
+          playerProfile,
+          playerShadow,
+          DEFAULT_SHADOW_SETTINGS,
+          playerEntry,
+        );
+        const nextPlayerEntry = {
           world, profile: playerProfile, shadow: playerShadow, range: playerGpuShadowBleedRange, region: { ...region },
           x: playerCell?.x, y: playerCell?.y,
-          values: buildVisibleSourceField(terrain, region, playerCell ? [playerCell] : [], playerProfile, playerShadow),
-          gpuDirectValues: buildVisibleSourceField(terrain, region, playerCell ? [playerCell] : [], playerProfile, DEFAULT_SHADOW_SETTINGS),
-          gpuPenumbraValues: buildPlayerPenumbraField(terrain, region, playerCell, playerProfile, playerGpuShadowBleedRange),
+          values: playerFields.values,
+          gpuDirectValues: playerFields.gpuDirectValues,
+          gpuPenumbraValues: buildPlayerPenumbraField(
+            terrain,
+            region,
+            playerCell,
+            playerProfile,
+            playerGpuShadowBleedRange,
+            playerEntry?.gpuPenumbraValues,
+          ),
         };
+        rememberRegionEntry(playerEntries, nextPlayerEntry);
+        playerEntry = nextPlayerEntry;
       }
 
       const torchContributions = torchEntry.values;
