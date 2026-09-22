@@ -41,8 +41,8 @@ establishes the torch positions that the later lighting proposals can consume.
 
 ## Impact
 
-- Affected runtime code includes the world-generation system and Babylon Lite
-  game-layer entry point under `ascii-rpg/src/runtime/`.
+- Affected client code includes the world-generation system and Babylon Lite
+  game-layer entry point under `ascii-rpg/src/client/`.
 - Focused world-generation tests will cover density-derived count, placement
   validity, determinism, player avoidance, and visible glyph precedence.
 - No new dependency, storage format, URL argument, network behavior, or UI

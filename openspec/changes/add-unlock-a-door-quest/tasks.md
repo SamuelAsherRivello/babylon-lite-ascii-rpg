@@ -22,10 +22,10 @@
   including the new quest's exact title, labels, progress, and completed state,
   without a separate per-quest UI registration.
 - [x] 2.3 Verify Collect Gold still completes and advances to `Unlock A Door`,
-  while manually selecting the new quest still resets only runtime progress.
+  while manually selecting the new quest still resets only client progress.
 - [x] 2.4 Verify every quest definition in `quest_data.json` appears in the
   Gameplay Settings `Quests` tab, can be selected as Default Quest, persists
-  by ID, and restores with fresh runtime progress after refresh.
+  by ID, and restores with fresh client progress after refresh.
 - [x] 2.5 Add active-step navigation metadata and nearest-target minimap
   resolution, and verify exactly one stairs, key, or door marker follows the
   active quest step.

@@ -39,7 +39,7 @@ browser storage.
   local JSON and browser storage easy to validate. An editable text field was
   rejected because it would allow unsupported or unsafe CSS input.
 - **Configuration boundary:** Store the selected font in the same validated
-  runtime configuration flow as palette entries, while preserving backward
+  client configuration flow as palette entries, while preserving backward
   compatibility with existing palette files that contain only entries. A
   separate font file is preferred if the current JSON shape cannot safely be
   extended without migration; the implementation task must choose one stable

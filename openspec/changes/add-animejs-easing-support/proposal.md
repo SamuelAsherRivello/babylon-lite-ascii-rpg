@@ -20,7 +20,7 @@ In curves.
   acceptance target for the helper and easing registry.
 - Expose Anime.js easing families available from the easing editor, including
   cubic bezier, power, sine, exponential, circular, back, elastic, bounce,
-  irregular, steps, linear, and spring easings where the runtime API supports
+  irregular, steps, linear, and spring easings where the client API supports
   them.
 - Apply the Anime.js Bezier Out preset to the closing phase of the realm iris
   transition and the Bezier In preset to its opening phase.
@@ -28,7 +28,7 @@ In curves.
   layer; Anime.js supplies easing values rather than replacing the renderer.
 - Add focused unit coverage for easing selection, progress normalization,
   cancellation, and the realm-transition phase easings before migrating other
-  runtime animations.
+  client animations.
 
 ## Capabilities
 
@@ -46,8 +46,8 @@ In curves.
 ## Impact
 
 - Dependency: root `package.json` and `package-lock.json` gain Anime.js.
-- Runtime: new helper/easing module under
-  `ascii-rpg/src/runtime/game-layer-babylon-lite/`, plus realm transition
+- Client: new helper/easing module under
+  `ascii-rpg/src/client/game-layer-babylon-lite/`, plus realm transition
   integration in the Babylon Lite game layer.
 - Tests: focused Node tests and existing transition tests are extended; the
   existing browser/build checks remain applicable.

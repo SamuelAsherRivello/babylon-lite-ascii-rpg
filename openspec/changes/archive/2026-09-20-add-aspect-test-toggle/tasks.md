@@ -8,5 +8,5 @@
 ## 2. Agent guidance and regression coverage
 
 - [x] 2.1 Update `AGENTS.md` to require the in-game aspect setting for agent-driven mobile-friendly testing instead of hardcoded browser dimensions or related screen-size workarounds; verify the guidance names both modes and the prohibition.
-- [x] 2.2 Extend existing Node source/runtime regression checks for the setting label, persistence/reset contract, tooltip, and responsive framing markers; verify with `npm.cmd test`.
+- [x] 2.2 Extend existing Node source/client regression checks for the setting label, persistence/reset contract, tooltip, and responsive framing markers; verify with `npm.cmd test`.
 - [x] 2.3 Run `npm.cmd run build`, `openspec validate "add-aspect-test-toggle" --strict`, and `git diff --check`; verify all checks pass.

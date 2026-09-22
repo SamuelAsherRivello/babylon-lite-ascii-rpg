@@ -43,7 +43,7 @@ loop a clear goal.
   inside the minimap viewport and yellow edge indicators when off-screen.
 - Keep quest markers independent of fog discovery without revealing additional
   terrain.
-- Reset the quest, pickups, and runtime gold state on browser refresh; future
+- Reset the quest, pickups, and client gold state on browser refresh; future
   quest activation triggers remain out of scope.
 
 ## Capabilities
@@ -63,11 +63,11 @@ loop a clear goal.
 ## Impact
 
 - Affected Babylon Lite systems: world generation, player movement/collision,
-  pickup and quest state, minimap rendering, and the runtime controller.
+  pickup and quest state, minimap rendering, and the client controller.
 - Affected bridge APIs: one immutable quest snapshot and subscription path from
   the game layer to React.
 - Affected React UI: the character-adjacent quest tracker and completion styling.
-- Affected character data: runtime gold must update from collected pickups rather
+- Affected character data: client gold must update from collected pickups rather
   than remaining a UI-only initial value.
 - Affected tests: quest state, pickup collection/effects, minimap marker
   projection/composition, bridge snapshots, and HUD rendering checks.

@@ -3,7 +3,7 @@
 ## 1. Generic movement events
 
 - [x] 1.1 Identify the shared successful cardinal movement commit path used by keyboard and swipe input, and verify it is the single point where a moved player cell is accepted.
-- [x] 1.2 Add or extend the generic runtime dispatch/listener surface so successful cardinal movement emits exactly `player moved up`, `player moved down`, `player moved left`, or `player moved right`, and verify blocked and diagonal movement emits no cardinal event.
+- [x] 1.2 Add or extend the generic client dispatch/listener surface so successful cardinal movement emits exactly `player moved up`, `player moved down`, `player moved left`, or `player moved right`, and verify blocked and diagonal movement emits no cardinal event.
 - [x] 1.3 Keep the game layer free of tutorial imports, progress state, and completion logic, and verify the movement/event tests cover keyboard, swipe, blocked, and diagonal cases.
 
 ## 2. Tutorial UI flow
@@ -18,7 +18,7 @@
 
 - [x] 3.1 Reuse the Lighting window frame, title-bar, corner typography, and UI input-isolation patterns for both tutorial windows, and verify tutorial controls do not start canvas swipe movement.
 - [ ] 3.2 Add compact desktop and mobile portrait/landscape geometry for the tutorial windows, and verify title, instruction or completion content, buttons, and `OK` remain visible without horizontal overflow.
-- [ ] 3.3 Update focused structural and runtime Node coverage for event names, event-only tutorial subscription, exact copy, phase transitions, and responsive markup, and verify `npm.cmd test` passes.
+- [ ] 3.3 Update focused structural and client Node coverage for event names, event-only tutorial subscription, exact copy, phase transitions, and responsive markup, and verify `npm.cmd test` passes.
 
 ## 4. Verification
 

@@ -27,7 +27,7 @@ None.
 
 ## Impact
 
-- Affected UI: `ascii-rpg/src/runtime/ui-layer-react/App.jsx`, `style.css`, and related palette, lighting, tooltip, fullscreen, and toast integration paths.
+- Affected UI: `ascii-rpg/src/client/ui-layer-react/App.jsx`, `style.css`, and related palette, lighting, tooltip, fullscreen, and toast integration paths.
 - Affected game boundary: only the existing React-to-Babylon bridge and renderer scheduling paths that are proven to participate in the freeze.
-- Affected tests: mirrored UI/runtime tests plus a focused browser interaction check for all three launchers and close paths.
-- Dependencies: no new runtime dependency; preserve the existing React, Vite, and Babylon Lite architecture.
+- Affected tests: mirrored UI/client tests plus a focused browser interaction check for all three launchers and close paths.
+- Dependencies: no new client dependency; preserve the existing React, Vite, and Babylon Lite architecture.

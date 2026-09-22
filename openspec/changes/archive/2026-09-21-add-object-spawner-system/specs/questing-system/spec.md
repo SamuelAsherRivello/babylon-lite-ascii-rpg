@@ -34,9 +34,9 @@ The system SHALL start one Collect Gold quest with a target of three Gold pickup
 - **WHEN** the third generated Gold pickup is collected
 - **THEN** quest progress SHALL be 3 of 3 and the quest SHALL become complete
 
-### Requirement: Runtime-only quest reset
+### Requirement: Client-only quest reset
 
-The quest state, Object Spawner System objects, collected-pickup state, and pickup effects SHALL be runtime-only for this release. A browser refresh SHALL create a new game instance with a fresh Collect Gold quest and newly distributed level objects.
+The quest state, Object Spawner System objects, collected-pickup state, and pickup effects SHALL be client-only for this release. A browser refresh SHALL create a new game instance with a fresh Collect Gold quest and newly distributed level objects.
 
 #### Scenario: Browser refresh starts a new quest and object set
 - **WHEN** the player refreshes the browser after collecting Gold or Heart

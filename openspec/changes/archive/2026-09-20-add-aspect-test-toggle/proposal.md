@@ -40,7 +40,7 @@ as desktop.
 
 ## Impact
 
-- Affects the React UI layer and responsive CSS in `ascii-rpg/src/runtime/ui-layer-react/`,
+- Affects the React UI layer and responsive CSS in `ascii-rpg/src/client/ui-layer-react/`,
   plus focused Node tests in `ascii-rpg/test/`.
 - Updates the repository `AGENTS.md` guidance for future agent-driven testing.
 - Adds no dependencies and does not alter the Babylon game-layer ownership of

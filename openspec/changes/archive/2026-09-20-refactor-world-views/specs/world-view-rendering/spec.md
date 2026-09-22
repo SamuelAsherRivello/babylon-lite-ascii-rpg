@@ -10,7 +10,7 @@ fog state without duplicating view-specific rendering logic.
 
 ### Requirement: Shared bounded world composition
 
-The runtime SHALL render a world view from an explicit source world rectangle
+The client SHALL render a world view from an explicit source world rectangle
 and destination rectangle. The composition SHALL include only cells inside the
 source rectangle and SHALL resolve the world background and visible glyph for
 each eligible cell through the same world-view pipeline for every view.

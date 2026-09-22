@@ -2,7 +2,7 @@
 
 ## Context
 
-See `proposal.md` for motivation and the change specs for behavior. Babylon Lite currently keeps authoritative world, player movement, object collision, player health, time, logging, fog, and rendering in `ascii-rpg/src/runtime/game-layer-babylon-lite/index.js` and sibling systems. World time starts at `1` and presently exposes only value subscriptions; successful movement increments it. Static visible occupancy is written into `world.characters`, while terrain and objects remain in separate records. The renderer is request-driven through Babylon Lite sprite layers and `requestAnimationFrame` presentation.
+See `proposal.md` for motivation and the change specs for behavior. Babylon Lite currently keeps authoritative world, player movement, object collision, player health, time, logging, fog, and rendering in `ascii-rpg/src/client/game-layer-babylon-lite/index.js` and sibling systems. World time starts at `1` and presently exposes only value subscriptions; successful movement increments it. Static visible occupancy is written into `world.characters`, while terrain and objects remain in separate records. The renderer is request-driven through Babylon Lite sprite layers and `requestAnimationFrame` presentation.
 
 The active `add-stamina-concept` change also modifies movement-driven time behavior. Its stamina recovery is tied specifically to successful movement, whereas this change makes combat another time-consuming action. The implementation must preserve that distinction by carrying an action cause with each tick rather than treating every tick as stamina-producing movement.
 
@@ -58,7 +58,7 @@ At time `1`, then at `1 + 30n`, each living spawner shuffles its eight neighbori
 
 Every entity stores `bornAtTime`; age is derived rather than incremented. An enemy acts only when `age >= 2` and `age % 2 === 0`. When at least one eligible enemy is within 64 cells, the active player realm builds at most one reverse cardinal distance field from the living player's cell for that tick. The field allocates only its local 129x129 window and uses numeric cell indexes backed by a per-realm static-occupancy set, avoiding full-world allocation, per-cell object allocation, and repeated linear object scans across the 512x512 world. Eligible enemies inside the field select a free cardinal neighbor with lower distance using a fixed tie-break order. Farther enemies use a deterministic constant-time cardinal step that strictly reduces Manhattan distance until they enter the field, where obstacle-aware routing takes over. Dynamic occupants are excluded at the final step so enemies cannot overlap; an enemy blocked by actors waits. Enemies in other realms still process age and lifecycle but have no target and remain stationary.
 
-A shared bounded reverse field was chosen over one full shortest-path search per enemy because indefinite spawning makes per-enemy 512x512 searches costly. A global unbounded field was also rejected after runtime profiling showed that scanning the entire world every two ticks caused visible input stalls. The far-distance greedy step is only the coarse approach phase; nearby cave and civilization barriers remain handled by the obstacle-aware field.
+A shared bounded reverse field was chosen over one full shortest-path search per enemy because indefinite spawning makes per-enemy 512x512 searches costly. A global unbounded field was also rejected after client profiling showed that scanning the entire world every two ticks caused visible input stalls. The far-distance greedy step is only the coarse approach phase; nearby cave and civilization barriers remain handled by the obstacle-aware field.
 
 ### Combat resolves before the resulting tick broadcast
 
@@ -96,4 +96,4 @@ Change the existing `E` and `S` palette entries to red rather than hardcoding sp
 4. Add the Babylon Lite health-bar overlay layer and bounded presentation updates.
 5. Reconcile the active stamina contract through tick causes, update focused integration tests, run the full Node suite and production build, and manually verify the requested mockup behavior in the live game.
 
-No persisted state migration is required. Rollback is limited to the scoped runtime, palette, tests, and OpenSpec deltas because enemy/spawner state is session-local.
+No persisted state migration is required. Rollback is limited to the scoped client, palette, tests, and OpenSpec deltas because enemy/spawner state is session-local.

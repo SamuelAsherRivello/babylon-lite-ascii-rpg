@@ -2,7 +2,7 @@
 
 ## Context
 
-The existing Babylon Lite runtime owns procedural generation, movement,
+The existing Babylon Lite client owns procedural generation, movement,
 collision, object state, rendering, realm state, and minimap state. The current
 generation pipeline produces natural terrain and then distributes catalogued
 objects, while React receives narrow snapshots for HUD values and logs. See
@@ -94,7 +94,7 @@ and the existing bridge delivers ordered log lines.
 ### Add glyph identities through the existing palette/catalog contract
 
 The catalog and active palette are extended for `─`, `│`, `█`, `□`, and `⚿`.
-Doors use the same glyphs in both wall orientations; no runtime glyph rotation
+Doors use the same glyphs in both wall orientations; no client glyph rotation
 is introduced.
 
 ## Risks / Trade-offs
@@ -120,7 +120,7 @@ is introduced.
 
 1. Add the civilization catalog and palette entries while preserving existing
    object definitions and stored palette customizations.
-2. Add the civilization generation and runtime state behind the Underground
+2. Add the civilization generation and client state behind the Underground
    realm path.
 3. Replace carrying with the key resource and add the key-count snapshot.
 4. Run focused Node tests, the full existing test suite, and the production

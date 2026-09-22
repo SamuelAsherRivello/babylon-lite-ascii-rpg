@@ -6,7 +6,7 @@
 - [x] 1.2 Add pure player-damage and defense-mitigation calculations using maximum damage inputs, normalized current stat ratios, nearest/ceiling rounding as specified, the 50% mitigation cap, and minimum damage of `1`; verify boundary values with focused Node tests.
 - [x] 1.3 Integrate the combat-stat state with the existing stamina subscription without changing stamina constants, attack cost, movement-only recovery, health lifecycle, or time causes; verify existing stamina and combat tests remain passing.
 
-## 2. Runtime combat integration
+## 2. Client combat integration
 
 - [x] 2.1 Update player collision combat against enemies and enemy spawners to calculate applied damage from current Offense while preserving occupancy, attack stamina spending, combat tick advancement, logs, and lethal removal; verify full, reduced, and exhausted attacks.
 - [x] 2.2 Update enemy adjacency attacks to calculate player damage from configured maximum enemy damage and current player Defense before calling the existing player lifecycle; verify full, partial, and zero-defense damage plus player death behavior.

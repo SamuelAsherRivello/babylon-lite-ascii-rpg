@@ -28,5 +28,5 @@
 ## 6. Vary source shadow presets
 
 - [x] 6.1 Add independent five-preset Torch Shadow and Player Shadow controls with stored selections, bridge commands, and compact `O` and `B` labels.
-- [x] 6.2 Carry the selected shadow profile through the lighting runtime and apply its `O` and `B` values to source light behind unwalkable terrain.
+- [x] 6.2 Carry the selected shadow profile through the lighting client and apply its `O` and `B` values to source light behind unwalkable terrain.
 - [x] 6.3 Cover the separate progressive shadow settings with focused tests, then run the Node suite, build, strict validation, and inspect the visible labels in the running game.

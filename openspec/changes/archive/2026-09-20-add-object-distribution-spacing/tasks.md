@@ -12,5 +12,5 @@
 
 ## 3. Validation
 
-- [x] 3.1 Run `node --test --test-isolation=none ascii-rpg/test/runtime/game-layer-babylon-lite/systems/world-system_tests.mjs` and verify all generator tests pass.
+- [x] 3.1 Run `node --test --test-isolation=none ascii-rpg/test/client/game-layer-babylon-lite/systems/world-system_tests.mjs` and verify all generator tests pass.
 - [x] 3.2 Run `npm.cmd test` and `npm.cmd run build` from the repository root and verify the complete Node suite and production build pass.

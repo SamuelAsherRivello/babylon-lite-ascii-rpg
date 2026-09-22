@@ -41,7 +41,7 @@ discovery behavior as the player moves.
 
 ## Impact
 
-- Affected runtime areas are the Babylon Lite fog-of-war system, world/realm
+- Affected client areas are the Babylon Lite fog-of-war system, world/realm
   initialization, and the viewport/grid sizing helpers used to resolve the
   zoom-5 logical screen dimensions.
 - Focused fog, world initialization, realm isolation, and rendering tests will

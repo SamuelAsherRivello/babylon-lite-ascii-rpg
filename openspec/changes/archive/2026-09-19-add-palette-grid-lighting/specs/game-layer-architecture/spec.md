@@ -25,11 +25,11 @@ data.
 - **THEN** Babylon Lite SHALL process game input, update game state, and render
   the game world in `game_layer`
 
-#### Scenario: Runtime source layout exposes ownership
+#### Scenario: Client source layout exposes ownership
 
-- **WHEN** a contributor locates runtime implementation code
+- **WHEN** a contributor locates client implementation code
 - **THEN** React UI, bridge communication, and Babylon Lite gameplay code SHALL
-  remain discoverable under their corresponding sibling runtime layers
+  remain discoverable under their corresponding sibling client layers
 
 #### Scenario: Palette and lighting reach visible glyphs
 

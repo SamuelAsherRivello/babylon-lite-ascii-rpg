@@ -6,7 +6,7 @@
 - [x] 1.2 Extend `quest_data.json` and the Quest System model for ordered steps, active-step filtering, step completion, and idempotent transitions; verify focused quest unit tests cover matching and unrelated events.
 - [x] 1.3 Add initial and transitioned realm-entry publication at the realm boundary without adding quest references; verify realm-event tests cover Overground, Underground, and stair transfers.
 
-## 2. Collect Gold runtime integration
+## 2. Collect Gold client integration
 
 - [x] 2.1 Connect the Quest System to the shared event stream and defer the gold pickup request until the Overground step completes; verify Underground startup creates no quest gold and Overground activation creates exactly three pickups.
 - [x] 2.2 Preserve Object Spawner ownership of pickup effects and generic pickup events while adapting its event publication; verify a gold collision credits exactly one gold and repeated collision cannot recollect it.

@@ -12,7 +12,7 @@ The Collect Gold quest currently becomes active as a single gold-counting object
 - Dispatch a generic realm-entry event from the realm transition boundary, including the entered realm name.
 - Keep gold pickup events owned by the Object Spawner System and make the Quest System observe them without adding quest logic to object spawning or realm management.
 - Publish the ordered quest-step state through the existing narrow bridge and render both steps in the quest HUD.
-- Preserve runtime-only quest state and existing one-gold-per-pickup behavior.
+- Preserve client-only quest state and existing one-gold-per-pickup behavior.
 
 ## Capabilities
 
@@ -27,6 +27,6 @@ None.
 
 ## Impact
 
-- Affected runtime areas include `quest-system.js`, `quest_data.json`, the Babylon Lite realm-transition boundary, the Object Spawner System integration, the bridge snapshot shape, and the React quest tracker.
+- Affected client areas include `quest-system.js`, `quest_data.json`, the Babylon Lite realm-transition boundary, the Object Spawner System integration, the bridge snapshot shape, and the React quest tracker.
 - Focused quest, realm-event, object-spawner, bridge, and HUD tests will require updates or additions.
 - No new dependencies, persistence, public network behavior, or changes to the generic pickup effect contract are required.

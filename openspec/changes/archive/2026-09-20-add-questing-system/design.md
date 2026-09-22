@@ -3,7 +3,7 @@
 ## Context
 
 See `proposal.md` and the questing-system and minimap-markers spec deltas for
-the user-visible contract. The current runtime keeps Babylon Lite authoritative
+the user-visible contract. The current client keeps Babylon Lite authoritative
 for generated worlds, player movement, collision, rendering, and minimap
 painting. React owns the HTML HUD and communicates through the existing narrow
 bridge. The character panel currently renders initial gold from a UI-local
@@ -19,7 +19,7 @@ model, while the game layer owns the actual player cell and world characters.
 - Extend the existing bridge with immutable quest and character-gold snapshots.
 - Reuse the current minimap marker composition and fog rules while adding quest
   markers and off-screen projection.
-- Preserve runtime-only state so browser refresh naturally restarts the example.
+- Preserve client-only state so browser refresh naturally restarts the example.
 
 **Non-Goals:**
 
@@ -36,7 +36,7 @@ model, while the game layer owns the actual player cell and world characters.
 ### Game layer owns quest and pickup state
 
 Add quest state beside the existing world and player state in the Babylon Lite
-runtime. The quest manager owns the one-entry active-quest list, lifecycle
+client. The quest manager owns the one-entry active-quest list, lifecycle
 transition, current/target progress, and completion. The active world owns
 pickup instances and resolves player-cell collection during the existing
 movement flow. React receives snapshots only; it does not calculate progress or
@@ -49,7 +49,7 @@ player/world state and make collision-driven updates race the game loop.
 ### JSON definitions with in-memory state
 
 Store static quest identity, display text, criterion mode, target value, and
-matching event type in `quest_data.json`. At runtime, construct an in-memory
+matching event type in `quest_data.json`. At client, construct an in-memory
 active quest from that definition and add mutable state such as lifecycle,
 baseline value, current progress, and completion. The first condition is
 “collect pickups of type gold.”
@@ -63,7 +63,7 @@ change.
 
 ### Generic pickup records and one-shot effects
 
-Represent each pickup with a stable runtime ID, pickup type, world cell,
+Represent each pickup with a stable client ID, pickup type, world cell,
 active/collected state, and an effect handler or effect descriptor. Collection
 is resolved after a successful player movement onto the pickup cell. The effect
 credits gold, marks the pickup inactive, updates quest progress, and schedules

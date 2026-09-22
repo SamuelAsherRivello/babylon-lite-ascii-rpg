@@ -9,7 +9,7 @@ fog state without duplicating view-specific rendering logic.
 
 ### Requirement: Shared bounded world composition
 
-The runtime SHALL render a world view from an explicit source world rectangle
+The client SHALL render a world view from an explicit source world rectangle
 and destination rectangle. The composition SHALL include only cells inside the
 source rectangle and SHALL resolve the world background and visible glyph for
 each eligible cell through the same world-view pipeline for every view.
@@ -149,7 +149,7 @@ The world-view renderer SHALL apply the confirmed per-glyph offset values whenev
 - **THEN** the mini-map SHALL apply the same offset semantics adapted to its destination cell scale
 - **AND** the mini-map SHALL preserve the same fog, lighting, and overlay ordering as other world-view content
 
-#### Scenario: Ascii previews share runtime cell rendering
+#### Scenario: Ascii previews share client cell rendering
 - **WHEN** the Ascii Settings palette grid or glyph editor preview renders a glyph
 - **THEN** it SHALL use the same composite cell rendering technology as the game view and mini-map for the glyph background, glyph pixels, offsets, and fully visible lighting treatment
 

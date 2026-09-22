@@ -7,7 +7,7 @@ World-distributed things are currently split between a pickup system, world-gene
 ## What Changes
 
 - Add an Object Spawner System in `object-spawner-system.js` that owns every glyph-based world object.
-- Replace the existing `pickup-system.js` runtime boundary with the Object Spawner System while retaining pickup collection semantics.
+- Replace the existing `pickup-system.js` client boundary with the Object Spawner System while retaining pickup collection semantics.
 - Define object metadata in JSON, including glyph, name, `IsPickup`, `IsLevelSpawned`, consequence, log text, and distribution rules.
 - Keep Gold as a quest-requested pickup with `IsLevelSpawned: false`; the quest system requests exactly three Gold objects.
 - Level-spawn Hearts, Torches, Traps, and paired Stairs during the final object-spawner world-generation phase.
@@ -37,9 +37,9 @@ World-distributed things are currently split between a pickup system, world-gene
 
 ## Impact
 
-- Affected runtime files include the Babylon Lite systems, world generation, quest integration, minimap renderer, lighting inputs, bridge-facing snapshots, and palette data.
+- Affected client files include the Babylon Lite systems, world generation, quest integration, minimap renderer, lighting inputs, bridge-facing snapshots, and palette data.
 - `quest-system.js` remains the quest authority; `object-spawner-system.js` becomes the object and pickup authority.
 - Existing tests importing `pickup-system.js` will move to the new system boundary and gain persistent-object coverage.
-- No new runtime dependency is expected.
+- No new client dependency is expected.
 - Implementation must preserve the narrow React bridge and must not expose mutable object coordinates or world state to React.
 - The proposal assumes the current 512×512 realm and zoom-5 density target used during exploration; exact JSON ranges remain implementation-time configuration subject to the stated approximately 5% per-screen target.

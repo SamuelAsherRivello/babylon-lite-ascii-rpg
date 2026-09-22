@@ -40,8 +40,8 @@ The generated world has static objects and civilization features but no autonomo
 
 ## Impact
 
-- Primary runtime impact is under `ascii-rpg/src/runtime/game-layer-babylon-lite/`, especially `index.js`, `systems/time-system.js`, `systems/world-system.js`, new enemy/spawner systems, palette data, world composition, and renderer layers.
+- Primary client impact is under `ascii-rpg/src/client/game-layer-babylon-lite/`, especially `index.js`, `systems/time-system.js`, `systems/world-system.js`, new enemy/spawner systems, palette data, world composition, and renderer layers.
 - Existing object and civilization systems remain separate authorities; enemy spawners are damageable tickable entities rather than Object Spawner catalog objects.
 - React receives only the existing immutable player health/death/log snapshots and does not receive enemy coordinates, spawner coordinates, tick registries, or health-bar state.
-- No new runtime dependency is expected. Health-bar animation uses the existing game render loop and elapsed presentation time.
+- No new client dependency is expected. Health-bar animation uses the existing game render loop and elapsed presentation time.
 - The change must preserve deterministic seeded generation, both realms, camera modes, fog, lighting, minimap behavior, narrow bridge ownership, and the existing no-shared-cell rule.

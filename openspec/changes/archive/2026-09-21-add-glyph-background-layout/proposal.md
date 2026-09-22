@@ -30,8 +30,8 @@ The ASCII game view currently renders glyphs directly against the canvas, which 
 
 ## Impact
 
-- Affected React UI: `ascii-rpg/src/runtime/ui-layer-react/App.jsx` and `windows.css`.
-- Affected bridge/controller state: the UI-to-game rendering preference path and runtime redraw invalidation.
-- Affected game rendering: `ascii-rpg/src/runtime/game-layer-babylon-lite/glyph-visual-cache.js`, `index.js`, GPU light-pass helpers, and related rendering helpers/tests.
+- Affected React UI: `ascii-rpg/src/client/ui-layer-react/App.jsx` and `windows.css`.
+- Affected bridge/controller state: the UI-to-game rendering preference path and client redraw invalidation.
+- Affected game rendering: `ascii-rpg/src/client/game-layer-babylon-lite/glyph-visual-cache.js`, `index.js`, GPU light-pass helpers, and related rendering helpers/tests.
 - Affected browser persistence: two new local-storage preferences cleared by the existing Reset Settings behavior.
 - No new dependencies, public APIs, world data, fog state, palette entries, or gameplay mechanics.

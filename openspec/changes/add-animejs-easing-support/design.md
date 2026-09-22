@@ -13,8 +13,8 @@ general easing callback for property animation tracks.
 
 **Goals:**
 
-- Add Anime.js as a runtime dependency for easing utilities.
-- Keep a project-owned helper as the stable API used by runtime animations.
+- Add Anime.js as a client dependency for easing utilities.
+- Keep a project-owned helper as the stable API used by client animations.
 - Make all easing choices available through a small registry and custom
   function escape hatch.
 - Deliver the realm iris transition as phase one, proving the helper and
@@ -62,7 +62,7 @@ transition system independently testable with injected frame schedulers.
 
 ### Preserve the current layer boundary
 
-The helper and easing registry live in the Babylon Lite game-layer runtime.
+The helper and easing registry live in the Babylon Lite game-layer client.
 The helper emits values; existing `updateSprite2DIndex`, mask, and render paths
 apply them. React remains responsible for the UI layer and is not a target of
 the game animation helper.
@@ -87,7 +87,7 @@ the game animation helper.
 1. Add and lock Anime.js, then add the easing registry and helper tests.
 2. Route the realm transition's closing/opening progress through the helper
    and verify Bezier Out/In phase behavior as the first consumer.
-3. Migrate additional JavaScript-owned runtime animations to the helper only
+3. Migrate additional JavaScript-owned client animations to the helper only
    after the realm transition integration is verified; preserve CSS-only UI
    animations outside its scope.
 4. Run the existing Node suite, build, and manual browser transition check.

@@ -26,6 +26,6 @@ Players can see the active world and realm floor, and fog-of-war already tracks 
 
 ## Impact
 
-- Affected runtime systems: `ascii-rpg/src/runtime/game-layer-babylon-lite/systems/fog-of-war-system.js`, `ascii-rpg/src/runtime/game-layer-babylon-lite/index.js`, `ascii-rpg/src/runtime/bridge-layer/game-bridge.js`, and `ascii-rpg/src/runtime/ui-layer-react/App.jsx`.
-- Affected tests: focused Node/source tests in `ascii-rpg/test/main_tests.mjs` and fog/realm system tests under `ascii-rpg/test/runtime/game-layer-babylon-lite/systems/`.
+- Affected client systems: `ascii-rpg/src/client/game-layer-babylon-lite/systems/fog-of-war-system.js`, `ascii-rpg/src/client/game-layer-babylon-lite/index.js`, `ascii-rpg/src/client/bridge-layer/game-bridge.js`, and `ascii-rpg/src/client/ui-layer-react/App.jsx`.
+- Affected tests: focused Node/source tests in `ascii-rpg/test/main_tests.mjs` and fog/realm system tests under `ascii-rpg/test/client/game-layer-babylon-lite/systems/`.
 - Affected user behavior: the minimap status becomes a concise exploration readout for the current realm while preserving existing fog discovery, minimap rendering, and realm transfer behavior.

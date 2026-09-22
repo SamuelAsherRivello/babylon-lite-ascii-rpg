@@ -15,7 +15,7 @@ The lower-right log also needs predictable reading behavior: new entries should 
 - Keep the Log UI responsible only for rendering the snapshot and tracking its scroll position; it SHALL append new lines at the bottom of the body.
 - Autoscroll to the newest line only when the log body is already at its scrollable bottom. Once the player scrolls upward, new entries SHALL not move the viewport until the player returns to the bottom.
 - Preserve the current Log panel location, collapse/expand behavior, styling, bounded retention, and existing line content except for the explicit `Player` prefix removal.
-- Add focused Log System, bridge, and UI behavior tests following the mirrored runtime test layout.
+- Add focused Log System, bridge, and UI behavior tests following the mirrored client test layout.
 
 ## Capabilities
 
@@ -25,11 +25,11 @@ The lower-right log also needs predictable reading behavior: new entries should 
 
 ### Modified Capabilities
 
-None. The existing game-layer architecture remains the boundary for this new system; the new capability will conform to its narrow bridge and game-owned runtime rules.
+None. The existing game-layer architecture remains the boundary for this new system; the new capability will conform to its narrow bridge and game-owned client rules.
 
 ## Impact
 
-- Adds `ascii-rpg/src/runtime/game-layer-babylon-lite/systems/log-system.js` and its mirrored tests.
+- Adds `ascii-rpg/src/client/game-layer-babylon-lite/systems/log-system.js` and its mirrored tests.
 - Updates Babylon Lite startup/system wiring, current log-producing gameplay paths, and the existing bridge log snapshot contract.
 - Updates the React Log panel and HUD styles only as needed for scroll-position tracking and bottom insertion.
 - Adds no dependencies, persistence, network behavior, or public external API.

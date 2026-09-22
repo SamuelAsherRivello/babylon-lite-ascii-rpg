@@ -3,7 +3,7 @@
 ## Purpose
 
 Provides a complete, editable glyph-style palette for the ASCII RPG so every
-visible Code Page 437 character can be used and styled consistently at runtime.
+visible Code Page 437 character can be used and styled consistently at client.
 
 ## ADDED Requirements
 

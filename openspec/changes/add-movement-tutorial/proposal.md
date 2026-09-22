@@ -48,7 +48,7 @@ movement in every cardinal direction.
 
 ## Impact
 
-- Affected React UI: `ascii-rpg/src/runtime/ui-layer-react/App.jsx` and its
+- Affected React UI: `ascii-rpg/src/client/ui-layer-react/App.jsx` and its
   existing UI stylesheet/components.
 - Affected bridge/game integration: the narrow bridge and Babylon Lite
   movement lifecycle, adding generic `player moved up`, `player moved down`,

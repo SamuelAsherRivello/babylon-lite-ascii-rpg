@@ -1,10 +1,10 @@
 # Tasks
 
-## 1. Palette data and runtime store
+## 1. Palette data and client store
 
 - [x] 1.1 Add the visible Code Page 437 32–254 mapping plus U+2022 and verify a unit test finds every required identity exactly once.
 - [x] 1.2 Define palette entry defaults, validation, customized-status derivation, and JSON serialization; verify invalid color, alpha, identity, and malformed-palette cases are rejected.
-- [x] 1.3 Add the shared runtime palette store and connect world glyph resolution to palette color and alpha; verify `W`, `•`, and `P` resolve the expected default styles.
+- [x] 1.3 Add the shared client palette store and connect world glyph resolution to palette color and alpha; verify `W`, `•`, and `P` resolve the expected default styles.
 - [x] 1.4 Add the `react-colorful` dependency and verify the dependency installs and the production bundle resolves it.
 
 ## 2. Palette editor UI

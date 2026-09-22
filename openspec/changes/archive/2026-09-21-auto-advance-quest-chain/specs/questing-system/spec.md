@@ -44,7 +44,7 @@ The system SHALL maintain an active-quest list containing only the current quest
 #### Scenario: Selecting a quest changes the current quest
 
 - **WHEN** the player selects a quest from Gameplay Settings
-- **THEN** that quest SHALL replace the current quest and transition to pending with fresh runtime progress
+- **THEN** that quest SHALL replace the current quest and transition to pending with fresh client progress
 
 #### Scenario: Completed quest advances when another definition exists
 

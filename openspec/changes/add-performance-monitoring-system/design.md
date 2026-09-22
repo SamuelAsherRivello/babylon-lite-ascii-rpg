@@ -2,7 +2,7 @@
 
 ## Context
 
-See `proposal.md` for motivation. The runtime already owns world generation,
+See `proposal.md` for motivation. The client already owns world generation,
 input locking, the main world render path, minimap rendering, and startup timing
 fields in `game-layer-babylon-lite/index.js`. React currently runs an independent
 once-per-second `requestAnimationFrame` FPS display. Existing logs are useful for
@@ -13,7 +13,7 @@ paths are not reported as comparable phase samples.
 
 **Goals:**
 
-- Establish one runtime-owned, opt-in collector with bounded memory and explicit
+- Establish one client-owned, opt-in collector with bounded memory and explicit
   session lifecycle.
 - Reuse the existing high-resolution `performance.now()` and animation-frame
   boundaries instead of adding a production profiling dependency.
@@ -51,7 +51,7 @@ paths are not reported as comparable phase samples.
 
 3. **Represent scenarios explicitly.** The session metadata records scenario,
    direction, sprint state, duration, viewport, zoom, device-pixel ratio, and
-   browser/runtime identifiers that are safe to disclose. Scenario changes end
+   browser/client identifiers that are safe to disclose. Scenario changes end
    the current sample set rather than mixing modes. This makes the requested
    idle/normal/sprint comparison reproducible.
 
@@ -60,7 +60,7 @@ paths are not reported as comparable phase samples.
    state to React. The initial presentation can log or return JSON; a future
    developer panel can consume the same shape without changing instrumentation.
 
-5. **Keep startup timing semantics explicit.** Record separate marks for runtime
+5. **Keep startup timing semantics explicit.** Record separate marks for client
    start, generation complete, first valid visible render, and input unlock. The
    report's primary "time to playable" uses the latest required boundary (input
    unlock after a valid render), while component fields explain where the time
@@ -84,7 +84,7 @@ paths are not reported as comparable phase samples.
 - [Risk] Startup timing can vary with generation seed and device → capture seed
   only as a non-exported internal correlation value, report environment context,
   and avoid treating the first run as a universal budget.
-- [Risk] Existing dirty work overlaps runtime files → implementation must stage
+- [Risk] Existing dirty work overlaps client files → implementation must stage
   only attributable files and preserve unrelated changes.
 
 ## Migration Plan

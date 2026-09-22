@@ -36,9 +36,9 @@ None.
 
 - Affected developer tooling and documentation: the repository's OpenSpec
   usage guidance and a project-rooted dashboard launch helper or command.
-- Affected local runtime: OpenSpecUI serves the current repository on
+- Affected local client: OpenSpecUI serves the current repository on
   `http://localhost:6001` and invokes the installed OpenSpec CLI `1.13.x`.
-- No game runtime, public deployment, data format, credential, or production
+- No game client, public deployment, data format, credential, or production
   API changes are expected.
 - No new application dependency is approved by this proposal. The dashboard
   remains an optional local developer tool and must not be required to build,

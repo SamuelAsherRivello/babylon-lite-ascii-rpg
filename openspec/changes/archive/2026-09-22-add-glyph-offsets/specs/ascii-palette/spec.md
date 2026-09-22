@@ -4,7 +4,7 @@
 
 ### Requirement: Grid-cell glyph previews
 
-The Ascii Settings palette grid and glyph editor preview SHALL render each glyph with the same composite grid-cell renderer used by the game view and mini-map. The previewed background, glyph tint, size, position, offset values, active font rules, and default lighting treatment SHALL match the runtime renderer's fully visible glyph-background cell presentation, so the palette card, editor preview, world cell, and mini-map cell communicate a consistent glyph-to-grid relationship.
+The Ascii Settings palette grid and glyph editor preview SHALL render each glyph with the same composite grid-cell renderer used by the game view and mini-map. The previewed background, glyph tint, size, position, offset values, active font rules, and default lighting treatment SHALL match the client renderer's fully visible glyph-background cell presentation, so the palette card, editor preview, world cell, and mini-map cell communicate a consistent glyph-to-grid relationship.
 
 #### Scenario: Palette card uses shared composite cell rendering
 - **WHEN** a developer views a glyph in the Ascii Settings palette grid
@@ -13,7 +13,7 @@ The Ascii Settings palette grid and glyph editor preview SHALL render each glyph
 
 #### Scenario: Editor preview matches grid-cell relationship
 - **WHEN** a developer opens a glyph's color editor
-- **THEN** the popup preview SHALL show the same composite grid-cell render used by the palette card and runtime renderer
+- **THEN** the popup preview SHALL show the same composite grid-cell render used by the palette card and client renderer
 - **AND** the preview SHALL use the draft color and draft offsets without committing them
 
 ### Requirement: Per-glyph offset controls

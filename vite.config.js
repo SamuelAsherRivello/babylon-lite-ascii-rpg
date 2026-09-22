@@ -3,13 +3,13 @@ import { fileURLToPath } from "node:url";
 import { readFile, rename, writeFile } from "node:fs/promises";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
-import { serializeFontConfig, validateFontId } from "./ascii-rpg/src/runtime/bridge-layer/font.js";
-import { serializePalette, validatePaletteEntries } from "./ascii-rpg/src/runtime/bridge-layer/palette.js";
+import { serializeFontConfig, validateFontId } from "./ascii-rpg/src/client/bridge-layer/font.js";
+import { serializePalette, validatePaletteEntries } from "./ascii-rpg/src/client/bridge-layer/palette.js";
 
 const repositoryRoot = dirname(fileURLToPath(import.meta.url));
 
 function palettePersistencePlugin() {
-  const palettePath = `${repositoryRoot}/ascii-rpg/src/runtime/game-layer-babylon-lite/data/palette_data.json`;
+  const palettePath = `${repositoryRoot}/ascii-rpg/src/client/game-layer-babylon-lite/data/palette_data.json`;
 
   return {
     name: "ascii-palette-persistence",
@@ -50,7 +50,7 @@ function palettePersistencePlugin() {
         }
       });
       server.middlewares.use("/__ascii_font", async (request, response, next) => {
-        const fontPath = `${repositoryRoot}/ascii-rpg/src/runtime/game-layer-babylon-lite/data/font_data.json`;
+        const fontPath = `${repositoryRoot}/ascii-rpg/src/client/game-layer-babylon-lite/data/font_data.json`;
         if (request.method === "GET") {
           try {
             response.statusCode = 200;

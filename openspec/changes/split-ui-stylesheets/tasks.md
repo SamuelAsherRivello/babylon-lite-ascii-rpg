@@ -2,7 +2,7 @@
 
 ## 1. Establish the stylesheet ownership layout
 
-- [x] 1.1 Replace the provisional feature stylesheet names with `character.css`, `map.css`, `hud.css`, `windows.css`, and `toasts.css`, and verify all six expected files exist under `ascii-rpg/src/runtime/ui-layer-react/`.
+- [x] 1.1 Replace the provisional feature stylesheet names with `character.css`, `map.css`, `hud.css`, `windows.css`, and `toasts.css`, and verify all six expected files exist under `ascii-rpg/src/client/ui-layer-react/`.
 - [x] 1.2 Rename the entry point to `styles.css`, update its ordered imports, and verify `ascii-rpg/src/main.jsx` imports only `styles.css`.
 
 ## 2. Move CSS rules without changing behavior

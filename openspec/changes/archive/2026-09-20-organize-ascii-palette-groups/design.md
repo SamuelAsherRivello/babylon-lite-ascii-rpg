@@ -21,7 +21,7 @@ contract.
 **Non-Goals:**
 
 - Changing the palette inventory, JSON format, migration version, colors, or
-  runtime rendering.
+  client rendering.
 - Altering Index or Alphabetical sorting.
 
 ## Decisions

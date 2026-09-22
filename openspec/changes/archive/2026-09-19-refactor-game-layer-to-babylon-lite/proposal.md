@@ -3,22 +3,22 @@
 ## Why
 
 Ascii RPG currently runs the playable game through a React-mounted 2D canvas
-component, so React owns too much of the game runtime: input, loop scheduling,
+component, so React owns too much of the game client: input, loop scheduling,
 movement, generation hookup, and rendering. The project needs a clear final
 architecture where React is the UI layer and Babylon Lite is the game layer.
 
 ## What Changes
 
-- **BREAKING** Replace the React-owned `content_layer` game runtime with a
+- **BREAKING** Replace the React-owned `content_layer` game client with a
   Babylon Lite-owned `game_layer`.
 - Mount React only into `ui_layer` for HUD, menus, settings, dialogs, the
   Ascii Palette window, the Arguments window, fullscreen controls, warnings,
   and other HTML user-interface surfaces.
-- Add Babylon Lite as the runtime owner for the engine canvas lifecycle, render
+- Add Babylon Lite as the client owner for the engine canvas lifecycle, render
   loop, game input, procedural level generation, world state, movement,
   collision, glyph placement, ASCII glyph rendering, and palette application to
   in-world cells.
-- Remove the old React-mounted canvas gameplay path as a runtime fallback. If
+- Remove the old React-mounted canvas gameplay path as a client fallback. If
   Babylon Lite or WebGPU cannot initialize, the game world does not load.
 - Preserve the Ascii Palette feature as a cross-layer feature:
   - React owns the palette window, color picker, alpha controls, confirmation
@@ -55,7 +55,7 @@ architecture where React is the UI layer and Babylon Lite is the game layer.
 - Affected application areas include `ascii-rpg/index.html`, `src/main.jsx`,
   `src/GameCanvas.jsx`, the world/grid modules, palette store integration,
   tests under `ascii-rpg/test/`, and package dependencies.
-- Add the Babylon Lite dependency used by the application runtime.
+- Add the Babylon Lite dependency used by the application client.
 - React remains a dependency for UI surfaces and `react-colorful` remains
   limited to the palette editor.
 - The old canvas gameplay component should be removed from the production

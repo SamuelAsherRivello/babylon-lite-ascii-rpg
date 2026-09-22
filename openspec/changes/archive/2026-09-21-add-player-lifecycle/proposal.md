@@ -12,7 +12,7 @@ Traps currently remove only two health points and the game has no explicit playe
 - Publish death state through the existing narrow game-to-UI bridge.
 - Show a tutorial-format modal titled `Adventure` with body text `You have died.`, the exact summary bullets `XP: 00`, `Gold: 00`, and `Time: 00`, and a `Restart Game` button.
 - Restart the game session when the player activates `Restart Game`.
-- Add focused runtime and UI contract coverage for trap damage, zero-health clamping, death gating, and exact modal copy.
+- Add focused client and UI contract coverage for trap damage, zero-health clamping, death gating, and exact modal copy.
 
 ## Capabilities
 
@@ -27,8 +27,8 @@ Traps currently remove only two health points and the game has no explicit playe
 
 ## Impact
 
-- Babylon Lite object catalog and runtime object effects under `ascii-rpg/src/runtime/game-layer-babylon-lite/`.
-- The game bridge and startup subscriptions under `ascii-rpg/src/runtime/bridge-layer/` and `ascii-rpg/src/main.jsx`.
-- React UI modal composition and responsive window styling under `ascii-rpg/src/runtime/ui-layer-react/`.
+- Babylon Lite object catalog and client object effects under `ascii-rpg/src/client/game-layer-babylon-lite/`.
+- The game bridge and startup subscriptions under `ascii-rpg/src/client/bridge-layer/` and `ascii-rpg/src/main.jsx`.
+- React UI modal composition and responsive window styling under `ascii-rpg/src/client/ui-layer-react/`.
 - Mirrored Node tests under `ascii-rpg/test/` and the new delta specs under this change.
 - No new dependency is required; restart uses the browser session reload path.

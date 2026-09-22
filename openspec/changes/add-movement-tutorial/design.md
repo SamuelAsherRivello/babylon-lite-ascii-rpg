@@ -70,7 +70,7 @@ receive player coordinates or a mutable movement controller.
 
 This event boundary is preferred over a tutorial callback or tutorial-specific
 bridge command because the game should publish what happened, while separate
-UI systems decide whether they care. If the project already has a runtime
+UI systems decide whether they care. If the project already has a client
 event bus, use it; otherwise add the smallest generic dispatch/listener
 surface at the existing UI/game boundary without embedding tutorial imports in
 gameplay modules.

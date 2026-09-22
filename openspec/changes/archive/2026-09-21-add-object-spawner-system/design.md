@@ -2,7 +2,7 @@
 
 ## Context
 
-See proposal.md and the object-spawner-system delta. The current Babylon Lite runtime creates Gold, health, and Trap pickups in `index.js`, stores pickup behavior in `systems/pickup-system.js`, generates Torches and paired Stairs in `systems/world-system.js`, and gives the minimap and lighting code separate access to `world.pickups` and `world.torches`. The current world pass list ends at player placement, while quest data owns Gold distances.
+See proposal.md and the object-spawner-system delta. The current Babylon Lite client creates Gold, health, and Trap pickups in `index.js`, stores pickup behavior in `systems/pickup-system.js`, generates Torches and paired Stairs in `systems/world-system.js`, and gives the minimap and lighting code separate access to `world.pickups` and `world.torches`. The current world pass list ends at player placement, while quest data owns Gold distances.
 
 ## Goals / Non-Goals
 
@@ -10,7 +10,7 @@ See proposal.md and the object-spawner-system delta. The current Babylon Lite ru
 
 - Establish `systems/object-spawner-system.js` as the single object authority.
 - Keep `systems/quest-system.js` as quest authority and make it request Gold objects.
-- Store catalog and distribution metadata in JSON while keeping consequences as validated runtime behavior references.
+- Store catalog and distribution metadata in JSON while keeping consequences as validated client behavior references.
 - Preserve Babylon Lite ownership of collision, rendering, lighting, fog, minimap, realm transitions, and UI snapshots.
 - Make seeded object distribution deterministic and cooperative with the existing generation scheduler.
 - Support the exact object/log contract agreed during exploration.
@@ -31,9 +31,9 @@ Replace `createPickupSystem` with `createObjectSpawnerSystem` in `object-spawner
 
 The alternative of leaving pickup and world-object stores separate was rejected because it would preserve duplicate placement rules and make object-layer precedence fragile.
 
-### JSON catalog plus explicit runtime consequences
+### JSON catalog plus explicit client consequences
 
-Add an object catalog JSON file beside `quest_data.json`. Each entry contains the agreed fields and distribution configuration: count range, minimum spacing, distance bands, candidate constraints, and paired-realm behavior. JSON remains declarative; the game layer maps approved consequence identifiers such as `gold:+1`, `health:+2`, `health:-2`, `torch-light`, and `realm-transition` to runtime behavior. This avoids serializing functions while keeping AI-authored spawn parameters editable.
+Add an object catalog JSON file beside `quest_data.json`. Each entry contains the agreed fields and distribution configuration: count range, minimum spacing, distance bands, candidate constraints, and paired-realm behavior. JSON remains declarative; the game layer maps approved consequence identifiers such as `gold:+1`, `health:+2`, `health:-2`, `torch-light`, and `realm-transition` to client behavior. This avoids serializing functions while keeping AI-authored spawn parameters editable.
 
 The alternative of embedding all object metadata in JavaScript was rejected because it would prevent a single visible distribution contract and make later content tuning harder.
 
@@ -59,7 +59,7 @@ The Object Spawner System emits configured pickup/effect log requests for the ex
 
 ## Risks / Trade-offs
 
-- [Risk] Renaming the system can leave stale imports or tests referencing `pickup-system.js` → update all runtime and mirrored test imports together and add a repository search check for the old module name.
+- [Risk] Renaming the system can leave stale imports or tests referencing `pickup-system.js` → update all client and mirrored test imports together and add a repository search check for the old module name.
 - [Risk] Existing Torch requirements target `T` and approximately three Torches per zoom-5 screen → update the delta and verify lighting/minimap behavior with the new `🕯️` glyph and the agreed approximately 10–14-per-world initial range.
 - [Risk] A large object catalog can increase generation work → use the existing cooperative checkpoints and bounded candidate scans.
 - [Risk] Multiple objects can select one cell → reserve player, paired Stair, and already selected object cells and use deterministic conflict resolution.

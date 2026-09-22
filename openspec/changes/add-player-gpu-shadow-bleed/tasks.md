@@ -10,7 +10,7 @@
 - [x] 2.1 Add read-only lighting helpers that identify the first straight-path unwalkable blocker and count grid steps behind it; verify focused lighting tests cover a clear path, first blocked cell, bounded range, closed corners, and no terrain mutation.
 - [x] 2.2 Build a player-only simulated penumbra field from the selected range, player brightness, and falloff; verify focused tests prove direct clear light, rapidly fading in-range penumbra, no player contribution beyond the range at every ambient level, and ambient-only shadow-core visibility above `0`.
 - [x] 2.3 Refactor the GPU light presentation to retain separate torch, direct-player, and player-penumbra inputs; bound direct-player and penumbra sprites to eligible cell bounds, and continuously scale the composite by `1 - ambient` without an ambient-value branch; verify focused rendering tests show no unrestricted player blur leak while an unobstructed torch still lights a player-shadowed cell.
-- [x] 2.4 Refresh and dispose player penumbra resources on movement, zoom, resize, palette/lighting changes, toggle changes, and game-layer disposal; verify focused runtime/resource tests cover no former-player trail and correct visible-region alignment.
+- [x] 2.4 Refresh and dispose player penumbra resources on movement, zoom, resize, palette/lighting changes, toggle changes, and game-layer disposal; verify focused client/resource tests cover no former-player trail and correct visible-region alignment.
 
 ## 3. Integrated validation
 

@@ -10,7 +10,7 @@ subscription, and 2D canvas text drawing. The palette editor already lives in
 React and commits palette snapshots through `palette-store.js`.
 
 The target architecture keeps React for UI but moves gameplay and rendering to
-Babylon Lite. Babylon Lite is a new runtime dependency for this project and is
+Babylon Lite. Babylon Lite is a new client dependency for this project and is
 treated as the owner of the game layer, not as a drawing helper hidden inside a
 React component.
 
@@ -28,7 +28,7 @@ React component.
   window and its color picker.
 - Provide a narrow bridge where React sends confirmed full palette snapshots
   and deliberate UI commands to Babylon Lite.
-- Remove the legacy React/canvas runtime fallback.
+- Remove the legacy React/canvas client fallback.
 
 **Non-Goals:**
 
@@ -46,7 +46,7 @@ React component.
   engine lifecycle. Alternative considered: wrap Babylon Lite in a React
   component. That matches some React/Babylon.js examples, but it weakens the
   explicit layer boundary requested for this project.
-- **Rename the runtime container:** Replace the HTML `content_layer` with
+- **Rename the client container:** Replace the HTML `content_layer` with
   `game_layer`. The old name was intentionally generic for template content;
   the new name communicates that a game engine owns this layer.
 - **Babylon Lite owns input:** Move keyboard listeners, held-key state, repeat
@@ -110,7 +110,7 @@ React component.
    while Babylon Lite updates rendered glyph styles.
 6. Preserve `?randomSeed=value`: React keeps writing it to the URL and Babylon
    Lite reads it during startup.
-7. Remove the old React/canvas runtime fallback from production startup.
+7. Remove the old React/canvas client fallback from production startup.
 8. Update focused unit tests for pure generator/movement/palette behavior and
    add browser verification for Babylon Lite startup, nonblank ASCII world
    rendering, movement into walls, and live palette updates.

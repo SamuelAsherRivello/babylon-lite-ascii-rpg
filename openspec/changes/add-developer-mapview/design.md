@@ -62,4 +62,4 @@ Alternative considered: rely on DOM focus trapping alone. That is brittle becaus
 
 ## Migration Plan
 
-No data migration is required. Ship behind the Developer Info UI as a normal runtime feature. Rollback is removing the `Map` launcher and mapview bridge/rendering path; existing game, minimap, and lighting behavior should remain compatible because their contracts are unchanged.
+No data migration is required. Ship behind the Developer Info UI as a normal client feature. Rollback is removing the `Map` launcher and mapview bridge/rendering path; existing game, minimap, and lighting behavior should remain compatible because their contracts are unchanged.

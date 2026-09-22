@@ -46,9 +46,9 @@ though both are presentations of the same world state.
 
 - Affected Babylon Lite renderer, visible-region utilities, fog integration,
   glyph-cache usage, and mini-map canvas path under
-  `ascii-rpg/src/runtime/game-layer-babylon-lite/`.
+  `ascii-rpg/src/client/game-layer-babylon-lite/`.
 - Affected focused renderer, fog, mini-map, and game-layer tests under
-  `ascii-rpg/test/runtime/game-layer-babylon-lite/`.
+  `ascii-rpg/test/client/game-layer-babylon-lite/`.
 - No new dependencies, React-owned world state, or public bridge data are
   required.
 - Existing lighting, camera, zoom, realm, and marker behavior must remain

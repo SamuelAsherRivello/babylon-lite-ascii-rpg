@@ -2,7 +2,7 @@
 
 ## Context
 
-See proposal.md for the reproduced regression and user-facing target. The current Babylon Lite runtime renders a visible region of about 1,100 cells at the normal viewport. Each movement schedules a complete visible-region render, recalculates the moving player's lighting fields, submits the optional additive GPU light sprites, and schedules a minimap repaint. The current live stress run sampled `60, 60, 41, 41, 30, 30, 26, 26, 33, 33, 59, 59` FPS during rapid Shift movement.
+See proposal.md for the reproduced regression and user-facing target. The current Babylon Lite client renders a visible region of about 1,100 cells at the normal viewport. Each movement schedules a complete visible-region render, recalculates the moving player's lighting fields, submits the optional additive GPU light sprites, and schedules a minimap repaint. The current live stress run sampled `60, 60, 41, 41, 30, 30, 26, 26, 33, 33, 59, 59` FPS during rapid Shift movement.
 
 The authoritative lighting and fog algorithms already have focused Node coverage. The optimization must remain inside the game layer, preserve the React-to-game bridge boundary, avoid new dependencies, and use the existing manual browser verification policy rather than adding Playwright tests.
 
@@ -53,7 +53,7 @@ Use the existing project URL and normal viewport. Record an idle sample, run at 
 
 ## Migration Plan
 
-1. Implement the reusable-buffer, consolidated traversal, and coalesced presentation changes behind the existing runtime paths.
+1. Implement the reusable-buffer, consolidated traversal, and coalesced presentation changes behind the existing client paths.
 2. Run the focused lighting, GPU light-pass, fog, world-view, and movement tests, then run the complete Node suite and production build.
 3. Repeat the live idle and sustained Shift stress protocol and inspect the visual result.
 4. If the target is not met or the visual result changes, revert the optimization edits while retaining the diagnostic evidence; no persisted data migration is required.

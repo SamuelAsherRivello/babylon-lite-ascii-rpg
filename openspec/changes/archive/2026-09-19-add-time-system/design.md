@@ -12,7 +12,7 @@ provides a deliberately narrow game-to-UI bridge for palette updates. See
 
 **Goals:**
 
-- Keep world time authoritative in the game runtime and reset it with a new
+- Keep world time authoritative in the game client and reset it with a new
   game instance.
 - Advance time at the same successful-movement boundary that changes the
   player cell.

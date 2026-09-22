@@ -3,7 +3,7 @@
 ## 1. Fog-of-war domain and coverage model
 
 - [x] 1.1 Add a Babylon Lite fog-of-war system with a session-owned discovered-cell field, a named player-light falloff cutoff, hard line-of-sight evaluation, and 10 by 10 walkable/discovered fog-opacity aggregation; verify focused Node tests cover new-world reset, current-cell discovery, clear paths, blockers, unwalkable cells, profile changes, and opacity ratios.
-- [x] 1.2 Connect fog initialization to completed world generation and discovery refresh to successful player placement, movement, and player-light profile updates; verify focused runtime tests prove torch, ambient, shadow-profile, and minimap-visibility changes do not reveal cells.
+- [x] 1.2 Connect fog initialization to completed world generation and discovery refresh to successful player placement, movement, and player-light profile updates; verify focused client tests prove torch, ambient, shadow-profile, and minimap-visibility changes do not reveal cells.
 
 ## 2. Game-owned minimap presentation
 

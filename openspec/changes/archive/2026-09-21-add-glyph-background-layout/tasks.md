@@ -14,7 +14,7 @@
 
 ## 3. Composite glyph/background rendering
 
-- [x] 3.1 Add the runtime composite visual path that derives an opaque grid-sized background from the glyph palette color, applies the `0..100` darkness mapping, and composites it with the glyph before cell lighting; verify darkness `0`, `50`, and `100` outputs.
+- [x] 3.1 Add the client composite visual path that derives an opaque grid-sized background from the glyph palette color, applies the `0..100` darkness mapping, and composites it with the glyph before cell lighting; verify darkness `0`, `50`, and `100` outputs.
 - [x] 3.2 Integrate composite visuals with the existing font/zoom glyph cache boundary without unbounded per-color growth, and verify palette, font, zoom, resize, and layout changes invalidate or reuse only the required visible presentation data.
 - [x] 3.3 Apply the composite to every discovered rendered game-view cell, including spaces, while preserving glyph-only rendering when disabled; verify the background and glyph receive the same lighting result.
 - [x] 3.4 Preserve shared fog eligibility and slot reconciliation so fogged cells submit neither element and stale combined presentations are hidden after viewport shifts; verify with focused world-view tests.

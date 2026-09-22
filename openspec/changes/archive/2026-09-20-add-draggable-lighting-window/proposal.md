@@ -44,8 +44,8 @@ adjustments open during play.
 
 ## Impact
 
-- Affected React UI: `ascii-rpg/src/runtime/ui-layer-react/App.jsx`.
-- Affected UI styling: `ascii-rpg/src/runtime/ui-layer-react/style.css`.
+- Affected React UI: `ascii-rpg/src/client/ui-layer-react/App.jsx`.
+- Affected UI styling: `ascii-rpg/src/client/ui-layer-react/style.css`.
 - Affected focused structural coverage: `ascii-rpg/test/main_tests.mjs`.
 - No game-layer API, dependency, palette, save-data, or lighting-profile
   changes are expected.

@@ -140,10 +140,10 @@ strike-through on the body while keeping the quest visible.
 - **THEN** the HUD SHALL keep the quest visible and apply strike-through styling
   to the quest body
 
-### Requirement: Runtime-only quest reset
+### Requirement: Client-only quest reset
 
 The quest state, generated pickups, collected-pickup state, and pickup gold
-effects SHALL be runtime-only for this release. A browser refresh SHALL create
+effects SHALL be client-only for this release. A browser refresh SHALL create
 a new game instance with a fresh Collect Gold quest and three new pickups.
 
 #### Scenario: Browser refresh starts a new quest

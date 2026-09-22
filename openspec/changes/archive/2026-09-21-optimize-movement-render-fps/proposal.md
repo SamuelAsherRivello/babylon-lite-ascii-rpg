@@ -24,6 +24,6 @@ None. Existing lighting and fog requirements remain the visual source of truth; 
 
 ## Impact
 
-- Affects the Babylon Lite game-layer movement scheduling, visible-region rendering, lighting-field/GPU light-pass submission, fog discovery refresh, and minimap rendering paths under `ascii-rpg/src/runtime/game-layer-babylon-lite/`.
+- Affects the Babylon Lite game-layer movement scheduling, visible-region rendering, lighting-field/GPU light-pass submission, fog discovery refresh, and minimap rendering paths under `ascii-rpg/src/client/game-layer-babylon-lite/`.
 - Adds focused Node tests for output-equivalence and bounded work where practical; no new dependencies or public bridge commands are required.
 - Requires manual browser verification at the configured project URL using sustained Shift movement. The acceptance target is a sampled FPS floor of at least 55 during the stress run, with idle FPS remaining at or near 60.

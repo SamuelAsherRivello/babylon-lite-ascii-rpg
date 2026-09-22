@@ -52,7 +52,7 @@ Keep the glyph atlas tint-independent. For each visible glyph, take its active
 base palette color and apply an ambient-to-lit RGB interpolation while deriving
 opacity from the same factor. The saved palette remains untouched. Palette
 entries retain editable color but no editable alpha; any legacy alpha value is
-ignored or normalized by the runtime. Torch glyphs use the same lighting rule
+ignored or normalized by the client. Torch glyphs use the same lighting rule
 as other glyphs so the source remains visually integrated with the scene.
 
 ## Renderer integration
@@ -64,7 +64,7 @@ colors while preserving the lighting factor. Because the player is itself a
 moving light source, every player move SHALL use a full visible render so the
 previous position cannot leave a stale light trail.
 
-No `Light`, `ShadowGenerator`, ray cast, terrain blocking, or new runtime
+No `Light`, `ShadowGenerator`, ray cast, terrain blocking, or new client
 dependency is part of this proposal. That is intentionally distinct from the
 future shadow-casting character-lighting proposal.
 

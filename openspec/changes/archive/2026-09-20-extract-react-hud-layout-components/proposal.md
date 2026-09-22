@@ -29,9 +29,9 @@ None. Existing HUD behavior and the `responsive-ui-layout` requirements remain u
 
 ## Impact
 
-- React UI markup in `ascii-rpg/src/runtime/ui-layer-react/App.jsx`, with shared components likely colocated in the same UI-layer module area.
-- HUD styles in `ascii-rpg/src/runtime/ui-layer-react/style.css`.
+- React UI markup in `ascii-rpg/src/client/ui-layer-react/App.jsx`, with shared components likely colocated in the same UI-layer module area.
+- HUD styles in `ascii-rpg/src/client/ui-layer-react/style.css`.
 - Focused structural tests in `ascii-rpg/test/main_tests.mjs` and any UI-layer tests that assert class names or markup contracts.
-- No runtime/game-layer changes, persistence changes, dependency changes, or public API changes.
+- No client/game-layer changes, persistence changes, dependency changes, or public API changes.
 
 Acceptance criteria: all existing HUD regions render with the same layout and interactions as before; the three shared primitives are used by their corresponding regions; title and body typography are defined once and reused; feature-specific content remains outside the primitive contracts; and the existing Node checks and production build continue to pass.

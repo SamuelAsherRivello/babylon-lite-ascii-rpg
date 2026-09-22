@@ -19,7 +19,7 @@ world-realms spec deltas for the required behavior.
 - Make initial realm establishment and later realm transfers observable through
   the same event contract.
 - Delay quest-gold placement until the Overground prerequisite is satisfied.
-- Preserve the existing UI/game-layer boundary, runtime-only state, and generic
+- Preserve the existing UI/game-layer boundary, client-only state, and generic
   Object Spawner ownership of pickup effects and pickup events.
 
 **Non-Goals:**

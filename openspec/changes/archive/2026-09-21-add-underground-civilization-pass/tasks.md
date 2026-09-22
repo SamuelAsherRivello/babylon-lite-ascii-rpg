@@ -11,7 +11,7 @@
 - [x] 2.2 Implement zoom-5 screen-region eligibility, approximately 10% seeded selection, one barrier maximum per selected region, 3–10 cell wall-bounded spans, and deterministic center-door placement; verify focused generation tests cover horizontal, vertical, boundary, and no-candidate cases.
 - [x] 2.3 Implement two-sided key placement randomly between five and ten grid steps, excluding adjacent cells, and skip candidates that cannot place both keys or would strand the player; verify focused tests reject unsolvable candidates and accept valid ones.
 
-## 3. Runtime object and collision state
+## 3. Client object and collision state
 
 - [x] 3.1 Extend the game-layer object state to render keys, fences, and closed/open doors above natural terrain while preserving underlying terrain data; verify world-view and minimap-focused tests cover glyph precedence and both door states.
 - [x] 3.2 Add authoritative key pickup state, shared key count, one-time collection, and session-scoped opened-door state; verify focused collision tests cover collection idempotence, key spending, permanent session opening, and both approach directions.

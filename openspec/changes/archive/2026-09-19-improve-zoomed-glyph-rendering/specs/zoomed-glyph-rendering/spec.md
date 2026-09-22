@@ -47,7 +47,7 @@ The game SHALL reuse a cached glyph visual for repeated renderings with the same
 #### Scenario: Lazy cache population
 
 - **WHEN** a glyph/font/zoom combination has not yet been requested
-- **THEN** the runtime SHALL create it on demand and SHALL not require prebuilding the complete palette before rendering the current visible region
+- **THEN** the client SHALL create it on demand and SHALL not require prebuilding the complete palette before rendering the current visible region
 
 ### Requirement: Visible-region rendering
 
@@ -75,12 +75,12 @@ The game SHALL construct complete world data cooperatively across bounded work s
 #### Scenario: Complete world and visible frame
 
 - **WHEN** generation begins for the configured world and viewport
-- **THEN** the runtime SHALL measure the interval until complete world data exists and the current visible region has been rendered, with a target below 1 second and an ideal target near 0.1 seconds
+- **THEN** the client SHALL measure the interval until complete world data exists and the current visible region has been rendered, with a target below 1 second and an ideal target near 0.1 seconds
 
 #### Scenario: No invalid partial world is exposed
 
 - **WHEN** world data is not yet complete
-- **THEN** the runtime SHALL not expose a partially generated terrain or invalid player state as if it were a playable completed world
+- **THEN** the client SHALL not expose a partially generated terrain or invalid player state as if it were a playable completed world
 
 #### Scenario: Generation cancellation or replacement
 
@@ -118,7 +118,7 @@ After the required glyph visuals for a supported zoom are cached, a zoom change 
 #### Scenario: Cold zoom change
 
 - **WHEN** the player changes to a zoom whose required glyph visuals are not cached
-- **THEN** the runtime SHALL lazily warm the required visible glyph visuals, report warmup separately, and then submit only the visible region
+- **THEN** the client SHALL lazily warm the required visible glyph visuals, report warmup separately, and then submit only the visible region
 
 ### Requirement: Future-effect-safe cache boundary
 

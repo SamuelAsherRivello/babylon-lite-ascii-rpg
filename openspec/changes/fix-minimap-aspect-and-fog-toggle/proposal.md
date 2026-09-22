@@ -21,5 +21,5 @@ The minimap currently stretches world cells when the game viewport and world asp
 
 ## Impact
 
-- React settings state, localStorage reset/persistence, bridge snapshots, minimap rendering, and focused runtime/UI tests.
+- React settings state, localStorage reset/persistence, bridge snapshots, minimap rendering, and focused client/UI tests.
 - No new dependencies or changes to world generation, discovery, or game zoom behavior.

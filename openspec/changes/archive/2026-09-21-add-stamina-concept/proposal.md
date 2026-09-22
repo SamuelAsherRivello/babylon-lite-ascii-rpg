@@ -59,7 +59,7 @@ ownership boundaries.
 
 - Babylon Lite needs a dedicated stamina system, combat-cost integration,
   sprint-aware/exhausted movement timing, and movement-driven T-tick recovery
-  under the existing runtime/test layout.
+  under the existing client/test layout.
 - The bridge snapshot and React Character box gain current/max stamina values;
   React remains presentation-only.
 - Existing movement, Time System, bridge, HUD, responsive, Node-test, build,

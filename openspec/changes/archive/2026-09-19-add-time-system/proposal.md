@@ -33,7 +33,7 @@ successful player-movement contract.
 
 ## Impact
 
-- Affected runtime code includes the Babylon Lite game layer, its narrow UI
+- Affected client code includes the Babylon Lite game layer, its narrow UI
   bridge, and the React corner UI in `ascii-rpg/src/`.
 - The existing player movement behavior remains unchanged except for the new
   time advancement side effect after a successful move.

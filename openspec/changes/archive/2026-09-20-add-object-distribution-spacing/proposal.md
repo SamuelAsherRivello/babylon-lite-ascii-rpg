@@ -37,8 +37,8 @@ objects one clear extension path.
 
 ## Impact
 
-- Affects `ascii-rpg/src/runtime/game-layer-babylon-lite/systems/world-system.js`
+- Affects `ascii-rpg/src/client/game-layer-babylon-lite/systems/world-system.js`
   and its Node generator tests.
-- Does not add runtime dependencies, settings, or browser-facing controls.
+- Does not add client dependencies, settings, or browser-facing controls.
 - The 25-grid distance is interpreted as Euclidean cell-center distance, which
   matches the game's existing radial grid-lighting distance convention.

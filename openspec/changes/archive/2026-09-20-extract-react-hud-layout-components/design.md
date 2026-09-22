@@ -43,7 +43,7 @@ This is preferred over inline font styles because the same roles are shared by m
 
 Refactor the markup in layers: first replace repeated corner wrappers with `CornerLayout`, then wrap the top panels and other boxed regions with `BoxLayout`, then convert repeated lower-left sections and quest/status groups to `HudBlockLayout`. Keep feature content and state calculations in their current functions. Remove only CSS rules that become duplicate primitive rules; retain feature-specific geometry such as character bars, minimap canvas placement, quest offsets, and lighting-window controls.
 
-### Preserve behavior through source-level and runtime checks
+### Preserve behavior through source-level and client checks
 
 Update the existing structural assertions to recognize the new component/class contract while retaining checks for exact ids, labels, event wiring, and layer boundaries. Run the repository's existing Node test command and production build after the refactor. Manual browser verification should compare landscape and portrait presentations, because CSS inheritance and absolute positioning are the principal regression risks.
 

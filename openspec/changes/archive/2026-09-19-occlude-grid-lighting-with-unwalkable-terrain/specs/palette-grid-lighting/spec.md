@@ -64,7 +64,7 @@ layer glyph while its surrounding cells receive the derived lighting.
 
 ### Requirement: Terrain shadows without Babylon light objects
 
-The lighting runtime SHALL form straight grid shadows from the terrain's
+The lighting client SHALL form straight grid shadows from the terrain's
 walkability and SHALL keep using palette modulation rather than Babylon light
 objects or shadow generators. An unwalkable target cell SHALL receive light
 from a source that can reach it directly, but SHALL apply the selected source

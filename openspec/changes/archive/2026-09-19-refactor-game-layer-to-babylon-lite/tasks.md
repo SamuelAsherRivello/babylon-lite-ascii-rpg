@@ -2,7 +2,7 @@
 
 ## 1. Dependency and layer bootstrap
 
-- [x] 1.1 Add the Babylon Lite runtime dependency and verify package
+- [x] 1.1 Add the Babylon Lite client dependency and verify package
   installation and import resolution succeed with `npm.cmd test` or a focused
   dependency/import check.
 - [x] 1.2 Replace `content_layer` with `game_layer` in the application shell
@@ -14,7 +14,7 @@
   and snapshots and verify React cannot directly mutate world, input, or
   renderer internals through that surface.
 
-## 2. Babylon Lite game runtime
+## 2. Babylon Lite game client
 
 - [x] 2.1 Implement Babylon Lite engine/canvas lifecycle ownership in the game
   bootstrap and verify a game instance can initialize and dispose cleanly.
@@ -43,7 +43,7 @@
   startup behavior and verify `?randomSeed=value` still reproduces the same
   generated level.
 
-## 4. Remove legacy canvas runtime
+## 4. Remove legacy canvas client
 
 - [x] 4.1 Remove the React-mounted `GameCanvas` production startup path and
   verify no React component owns the game canvas, input listeners, or draw loop.

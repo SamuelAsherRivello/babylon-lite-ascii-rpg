@@ -6,7 +6,7 @@ context: |
   project shell, corner UI, fullscreen preference, and GitHub Pages build.
   Canonical project documentation assets live in ascii-rpg/documentation/.
   Before proposing or applying a change, record the project's verified purpose,
-  runtime targets, architecture, dependency policy, security constraints, and
+  client targets, architecture, dependency policy, security constraints, and
   validation commands here.
 rules:
   proposal:

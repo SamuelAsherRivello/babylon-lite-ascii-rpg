@@ -10,9 +10,9 @@ OpenSpec CLI. The current Windows environment has a global OpenSpec CLI
 `where.exe`, so the dashboard's Execute Path must support a direct Node
 invocation as a local recovery.
 
-The game runtime, Vite development server, GitHub Pages deployment, and
+The game client, Vite development server, GitHub Pages deployment, and
 OpenSpec planning files are separate concerns. Dashboard support must remain
-developer tooling and must not become a runtime dependency of the game.
+developer tooling and must not become a client dependency of the game.
 
 ## Goals / Non-Goals
 

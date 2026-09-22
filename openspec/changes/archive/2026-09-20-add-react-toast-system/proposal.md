@@ -42,10 +42,10 @@ also needs a built-in way to exercise that feedback path.
 
 ## Impact
 
-- Affected UI: `ascii-rpg/src/runtime/ui-layer-react/App.jsx`, new UI-layer
+- Affected UI: `ascii-rpg/src/client/ui-layer-react/App.jsx`, new UI-layer
   toast component/state helper(s), and `style.css`.
 - Affected tests: focused Node tests under
-  `ascii-rpg/test/runtime/ui-layer-react/`, registered with the existing
+  `ascii-rpg/test/client/ui-layer-react/`, registered with the existing
   `npm.cmd test` command.
 - No new dependencies, browser storage keys, Babylon game-layer behavior, or
   bridge-layer API are introduced.

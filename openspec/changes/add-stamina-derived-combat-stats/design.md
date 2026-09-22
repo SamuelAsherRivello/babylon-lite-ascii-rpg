@@ -2,7 +2,7 @@
 
 ## Context
 
-The completed stamina and enemy changes already provide the relevant runtime
+The completed stamina and enemy changes already provide the relevant client
 boundaries. `stamina-system.js` owns a bounded player stamina value, spends
 `25` stamina for a resolved attack, and restores `10` stamina only on
 movement-caused time ticks. `combat-system.js` currently applies fixed player

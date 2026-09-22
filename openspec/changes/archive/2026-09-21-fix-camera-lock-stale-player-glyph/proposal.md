@@ -26,6 +26,6 @@ This is user-visible rendering corruption during ordinary movement and should be
 
 ## Impact
 
-- Affected runtime: `ascii-rpg/src/runtime/game-layer-babylon-lite/index.js` and the visible-region/world-view rendering helpers as needed.
+- Affected client: `ascii-rpg/src/client/game-layer-babylon-lite/index.js` and the visible-region/world-view rendering helpers as needed.
 - Affected tests: focused game-layer rendering and camera behavior tests under `ascii-rpg/test/`.
 - No public API, dependency, persistence, or deployment changes are expected.

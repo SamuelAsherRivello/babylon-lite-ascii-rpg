@@ -51,7 +51,7 @@ the completed health and stamina rules.
 
 ## Impact
 
-- Affected runtime areas include the Babylon Lite combat, player lifecycle,
+- Affected client areas include the Babylon Lite combat, player lifecycle,
   enemy system, stamina integration, bridge snapshots, and React Character
   bar presentation.
 - The existing player maximum damage `20` and enemy maximum attack damage `5`

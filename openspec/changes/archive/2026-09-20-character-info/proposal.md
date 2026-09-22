@@ -43,11 +43,11 @@ begin updating those values.
 
 ## Impact
 
-- Affected UI: `ascii-rpg/src/runtime/ui-layer-react/App.jsx` and
-  `ascii-rpg/src/runtime/ui-layer-react/style.css`.
+- Affected UI: `ascii-rpg/src/client/ui-layer-react/App.jsx` and
+  `ascii-rpg/src/client/ui-layer-react/style.css`.
 - Affected model surface: a character data module under
-  `ascii-rpg/src/runtime/ui-layer-react/`.
+  `ascii-rpg/src/client/ui-layer-react/`.
 - Affected validation: focused static UI assertions, the existing Node test
   suite, and the Vite production build.
-- No new runtime dependencies, asset files, persistence keys, or game-layer
+- No new client dependencies, asset files, persistence keys, or game-layer
   APIs are required for the initial state.

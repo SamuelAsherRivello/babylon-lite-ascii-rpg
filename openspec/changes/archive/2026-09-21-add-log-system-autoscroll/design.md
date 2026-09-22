@@ -7,7 +7,7 @@ game-controller callbacks, and forwards them through `game-bridge.js` to the
 React Log panel. The Log panel renders the snapshot in a scrollable body but
 does not currently preserve a deliberate follow-bottom versus reading-history
 state. Systems are already organized under `systems/`, with `.js` modules and
-mirrored runtime tests.
+mirrored client tests.
 
 ## Goals / Non-Goals
 

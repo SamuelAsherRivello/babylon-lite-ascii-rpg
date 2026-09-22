@@ -23,6 +23,6 @@ None.
 
 ## Impact
 
-- Affected runtime: `ascii-rpg/src/runtime/game-layer-babylon-lite/index.js` and the minimap rendering helpers.
+- Affected client: `ascii-rpg/src/client/game-layer-babylon-lite/index.js` and the minimap rendering helpers.
 - No new dependencies, persistence changes, world-data changes, or public API changes.
 - Existing game-view lighting, minimap cropping, fog behavior, and independent canvas ownership remain unchanged.

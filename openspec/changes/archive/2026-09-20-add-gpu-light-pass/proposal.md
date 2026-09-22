@@ -40,7 +40,7 @@ visibility, terrain, or authoritative grid-shadow rules.
 - Affected source: React Settings and local-storage handling, the UI-to-game
   bridge, Babylon Lite startup/render/disposal code, and focused lighting/
   bridge/UI tests.
-- Affected runtime: the existing WebGPU-only Babylon Lite canvas. No new
+- Affected client: the existing WebGPU-only Babylon Lite canvas. No new
   package or browser-rendering fallback is proposed.
 - Acceptance: the default remains the current sprite-only appearance; the
   checked state survives reload and adds a clearly visible soft warm lighting

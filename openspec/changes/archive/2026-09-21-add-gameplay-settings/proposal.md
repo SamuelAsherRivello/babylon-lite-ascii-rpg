@@ -12,7 +12,7 @@ The game currently exposes the Ascii Settings window but gives players no compar
 - Persist the selected quest as the browser's `Default Quest` and use it when initializing a new game instance.
 - Allow selecting a quest from the window to update the saved default and activate that quest in the current game session.
 - Preserve ordered quest progression: after a quest completes, start the next available quest; when there is no next quest, keep the completed quest visible in the HUD.
-- Keep quest progress runtime-only; refreshing the browser starts the saved default quest with a fresh runtime state and generated quest pickups.
+- Keep quest progress client-only; refreshing the browser starts the saved default quest with a fresh client state and generated quest pickups.
 
 ## Capabilities
 
@@ -26,8 +26,8 @@ The game currently exposes the Ascii Settings window but gives players no compar
 
 ## Impact
 
-- Affected React UI: `ascii-rpg/src/runtime/ui-layer-react/App.jsx` and window styles.
+- Affected React UI: `ascii-rpg/src/client/ui-layer-react/App.jsx` and window styles.
 - Affected bridge/controller surface: the narrow game bridge and game controller quest API.
-- Affected quest initialization: `ascii-rpg/src/runtime/game-layer-babylon-lite/index.js` and the existing quest manager integration.
+- Affected quest initialization: `ascii-rpg/src/client/game-layer-babylon-lite/index.js` and the existing quest manager integration.
 - Affected contract coverage: quest lifecycle/HUD requirements and responsive Windows launcher behavior.
 - No new dependencies; browser `localStorage` is the persistence mechanism.

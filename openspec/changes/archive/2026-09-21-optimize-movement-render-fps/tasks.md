@@ -10,7 +10,7 @@
 
 - [x] 2.1 Refactor bounded moving-player lighting work to reuse scratch storage and share equivalent path/falloff traversal between authoritative and GPU-direct fields without changing shadow-aware, direct, or penumbra outputs; verify lighting output-equivalence tests pass.
 - [x] 2.2 Replace per-render GPU light sample and active-slot allocations with reusable arrays/markers while preserving the existing cell-bounded sprite positions, colors, alpha, falloff, ambient headroom, and stale-slot hiding; verify GPU light-pass tests pass.
-- [x] 2.3 Keep visible-region rendering limited to the current region and avoid redundant glyph, color, fog, and sprite submissions when their inputs are unchanged; verify rendering and world-view tests pass and the runtime reports no stale visible slots.
+- [x] 2.3 Keep visible-region rendering limited to the current region and avoid redundant glyph, color, fog, and sprite submissions when their inputs are unchanged; verify rendering and world-view tests pass and the client reports no stale visible slots.
 
 ## 3. Optimize fog and minimap refresh scheduling
 

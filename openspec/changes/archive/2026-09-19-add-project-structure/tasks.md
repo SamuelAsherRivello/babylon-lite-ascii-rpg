@@ -11,10 +11,10 @@
   without changing their data contracts; verify the existing font and palette
   tests still pass.
 
-## 2. Runtime structure
+## 2. Client structure
 
 - [x] 2.1 Create sibling `ui-layer-react/`, `bridge-layer/`, and
-  `game-layer-babylon-lite/` directories under `ascii-rpg/src/runtime/`;
+  `game-layer-babylon-lite/` directories under `ascii-rpg/src/client/`;
   verify all three directories exist at the same depth.
 - [x] 2.2 Move React UI modules into `ui-layer-react/` and keep JSX-specific
   code there; verify the React entry renders the existing UI in `ui_layer`.
@@ -26,7 +26,7 @@
   `*-system.js` files; verify game-layer tests pass.
 - [x] 2.5 Group player implementation under
   `game-layer-babylon-lite/characters/player/` and preserve the game layer's
-  runtime responsibilities; verify player movement tests pass.
+  client responsibilities; verify player movement tests pass.
 - [x] 2.6 Add representative templates and layer guidance files, ensuring
   templates are not imported by production modules; verify the expected
   extensions and guidance files with a focused structural check.

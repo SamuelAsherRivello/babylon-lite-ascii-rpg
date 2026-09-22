@@ -28,8 +28,8 @@ Developers need a quick way to inspect the generated realm layout, item distribu
 
 ## Impact
 
-- Affects the React UI launcher/window state in `ascii-rpg/src/runtime/ui-layer-react/App.jsx` and related UI styling.
+- Affects the React UI launcher/window state in `ascii-rpg/src/client/ui-layer-react/App.jsx` and related UI styling.
 - Affects the bridge between React and Babylon Lite if a narrow open/close mapview command or snapshot is needed.
-- Affects Babylon Lite world-view rendering, marker projection, and input gating under `ascii-rpg/src/runtime/game-layer-babylon-lite/`.
+- Affects Babylon Lite world-view rendering, marker projection, and input gating under `ascii-rpg/src/client/game-layer-babylon-lite/`.
 - Requires focused Node/source tests for the UI launcher, mapview renderer parameters, marker inclusion/exclusion, input suppression, and no regression to the existing minimap.
 - Requires manual browser verification in landscape that the mapview fills the screen and fits the active realm.

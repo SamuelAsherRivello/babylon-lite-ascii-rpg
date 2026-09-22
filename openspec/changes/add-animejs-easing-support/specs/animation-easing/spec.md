@@ -3,7 +3,7 @@
 ## Purpose
 
 Provides one consistent, easing-aware animation contract for application-owned
-runtime animations, while making the Anime.js easing catalog available to
+client animations, while making the Anime.js easing catalog available to
 current and future Babylon Lite animations. The realm iris transition is the
 first required consumer of this contract.
 
@@ -34,7 +34,7 @@ without leaving a scheduled update active.
 
 ### Requirement: Anime.js easing catalog is available
 
-The runtime SHALL expose a stable project-owned easing selection surface for
+The client SHALL expose a stable project-owned easing selection surface for
 the Anime.js easing catalog, including cubic bezier, power, sine, exponential,
 circular, back, elastic, bounce, irregular, steps, linear, and spring easing
 families where supported by the installed Anime.js version. Callers SHALL be

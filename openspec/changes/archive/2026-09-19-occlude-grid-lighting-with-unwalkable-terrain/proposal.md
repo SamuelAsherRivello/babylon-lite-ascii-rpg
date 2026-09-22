@@ -38,7 +38,7 @@ None.
 
 ## Impact
 
-- Affected game layer: `ascii-rpg/src/runtime/game-layer-babylon-lite/lighting.js`
+- Affected game layer: `ascii-rpg/src/client/game-layer-babylon-lite/lighting.js`
   and the visible-cell lighting path in `index.js`, using the existing
   `world.terrain[y][x].walkable` data.
 - Affected checks: focused lighting and visible-render tests, the existing Node

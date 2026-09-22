@@ -27,8 +27,8 @@ The current HUD uses the upper-left corner for mixed world/realm/time text and r
 
 ## Impact
 
-- React HUD markup in `ascii-rpg/src/runtime/ui-layer-react/App.jsx`.
-- Shared HUD geometry and border rules in `ascii-rpg/src/runtime/ui-layer-react/style.css`.
+- React HUD markup in `ascii-rpg/src/client/ui-layer-react/App.jsx`.
+- Shared HUD geometry and border rules in `ascii-rpg/src/client/ui-layer-react/style.css`.
 - UI-facing realm and time formatting, while preserving existing game-layer realm and time state.
-- Existing structural and runtime tests that assert the four-corner layout or exact time location will need updates during implementation.
+- Existing structural and client tests that assert the four-corner layout or exact time location will need updates during implementation.
 - No new dependencies or persistence keys are required.

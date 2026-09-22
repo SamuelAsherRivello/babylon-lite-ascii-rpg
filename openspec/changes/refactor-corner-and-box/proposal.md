@@ -27,7 +27,7 @@ None. Existing HUD requirements remain unchanged; `skip_specs: true` declares th
 
 ## Impact
 
-- Affects `ascii-rpg/src/runtime/ui-layer-react/HudLayouts.jsx`, `App.jsx`, and the HUD stylesheet files.
+- Affects `ascii-rpg/src/client/ui-layer-react/HudLayouts.jsx`, `App.jsx`, and the HUD stylesheet files.
 - May require focused updates to `ascii-rpg/test/main_tests.mjs` and related UI source-contract checks.
-- Adds no dependencies and changes no bridge, game-layer, persistence, or public runtime APIs.
+- Adds no dependencies and changes no bridge, game-layer, persistence, or public client APIs.
 - The implementation must preserve the existing responsive HUD contract, including equal top-panel geometry, shared viewport insets, minimap behavior, and Log collapse behavior.

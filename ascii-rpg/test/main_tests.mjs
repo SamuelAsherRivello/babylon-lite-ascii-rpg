@@ -14,7 +14,7 @@ const styleSheetFiles = [
 
 async function readStyles() {
   return (await Promise.all(
-    styleSheetFiles.map((fileName) => readFile(new URL(`src/runtime/ui-layer-react/${fileName}`, appRoot), "utf8")),
+    styleSheetFiles.map((fileName) => readFile(new URL(`src/client/ui-layer-react/${fileName}`, appRoot), "utf8")),
   )).join("\n");
 }
 
@@ -26,17 +26,17 @@ test("builds for the GitHub Pages project path", () => {
 
 test("documents the plain safe-area template", async () => {
   const page = await readFile(new URL("index.html", appRoot), "utf8");
-  const app = await readFile(new URL("src/runtime/ui-layer-react/App.jsx", appRoot), "utf8");
+  const app = await readFile(new URL("src/client/ui-layer-react/App.jsx", appRoot), "utf8");
   const main = await readFile(new URL("src/main.jsx", appRoot), "utf8");
-  const gameLayer = await readFile(new URL("src/runtime/game-layer-babylon-lite/index.js", appRoot), "utf8");
-  const gameBridge = await readFile(new URL("src/runtime/bridge-layer/game-bridge.js", appRoot), "utf8");
-  const camera = await readFile(new URL("src/runtime/bridge-layer/camera.js", appRoot), "utf8");
+  const gameLayer = await readFile(new URL("src/client/game-layer-babylon-lite/index.js", appRoot), "utf8");
+  const gameBridge = await readFile(new URL("src/client/bridge-layer/game-bridge.js", appRoot), "utf8");
+  const camera = await readFile(new URL("src/client/bridge-layer/camera.js", appRoot), "utf8");
   const styles = await readStyles();
-  const hudLayouts = await readFile(new URL("src/runtime/ui-layer-react/HudLayouts.jsx", appRoot), "utf8");
-  const fontStore = await readFile(new URL("src/runtime/ui-layer-react/font-store.js", appRoot), "utf8");
-  const paletteStore = await readFile(new URL("src/runtime/ui-layer-react/palette-store.js", appRoot), "utf8");
-  const platformSettings = await readFile(new URL("src/runtime/ui-layer-react/platform-settings.js", appRoot), "utf8");
-  const buttonTabOrder = await readFile(new URL("src/runtime/ui-layer-react/button-tab-order.js", appRoot), "utf8");
+  const hudLayouts = await readFile(new URL("src/client/ui-layer-react/HudLayouts.jsx", appRoot), "utf8");
+  const fontStore = await readFile(new URL("src/client/ui-layer-react/font-store.js", appRoot), "utf8");
+  const paletteStore = await readFile(new URL("src/client/ui-layer-react/palette-store.js", appRoot), "utf8");
+  const platformSettings = await readFile(new URL("src/client/ui-layer-react/platform-settings.js", appRoot), "utf8");
+  const buttonTabOrder = await readFile(new URL("src/client/ui-layer-react/button-tab-order.js", appRoot), "utf8");
 
   if (!page.includes("<title>Ascii RPG</title>")) {
     throw new Error("The browser title must identify the project.");
@@ -159,7 +159,7 @@ test("documents the plain safe-area template", async () => {
     || !styles.includes(".log_number_negative")) {
     throw new Error("The Log System must own game log events, immutable bridge snapshots, and scroll-aware React rendering.");
   }
-  const characterData = await readFile(new URL("src/runtime/ui-layer-react/character-data.js", appRoot), "utf8");
+  const characterData = await readFile(new URL("src/client/ui-layer-react/character-data.js", appRoot), "utf8");
   for (const requiredFragment of [
     "startingPercent: 100",
     "startingValue: 50",
@@ -703,9 +703,9 @@ test("documents the plain safe-area template", async () => {
 });
 
 test("documents the event-only movement tutorial flow", async () => {
-  const app = await readFile(new URL("src/runtime/ui-layer-react/App.jsx", appRoot), "utf8");
-  const bridge = await readFile(new URL("src/runtime/bridge-layer/game-bridge.js", appRoot), "utf8");
-  const gameLayer = await readFile(new URL("src/runtime/game-layer-babylon-lite/index.js", appRoot), "utf8");
+  const app = await readFile(new URL("src/client/ui-layer-react/App.jsx", appRoot), "utf8");
+  const bridge = await readFile(new URL("src/client/bridge-layer/game-bridge.js", appRoot), "utf8");
+  const gameLayer = await readFile(new URL("src/client/game-layer-babylon-lite/index.js", appRoot), "utf8");
   const styles = await readStyles();
   for (const eventName of ["player moved up", "player moved down", "player moved left", "player moved right"]) {
     if (!bridge.includes(eventName) || !gameLayer.includes(`PLAYER_MOVED_EVENTS.`)) {
@@ -743,11 +743,11 @@ test("documents the event-only movement tutorial flow", async () => {
 });
 
 test("documents the player death lifecycle and recovery prompt", async () => {
-  const app = await readFile(new URL("src/runtime/ui-layer-react/App.jsx", appRoot), "utf8");
-  const bridge = await readFile(new URL("src/runtime/bridge-layer/game-bridge.js", appRoot), "utf8");
+  const app = await readFile(new URL("src/client/ui-layer-react/App.jsx", appRoot), "utf8");
+  const bridge = await readFile(new URL("src/client/bridge-layer/game-bridge.js", appRoot), "utf8");
   const main = await readFile(new URL("src/main.jsx", appRoot), "utf8");
-  const gameLayer = await readFile(new URL("src/runtime/game-layer-babylon-lite/index.js", appRoot), "utf8");
-  const objectData = await readFile(new URL("src/runtime/game-layer-babylon-lite/data/object_data.json", appRoot), "utf8");
+  const gameLayer = await readFile(new URL("src/client/game-layer-babylon-lite/index.js", appRoot), "utf8");
+  const objectData = await readFile(new URL("src/client/game-layer-babylon-lite/data/object_data.json", appRoot), "utf8");
   const styles = await readStyles();
   if (!objectData.includes('"amount": -25') || !objectData.includes('"Lost -25 Health from Trap"')
     || !gameLayer.includes("createPlayerLifecycle") || !gameLayer.includes("playerLifecycle.isDead()")
@@ -771,8 +771,8 @@ test("documents the player death lifecycle and recovery prompt", async () => {
 });
 
 test("documents the quest tracker, live gold bridge, and quest toasts", async () => {
-  const app = await readFile(new URL("src/runtime/ui-layer-react/App.jsx", appRoot), "utf8");
-  const bridge = await readFile(new URL("src/runtime/bridge-layer/game-bridge.js", appRoot), "utf8");
+  const app = await readFile(new URL("src/client/ui-layer-react/App.jsx", appRoot), "utf8");
+  const bridge = await readFile(new URL("src/client/bridge-layer/game-bridge.js", appRoot), "utf8");
   const styles = await readStyles();
   if (!app.includes("Quest: ${quest.title}") || !app.includes("quest_tracker_step_complete")
     || !app.includes("quest_tracker_title_complete")
@@ -784,7 +784,7 @@ test("documents the quest tracker, live gold bridge, and quest toasts", async ()
   }
   if (!bridge.includes("getQuestSnapshot") || !bridge.includes("subscribeToQuest")
     || !bridge.includes("getGoldSnapshot") || !bridge.includes("subscribeToGold")) {
-    throw new Error("The bridge must expose quest and runtime gold snapshots.");
+    throw new Error("The bridge must expose quest and client gold snapshots.");
   }
   if (!styles.includes(".quest_tracker") || !styles.includes(".quest_tracker_marker")
     || !styles.includes(".quest_tracker_title_complete")
@@ -802,10 +802,10 @@ test("documents the quest tracker, live gold bridge, and quest toasts", async ()
 });
 
 test("documents the Gameplay Settings quest selector and default persistence", async () => {
-  const app = await readFile(new URL("src/runtime/ui-layer-react/App.jsx", appRoot), "utf8");
-  const questData = JSON.parse(await readFile(new URL("src/runtime/game-layer-babylon-lite/data/quest_data.json", appRoot), "utf8"));
-  const gameLayer = await readFile(new URL("src/runtime/game-layer-babylon-lite/index.js", appRoot), "utf8");
-  const bridge = await readFile(new URL("src/runtime/bridge-layer/game-bridge.js", appRoot), "utf8");
+  const app = await readFile(new URL("src/client/ui-layer-react/App.jsx", appRoot), "utf8");
+  const questData = JSON.parse(await readFile(new URL("src/client/game-layer-babylon-lite/data/quest_data.json", appRoot), "utf8"));
+  const gameLayer = await readFile(new URL("src/client/game-layer-babylon-lite/index.js", appRoot), "utf8");
+  const bridge = await readFile(new URL("src/client/bridge-layer/game-bridge.js", appRoot), "utf8");
   const styles = await readStyles();
   if (!app.includes('id="gameplay_settings_toggle"') || !app.includes("Gameplay Settings")
     || !app.includes('id="gameplay_settings_title"') || !app.includes(">Quests</h2>")
@@ -833,8 +833,8 @@ test("documents the Gameplay Settings quest selector and default persistence", a
 });
 
 test("derives the character gold icon color from the shared palette", async () => {
-  const app = await readFile(new URL("src/runtime/ui-layer-react/App.jsx", appRoot), "utf8");
-  const palette = JSON.parse(await readFile(new URL("src/runtime/game-layer-babylon-lite/data/palette_data.json", appRoot), "utf8"));
+  const app = await readFile(new URL("src/client/ui-layer-react/App.jsx", appRoot), "utf8");
+  const palette = JSON.parse(await readFile(new URL("src/client/game-layer-babylon-lite/data/palette_data.json", appRoot), "utf8"));
   if (!app.includes('getPaletteStyle(palette, "💰")') || !app.includes("style={{ color: goldStyle.color }}")) {
     throw new Error("The character gold icon must resolve its color from the shared palette.");
   }

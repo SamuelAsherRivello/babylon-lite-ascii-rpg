@@ -23,7 +23,7 @@ The refactor must stay within the React UI layer and its imported CSS. It must n
 - Do not combine Character, Quest, Map, or Log content components into one content abstraction.
 - Do not move `#minimap_canvas` or game-layer rendering into React.
 - Do not change the four-corner layout contract, quest placement, minimap zoom behavior, or Log data source.
-- Do not add a component library, CSS framework, dependency, persistence setting, or new public runtime API.
+- Do not add a component library, CSS framework, dependency, persistence setting, or new public client API.
 
 ## Decisions
 

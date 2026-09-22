@@ -33,12 +33,12 @@ state, fog state, or per-cell render data.
 - **THEN** Babylon Lite SHALL process game input, update game state, and
   render the requested game world view in `game_layer`
 
-#### Scenario: Runtime source layout exposes ownership
+#### Scenario: Client source layout exposes ownership
 
-- **WHEN** a contributor locates runtime implementation code
+- **WHEN** a contributor locates client implementation code
 - **THEN** React UI, bridge communication, and Babylon Lite gameplay and
   world-view code SHALL remain discoverable under their corresponding sibling
-  runtime layers
+  client layers
 
 #### Scenario: Palette and lighting reach visible glyphs
 

@@ -22,6 +22,6 @@ None. The camera, lighting, zoom, and reset behavior specified by existing capab
 
 ## Impact
 
-- UI layer: `ascii-rpg/src/runtime/ui-layer-react/App.jsx` and its styling in `style.css`.
+- UI layer: `ascii-rpg/src/client/ui-layer-react/App.jsx` and its styling in `style.css`.
 - Verification: focused UI checks, the repository Node test suite and build, plus a manual hover check at desktop and narrow viewport widths.
 - No new dependency, game-layer behavior, bridge API, saved-data format, or external service is expected.

@@ -32,7 +32,7 @@ None.
 
 ## Impact
 
-- Babylon Lite startup camera-origin calculation in the player-grid/runtime
+- Babylon Lite startup camera-origin calculation in the player-grid/client
   modules.
 - Existing camera-mode tests and startup/movement regression coverage.
 - No new dependencies, public APIs, storage keys, or UI controls.

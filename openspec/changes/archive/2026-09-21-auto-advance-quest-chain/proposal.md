@@ -19,7 +19,7 @@ next-start states visible and preserving the final completed quest.
 - When no uncompleted quest remains, keep the final quest active, completed, and
   visibly struck through; do not restart or loop the quest catalog during the
   session.
-- Preserve runtime-only quest progress and the existing manual quest-selection
+- Preserve client-only quest progress and the existing manual quest-selection
   behavior.
 
 ## Capabilities

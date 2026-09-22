@@ -41,7 +41,7 @@ None.
   entry point and components under `ascii-rpg/src/`, and their focused tests.
 - The existing corner UI remains available as a separate UI layer; gameplay
   rendering belongs in the content layer.
-- No new runtime dependency is required; the change uses the existing React,
+- No new client dependency is required; the change uses the existing React,
   Vite, and browser APIs.
 - Keyboard handling must avoid browser arrow-key scrolling while the game is
   active and must clean up listeners and repeat timers on unmount or key

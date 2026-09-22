@@ -88,9 +88,9 @@ layer glyph while its surrounding cells receive the derived lighting.
   base palette color and SHALL add only the shared visual light composite on
   top, without rendering a full-bright base color first
 
-### Requirement: Runtime owns glyph opacity and brightness
+### Requirement: Client owns glyph opacity and brightness
 
-The lighting runtime SHALL own rendered glyph opacity and brightness. The
+The lighting client SHALL own rendered glyph opacity and brightness. The
 Ascii Palette SHALL provide an editable base color but SHALL NOT provide a
 user-editable alpha or brightness value. Lighting SHALL derive opacity from the
 cell factor while preserving the selected base hue.
@@ -101,7 +101,7 @@ cell factor while preserving the selected base hue.
 - **THEN** the editor SHALL allow base color editing but SHALL not expose an
   alpha slider or other opacity control
 
-#### Scenario: Runtime controls opacity
+#### Scenario: Client controls opacity
 
 - **WHEN** a cell's lighting factor changes
 - **THEN** its submitted opacity SHALL change with the factor even though the
@@ -259,7 +259,7 @@ and SHALL reuse the result while a cell's lighting inputs remain unchanged.
 
 ### Requirement: Terrain shadows without Babylon light objects
 
-The lighting runtime SHALL form straight grid shadows from the terrain's
+The lighting client SHALL form straight grid shadows from the terrain's
 walkability and SHALL keep using palette modulation rather than Babylon light
 objects or shadow generators. An unwalkable target cell SHALL receive light
 from a source that can reach it directly, but SHALL apply the selected source

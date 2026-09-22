@@ -9,7 +9,7 @@ deterministic terrain shadows. React persists settings and sends narrow
 snapshots through `game-bridge.js`; Babylon Lite owns the render lifecycle.
 
 The installed `@babylonjs/lite` 1.30.x package exposes GPU sprite layers,
-runtime texture atlases, and additive blending, so the feature can stay within
+client texture atlases, and additive blending, so the feature can stay within
 the existing rendering dependency and WebGPU requirement.
 
 ## Goals / Non-Goals

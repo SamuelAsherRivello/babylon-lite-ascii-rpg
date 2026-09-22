@@ -2,8 +2,8 @@
 
 ## 1. Implement the game-layer Log System
 
-- [x] 1.1 Create `ascii-rpg/src/runtime/game-layer-babylon-lite/systems/log-system.js` using the existing Babylon Lite system conventions, with message-first event intake, optional policy metadata, line normalization, eight-line default retention, immutable snapshots, subscriptions, and disposal; verify focused Log System unit tests cover valid, rejected, multiline, ordered, bounded, and empty histories.
-- [x] 1.2 Add mirrored `ascii-rpg/test/runtime/game-layer-babylon-lite/systems/log-system_tests.mjs` and verify the event contract never exposes mutable internal history to callers.
+- [x] 1.1 Create `ascii-rpg/src/client/game-layer-babylon-lite/systems/log-system.js` using the existing Babylon Lite system conventions, with message-first event intake, optional policy metadata, line normalization, eight-line default retention, immutable snapshots, subscriptions, and disposal; verify focused Log System unit tests cover valid, rejected, multiline, ordered, bounded, and empty histories.
+- [x] 1.2 Add mirrored `ascii-rpg/test/client/game-layer-babylon-lite/systems/log-system_tests.mjs` and verify the event contract never exposes mutable internal history to callers.
 - [x] 1.3 Instantiate the Log System in Babylon Lite startup, route realm and pickup messages through it, remove the private `appendLog` ownership from `index.js`, and omit the redundant `Player` prefix; verify game-controller log snapshots stay ordered.
 
 ## 2. Preserve the narrow bridge contract

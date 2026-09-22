@@ -30,8 +30,8 @@ Emoji glyphs such as the fencer render with a different apparent footprint in th
 
 ## Impact
 
-- Affects the React Ascii Settings palette editor in `ascii-rpg/src/runtime/ui-layer-react/App.jsx` and its window styles.
+- Affects the React Ascii Settings palette editor in `ascii-rpg/src/client/ui-layer-react/App.jsx` and its window styles.
 - Affects palette modeling, validation, migration, serialization, and persistence in the bridge and UI palette store.
-- Affects Babylon Lite glyph rasterization and cache keys in `glyph-visual-cache.js` and runtime consumers in the world/minimap render path.
+- Affects Babylon Lite glyph rasterization and cache keys in `glyph-visual-cache.js` and client consumers in the world/minimap render path.
 - Requires focused Node tests for palette defaults/migration/validation, UI contract checks, and glyph raster/cache behavior. Manual browser verification should compare the world cell, glyph grid card, and color editor preview for the same glyph.
-- Adds no new runtime dependency.
+- Adds no new client dependency.

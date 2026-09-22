@@ -18,7 +18,7 @@ The implementation must remain inside `game-layer-babylon-lite`; React continues
 - Validate both visual fidelity and performance at normal and diagnostic visible-cell counts.
 - Meet an end-to-end readiness target of less than 1 second, with approximately 0.1 seconds as the ideal baseline for complete world data plus the first visible-region render.
 - Meet a separate approximately 16.7 ms target for resubmitting the visible region after a cached zoom change.
-- Keep normal generation and test determinism intact while adding a cooperative runtime generation path.
+- Keep normal generation and test determinism intact while adding a cooperative client generation path.
 
 **Non-Goals:**
 
@@ -29,7 +29,7 @@ The implementation must remain inside `game-layer-babylon-lite`; React continues
 - Making diagnostic zoom values part of the shipped user controls unless a later change explicitly requests that.
 - Guaranteeing the ideal 0.1-second target on every device; the implementation must measure it and report misses honestly.
 - Guaranteeing the 16.7 ms zoom-change target on every device or including first-time glyph generation in that budget; those costs must be measured separately.
-- Changing the public behavior of the existing synchronous world builder solely to support runtime yielding; a separate resumable/cooperative entry point is preferred.
+- Changing the public behavior of the existing synchronous world builder solely to support client yielding; a separate resumable/cooperative entry point is preferred.
 
 ## Decisions
 
@@ -65,13 +65,13 @@ If measurements show that per-cell instance updates remain the bottleneck, a fol
 
 ### Build world data cooperatively, then render only the visible result
 
-World construction will be organized as resumable generation work: each major pass and any large row/cell loop will run in bounded slices, then yield through the browser task scheduler before continuing (`scheduler.yield` when available, a zero-delay timer otherwise). This gives rendering and input an opportunity to run without making completion depend on animation frames that can be heavily throttled. The runtime will expose a world only after terrain, walkability, characters, player start, and other required generation outputs are complete. Until then, it may show an inert loading/blank game surface, but it must not submit partially generated off-screen or on-screen cells as a playable world.
+World construction will be organized as resumable generation work: each major pass and any large row/cell loop will run in bounded slices, then yield through the browser task scheduler before continuing (`scheduler.yield` when available, a zero-delay timer otherwise). This gives rendering and input an opportunity to run without making completion depend on animation frames that can be heavily throttled. The client will expose a world only after terrain, walkability, characters, player start, and other required generation outputs are complete. Until then, it may show an inert loading/blank game surface, but it must not submit partially generated off-screen or on-screen cells as a playable world.
 
 The readiness timer will begin when generation starts and end after the first valid visible-region render is submitted. The implementation will separately record data-build time, visible-render time, and total readiness time so a sub-one-second miss can be attributed to generation, glyph preparation, sprite submission, or scheduling. Rendering remains strictly viewport-bounded during the final visible-frame step; generation of off-screen world data is not permission to render it.
 
 Alternative rejected: rendering partial terrain as it is generated. That could produce an earlier visual, but it risks showing invalid connectivity, player placement, water/torch overlays, or stale cells and would make the readiness contract ambiguous.
 
-The existing deterministic completed-world builder should remain usable for focused tests and other synchronous callers. The runtime path should wrap or refactor its passes into a resumable builder that yields after bounded row/cell work and between generation attempts. Each slice should use a small time budget rather than a fixed cell count alone, because smoothing, flood-fill, and lake selection have different costs. A replacement request must invalidate the previous builder so a slower stale result cannot publish after a newer world request.
+The existing deterministic completed-world builder should remain usable for focused tests and other synchronous callers. The client path should wrap or refactor its passes into a resumable builder that yields after bounded row/cell work and between generation attempts. Each slice should use a small time budget rather than a fixed cell count alone, because smoothing, flood-fill, and lake selection have different costs. A replacement request must invalidate the previous builder so a slower stale result cannot publish after a newer world request.
 
 The renderer should be initialized independently of world publication, but it should render an inert blank/loading surface until the completed world is available. Once published, the first render should iterate only the viewport intersection with world bounds and warm only the glyph visuals needed by those visible cells.
 
@@ -100,4 +100,4 @@ Static cache entries will contain glyph shape/base appearance. Animation, time-b
 3. Run diagnostic stress validation below zoom 1 and record cache size, culling, redraw, and frame-time observations.
 4. Measure complete-world-data time, first-visible-render time, and total readiness time against the under-1-second target and approximately 0.1-second ideal.
 5. Measure cached zoom-change request-to-visible-region submission against the approximately 16.7 ms target, separately recording cold-cache warmup time.
-6. If the new path regresses visual quality or runtime stability, retain the existing renderer path behind the same internal resolution boundary until the cache representation is corrected; no data migration is required.
+6. If the new path regresses visual quality or client stability, retain the existing renderer path behind the same internal resolution boundary until the cache representation is corrected; no data migration is required.

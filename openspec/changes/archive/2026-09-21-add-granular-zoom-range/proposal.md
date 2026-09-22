@@ -16,7 +16,7 @@ The proposed scale is linearly spaced by nominal value: proposed zoom 1 represen
 - Map the minimap's existing scale states to equivalent new scale states (including its initial/default state) so minimap content size and coverage feel unchanged at first render. Keep minimap scale interaction independent from game zoom and preserve its existing persistence and hidden numeric presentation.
 - Update camera, viewport, glyph-cache, culling, and performance checks for the ten remapped values and fractional effective scales.
 - Validate that far zooms clamp correctly at the existing world boundary and do not require automatic world expansion.
-- Treat world expansion as optional follow-up work: the current runtime already generates a 512×512 world, but the proposal must measure whether far zoom exposes undesirable edge clipping, sparse content, or performance costs before changing world dimensions.
+- Treat world expansion as optional follow-up work: the current client already generates a 512×512 world, but the proposal must measure whether far zoom exposes undesirable edge clipping, sparse content, or performance costs before changing world dimensions.
 
 ## Capabilities
 

@@ -31,7 +31,7 @@ The Gameplay Settings window SHALL render one selectable box for every quest def
 
 #### Scenario: Show completed quest styling
 
-- **WHEN** a quest shown in the catalog is complete in the current runtime
+- **WHEN** a quest shown in the catalog is complete in the current client
 - **THEN** its title and completed task lines use the same strike-through treatment as the quest HUD
 
 ### Requirement: Select and persist the Default Quest
@@ -46,7 +46,7 @@ The Gameplay Settings window SHALL allow a player to select a valid quest as the
 #### Scenario: Restore the default quest
 
 - **WHEN** the app starts with a saved valid Default Quest
-- **THEN** the game begins with that quest selected and its runtime progress starts fresh
+- **THEN** the game begins with that quest selected and its client progress starts fresh
 
 #### Scenario: Recover an invalid or missing default
 

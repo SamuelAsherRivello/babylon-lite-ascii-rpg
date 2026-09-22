@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Defines the final runtime boundary between the React user-interface layer and
+Defines the final client boundary between the React user-interface layer and
 the Babylon Lite game layer so the game has one authoritative owner for input,
 simulation, and rendering while UI remains HTML/React.
 
@@ -38,7 +38,7 @@ confirmed data snapshots only. Palette updates SHALL use complete, validated
 palette snapshots rather than mutable store access or individual glyph patches.
 React SHALL NOT directly mutate game state,
 movement state, world cells, renderer internals, or input state. Babylon Lite
-SHALL remain authoritative for runtime game state and input.
+SHALL remain authoritative for client game state and input.
 
 #### Scenario: Palette command
 
@@ -56,7 +56,7 @@ SHALL remain authoritative for runtime game state and input.
 ### Requirement: No legacy gameplay fallback
 
 The application SHALL NOT retain the legacy React-mounted canvas gameplay path
-as a runtime fallback. If Babylon Lite or the required browser rendering
+as a client fallback. If Babylon Lite or the required browser rendering
 support cannot initialize, the game world SHALL not load.
 
 #### Scenario: Babylon Lite startup succeeds

@@ -9,7 +9,7 @@ confirmed data snapshots only. Palette updates SHALL use complete, validated
 palette snapshots rather than mutable store access or individual glyph patches.
 React SHALL NOT directly mutate game state, movement state, world cells,
 renderer internals, or input state. Babylon Lite SHALL remain authoritative
-for runtime game state, stamina-derived combat statistics, and damage
+for client game state, stamina-derived combat statistics, and damage
 resolution. Babylon Lite SHALL publish only immutable Offense and Defense
 snapshots needed by the Character HUD; React SHALL not calculate those values.
 

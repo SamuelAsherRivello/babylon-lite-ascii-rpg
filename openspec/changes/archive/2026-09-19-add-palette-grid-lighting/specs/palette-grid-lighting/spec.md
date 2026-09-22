@@ -54,9 +54,9 @@ layer glyph while its surrounding cells receive the derived lighting.
 - **THEN** the submitted style SHALL be brighter than its ambient-only style
   without changing the saved palette or terrain data
 
-### Requirement: Runtime owns glyph opacity and brightness
+### Requirement: Client owns glyph opacity and brightness
 
-The lighting runtime SHALL own rendered glyph opacity and brightness. The
+The lighting client SHALL own rendered glyph opacity and brightness. The
 Ascii Palette SHALL provide an editable base color but SHALL NOT provide a
 user-editable alpha or brightness value. Lighting SHALL derive opacity from the
 cell factor while preserving the selected base hue.
@@ -67,7 +67,7 @@ cell factor while preserving the selected base hue.
 - **THEN** the editor SHALL allow base color editing but SHALL not expose an
   alpha slider or other opacity control
 
-#### Scenario: Runtime controls opacity
+#### Scenario: Client controls opacity
 
 - **WHEN** a cell's lighting factor changes
 - **THEN** its submitted opacity SHALL change with the factor even though the

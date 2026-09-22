@@ -24,6 +24,6 @@ None.
 
 ## Impact
 
-- Affected implementation: `ascii-rpg/src/runtime/game-layer-babylon-lite/systems/minimap-renderer.js`.
-- Affected verification: `ascii-rpg/test/runtime/game-layer-babylon-lite/systems/minimap-renderer_tests.mjs` and the repository's existing Node test/build checks.
+- Affected implementation: `ascii-rpg/src/client/game-layer-babylon-lite/systems/minimap-renderer.js`.
+- Affected verification: `ascii-rpg/test/client/game-layer-babylon-lite/systems/minimap-renderer_tests.mjs` and the repository's existing Node test/build checks.
 - No new dependencies, public APIs, world-generation changes, or UI settings are required.

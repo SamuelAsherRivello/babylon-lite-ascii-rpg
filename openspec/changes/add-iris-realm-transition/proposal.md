@@ -48,12 +48,12 @@ UI remains visible above it.
 ## Impact
 
 - A new Babylon Lite transition system and transition-mask rendering surface
-  under `ascii-rpg/src/runtime/game-layer-babylon-lite/`.
+  under `ascii-rpg/src/client/game-layer-babylon-lite/`.
 - Realm activation and movement input handling in the Babylon game controller,
   plus focused mirrored Node tests for timing, lifecycle ordering, input lock,
   and realm-transfer integration.
 - Existing game-layer CSS/container stacking may need a narrowly scoped
   game-layer-only mask surface; no new dependency is expected.
 - The attached image is a visual reference for a feathered/soft iris edge. The
-  implementation should use a runtime-rendered gradient edge rather than add
+  implementation should use a client-rendered gradient edge rather than add
   the reference image as an application asset.

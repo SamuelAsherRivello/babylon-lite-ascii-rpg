@@ -17,7 +17,7 @@
 
 ## 4. Future animation adoption
 
-- [ ] 4.1 Route any additional JavaScript-owned runtime animations touched by this change through AnimationHelper and document CSS-only UI animations as outside the helper boundary; verify no duplicate scheduler updates are introduced.
+- [ ] 4.1 Route any additional JavaScript-owned client animations touched by this change through AnimationHelper and document CSS-only UI animations as outside the helper boundary; verify no duplicate scheduler updates are introduced.
 
 ## 5. Verification
 

@@ -4,7 +4,7 @@
 
 The current application has a viewport-derived grid and a canvas renderer that
 draws only `P`. See `proposal.md` for motivation. The existing player-grid
-behavior must remain compatible with the current React/Vite browser runtime,
+behavior must remain compatible with the current React/Vite browser client,
 while movement gains access to explicit world terrain.
 
 ## Goals / Non-Goals
@@ -35,7 +35,7 @@ while movement gains access to explicit world terrain.
   and keep the outer border as walls. Full threshold/radius tuning is deferred.
 - **Seeded randomness:** Resolve a seed for every generation. A caller-provided
   seed is used unchanged; otherwise the generator creates a fresh seed from
-  runtime randomness and stores it in the returned world. This gives normal
+  client randomness and stores it in the returned world. This gives normal
   gameplay a new level while allowing tests, bug reports, and future replay to
   reproduce a layout from the retained seed.
 - **Connected-region acceptance:** Flood-fill walkable terrain, retain the

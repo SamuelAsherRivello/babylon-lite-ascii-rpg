@@ -74,7 +74,7 @@ second camera state or a new dependency.
 
 ## Migration Plan
 
-No data migration is required. The change is runtime-only and compatible with
+No data migration is required. The change is client-only and compatible with
 existing saved camera-mode preferences. Validate with the existing Node tests,
 production build, and manual browser checks across landscape and portrait
 resizes. Rollback consists of reverting the implementation commit; no stored

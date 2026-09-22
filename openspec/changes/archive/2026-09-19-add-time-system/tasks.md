@@ -2,7 +2,7 @@
 
 ## 1. Time state and bridge
 
-- [x] 1.1 Add a focused Time System module or equivalent runtime contract for a numeric initial value of `1`, one-unit advancement, and minimum five-digit formatting; verify unit coverage for `1`, incrementing, blocked/no-op behavior, and values above `99999`.
+- [x] 1.1 Add a focused Time System module or equivalent client contract for a numeric initial value of `1`, one-unit advancement, and minimum five-digit formatting; verify unit coverage for `1`, incrementing, blocked/no-op behavior, and values above `99999`.
 - [x] 1.2 Extend the game bridge with a current-time snapshot and subscription/update lifecycle that supports React and future non-React consumers; verify subscribers receive initial and incremented values and are cleaned up on disposal.
 
 ## 2. Game-layer integration

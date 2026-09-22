@@ -40,9 +40,9 @@ escaping its boundary.
 
 ## Impact
 
-- React Settings UI and styles under `ascii-rpg/src/runtime/ui-layer-react/`.
-- The UI bridge under `ascii-rpg/src/runtime/bridge-layer/`.
+- React Settings UI and styles under `ascii-rpg/src/client/ui-layer-react/`.
+- The UI bridge under `ascii-rpg/src/client/bridge-layer/`.
 - Babylon Lite viewport, sprite-layer capacity, rendering, and fixed-level
-  startup under `ascii-rpg/src/runtime/game-layer-babylon-lite/`.
+  startup under `ascii-rpg/src/client/game-layer-babylon-lite/`.
 - Existing player-grid, bridge, page, and world-generation tests.
-- No new runtime dependency or external service is required.
+- No new client dependency or external service is required.

@@ -40,7 +40,7 @@ None.
 
 ## Impact
 
-- Affects `ascii-rpg/src/runtime/game-layer-babylon-lite/index.js` and the
+- Affects `ascii-rpg/src/client/game-layer-babylon-lite/index.js` and the
   closest mirrored game-layer transition/integration tests.
 - May adjust the existing sprite-layer reconciliation seam, but introduces no
   dependency or bridge/API change.

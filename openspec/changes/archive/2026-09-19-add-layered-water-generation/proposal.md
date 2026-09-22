@@ -47,10 +47,10 @@ shallow-water traversal.
 
 ## Impact
 
-- Affected runtime code is centered on
-  `ascii-rpg/src/runtime/game-layer-babylon-lite/systems/world-system.js` and
+- Affected client code is centered on
+  `ascii-rpg/src/client/game-layer-babylon-lite/systems/world-system.js` and
   the Babylon Lite glyph atlas/rendering setup in
-  `ascii-rpg/src/runtime/game-layer-babylon-lite/index.js`.
+  `ascii-rpg/src/client/game-layer-babylon-lite/index.js`.
 - Palette defaults and map-glyph inventory will need to include the three water
   glyphs and their default blue colors.
 - Existing player movement, character precedence, torch placement, and bridge

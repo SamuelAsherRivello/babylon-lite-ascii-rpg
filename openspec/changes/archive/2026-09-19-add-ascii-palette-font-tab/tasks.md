@@ -4,10 +4,10 @@
 
 - [x] 1.1 Add the validated five-font catalog, stable ids, CSS fallback stacks,
   default selection, and compatibility parsing for missing font data.
-- [x] 1.2 Extend the shared runtime store with get/subscribe/commit/reset font
+- [x] 1.2 Extend the shared client store with get/subscribe/commit/reset font
   operations and validate malformed or unsupported persisted values.
 - [x] 1.3 Extend the local Vite persistence middleware to write the selected
-  font atomically and reject invalid or failed writes without changing runtime
+  font atomically and reject invalid or failed writes without changing client
   state.
 - [x] 1.4 Add deployed browser persistence, the existing warning acknowledgment,
   BroadcastChannel notifications, and storage-event fallback for font changes.

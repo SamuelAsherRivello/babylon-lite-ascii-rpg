@@ -3,7 +3,7 @@
 ## 1. Object Catalog and System Boundary
 
 - [x] 1.1 Create the JSON object catalog with Gold, Heart, Torch, Trap, and Stairs entries, exact `IsPickup`/`IsLevelSpawned` values, glyphs, consequence identifiers, exact log text, and initial 10–14 level-spawn ranges; verify the JSON parses and every glyph is accounted for.
-- [x] 1.2 Rename the runtime module boundary from `pickup-system.js` to `object-spawner-system.js` and update mirrored test imports; verify repository search finds no stale runtime import of `pickup-system.js`.
+- [x] 1.2 Rename the client module boundary from `pickup-system.js` to `object-spawner-system.js` and update mirrored test imports; verify repository search finds no stale client import of `pickup-system.js`.
 - [x] 1.3 Implement catalog validation, object registration, immutable snapshots, seeded placement, reserved-cell handling, and collision events; verify unit tests cover invalid glyphs, duplicate cells, deterministic placement, pickup consumption, and persistent objects.
 
 ## 2. Palette and Rendering Integration

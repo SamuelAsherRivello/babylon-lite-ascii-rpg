@@ -2,7 +2,7 @@
 
 ## 1. Reconcile game-view sprite slots
 
-- [x] 1.1 Update the game-view world composition pass in `ascii-rpg/src/runtime/game-layer-babylon-lite/index.js` to visit every bounded source cell while preserving the existing undiscovered-cell hide path; verify undiscovered cells still submit no visible glyph.
+- [x] 1.1 Update the game-view world composition pass in `ascii-rpg/src/client/game-layer-babylon-lite/index.js` to visit every bounded source cell while preserving the existing undiscovered-cell hide path; verify undiscovered cells still submit no visible glyph.
 - [x] 1.2 Preserve the existing Camera Lock origin and wrapping behavior while routing shifted viewports through the slot-reconciliation pass; verify the player remains at the opposite screen edge after valid horizontal and vertical wraps.
 
 ## 2. Add focused regression coverage

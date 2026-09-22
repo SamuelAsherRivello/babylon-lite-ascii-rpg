@@ -47,7 +47,7 @@ The game SHALL reuse a cached glyph visual for repeated renderings with the same
 #### Scenario: Lazy cache population
 
 - **WHEN** a glyph/font/zoom combination has not yet been requested
-- **THEN** the runtime SHALL create it on demand and SHALL not require prebuilding the complete palette before rendering the current visible region
+- **THEN** the client SHALL create it on demand and SHALL not require prebuilding the complete palette before rendering the current visible region
 
 ### Requirement: Visible-region rendering
 The game SHALL submit renderable cells only for the current visible region at the effective scale selected by the displayed value, and cells outside that region SHALL not contribute visible sprites to the frame.
@@ -76,12 +76,12 @@ The game SHALL construct complete world data cooperatively across bounded work s
 #### Scenario: Complete world and visible frame
 
 - **WHEN** generation begins for the configured world and viewport
-- **THEN** the runtime SHALL measure the interval until complete world data exists and the current visible region has been rendered, with a target below 1 second and an ideal target near 0.1 seconds
+- **THEN** the client SHALL measure the interval until complete world data exists and the current visible region has been rendered, with a target below 1 second and an ideal target near 0.1 seconds
 
 #### Scenario: No invalid partial world is exposed
 
 - **WHEN** world data is not yet complete
-- **THEN** the runtime SHALL not expose a partially generated terrain or invalid player state as if it were a playable completed world
+- **THEN** the client SHALL not expose a partially generated terrain or invalid player state as if it were a playable completed world
 
 #### Scenario: Generation cancellation or replacement
 
@@ -112,7 +112,7 @@ After the required glyph visuals for an effective scale are cached, a displayed 
 
 #### Scenario: Adjacent remapped zoom change
 - **WHEN** the player changes by one displayed zoom step
-- **THEN** the runtime SHALL reuse compatible cached glyph visuals where possible, submit the new visible region, and SHALL not regenerate the world
+- **THEN** the client SHALL reuse compatible cached glyph visuals where possible, submit the new visible region, and SHALL not regenerate the world
 
 #### Scenario: Cached zoom change
 - **WHEN** required visuals for the destination displayed value are cached
@@ -120,7 +120,7 @@ After the required glyph visuals for an effective scale are cached, a displayed 
 
 #### Scenario: Cold zoom change
 - **WHEN** required visuals for the destination displayed value are not cached
-- **THEN** the runtime SHALL warm only required visible visuals and report warmup separately
+- **THEN** the client SHALL warm only required visible visuals and report warmup separately
 
 ### Requirement: Future-effect-safe cache boundary
 

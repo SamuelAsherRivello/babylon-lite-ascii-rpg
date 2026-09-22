@@ -21,7 +21,7 @@ existing quests and `Unlock A Door`.
 
 - **WHEN** a player views Gameplay Settings
 - **THEN** every quest definition appears as a selectable quest card,
-  including `Unlock A Door`, and selecting any card starts fresh runtime
+  including `Unlock A Door`, and selecting any card starts fresh client
   progress for that quest
 
 #### Scenario: Catalog and settings remain complete
@@ -35,7 +35,7 @@ existing quests and `Unlock A Door`.
 - **WHEN** a player selects any quest card in Gameplay Settings
 - **THEN** that quest becomes active immediately, its ID is persisted as the
   Default Quest, and a browser refresh restores that selected quest with fresh
-  runtime progress
+  client progress
 
 ### Requirement: Unlock A Door progression
 
@@ -78,7 +78,7 @@ create a duplicate key solely for quest progress.
 
 The quest snapshot and lifecycle notifications SHALL expose the ordered
 progress and completion of `Unlock A Door` using the existing immutable bridge,
-HUD, and toast behavior. Quest progress SHALL remain runtime-only across a
+HUD, and toast behavior. Quest progress SHALL remain client-only across a
 browser refresh, while a persisted valid Default Quest selection SHALL remain
 honored. The Gameplay Settings catalog SHALL use the same title, task order,
 progress, and completed styling as the HUD for every quest.
@@ -102,12 +102,12 @@ progress, and completed styling as the HUD for every quest.
 - **THEN** the existing quest lifecycle notification reports completion of
   `Unlock A Door` and the completed quest remains visible
 
-#### Scenario: Refresh resets runtime progress
+#### Scenario: Refresh resets client progress
 
 - **WHEN** the browser is refreshed after partial or complete `Unlock A Door`
   progress
 - **THEN** the new game instance starts the saved valid Default Quest with
-  fresh runtime quest progress and newly generated world-object state
+  fresh client quest progress and newly generated world-object state
 
 ### Requirement: Active task navigation marker
 

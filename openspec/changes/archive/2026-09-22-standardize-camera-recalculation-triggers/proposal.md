@@ -3,7 +3,7 @@
 ## Why
 
 Camera mode behavior is currently specified for movement and viewport resize,
-but the game has more runtime events that can invalidate the visible world
+but the game has more client events that can invalidate the visible world
 origin. This change makes camera recalculation explicit and consistent whenever
 the player anchor, active world, selected camera mode, or effective viewport
 changes.
@@ -34,10 +34,10 @@ changes.
 
 ## Impact
 
-- Affected code: `ascii-rpg/src/runtime/game-layer-babylon-lite/index.js`,
-  `ascii-rpg/src/runtime/game-layer-babylon-lite/characters/player/player-grid.js`,
-  `ascii-rpg/src/runtime/bridge-layer/game-bridge.js`, and
-  `ascii-rpg/src/runtime/ui-layer-react/App.jsx`.
+- Affected code: `ascii-rpg/src/client/game-layer-babylon-lite/index.js`,
+  `ascii-rpg/src/client/game-layer-babylon-lite/characters/player/player-grid.js`,
+  `ascii-rpg/src/client/bridge-layer/game-bridge.js`, and
+  `ascii-rpg/src/client/ui-layer-react/App.jsx`.
 - Affected systems: camera mode selection, world viewport origin, zoom changes,
   realm transitions, aspect-mode presentation, resize/orientation/canvas layout
   handling, movement, and any game-layer-owned player relocation helpers.

@@ -6,7 +6,7 @@ The UI stylesheet has grown into a single mixed file containing map rendering, c
 
 ## What Changes
 
-- Organize the UI styles into six files under `ascii-rpg/src/runtime/ui-layer-react/`:
+- Organize the UI styles into six files under `ascii-rpg/src/client/ui-layer-react/`:
   - `character.css` for character bars, resources, and character detail layout.
   - `map.css` for the game canvas, transition mask, minimap, map framing, and map presentation rules.
   - `hud.css` for corners, HUD blocks, quest tracker, links, settings, zoom controls, and shared HUD interaction styling.
@@ -16,7 +16,7 @@ The UI stylesheet has grown into a single mixed file containing map rendering, c
 - Keep `styles.css` as the stylesheet imported by the application and use ordered imports for the feature files.
 - Preserve selectors, cascade behavior, responsive rules, colors, dimensions, animations, and user-visible layout.
 - Update stylesheet-oriented tests to inspect the complete imported stylesheet set.
-- No public API, dependency, runtime behavior, or visual design change is intended.
+- No public API, dependency, client behavior, or visual design change is intended.
 
 ## Capabilities
 
@@ -30,7 +30,7 @@ None. Existing UI requirements remain unchanged.
 
 ## Impact
 
-- Affects the CSS files and stylesheet import in `ascii-rpg/src/runtime/ui-layer-react/`.
+- Affects the CSS files and stylesheet import in `ascii-rpg/src/client/ui-layer-react/`.
 - Affects source-level stylesheet checks in `ascii-rpg/test/main_tests.mjs`.
 - Adds no dependencies and changes no React, Babylon, or bridge-layer APIs.
 - Validation remains the existing repository test suite and Vite production build.

@@ -40,7 +40,7 @@ Alternative considered: Scan the full `visibility` array every time the HUD need
 
 Add `getRealmDiscoverySnapshot`, `subscribeToRealmDiscovery`, and `sendRealmDiscoverySnapshot` beside the existing realm/time/minimap snapshot APIs. The game layer should notify the bridge from `main.jsx` by subscribing to a controller-level discovery API, matching the existing realm, quest, and resource flows.
 
-Alternative considered: Let React query the game controller directly. That would blur the current bridge boundary and make React depend on Babylon runtime internals.
+Alternative considered: Let React query the game controller directly. That would blur the current bridge boundary and make React depend on Babylon client internals.
 
 ### Notify after every discovery-affecting path
 

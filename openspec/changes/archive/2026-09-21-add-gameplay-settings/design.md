@@ -10,7 +10,7 @@ See `proposal.md` for motivation and user-facing scope. The current React HUD re
 
 - Keep quest definitions authoritative in `quest_data.json` and expose only quest IDs across the UI/game boundary.
 - Reuse the HUD quest title/task composition and completion classes in the catalog cards.
-- Persist only the selected default quest ID; keep progress, active steps, pickups, and completion runtime-only.
+- Persist only the selected default quest ID; keep progress, active steps, pickups, and completion client-only.
 - Preserve the existing narrow bridge and ordered automatic quest advancement.
 - Keep the new modal compatible with the existing responsive window and HUD patterns.
 
@@ -24,7 +24,7 @@ See `proposal.md` for motivation and user-facing scope. The current React HUD re
 
 1. **Use one local-storage key containing a quest ID.** The UI and game bootstrap will validate the stored ID against the imported quest catalog. A missing or invalid value falls back to the first definition and is repaired in storage. This avoids persisting mutable quest state and prevents stale IDs from producing an unknown-quest error.
 
-2. **Start the selected quest through the game controller bridge.** The UI will save the ID and call a narrow `startQuest(id)` bridge action; the game controller will validate the ID and call the existing quest manager with current runtime values. This preserves the layer boundary: React does not access quest criteria, pickups, or mutable world state.
+2. **Start the selected quest through the game controller bridge.** The UI will save the ID and call a narrow `startQuest(id)` bridge action; the game controller will validate the ID and call the existing quest manager with current client values. This preserves the layer boundary: React does not access quest criteria, pickups, or mutable world state.
 
 3. **Make the quest card a presentation variant of the HUD tracker.** A shared quest layout component will receive either the live snapshot or a preview derived from a static definition. The catalog will mark the current selected default without changing quest state, and only a live completed snapshot receives strike-through state.
 
@@ -34,11 +34,11 @@ See `proposal.md` for motivation and user-facing scope. The current React HUD re
 
 ## Risks / Trade-offs
 
-- [Risk] Selecting a quest during an active session resets that quest's runtime progress and may replace a pending quest. → Make the card selection behavior explicit in the window copy and keep the action limited to the selected quest ID.
+- [Risk] Selecting a quest during an active session resets that quest's client progress and may replace a pending quest. → Make the card selection behavior explicit in the window copy and keep the action limited to the selected quest ID.
 - [Risk] A quest definition can be removed after a user saved it. → Validate the stored ID at both UI initialization and game bootstrap, then fall back to and persist the first definition.
 - [Risk] The quest catalog can become long on mobile. → Use a bounded modal body/list with normal overflow scrolling and verify portrait presentation manually.
 - [Risk] Existing source-based tests may assert the fixed initial quest. → Update focused quest and UI contract tests during implementation, then run the repository's normal Node test and build commands.
 
 ## Migration Plan
 
-No data migration is required. On the first session after deployment, the bootstrap stores the first quest ID under the new key. Existing quest progress is not migrated because it was already runtime-only. Rollback consists of removing the new UI/bridge behavior; the additional local-storage key is harmless and can be ignored by older code.
+No data migration is required. On the first session after deployment, the bootstrap stores the first quest ID under the new key. Existing quest progress is not migrated because it was already client-only. Rollback consists of removing the new UI/bridge behavior; the additional local-storage key is harmless and can be ignored by older code.

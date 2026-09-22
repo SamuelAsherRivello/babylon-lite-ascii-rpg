@@ -34,7 +34,7 @@ cells.
 The starting footprint will derive its column and row bounds from the existing
 viewport/grid calculations at displayed zoom `5`, rather than from browser
 pixels or the user's current zoom. This makes the rule deterministic across
-device pixel ratios and ensures “based on zoom 5” has one runtime definition.
+device pixel ratios and ensures “based on zoom 5” has one client definition.
 
 The requested percentages describe the clear footprint's total width and
 height. For each axis, calculate a centered inclusive range around the player

@@ -7,9 +7,9 @@ player contribution arrays as one combined set of large additive radial
 sprites. Although those arrays already exclude player light behind an `X High`
 blocker, a lit neighboring sprite can overlap the hard-shadow cells.
 
-The runtime already has separate player and torch contribution fields, a
+The client already has separate player and torch contribution fields, a
 straight grid-path blocker traversal, React local-storage settings, and a
-narrow cached bridge. Babylon Lite already supplies the sprite layer, runtime
+narrow cached bridge. Babylon Lite already supplies the sprite layer, client
 atlas, and additive blend path used by the optional pass.
 
 ## Goals / Non-Goals

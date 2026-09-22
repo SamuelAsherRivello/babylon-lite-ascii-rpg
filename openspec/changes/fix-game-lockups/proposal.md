@@ -10,7 +10,7 @@ The game can lock or crash the browser as soon as a player clicks a React menu c
 - Establish a safe renderer lifecycle for startup, resize, visibility changes, teardown, and device errors without retaining a legacy gameplay fallback.
 - Preserve all gameplay, fog, minimap, palette, font, zoom, camera, realm, lighting, and GPU-light systems while ensuring React menu actions remain interactive.
 - Remove implicit first-click fullscreen behavior; fullscreen remains an explicit user setting.
-- Add focused runtime and browser interaction validation for every left-side menu action, rendering updates, and recovery boundaries.
+- Add focused client and browser interaction validation for every left-side menu action, rendering updates, and recovery boundaries.
 
 ## Capabilities
 
@@ -26,6 +26,6 @@ The game can lock or crash the browser as soon as a player clicks a React menu c
 
 ## Impact
 
-- Affected runtime: Babylon Lite game-layer scheduling/lifecycle, React fullscreen behavior, and the narrow bridge only where lifecycle-safe commands require it.
+- Affected client: Babylon Lite game-layer scheduling/lifecycle, React fullscreen behavior, and the narrow bridge only where lifecycle-safe commands require it.
 - Affected validation: focused game-layer and UI tests plus manual browser interaction coverage.
-- Dependencies: no new runtime dependency or alternate gameplay renderer.
+- Dependencies: no new client dependency or alternate gameplay renderer.

@@ -32,7 +32,7 @@
 - [x] 3.1 Replace duplicated game/minimap world-composition branches with the
   shared renderer while preserving camera, zoom, lighting, canvas bounds, and
   minimap marker behavior; verify focused game-layer and minimap tests pass.
-- [x] 3.2 Update structural/runtime tests for the shared world-view boundary,
+- [x] 3.2 Update structural/client tests for the shared world-view boundary,
   explicit independent source rectangles, common fog behavior, pass ordering,
   and target-specific capabilities; verify the mirrored test layout remains
   intact.

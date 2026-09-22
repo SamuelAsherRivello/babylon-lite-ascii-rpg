@@ -12,9 +12,9 @@ rendering owner. See `proposal.md` for the motivation and scope.
 
 **Goals:**
 
-- Make the three runtime boundaries visible as sibling directories.
+- Make the three client boundaries visible as sibling directories.
 - Keep React-specific files in `.jsx` where JSX is used and keep Babylon Lite
-  and bridge runtime modules in `.js`.
+  and bridge client modules in `.js`.
 - Name systems consistently with the `*-system.js` convention.
 - Provide representative templates and local guidance for contributors and AI
   agents.
@@ -23,17 +23,17 @@ rendering owner. See `proposal.md` for the motivation and scope.
 
 **Non-Goals:**
 
-- Introducing TypeScript, a new framework, or a new runtime dependency.
+- Introducing TypeScript, a new framework, or a new client dependency.
 - Changing the user-visible game, UI, palette, input, or timing behavior.
 - Moving the repository-level package manifest into `ascii-rpg/`.
 - Treating font and palette JSON as React components or generic UI assets.
 
 ## Decisions
 
-### Runtime layers are siblings
+### Client layers are siblings
 
-Use `src/runtime/ui-layer-react/`, `src/runtime/bridge-layer/`, and
-`src/runtime/game-layer-babylon-lite/`. This makes the bridge a first-class
+Use `src/client/ui-layer-react/`, `src/client/bridge-layer/`, and
+`src/client/game-layer-babylon-lite/`. This makes the bridge a first-class
 boundary rather than a private subfolder of either endpoint. Alternatives
 considered were placing the bridge under React or under Babylon Lite; both
 would imply ownership that conflicts with the existing narrow communication
@@ -54,7 +54,7 @@ Place game systems in `game-layer-babylon-lite/systems/` and use names such as
 `world-system.js`. Characters remain under `characters/`, with player-specific
 modules under `characters/player/`.
 
-### Templates are examples, not shared runtime dependencies
+### Templates are examples, not shared client dependencies
 
 Each layer gets a representative `Template` file in the extension appropriate
 to that layer, plus concise local guidance. New code may copy the pattern, but
@@ -64,7 +64,7 @@ production modules should not import templates. The React layer can include
 
 ### Tests mirror implementation paths
 
-Move or add tests under a path that mirrors `src/`, including `runtime/`, the
+Move or add tests under a path that mirrors `src/`, including `client/`, the
 layer name, and the relevant module area. Test filenames add `_tests` before
 the extension, for example `time-system_tests.js`. This keeps discovery
 predictable and allows the existing Node test runner to retain explicit test

@@ -7,10 +7,10 @@
 
 ## 2. Game-layer GPU light pass
 
-- [x] 2.1 Add a game-layer-owned GPU-light-pass controller that turns the persisted bridge command into an enabled/disabled render mode; verify focused runtime tests cover the direct sprite-only off path and the immediate mode change.
+- [x] 2.1 Add a game-layer-owned GPU-light-pass controller that turns the persisted bridge command into an enabled/disabled render mode; verify focused client tests cover the direct sprite-only off path and the immediate mode change.
 - [x] 2.2 Build a screen-aligned low-resolution warm emission mask from the existing visible torch/player contribution fields; verify focused lighting/render tests cover source contribution, terrain-shadow exclusion, viewport alignment, and no mutation of world or palette data.
 - [x] 2.3 Render the enabled sprite scene through a Babylon Lite additive sprite layer using a generated pre-blurred light atlas, then present the restrained warm composite; verify the layer is resized for visible-region capacity and disposed with the game layer.
-- [x] 2.4 Refresh the GPU light-pass inputs on movement, zoom, resize, palette edits, and lighting profile changes; verify focused runtime tests prove no former-player light trail and correctly updated visible-region alignment.
+- [x] 2.4 Refresh the GPU light-pass inputs on movement, zoom, resize, palette edits, and lighting profile changes; verify focused client tests prove no former-player light trail and correctly updated visible-region alignment.
 
 ## 3. Integrated validation
 

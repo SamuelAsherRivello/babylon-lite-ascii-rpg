@@ -31,7 +31,7 @@ for the palette and the React/Vite app has no server persistence endpoint.
   Code Page 437 values or `unicode` for U+2022), `glyph`, `color`, and `alpha`.
   Customized status is derived by comparing values with `#ffffff` and `1.0`,
   avoiding a second mutable flag that could drift.
-- **Single runtime source:** Add a small palette store module that owns the
+- **Single client source:** Add a small palette store module that owns the
   loaded snapshot, exposes read/subscribe/commit behavior to both React roots,
   and provides the canvas renderer with resolved styles. This avoids relying on
   the browser `storage` event, which does not notify the same document that
@@ -41,7 +41,7 @@ for the palette and the React/Vite app has no server persistence endpoint.
   draft; Confirm commits it and Cancel discards it.
 - **Local persistence:** In Vite development, expose a development-only
   endpoint that validates and atomically writes the palette JSON. A failed
-  response leaves the committed runtime snapshot unchanged.
+  response leaves the committed client snapshot unchanged.
 - **Deployed persistence:** In production/static hosting, use `localStorage`
   as the writable layer over the bundled default palette. The first
   unacknowledged Confirm shows the local-only warning; the `Hide warning`
@@ -83,7 +83,7 @@ all other visible entries at white/1.0. Load it before world creation, then
 replace terrain-local styling and hard-coded canvas styling with palette lookup.
 Existing saved browser fullscreen preferences remain unchanged. If a palette
 override is invalid or the local endpoint is unavailable, retain the previous
-runtime snapshot and report the failure.
+client snapshot and report the failure.
 
 ## Open Questions
 

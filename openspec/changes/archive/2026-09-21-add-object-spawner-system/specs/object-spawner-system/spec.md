@@ -48,7 +48,7 @@ The Object Spawner System SHALL run as the final world-generation phase after pl
 
 ### Requirement: Quest-requested object spawning
 
-The system SHALL support runtime requests for `IsLevelSpawned: false` objects. The Collect Gold quest SHALL request exactly three Gold pickups at its configured target distances, and the Object Spawner System SHALL place them on valid cells.
+The system SHALL support client requests for `IsLevelSpawned: false` objects. The Collect Gold quest SHALL request exactly three Gold pickups at its configured target distances, and the Object Spawner System SHALL place them on valid cells.
 
 #### Scenario: Quest requests Gold
 - **WHEN** the Collect Gold quest starts

@@ -4,7 +4,7 @@
 
 ### Requirement: Default glyph styling
 
-Every palette entry SHALL have an editable base color and a runtime-owned
+Every palette entry SHALL have an editable base color and a client-owned
 opacity value. New or uncustomized entries SHALL default to white
 (`#ffffff`). The Ascii Palette editor SHALL not allow a developer to change
 alpha or brightness; those values SHALL be derived by the active rendering
@@ -15,13 +15,13 @@ base color differs from the default.
 
 - **WHEN** a palette entry has not been customized
 - **THEN** the entry SHALL report base color `#ffffff` and default status,
-  while rendered opacity is supplied by the runtime
+  while rendered opacity is supplied by the client
 
 #### Scenario: Customized color entry
 
 - **WHEN** a developer changes a glyph's base color and confirms it
 - **THEN** the entry SHALL report the confirmed color and customized status,
-  while runtime lighting continues to control rendered opacity and brightness
+  while client lighting continues to control rendered opacity and brightness
 
 #### Scenario: Customized entry
 
@@ -90,10 +90,10 @@ opacity or brightness.
 
 - **WHEN** a developer confirms a valid base-color edit
 - **THEN** the saved base color SHALL update and the current game SHALL apply
-  its active runtime lighting to the glyph
+  its active client lighting to the glyph
 
 #### Scenario: Confirm glyph edit
 
 - **WHEN** a developer clicks Confirm with a valid base color
 - **THEN** the editor SHALL close, the table SHALL refresh, and the current game
-  SHALL use the confirmed base color with runtime lighting
+  SHALL use the confirmed base color with client lighting

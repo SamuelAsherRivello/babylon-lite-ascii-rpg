@@ -35,7 +35,7 @@ when the active camera mode depends on viewport width and height.
 
 ## Impact
 
-- Affected runtime: `ascii-rpg/src/runtime/game-layer-babylon-lite/index.js`
+- Affected client: `ascii-rpg/src/client/game-layer-babylon-lite/index.js`
   and the camera/view-origin helpers under the same game-layer module.
 - Affected tests: camera and world-view tests, plus source-level game-layer
   resize coverage as appropriate to the existing test strategy.

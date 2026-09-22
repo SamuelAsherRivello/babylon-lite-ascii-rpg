@@ -23,7 +23,7 @@ door behavior is owned by the game layer and must remain outside React.
 - Derive one closest reachable target from the active step and pass it through
   the existing minimap navigation-marker path.
 - Verify the catalog, event sequencing, HUD snapshot, selector, toast path, and
-  runtime reset without adding dependencies.
+  client reset without adding dependencies.
 
 **Non-Goals:**
 

@@ -14,7 +14,7 @@
 - [x] 2.3 Extend Confirm, Reset, and Cancel handling so Confirm persists draft color and offsets, Reset stages default color plus zero offsets, and Cancel discards all draft changes; verify the existing UI contract tests cover the updated strings and behavior hooks.
 - [x] 2.4 Update CSS for the palette grid and editor popup so composite cell previews have stable dimensions, no nested card treatment, no text overflow, and no popup overflow in portrait or landscape layouts.
 
-## 3. Runtime Rendering
+## 3. Client Rendering
 
 - [x] 3.1 Extend glyph rasterization to accept normalized offsets and scale, apply them within the glyph canvas, and verify focused raster tests cover zero offsets, translation, scale endpoints, and right-facing glyphs.
 - [x] 3.2 Pass palette offsets into game-view and mini-map glyph cache creation while keeping palette color lookup tied to base glyph identity, then verify player and enemy facing colors remain consistent.

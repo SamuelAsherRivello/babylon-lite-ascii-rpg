@@ -69,4 +69,4 @@ questing-system delta for the required behavior.
 Implement the event publication and UI subscription, add focused Node contract
 tests, run the production build, and manually verify the transition in the live
 app. No data migration or rollback procedure is needed because quest progress
-is runtime-only; reverting the code restores the prior snapshot behavior.
+is client-only; reverting the code restores the prior snapshot behavior.

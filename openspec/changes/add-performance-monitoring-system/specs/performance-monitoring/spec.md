@@ -10,7 +10,7 @@ the main game world and exploration minimap.
 
 ### Requirement: Bounded opt-in monitoring sessions
 
-The runtime SHALL expose a developer-facing monitoring session that can be
+The client SHALL expose a developer-facing monitoring session that can be
 started with a named scenario and finite duration, stopped explicitly, reset,
 and read as a structured report. Monitoring SHALL be disabled unless requested,
 and an inactive session SHALL not add a continuous visible HUD, persistence
@@ -25,7 +25,7 @@ write, or unbounded sample buffer.
 #### Scenario: A session completes at its bound
 
 - **WHEN** a developer starts a named diagnostic session with a finite duration
-- **THEN** the runtime SHALL collect only that session's samples, stop at the
+- **THEN** the client SHALL collect only that session's samples, stop at the
   requested bound, and expose a report with scenario, environment context,
   duration, and completion state
 
@@ -57,7 +57,7 @@ input mode and SHALL NOT combine samples from different scenarios.
 
 ### Requirement: Startup readiness is measurable from launch to playability
 
-The runtime SHALL measure startup readiness from the app/game-layer start
+The client SHALL measure startup readiness from the app/game-layer start
 boundary through generated world availability, first valid visible world render,
 and the point at which gameplay input is unlocked. The report SHALL expose the
 total interval and component timings for world generation, generation yields or
@@ -77,7 +77,7 @@ wait time, first visible game-world render, and first playable readiness.
 
 ### Requirement: Main-world and minimap costs are separated
 
-The runtime SHALL record main game-world rendering and minimap rendering as
+The client SHALL record main game-world rendering and minimap rendering as
 separate timed phases. Each phase report SHALL include elapsed samples and
 relevant context such as visible region size, submitted/skipped cell counts,
 glyph-cache warmup or cached status, and whether the sample was a movement,
@@ -100,7 +100,7 @@ startup, or ordinary refresh.
 ### Requirement: Reports are actionable and extensible
 
 The report SHALL be exportable or loggable as structured, privacy-safe data
-containing browser/runtime context needed to reproduce a measurement, without
+containing browser/client context needed to reproduce a measurement, without
 including secrets or user content. The monitoring model SHALL permit future
 metrics such as input-to-movement latency, frame pacing/jank, cache behavior,
 GPU light-pass cost, health-bar animation cost, and realm-transition readiness

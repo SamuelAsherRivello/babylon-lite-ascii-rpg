@@ -2,7 +2,7 @@
 
 ## Purpose
 Provides a complete, editable glyph-style palette for the ASCII RPG so every
-visible Code Page 437 character can be used and styled consistently at runtime.
+visible Code Page 437 character can be used and styled consistently at client.
 
 ## Requirements
 
@@ -46,7 +46,7 @@ value. The game SHALL be permitted to use any entry without an allow-list.
 
 ### Requirement: Default glyph styling
 
-Every palette entry SHALL have an editable base color and a runtime-owned
+Every palette entry SHALL have an editable base color and a client-owned
 opacity value. New or uncustomized entries SHALL default to white
 (`#ffffff`). The Ascii Palette editor SHALL not allow a developer to change
 alpha or brightness; those values SHALL be derived by the active rendering
@@ -57,13 +57,13 @@ base color differs from the default.
 
 - **WHEN** a palette entry has not been customized
 - **THEN** the entry SHALL report base color `#ffffff` and default status,
-  while rendered opacity is supplied by the runtime
+  while rendered opacity is supplied by the client
 
 #### Scenario: Customized color entry
 
 - **WHEN** a developer changes a glyph's base color and confirms it
 - **THEN** the entry SHALL report the confirmed color and customized status,
-  while runtime lighting continues to control rendered opacity and brightness
+  while client lighting continues to control rendered opacity and brightness
 
 #### Scenario: Customized entry
 
@@ -132,13 +132,13 @@ opacity or brightness.
 
 - **WHEN** a developer confirms a valid base-color edit
 - **THEN** the saved base color SHALL update and the current game SHALL apply
-  its active runtime lighting to the glyph
+  its active client lighting to the glyph
 
 #### Scenario: Confirm glyph edit
 
 - **WHEN** a developer clicks Confirm with a valid base color
 - **THEN** the editor SHALL close, the table SHALL refresh, and the current game
-  SHALL use the confirmed base color with runtime lighting
+  SHALL use the confirmed base color with client lighting
 
 ### Requirement: Local development persistence
 
@@ -371,7 +371,7 @@ fixed column count that causes glyph-card overflow or horizontal scrolling.
 
 ### Requirement: Grid-cell glyph previews
 
-The Ascii Settings palette grid and glyph editor preview SHALL render each glyph with the same composite grid-cell renderer used by the game view and mini-map. The previewed background, glyph tint, size, position, offset values, active font rules, and default lighting treatment SHALL match the runtime renderer's fully visible glyph-background cell presentation, so the palette card, editor preview, world cell, and mini-map cell communicate a consistent glyph-to-grid relationship.
+The Ascii Settings palette grid and glyph editor preview SHALL render each glyph with the same composite grid-cell renderer used by the game view and mini-map. The previewed background, glyph tint, size, position, offset values, active font rules, and default lighting treatment SHALL match the client renderer's fully visible glyph-background cell presentation, so the palette card, editor preview, world cell, and mini-map cell communicate a consistent glyph-to-grid relationship.
 
 #### Scenario: Palette card uses shared composite cell rendering
 - **WHEN** a developer views a glyph in the Ascii Settings palette grid
@@ -380,7 +380,7 @@ The Ascii Settings palette grid and glyph editor preview SHALL render each glyph
 
 #### Scenario: Editor preview matches grid-cell relationship
 - **WHEN** a developer opens a glyph's color editor
-- **THEN** the popup preview SHALL show the same composite grid-cell render used by the palette card and runtime renderer
+- **THEN** the popup preview SHALL show the same composite grid-cell render used by the palette card and client renderer
 - **AND** the preview SHALL use the draft color and draft offsets without committing them
 
 ### Requirement: Per-glyph offset controls
@@ -456,7 +456,7 @@ Every object catalog entry SHALL resolve to an editable ASCII Palette glyph with
 
 ### Requirement: Player, enemy, and spawner glyph palette coverage
 
-The ASCII Palette SHALL retain entries for the `🤺` Player, `🕷️` Enemy, and uppercase `S` Enemy Spawner glyphs. It SHALL assign an explicit yellow base color for Player rendering and explicit red base colors for Enemy and Enemy Spawner rendering. Runtime lighting MAY adjust visible brightness, but player, enemy, and spawner identity SHALL remain palette-driven.
+The ASCII Palette SHALL retain entries for the `🤺` Player, `🕷️` Enemy, and uppercase `S` Enemy Spawner glyphs. It SHALL assign an explicit yellow base color for Player rendering and explicit red base colors for Enemy and Enemy Spawner rendering. Client lighting MAY adjust visible brightness, but player, enemy, and spawner identity SHALL remain palette-driven.
 
 #### Scenario: Player glyph is yellow
 - **WHEN** the visible player renders as `🤺`

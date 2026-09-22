@@ -48,7 +48,7 @@ The system SHALL maintain an active-quest list containing only the current quest
 #### Scenario: Selecting a quest changes the current quest
 
 - **WHEN** the player selects a quest from Gameplay Settings
-- **THEN** that quest SHALL replace the current quest and transition to pending with fresh runtime progress
+- **THEN** that quest SHALL replace the current quest and transition to pending with fresh client progress
 
 #### Scenario: Completed quest advances when another definition exists
 
@@ -248,9 +248,9 @@ The HUD SHALL render the current quest 25px below the character box. The title l
 - **WHEN** all quest definitions have completed during the session
 - **THEN** the HUD SHALL keep the final quest visible as completed and struck through without restarting it
 
-### Requirement: Runtime-only quest reset
+### Requirement: Client-only quest reset
 
-The quest state, Object Spawner System objects, collected-pickup state, and pickup effects SHALL be runtime-only for this release. A browser refresh SHALL create a new game instance with a fresh runtime state for the saved valid Default Quest, or the first quest when the saved default is absent or invalid, and newly distributed level objects.
+The quest state, Object Spawner System objects, collected-pickup state, and pickup effects SHALL be client-only for this release. A browser refresh SHALL create a new game instance with a fresh client state for the saved valid Default Quest, or the first quest when the saved default is absent or invalid, and newly distributed level objects.
 
 #### Scenario: Browser refresh starts the saved default quest and object set
 
@@ -260,7 +260,7 @@ The quest state, Object Spawner System objects, collected-pickup state, and pick
 #### Scenario: Refresh in Overground
 
 - **WHEN** the player refreshes the browser while the active realm is Overground
-- **THEN** the new game instance SHALL begin with the saved valid Default Quest at its initial progress and runtime-generated pickups appropriate to its initial realm
+- **THEN** the new game instance SHALL begin with the saved valid Default Quest at its initial progress and client-generated pickups appropriate to its initial realm
 
 #### Scenario: Refresh in Underground
 
@@ -285,7 +285,7 @@ The quest state, Object Spawner System objects, collected-pickup state, and pick
 #### Scenario: Browser refresh restores the saved default without progress
 
 - **WHEN** the player refreshes the browser after selecting a valid Default Quest
-- **THEN** the new game instance SHALL begin with that quest at fresh runtime progress and newly generated runtime objects
+- **THEN** the new game instance SHALL begin with that quest at fresh client progress and newly generated client objects
 
 ### Requirement: Generic event observation boundaries
 

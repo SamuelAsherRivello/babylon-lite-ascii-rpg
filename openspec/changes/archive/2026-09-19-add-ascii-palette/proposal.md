@@ -19,7 +19,7 @@ changing world-generation or rendering code.
     palette application to in-world cells.
   - Babylon Lite owns the complete `game_layer`: engine canvas lifecycle,
     game input, procedural level generation, ASCII glyph rendering, palette
-    application for world glyphs, movement, collision, and all runtime game
+    application for world glyphs, movement, collision, and all client game
     logic.
 - Add a complete visible Code Page 437 palette for character values 32–254,
   plus the existing Unicode bullet glyph `•` (U+2022).
@@ -65,7 +65,7 @@ changing world-generation or rendering code.
   `react-colorful` and a native controlled range input for alpha. This
   dependency is limited to React UI surfaces and is not part of the Babylon
   Lite game loop.
-- Add Babylon Lite as the runtime owner for game rendering and logic. The
+- Add Babylon Lite as the client owner for game rendering and logic. The
   palette editor sends confirmed palette state to Babylon Lite through a narrow
   UI-to-game bridge; Babylon Lite applies those values to the live ASCII scene.
 - Add a Vite development-only write endpoint or equivalent local-server hook;

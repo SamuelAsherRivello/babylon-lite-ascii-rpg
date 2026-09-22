@@ -41,7 +41,7 @@ After the required glyph visuals for an effective scale are cached, a displayed 
 
 #### Scenario: Adjacent remapped zoom change
 - **WHEN** the player changes by one displayed zoom step
-- **THEN** the runtime SHALL reuse compatible cached glyph visuals where possible, submit the new visible region, and SHALL not regenerate the world
+- **THEN** the client SHALL reuse compatible cached glyph visuals where possible, submit the new visible region, and SHALL not regenerate the world
 
 #### Scenario: Cached zoom change
 - **WHEN** required visuals for the destination displayed value are cached
@@ -49,7 +49,7 @@ After the required glyph visuals for an effective scale are cached, a displayed 
 
 #### Scenario: Cold zoom change
 - **WHEN** required visuals for the destination displayed value are not cached
-- **THEN** the runtime SHALL warm only required visible visuals and report warmup separately
+- **THEN** the client SHALL warm only required visible visuals and report warmup separately
 
 ### Requirement: Rendering stress validation
 The rendering implementation SHALL provide focused validation or diagnostics for displayed zooms `1`, `5`, and `10`, representative intermediate values, and the corresponding minimap state. Validation SHALL cover visible-cell count, cache reuse, culling behavior, redraw work, memory growth, and bounded cache size.

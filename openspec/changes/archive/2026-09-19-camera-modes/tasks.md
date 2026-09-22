@@ -10,7 +10,7 @@
 
 - [x] 2.1 Add the persisted Settings control directly beneath Fullscreen with the exact labels `Camera Center`, `Camera Deadzone`, and `Camera Lock`; verify UI source tests cover initial rendering and the complete cycle.
 - [x] 2.2 Add a narrow bridge command/snapshot for camera mode and connect React changes to the authoritative Babylon Lite game controller; verify bridge tests cover valid mode delivery and invalid-mode rejection or fallback.
-- [x] 2.3 Update zoom, resize, movement, and visible-region coordination so the selected mode remains active without regenerating the world or resetting the player; verify focused runtime tests cover state preservation.
+- [x] 2.3 Update zoom, resize, movement, and visible-region coordination so the selected mode remains active without regenerating the world or resetting the player; verify focused client tests cover state preservation.
 
 ## 3. Regression and delivery verification
 

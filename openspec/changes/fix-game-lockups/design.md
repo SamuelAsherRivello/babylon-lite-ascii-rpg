@@ -2,7 +2,7 @@
 
 ## Context
 
-The React HUD and Babylon Lite runtime are separate layers connected by a narrow bridge. Current continuous frame submission and resize/input work can contend with UI events.
+The React HUD and Babylon Lite client are separate layers connected by a narrow bridge. Current continuous frame submission and resize/input work can contend with UI events.
 
 ## Goals / Non-Goals
 

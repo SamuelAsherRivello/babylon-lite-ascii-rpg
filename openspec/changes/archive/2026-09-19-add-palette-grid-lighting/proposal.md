@@ -24,7 +24,7 @@ visual language before investing in shadow-casting 3D lighting.
 - Apply the factor to rendered palette color and opacity without changing
   terrain, character, movement, or torch placement data.
 - Remove user-controlled alpha editing from the Ascii Palette; palette color
-  remains editable while runtime lighting owns brightness and opacity.
+  remains editable while client lighting owns brightness and opacity.
 - Recalculate lighting when the visible region, player movement, viewport,
   zoom, palette, or world changes require rendering updates.
 - Keep the experiment shadowless: wall cells do not block or cast shadows, and
@@ -42,13 +42,13 @@ visual language before investing in shadow-casting 3D lighting.
 - `game-layer-architecture`: The game layer applies a derived lighting factor
   to visible palette styles while preserving the existing palette bridge.
 - `ascii-palette`: Palette color remains editable, but palette alpha is no
-  longer user-controlled because runtime lighting owns opacity.
+  longer user-controlled because client lighting owns opacity.
 - `random-torch-placement`: Torch positions are consumed as stable light
   sources without changing their placement or movement semantics.
 
 ## Impact
 
-- Affected runtime: `ascii-rpg/src/runtime/game-layer-babylon-lite/`,
+- Affected client: `ascii-rpg/src/client/game-layer-babylon-lite/`,
   especially visible-cell rendering and palette color handling.
 - Affected tests: Babylon Lite rendering and lighting unit tests.
 - No new dependency is expected. The narrow bridge gains commands for the

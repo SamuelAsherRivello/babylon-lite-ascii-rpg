@@ -10,9 +10,9 @@
 ## 2. Make world generation cooperative
 
 - [x] 2.1 Refactor world generation into resumable bounded work slices while preserving deterministic seeds, generation-pass ordering, connectivity guarantees, water/torch data, and player placement; verify existing synchronous generation tests still describe the same completed world data.
-- [x] 2.2 Integrate staged generation with game-layer startup so the main thread yields between slices and no partially generated world is exposed as playable; verify input/render scheduling remains responsive and the runtime publishes the world only after required data is complete.
+- [x] 2.2 Integrate staged generation with game-layer startup so the main thread yields between slices and no partially generated world is exposed as playable; verify input/render scheduling remains responsive and the client publishes the world only after required data is complete.
 - [x] 2.3 Measure full world-data construction separately from first visible-region rendering at the 512x512 production size; verify total readiness targets are reported honestly when the ideal 0.1-second target is missed.
-- [x] 2.4 Preserve the completed synchronous world-builder behavior for deterministic tests while exposing a resumable cooperative runtime path; verify seeded completed worlds remain identical to existing expectations.
+- [x] 2.4 Preserve the completed synchronous world-builder behavior for deterministic tests while exposing a resumable cooperative client path; verify seeded completed worlds remain identical to existing expectations.
 - [x] 2.5 Handle replacement or cancellation of in-progress generation; verify stale generation results cannot publish after a newer request and incomplete worlds are never exposed as playable.
 
 ## 3. Implement zoom-aware glyph visuals

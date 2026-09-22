@@ -12,9 +12,9 @@
 ## 2. Palette modulation
 
 - [x] 2.1 Add a pure helper that applies a cell lighting factor to base palette
-  color and runtime-owned opacity without mutating the palette.
+  color and client-owned opacity without mutating the palette.
 - [x] 2.2 Remove the Ascii Palette alpha control while retaining color editing,
-  and update palette tests for runtime-owned opacity.
+  and update palette tests for client-owned opacity.
 - [x] 2.3 Add tests proving ambient and lit values are bounded, hue-preserving,
   and transient.
 

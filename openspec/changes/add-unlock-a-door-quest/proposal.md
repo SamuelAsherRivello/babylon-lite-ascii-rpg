@@ -25,7 +25,7 @@ mechanics discoverable and gives the player a clear completion goal.
   opening.
 - Preserve the existing quest selector, Default Quest persistence, ordered
   quest advancement, immutable bridge snapshot, HUD presentation, lifecycle
-  toasts, and runtime-only progress behavior.
+  toasts, and client-only progress behavior.
 - Add focused contract coverage for the definition, event ordering, initial
   Underground state, completion, and regression of the existing Collect Gold
   quest.
@@ -44,7 +44,7 @@ realm, pickup, and door event boundaries.
 
 ## Impact
 
-- Affects `ascii-rpg/src/runtime/game-layer-babylon-lite/data/quest_data.json`
+- Affects `ascii-rpg/src/client/game-layer-babylon-lite/data/quest_data.json`
   and the quest manager's event-facing contract.
 - Affects quest-focused Node tests, the Gameplay Settings quest catalog, and
   the existing quest HUD/toast contract through the already-supported snapshot
@@ -53,5 +53,5 @@ realm, pickup, and door event boundaries.
   continue publishing generic events with stable event types; it does not
   change their ownership or visual behavior.
 - No new dependency, persistence model, or public API is expected. Quest
-  progress remains runtime-only, while the existing Default Quest selection
+  progress remains client-only, while the existing Default Quest selection
   remains persisted.

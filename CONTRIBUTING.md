@@ -17,7 +17,7 @@ verification evidence consistent with one another.
 
 - Keep changes scoped to the stated outcome.
 - Run the relevant automated checks and record manual verification when needed.
-- Verify browser-visible changes in a real browser or runtime.
+- Verify browser-visible changes in a real browser or client.
 - Update README commands, screenshots, and release instructions only from
   verified project behavior.
 - Do not commit generated output, local configuration, credentials, recovery

@@ -51,17 +51,17 @@ An in-memory reset controller was rejected because it would need to reconstruct 
 
 ### Keep Trap data and effect text aligned
 
-The JSON catalog will define `amount: -25` and the exact `Player lost -25 Health from Trap` log. The runtime trap effect will use the same consequence and text, with focused tests checking both declarative data and live behavior until the catalog consequence is fully centralized.
+The JSON catalog will define `amount: -25` and the exact `Player lost -25 Health from Trap` log. The client trap effect will use the same consequence and text, with focused tests checking both declarative data and live behavior until the catalog consequence is fully centralized.
 
 ## Risks / Trade-offs
 
 - [Risk] A death transition during a movement step could otherwise advance time or dispatch movement events after the lethal collision. -> [Mitigation] Check the dead state immediately after object collision and return before time advancement, movement events, discovery, or scheduled rendering.
 - [Risk] StrictMode or repeated bridge subscriptions could show stale death UI. -> [Mitigation] Use the existing `useSyncExternalStore` pattern and make the death transition idempotent.
-- [Risk] Existing dirty work may overlap the same runtime files. -> [Mitigation] Inspect the current diff before each edit and stage only lifecycle-attributable files during implementation.
+- [Risk] Existing dirty work may overlap the same client files. -> [Mitigation] Inspect the current diff before each edit and stage only lifecycle-attributable files during implementation.
 
 ## Migration Plan
 
-1. Update the trap catalog/runtime consequence and add the lifecycle bridge/controller subscription.
+1. Update the trap catalog/client consequence and add the lifecycle bridge/controller subscription.
 2. Add game-layer death gating and React death-window rendering with exact copy.
 3. Run focused Node tests, the full repository test command, build, diff checks, and OpenSpec validation.
 4. Verify the running browser session reaches the prompt, blocks gameplay, and reloads to a fresh run.

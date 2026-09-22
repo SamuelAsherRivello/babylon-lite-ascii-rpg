@@ -2,7 +2,7 @@
 
 ## Context
 
-See `proposal.md` for motivation and behavior scope. The verified runtime has
+See `proposal.md` for motivation and behavior scope. The verified client has
 React in `ui-layer-react`, a narrow `bridge-layer`, and Babylon Lite in
 `game-layer-babylon-lite`. The current player-grid module calculates viewport
 dimensions and a player-centered origin, while `visible-region.js` clamps a
@@ -18,14 +18,14 @@ zoom state, and the existing zoom contract describes a non-following viewport.
   for camera geometry, movement, world state, and rendering.
 - Centralize camera-mode calculations so movement, resize, zoom, and rendering
   use the same origin and wrap decisions.
-- Cover the three modes with deterministic Node tests that mirror the runtime
+- Cover the three modes with deterministic Node tests that mirror the client
   layer boundaries.
 
 **Non-Goals:**
 
 - Adding mouse/drag camera panning or free-look controls.
 - Changing world generation dimensions, terrain generation, or palette behavior.
-- Adding a new runtime dependency or replacing Babylon Lite's renderer.
+- Adding a new client dependency or replacing Babylon Lite's renderer.
 
 ## Decisions
 

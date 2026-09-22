@@ -20,7 +20,7 @@ See `proposal.md` for the user-visible problem. The game view submits palette co
 ## Decisions
 
 - **Use the existing authoritative light field.** The mini-map already obtains a region-specific light field, so its per-cell factor is the correct input and avoids duplicating lighting calculations.
-- **Modulate before minimap raster caching.** Convert the active palette color to the runtime RGBA representation, apply the cell factor, and include the resulting color in the minimap glyph-canvas cache key. This prevents a cached bright color from being reused after lighting changes.
+- **Modulate before minimap raster caching.** Convert the active palette color to the client RGBA representation, apply the cell factor, and include the resulting color in the minimap glyph-canvas cache key. This prevents a cached bright color from being reused after lighting changes.
 - **Keep the GPU overlay additive and unchanged in role.** The overlay remains a visual cue using the same samples as the game view; the base glyph must no longer depend on it for ordinary illumination.
 - **Share a small color-resolution helper if needed.** If game and minimap conversion/modulation logic would otherwise diverge, centralize only that pure color operation without merging their separate render targets or caches.
 

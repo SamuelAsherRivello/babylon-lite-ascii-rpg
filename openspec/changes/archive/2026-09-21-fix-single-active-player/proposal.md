@@ -38,12 +38,12 @@ None.
 
 ## Impact
 
-- `ascii-rpg/src/runtime/game-layer-babylon-lite/index.js` realm activation
+- `ascii-rpg/src/client/game-layer-babylon-lite/index.js` realm activation
   and player-marker handling.
-- `ascii-rpg/src/runtime/game-layer-babylon-lite/systems/world-system.js` or a
+- `ascii-rpg/src/client/game-layer-babylon-lite/systems/world-system.js` or a
   focused helper for normalizing player overlays, if needed by the verified
   implementation.
 - Mirrored Node tests under
-  `ascii-rpg/test/runtime/game-layer-babylon-lite/` for world/realm state and
+  `ascii-rpg/test/client/game-layer-babylon-lite/` for world/realm state and
   rendering behavior.
 - No new dependency, bridge API, React UI change, or persistence migration.

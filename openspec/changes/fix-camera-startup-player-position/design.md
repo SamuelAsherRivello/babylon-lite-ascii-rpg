@@ -3,7 +3,7 @@
 ## Context
 
 The existing player-grid module already separates camera-origin calculation
-from world-cell movement. The runtime currently has both startup origin
+from world-cell movement. The client currently has both startup origin
 resolution and ordinary mode-specific origin resolution, but startup behavior
 can be affected by the ordering of bridge application, viewport setup, and the
 first world render. See proposal.md and the camera-modes delta for the

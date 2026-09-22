@@ -29,7 +29,7 @@ The current React settings layer stores an integer zoom from 1–10, while the B
 
 4. **Retain world bounds.** The existing 512×512 world remains the source of truth. At displayed zoom 1, the camera clamps to valid rows and columns and the renderer culls outside cells. World-size expansion is only justified by visual evidence of insufficient content or boundary artifacts, not by the zoom remap itself.
 
-5. **Validate performance at the new far view.** The farthest view can expose roughly 100 times the visible area of current zoom 1. Focused tests and runtime diagnostics must measure visible-cell count, glyph-cache growth, lighting work, and cached zoom rerender time before any implementation is considered complete.
+5. **Validate performance at the new far view.** The farthest view can expose roughly 100 times the visible area of current zoom 1. Focused tests and client diagnostics must measure visible-cell count, glyph-cache growth, lighting work, and cached zoom rerender time before any implementation is considered complete.
 
 ## Risks / Trade-offs
 

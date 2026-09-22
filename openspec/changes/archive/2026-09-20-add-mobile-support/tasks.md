@@ -21,7 +21,7 @@
   remain correct.
 - [x] 2.3 Cancel and clean up touch state on pointer release, cancellation,
   capture loss, resize/orientation changes, page hide, and game disposal; verify
-  focused runtime tests cover each stop path and UI controls cannot start a
+  focused client tests cover each stop path and UI controls cannot start a
   movement gesture.
 
 ## 3. Validation

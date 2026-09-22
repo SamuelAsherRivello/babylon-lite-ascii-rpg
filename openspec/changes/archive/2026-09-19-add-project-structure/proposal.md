@@ -2,7 +2,7 @@
 
 ## Why
 
-The current `ascii-rpg` source tree mixes React UI, Babylon Lite runtime code,
+The current `ascii-rpg` source tree mixes React UI, Babylon Lite client code,
 and their communication boundary at one level, which makes ownership and the
 expected location for new files unclear. A layer-oriented structure will make
 the existing architecture visible in the filesystem and give contributors and
@@ -13,12 +13,12 @@ has an obvious corresponding test location.
 
 ## What Changes
 
-- Organize runtime code under `ascii-rpg/src/runtime/` with three sibling
+- Organize client code under `ascii-rpg/src/client/` with three sibling
   layers: `ui-layer-react/`, `bridge-layer/`, and
   `game-layer-babylon-lite/`.
 - Keep React-specific components and `.jsx` templates in
   `ui-layer-react/`.
-- Keep Babylon Lite runtime code in `.js` modules, with systems named using
+- Keep Babylon Lite client code in `.js` modules, with systems named using
   the `*-system.js` convention, including `input-system.js`,
   `rendering-system.js`, `time-system.js`, and `world-system.js`.
 - Organize game characters under
@@ -35,7 +35,7 @@ has an obvious corresponding test location.
   `palette_data.json`.
 - Restructure `ascii-rpg/test/` to mirror the relevant `src/` paths and layer
   boundaries.
-- Preserve the existing React-to-Babylon Lite ownership boundary and runtime
+- Preserve the existing React-to-Babylon Lite ownership boundary and client
   behavior while relocating files.
 
 ## Capabilities
@@ -56,7 +56,7 @@ None.
   `ascii-rpg/test/`.
 - Imports, Vite entry points, test paths, and any OpenSpec skill checks that
   refer to the current file locations will need updating.
-- No new runtime dependency is expected; the existing React, React DOM,
+- No new client dependency is expected; the existing React, React DOM,
   `react-colorful`, Vite, and `@babylonjs/lite` dependencies remain in use.
 - The browser-visible UI/game behavior and the narrow bridge contract should
   remain unchanged.

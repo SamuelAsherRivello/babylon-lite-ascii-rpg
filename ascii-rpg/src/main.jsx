@@ -1,12 +1,12 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { App } from "./runtime/ui-layer-react/App.jsx";
-import { startGameLayer } from "./runtime/game-layer-babylon-lite/index.js";
-import { getCameraModeSnapshot, getCombatStatsSnapshot, getExperienceSnapshot, getGoldSnapshot, getHealthSnapshot, getLogSnapshot, getPlayerDeadSnapshot, getQuestSnapshot, getRealmDiscoverySnapshot, getRealmSnapshot, getStaminaSnapshot, sendCombatStatsSnapshot, sendExperienceSnapshot, sendFontSnapshot, sendGoldSnapshot, sendHealthSnapshot, sendLogSnapshot, sendMinimapZoomSnapshot, sendPaletteSnapshot, sendPlayerDeadSnapshot, sendQuestEvent, sendQuestSnapshot, sendRandomSeedSnapshot, sendRealmDiscoverySnapshot, sendRealmSnapshot, sendStaminaSnapshot, sendTimeSnapshot, setGameController } from "./runtime/bridge-layer/game-bridge.js";
-import { fontReady, getFontId, subscribeToFont } from "./runtime/ui-layer-react/font-store.js";
-import { getPalette, paletteReady, subscribeToPalette } from "./runtime/ui-layer-react/palette-store.js";
-import { initializeHudHiddenDataset } from "./runtime/ui-layer-react/platform-settings.js";
-import "./runtime/ui-layer-react/styles.css";
+import { App } from "./client/ui-layer-react/App.jsx";
+import { startGameLayer } from "./client/game-layer-babylon-lite/index.js";
+import { getCameraModeSnapshot, getCombatStatsSnapshot, getExperienceSnapshot, getGoldSnapshot, getHealthSnapshot, getLogSnapshot, getPlayerDeadSnapshot, getQuestSnapshot, getRealmDiscoverySnapshot, getRealmSnapshot, getStaminaSnapshot, sendCombatStatsSnapshot, sendExperienceSnapshot, sendFontSnapshot, sendGoldSnapshot, sendHealthSnapshot, sendLogSnapshot, sendMinimapZoomSnapshot, sendPaletteSnapshot, sendPlayerDeadSnapshot, sendQuestEvent, sendQuestSnapshot, sendRandomSeedSnapshot, sendRealmDiscoverySnapshot, sendRealmSnapshot, sendStaminaSnapshot, sendTimeSnapshot, setGameController } from "./client/bridge-layer/game-bridge.js";
+import { fontReady, getFontId, subscribeToFont } from "./client/ui-layer-react/font-store.js";
+import { getPalette, paletteReady, subscribeToPalette } from "./client/ui-layer-react/palette-store.js";
+import { initializeHudHiddenDataset } from "./client/ui-layer-react/platform-settings.js";
+import "./client/ui-layer-react/styles.css";
 
 const gameLayer = document.getElementById("game_layer");
 initializeHudHiddenDataset();

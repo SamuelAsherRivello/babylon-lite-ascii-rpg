@@ -8,7 +8,7 @@
 
 ## 2. Realm transfer integration
 
-- [x] 2.1 Integrate the transition primitive into the Babylon game controller so stair-cell and Settings-triggered realm transfers clear movement state, lock all movement input, and do not start a second transfer while active; verify with focused controller/input tests or the closest existing runtime test seam.
+- [x] 2.1 Integrate the transition primitive into the Babylon game controller so stair-cell and Settings-triggered realm transfers clear movement state, lock all movement input, and do not start a second transfer while active; verify with focused controller/input tests or the closest existing client test seam.
 - [x] 2.2 Move the existing realm swap and paired-stair arrival work to the covered/midpoint event, preserving fog discovery, lighting, camera resolution, realm listeners, and stored active-realm updates; verify the realm changes only while covered and arrives on the paired coordinate.
 - [x] 2.3 Resume input only after the opening phase completes and verify keyboard, pointer, swipe, and held-repeat input can move the destination realm afterward.
 - [x] 2.4 Preserve the narrow bridge and UI ownership boundary, adding or updating tests so realm status still reaches React while the HUD/settings UI remains visible above the game-layer mask.
@@ -16,6 +16,6 @@
 ## 3. Verification and delivery
 
 - [x] 3.1 Run the repository Node test suite with `npm.cmd test` and resolve any focused transition, world-realm, bridge, or architecture regressions.
-- [x] 3.2 Run `npm.cmd run build` and verify the production bundle includes the transition integration without a new runtime dependency.
+- [x] 3.2 Run `npm.cmd run build` and verify the production bundle includes the transition integration without a new client dependency.
 - [ ] 3.3 Perform manual browser verification on the actual playable project-root URL: enter `S` in both realm directions, observe the feathered 500ms-in/500ms-out black iris with a 100ms covered hold centered on the player, confirm the realm graphics swap at full black coverage, confirm UI remains visible, and confirm input is paused during the animation.
 - [x] 3.4 Verify player-centered iris positioning across all 3 camera modes and all 10 zoom levels, including a camera mode where the player is not at the viewport center.

@@ -11,7 +11,7 @@ continuous profiling overhead or making the HUD noisy for normal play.
 
 ## What Changes
 
-- Add an opt-in performance-monitoring service owned by the game/runtime boundary
+- Add an opt-in performance-monitoring service owned by the game/client boundary
   that can start, stop, clear, and snapshot bounded measurement sessions.
 - Measure FPS and frame-time distributions for explicit scenarios: idle,
   movement in one direction, and sprint movement in one direction. Reports SHALL
@@ -38,7 +38,7 @@ continuous profiling overhead or making the HUD noisy for normal play.
 
 ### New Capabilities
 
-- `performance-monitoring`: Opt-in, repeatable runtime performance sessions and
+- `performance-monitoring`: Opt-in, repeatable client performance sessions and
   reports for frame rate, startup readiness, and separated game/minimap render
   timings.
 
@@ -50,10 +50,10 @@ requirements.
 
 ## Impact
 
-- Affected runtime areas: `ascii-rpg/src/runtime/game-layer-babylon-lite/`, the
+- Affected client areas: `ascii-rpg/src/client/game-layer-babylon-lite/`, the
   bridge used for developer diagnostics, and the React developer-facing surface
   or console/report presentation.
-- Affected test areas: runtime unit tests for session aggregation and lifecycle,
+- Affected test areas: client unit tests for session aggregation and lifecycle,
   source/integration checks for instrumentation boundaries, and manual browser
   verification of the three movement scenarios plus startup readiness.
 - No new production dependency is expected; use the existing high-resolution

@@ -28,7 +28,7 @@ See `proposal.md` and the `glyph-background-layout` delta for the user-visible b
 
 2. **Use integer normalization for the slider.** Values are clamped to `0..100`, stored as decimal strings, and mapped with `backgroundChannel = glyphChannel * (1 - darkness / 100)`. Invalid stored values fall back to `50` and are repaired in storage.
 
-3. **Use a runtime composite visual rather than two independently lit sprites.** The composite path will create a grid-sized opaque background and the glyph from the same palette color, then expose the combined cell visual to the existing sprite submission. This is preferred over a second background layer because the requirement applies lighting once after compositing; it also ensures the glyph/background relationship remains stable under lighting.
+3. **Use a client composite visual rather than two independently lit sprites.** The composite path will create a grid-sized opaque background and the glyph from the same palette color, then expose the combined cell visual to the existing sprite submission. This is preferred over a second background layer because the requirement applies lighting once after compositing; it also ensures the glyph/background relationship remains stable under lighting.
 
 4. **Keep reusable glyph shape data separate from color and layout state.** The existing zoom/font glyph cache remains responsible for bounded glyph shape reuse. A color/layout-aware composite cache or raster composition step may reuse those shapes, but palette color, darkness, and the enabled flag remain render-time inputs and must not create unbounded cache growth.
 

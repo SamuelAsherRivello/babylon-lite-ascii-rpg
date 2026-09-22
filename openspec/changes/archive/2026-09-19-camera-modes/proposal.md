@@ -43,7 +43,7 @@ bounded following, or edge-wrapping movement.
 
 ## Impact
 
-- React UI: the Settings section in `ascii-rpg/src/runtime/ui-layer-react/App.jsx`
+- React UI: the Settings section in `ascii-rpg/src/client/ui-layer-react/App.jsx`
   and its local preference handling.
 - Bridge: a narrow camera-mode command/snapshot between React and Babylon Lite.
 - Babylon Lite: player-grid movement, viewport-origin calculation, visible-region

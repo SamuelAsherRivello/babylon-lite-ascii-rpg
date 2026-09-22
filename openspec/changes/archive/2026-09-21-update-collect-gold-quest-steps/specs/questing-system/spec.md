@@ -206,10 +206,10 @@ final gold pickup.
 - **WHEN** the third gold pickup completes the quest
 - **THEN** the HUD SHALL keep both steps visible and apply completed styling to the quest steps
 
-### Requirement: Runtime-only quest reset
+### Requirement: Client-only quest reset
 
 The quest state, generated pickups, collected-pickup state, and pickup effects
-SHALL be runtime-only for this release. A browser refresh SHALL create a new
+SHALL be client-only for this release. A browser refresh SHALL create a new
 game instance with a fresh two-step Collect Gold quest. The initial realm SHALL
 determine whether the first step is already complete, and quest gold SHALL be
 generated only after the Overground prerequisite is satisfied.
@@ -227,9 +227,9 @@ generated only after the Overground prerequisite is satisfied.
 #### Scenario: Browser refresh starts a new quest and object set
 
 - **WHEN** the player refreshes the browser after collecting gold
-- **THEN** the new game instance SHALL begin with a fresh two-step Collect Gold quest and runtime-generated pickups appropriate to its initial realm
+- **THEN** the new game instance SHALL begin with a fresh two-step Collect Gold quest and client-generated pickups appropriate to its initial realm
 
 #### Scenario: Browser refresh starts a new quest
 
 - **WHEN** the player refreshes the browser after collecting gold
-- **THEN** the new game instance SHALL begin with a fresh two-step Collect Gold quest and runtime-generated pickups appropriate to its initial realm
+- **THEN** the new game instance SHALL begin with a fresh two-step Collect Gold quest and client-generated pickups appropriate to its initial realm

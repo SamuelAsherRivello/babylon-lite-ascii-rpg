@@ -4,7 +4,7 @@
 
 Provides a deterministic, local-only way for contributors to inspect this
 repository's OpenSpec specifications, active changes, and task progress in a
-browser dashboard without invoking an AI service or changing game runtime behavior.
+browser dashboard without invoking an AI service or changing game client behavior.
 
 ## Requirements
 
@@ -32,7 +32,7 @@ uncontrolled system browser from the launcher.
 The dashboard support SHALL expose OpenSpec specs, active changes, artifact
 status, and task progress as local read-only visibility by default. Launching
 the dashboard SHALL NOT call an AI service, install packages, modify game
-runtime files, or execute workflow actions such as Apply or Archive without an
+client files, or execute workflow actions such as Apply or Archive without an
 explicit user action.
 
 #### Scenario: Inspect current project status

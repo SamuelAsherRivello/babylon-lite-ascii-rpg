@@ -39,7 +39,7 @@ path. See `proposal.md` for motivation and the delta specs for behavior.
   viewport-filling. This changes available canvas geometry, so the existing
   Babylon resize observer remains authoritative instead of adding synthetic
   dimensions to game logic.
-- Extend existing Node source/runtime checks and avoid Playwright, consistent
+- Extend existing Node source/client checks and avoid Playwright, consistent
   with repository policy. Update `AGENTS.md` to make this control the required
   agent workflow for mobile-friendly visual testing.
 
