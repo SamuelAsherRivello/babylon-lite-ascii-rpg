@@ -78,16 +78,6 @@
   z-index: 1;
 }
 
-#temporary_red_overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 2147483647;
-  box-sizing: border-box;
-  border: 1px solid red;
-  pointer-events: none;
-  transform: translateZ(0);
-}
-
 html[data-mapview-open="true"] #game_layer {
   z-index: 8;
 }
@@ -194,15 +184,6 @@ html[data-presentation-aspect="portrait"] #game_layer {
   transform: translate(-50%, -50%);
 }
 
-html[data-presentation-aspect="portrait"] #temporary_red_overlay {
-  inset: auto;
-  top: 50%;
-  left: 50%;
-  width: var(--presentation-frame-width);
-  height: var(--presentation-frame-height);
-  transform: translate(-50%, -50%);
-}
-
 html[data-presentation-aspect="portrait"] #ui_layer {
   inset: auto;
   top: 50%;
@@ -217,13 +198,6 @@ html[data-presentation-aspect="portrait"] #ui_layer {
 
 @media (pointer: coarse) {
   html[data-presentation-aspect="portrait"] #game_layer {
-    inset: 0;
-    width: 100vw;
-    height: 100vh;
-    transform: none;
-  }
-
-  html[data-presentation-aspect="portrait"] #temporary_red_overlay {
     inset: 0;
     width: 100vw;
     height: 100vh;
