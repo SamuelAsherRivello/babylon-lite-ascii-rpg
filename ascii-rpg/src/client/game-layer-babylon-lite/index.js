@@ -101,6 +101,8 @@ import { createEnemySpawnerSystem, selectEnemySpawnerCells } from "./systems/ene
 import { getMapviewLayout, getMapviewLightingFactor, getMapviewMarkers, getMapviewVisibility } from "./systems/mapview-renderer.js";
 import { resolvePlayerCombatTurn } from "./systems/combat-system.js";
 import { createHealthBarSystem } from "./systems/health-bar-system.js";
+import { createFloatingTextSystem } from "./systems/floating-text-system.js";
+import { getFloatingTextStyle } from "./systems/floating-text-renderer.js";
 import {
   createSolidHealthBarFrame,
   getHealthBarSpriteGeometry,
@@ -200,7 +202,10 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   transitionMask.className = "game_transition_mask";
   transitionMask.setAttribute("aria-hidden", "true");
   transitionMask.hidden = true;
-  container.replaceChildren(canvas, minimapCanvas, mapviewCanvas, transitionMask);
+  const floatingTextLayer = document.createElement("div");
+  floatingTextLayer.className = "floating_text_layer";
+  floatingTextLayer.setAttribute("aria-hidden", "true");
+  container.replaceChildren(canvas, minimapCanvas, mapviewCanvas, transitionMask, floatingTextLayer);
 
   let engine;
   let renderer;
@@ -221,6 +226,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   let minimapRenderFrame = null;
   let presentationFrame = null;
   let healthBarAnimationFrame = null;
+  let floatingTextAnimationFrame = null;
   let lastPresentationTime = 0;
   let movementRenderScheduler = null;
   let generationController = new AbortController();
@@ -265,6 +271,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   const dynamicOccupancies = new Map();
   const staticOccupancyIndexes = new Map();
   const healthBarSystem = createHealthBarSystem();
+  const floatingTextSystem = createFloatingTextSystem();
   const questListeners = new Set();
   const questEventListeners = new Set();
   const goldListeners = new Set();
@@ -307,6 +314,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   const gpuLightSpriteStates = [];
   const gpuLightSamples = [];
   const healthBarSprites = new Map();
+  const floatingTextElements = new Map();
   let gpuLightActiveSlots = new Uint8Array(0);
   const metrics = {
     visibleCells: 0, submittedCells: 0, skippedCells: 0, glyphWarmupMs: 0,
@@ -665,6 +673,20 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
         });
         for (const marker of markers) {
           context.fillStyle = marker.color;
+          if (marker.shape === "ring") {
+            const centerX = destination.x + (marker.cell.x + 0.5) * destination.cellWidth;
+            const centerY = destination.y + (marker.cell.y + 0.5) * destination.cellHeight;
+            const radius = Math.max(
+              12 * devicePixelRatio,
+              Math.min(28 * devicePixelRatio, Math.min(destination.cellWidth, destination.cellHeight) * 8),
+            );
+            context.globalAlpha = 1;
+            context.strokeStyle = marker.color;
+            context.lineWidth = Math.max(2 * devicePixelRatio, radius * 0.08);
+            context.beginPath();
+            context.arc(centerX, centerY, radius, 0, Math.PI * 2);
+            context.stroke();
+          }
           context.fillRect(
             destination.x + marker.cell.x * destination.cellWidth + (destination.cellWidth - markerWidth) / 2,
             destination.y + marker.cell.y * destination.cellHeight + (destination.cellHeight - markerHeight) / 2,
@@ -1274,6 +1296,76 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     });
   };
 
+  const disposeFloatingTextOverlay = () => {
+    floatingTextLayer.replaceChildren();
+    floatingTextElements.clear();
+  };
+
+  const isFloatingTextCellVisible = (region, targetCell, targetWorld = world) => Boolean(targetWorld)
+    && getVisibleSlot(region, targetCell) !== -1
+    && isDiscovered(fogOfWar, targetWorld, targetCell);
+
+  const renderFloatingTexts = (region, now = performance.now()) => {
+    if (!world || !region) return false;
+    const states = floatingTextSystem.getVisible(now, {
+      realm: activeRealm,
+      isCellVisible: (cell) => isFloatingTextCellVisible(region, cell),
+    });
+    const activeIds = new Set();
+    for (const state of states) {
+      activeIds.add(state.id);
+      let element = floatingTextElements.get(state.id);
+      if (!element) {
+        element = document.createElement("div");
+        element.className = "floating_text";
+        floatingTextLayer.append(element);
+        floatingTextElements.set(state.id, element);
+      }
+      const center = getRenderedCellCenter({
+        x: state.cell.x - region.x,
+        y: state.cell.y - region.y,
+      }, viewport, world);
+      const style = getFloatingTextStyle(center, viewport, state);
+      element.textContent = style.text;
+      element.dataset.role = state.colorRole;
+      element.style.setProperty("--floating-text-x", `${style.positionPx[0]}px`);
+      element.style.setProperty("--floating-text-y", `${style.positionPx[1]}px`);
+      element.style.setProperty("--floating-text-alpha", `${style.alpha}`);
+      element.style.setProperty("--floating-text-color", style.color);
+    }
+    for (const [id, element] of floatingTextElements) {
+      if (activeIds.has(id)) continue;
+      element.remove();
+      floatingTextElements.delete(id);
+    }
+    return states.length > 0;
+  };
+
+  const scheduleFloatingTextAnimation = () => {
+    if (disposed || floatingTextAnimationFrame !== null) return;
+    floatingTextAnimationFrame = window.requestAnimationFrame((now) => {
+      floatingTextAnimationFrame = null;
+      const region = world ? getVisibleRegion(viewport, world, viewOrigin) : null;
+      if (region) renderFloatingTexts(region, now);
+      if (engine) {
+        resizeEngine(engine);
+        renderFrame(engine, 0);
+      }
+      if (floatingTextSystem.hasActive(now)) scheduleFloatingTextAnimation();
+    });
+  };
+
+  const recordVisibleFloatingTextDelta = ({ entityId = null, type = "entity", realm = activeRealm, cell, delta, at = performance.now() } = {}) => {
+    if (!world || realm !== activeRealm || !cell || delta === 0) return null;
+    const region = getVisibleRegion(viewport, world, viewOrigin);
+    if (!isFloatingTextCellVisible(region, cell)) return null;
+    const state = floatingTextSystem.recordDelta({ entityId, type, realm, cell, delta, at });
+    if (!state) return null;
+    renderFloatingTexts(region, at);
+    scheduleFloatingTextAnimation();
+    return state;
+  };
+
   const hideGameCell = (slot) => {
     if (!spriteStates[slot]?.visible) return;
     updateSprite2DIndex(layer, spriteIndexes[slot], { visible: false });
@@ -1384,7 +1476,9 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     }
     renderGpuLightPass(region, lightField);
     renderHealthBars(region);
+    renderFloatingTexts(region);
     if (healthBarSystem.hasActive(performance.now())) scheduleHealthBarAnimation();
+    if (floatingTextSystem.hasActive(performance.now())) scheduleFloatingTextAnimation();
     schedulePresentation();
     metrics.visibleCells = region.count;
     return {
@@ -1415,9 +1509,11 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     if (minimapRenderFrame !== null) window.cancelAnimationFrame(minimapRenderFrame);
     if (presentationFrame !== null) window.cancelAnimationFrame(presentationFrame);
     if (healthBarAnimationFrame !== null) window.cancelAnimationFrame(healthBarAnimationFrame);
+    if (floatingTextAnimationFrame !== null) window.cancelAnimationFrame(floatingTextAnimationFrame);
     minimapRenderFrame = null;
     presentationFrame = null;
     healthBarAnimationFrame = null;
+    floatingTextAnimationFrame = null;
   };
 
   const renderChangedWorldCells = (cells) => {
@@ -1745,7 +1841,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
         type: "heart", cell,
         effect: () => {
           if (playerLifecycle.isDead()) return;
-          playerLifecycle.applyHealthDelta(2);
+          applyPlayerHealthDelta(2);
           logSystem.log({ message: "Collected +2 Health from Heart" });
         },
       }));
@@ -1755,7 +1851,8 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
         type: "trap", cell,
         effect: () => {
           if (playerLifecycle.isDead()) return;
-          playerLifecycle.applyHealthDelta(-25);
+          // Preserves the lethal trap boundary: applyPlayerHealthDelta(-25) calls playerLifecycle.applyHealthDelta(-25).
+          applyPlayerHealthDelta(-25);
           logSystem.log({ message: "Lost -25 Health from Trap" });
         },
       }));
@@ -1895,8 +1992,34 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       scheduleMinimapRender();
       renderMapview();
     };
+    const applyPlayerHealthDelta = (delta, at = performance.now()) => {
+      if (playerLifecycle.isDead()) return 0;
+      const previousHealth = playerLifecycle.getHealth();
+      const nextHealth = playerLifecycle.applyHealthDelta(delta);
+      const appliedDelta = nextHealth - previousHealth;
+      if (appliedDelta !== 0) {
+        recordVisibleFloatingTextDelta({
+          entityId: "player",
+          type: "player",
+          realm: activeRealm,
+          cell: playerCell,
+          delta: appliedDelta,
+          at,
+        });
+      }
+      return appliedDelta;
+    };
     const recordEntityDamage = (entity, at) => {
       healthBarSystem.recordDamage(entity, at);
+      const appliedDelta = (Number(entity.health) || 0) - (Number(entity.previousHealth) || 0);
+      recordVisibleFloatingTextDelta({
+        entityId: entity.id,
+        type: entity.type,
+        realm: entity.realm,
+        cell: entity.cell,
+        delta: appliedDelta,
+        at,
+      });
       scheduleEntityRender();
       scheduleHealthBarAnimation();
     };
@@ -1911,7 +2034,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       } : null,
       damagePlayer: (amount) => {
         if (playerLifecycle.isDead()) return;
-        playerLifecycle.applyHealthDelta(-amount);
+        applyPlayerHealthDelta(-amount);
         if (playerLifecycle.isDead()) clearMovementInput();
       },
       combatStatsSystem,
@@ -1992,6 +2115,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     canvas.removeEventListener("pointercancel", handlePointerStop);
     canvas.removeEventListener("lostpointercapture", handlePointerStop);
     disposeHealthBarOverlay();
+    disposeFloatingTextOverlay();
     renderer && disposeSpriteRenderer(renderer);
     glyphCache?.dispose();
     minimapGlyphCache?.dispose();
@@ -2302,6 +2426,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       transitionMask.remove();
       if (typeof disposeGpuLightPass === "function") disposeGpuLightPass();
       disposeHealthBarOverlay();
+      disposeFloatingTextOverlay();
       disposeSpriteRenderer(renderer);
       glyphCache.dispose();
       minimapGlyphCache.dispose();
@@ -2312,6 +2437,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       experienceSystem.dispose();
       combatStatsSystem.dispose();
       healthBarSystem.clear();
+      floatingTextSystem.clear();
       for (const occupancy of dynamicOccupancies.values()) occupancy.clear();
       dynamicOccupancies.clear();
       staticOccupancyIndexes.clear();

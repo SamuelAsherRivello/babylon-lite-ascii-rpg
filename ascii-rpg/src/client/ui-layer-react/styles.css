@@ -5,6 +5,7 @@
 @import "./hud.css";
 @import "./windows.css";
 @import "./toasts.css";
+@import "./floating-text.css";
 
 html,
 body {

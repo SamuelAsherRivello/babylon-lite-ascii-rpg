@@ -1,0 +1,31 @@
+/* Floating text styles: game-layer-owned health delta overlay presentation. */
+
+.floating_text_layer {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.floating_text {
+  position: absolute;
+  left: var(--floating-text-x);
+  top: var(--floating-text-y);
+  transform: translate(-50%, -100%);
+  opacity: var(--floating-text-alpha, 1);
+  color: var(--floating-text-color, #ff3347);
+  font-family: ui-monospace, "Cascadia Mono", "Consolas", monospace;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+  text-shadow: 0 1px 2px #000, 0 0 4px #000;
+  white-space: nowrap;
+  user-select: none;
+  will-change: left, top, opacity;
+}
+
+.floating_text[data-role="healing"] {
+  color: var(--floating-text-color, #46f078);
+}
