@@ -54,19 +54,9 @@ commands from the repository root:
 2. Push to `main` to run the GitHub Pages deployment workflow.
 3. Verify the deployed Pages URL after the workflow completes.
 
-## Project Details
+## Workflows
 
-<!-- AI: Update these project details when the template is used. -->
-Ascii RPG uses React for the UI and Vite for local development and production
-builds. The application targets modern desktop and mobile browsers.
-
-### 📦 AI
-
-- `AGENTS.md` contains repository-specific AI agent guidance.
-- [openspec](openspec/) contains the repository's specification workflow
-  configuration.
-
-#### OpenSpec
+### 📦 ApenSpec
 
 | # | Name | Command | Comment |
 | --- | --- | --- | --- |
@@ -79,6 +69,18 @@ builds. The application targets modern desktop and mobile browsers.
 | 5 | Sync | `$openspec-sync-specs` | Updates main specs without archiving. |
 | 6 | Archive | `$openspec-archive-change` | Finalizes and archives a change. |
 | -  | (Git Synchronize)  | - | Share progress |
+
+## Project Details
+
+<!-- AI: Update these project details when the template is used. -->
+Ascii RPG uses React for the UI and Vite for local development and production
+builds. The application targets modern desktop and mobile browsers.
+
+### 📦 AI
+
+- `AGENTS.md` contains repository-specific AI agent guidance.
+- [openspec](openspec/) contains the repository's specification workflow
+  configuration.
 
 ### 📦 Packages
 
