@@ -135,7 +135,7 @@ open doors SHALL be walkable.
 #### Scenario: Player occupies a walkable terrain cell
 - **WHEN** the player is placed at a valid start cell
 - **THEN** that cell SHALL retain its walkable terrain in the terrain layer and
-  contain `P` in the character layer
+  contain `🤺` in the character layer
 
 #### Scenario: Water retains terrain identity under a character
 - **WHEN** a character occupies a shallow-water cell
@@ -171,6 +171,22 @@ position, the player glyph SHALL remain the visible character.
 - **WHEN** a cell has terrain `W`, `•`, `~`, `≈`, or `▓` and no character
 - **THEN** the rendered cell SHALL show the terrain glyph with its configured
   style
+
+### Requirement: Player facing glyph presentation
+
+The player SHALL render as the palette-driven `🤺` glyph. Because the default `🤺` artwork faces left, the renderer SHALL use the unflipped glyph for left-facing presentation and a horizontally mirrored presentation for right-facing presentation. The player SHALL default to left-facing presentation, update facing only after successful left or right travel, and preserve the last horizontal facing direction during vertical travel, blocked movement, combat-only movement attempts, and realm transitions.
+
+#### Scenario: Player starts left-facing
+- **WHEN** a new game starts and the player has not traveled horizontally
+- **THEN** the player SHALL render as the left-facing `🤺`
+
+#### Scenario: Horizontal travel updates player facing
+- **WHEN** the player successfully travels left or right
+- **THEN** the rendered `🤺` presentation SHALL face that horizontal travel direction
+
+#### Scenario: Vertical travel preserves player facing
+- **WHEN** the player travels up or down after a previous left or right move
+- **THEN** the rendered `🤺` presentation SHALL keep the last horizontal travel direction
 
 ### Requirement: Sparse organic nested water generation
 

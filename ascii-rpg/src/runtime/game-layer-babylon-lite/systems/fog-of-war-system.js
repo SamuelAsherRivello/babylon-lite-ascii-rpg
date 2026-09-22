@@ -31,10 +31,12 @@ export function createFogOfWar(world) {
   const minimapColumns = Math.ceil(world.columns / MINIMAP_WORLD_SCALE);
   const minimapRows = Math.ceil(world.rows / MINIMAP_WORLD_SCALE);
   const walkableCounts = new Uint16Array(minimapColumns * minimapRows);
+  let walkableCellCount = 0;
   for (let y = 0; y < world.rows; y += 1) {
     for (let x = 0; x < world.columns; x += 1) {
       const cell = { x, y };
       if (!isWalkable(world, cell)) continue;
+      walkableCellCount += 1;
       walkableCounts[getMinimapIndex(getMinimapCell(cell), minimapColumns)] += 1;
     }
   }
@@ -44,6 +46,8 @@ export function createFogOfWar(world) {
     discovered: visibility,
     visibilityTotals: new Uint32Array(minimapColumns * minimapRows),
     walkableCounts,
+    walkableCellCount,
+    discoveredWalkableCount: 0,
     minimapColumns,
     minimapRows,
     fogUnclearRadius: Number.isFinite(world.fogUnclearRadius) ? world.fogUnclearRadius : fogUnclearRadius,
@@ -91,6 +95,7 @@ function markVisibility(fog, world, cell, candidateVisibility) {
   if (isWalkable(world, cell)) {
     const minimapIndex = getMinimapIndex(getMinimapCell(cell), fog.minimapColumns);
     fog.visibilityTotals[minimapIndex] += nextVisibility - previousVisibility;
+    if (previousVisibility === 0 && nextVisibility > 0) fog.discoveredWalkableCount += 1;
   }
   return true;
 }
@@ -175,4 +180,13 @@ export function getMinimapCoverage(fog, minimapCell) {
   const index = getMinimapIndex(minimapCell, fog.minimapColumns);
   const walkable = fog.walkableCounts[index];
   return walkable === 0 ? 0 : fog.visibilityTotals[index] / (walkable * 100);
+}
+
+export function getRealmDiscoveryPercent(fog) {
+  if (!fog || !Number.isFinite(fog.walkableCellCount) || fog.walkableCellCount <= 0) return 0;
+  const discovered = Math.min(
+    fog.walkableCellCount,
+    Math.max(0, Number(fog.discoveredWalkableCount) || 0),
+  );
+  return Math.min(100, Math.max(0, Math.round((discovered * 100) / fog.walkableCellCount)));
 }

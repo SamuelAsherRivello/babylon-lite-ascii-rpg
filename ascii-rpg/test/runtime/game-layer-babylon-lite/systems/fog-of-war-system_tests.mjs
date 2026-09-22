@@ -11,6 +11,7 @@ import {
   discoverStartingArea,
   getFogVisibility,
   getMinimapCoverage,
+  getRealmDiscoveryPercent,
   isDiscovered,
 } from "../../../../src/runtime/game-layer-babylon-lite/systems/fog-of-war-system.js";
 
@@ -28,10 +29,43 @@ test("fog starts fully undiscovered and records the player's current cell", () =
   const fog = createFogOfWar(world);
   assert.equal(MINIMAP_WORLD_SCALE, 10);
   assert.equal(DISCOVERY_LIGHT_CUTOFF, 0.1);
+  assert.equal(fog.walkableCellCount, 144);
+  assert.equal(fog.discoveredWalkableCount, 0);
+  assert.equal(getRealmDiscoveryPercent(fog), 0);
   assert.equal(isDiscovered(fog, world, { x: 2, y: 2 }), false);
   discoverFromPlayer(fog, world, { x: 2, y: 2 });
   assert.equal(isDiscovered(fog, world, { x: 2, y: 2 }), true);
   assert.equal(isDiscovered(fog, world, { x: 3, y: 2 }), true);
+  assert.ok(getRealmDiscoveryPercent(fog) > 0);
+});
+
+test("realm discovery percentage counts only unfogged walkable tiles", () => {
+  const world = createWorld(2, 5);
+  world.terrain[0][0].walkable = false;
+  const fog = createFogOfWar(world);
+  assert.equal(fog.walkableCellCount, 9);
+  assert.equal(getRealmDiscoveryPercent(fog), 0);
+
+  discoverCell(fog, world, { x: 1, y: 0 });
+  discoverCell(fog, world, { x: 2, y: 0 });
+  assert.equal(fog.discoveredWalkableCount, 2);
+  assert.equal(getRealmDiscoveryPercent(fog), 22);
+
+  discoverCell(fog, world, { x: 2, y: 0 });
+  assert.equal(fog.discoveredWalkableCount, 2);
+  assert.equal(getRealmDiscoveryPercent(fog), 22);
+
+  assert.equal(discoverCell(fog, world, { x: 0, y: 0 }), false);
+  assert.equal(fog.discoveredWalkableCount, 2);
+  assert.equal(getRealmDiscoveryPercent(fog), 22);
+
+  for (let y = 0; y < world.rows; y += 1) {
+    for (let x = 0; x < world.columns; x += 1) {
+      discoverCell(fog, world, { x, y });
+    }
+  }
+  assert.equal(fog.discoveredWalkableCount, 9);
+  assert.equal(getRealmDiscoveryPercent(fog), 100);
 });
 
 test("generated world realms receive independent fog maps", () => {
@@ -44,6 +78,8 @@ test("generated world realms receive independent fog maps", () => {
   discoverCell(fogMaps.Overground, overground, { x: 2, y: 2 });
   assert.equal(isDiscovered(fogMaps.Overground, overground, { x: 2, y: 2 }), true);
   assert.equal(isDiscovered(fogMaps.Underground, underground, { x: 2, y: 2 }), false);
+  assert.ok(getRealmDiscoveryPercent(fogMaps.Overground) > 0);
+  assert.equal(getRealmDiscoveryPercent(fogMaps.Underground), 0);
 });
 
 test("fog discovers clear walkable cells within the fixed five-grid radius", () => {

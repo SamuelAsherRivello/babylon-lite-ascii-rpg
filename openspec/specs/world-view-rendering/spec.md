@@ -87,6 +87,10 @@ The world-view renderer SHALL accept view parameters that enable or disable
 presentation capabilities such as target-layer submission, scale, lighting,
 and optional overlays. Capability differences SHALL be expressed through
 arguments while world-cell eligibility and glyph identity remain shared.
+Facing presentation for directional actors SHALL be expressed as renderer
+presentation state derived from the actor record, so the authoritative glyph
+identity remains `🤺` for the player and `🕷️` for enemies while the rendered
+visual may use a left- or right-facing raster.
 
 #### Scenario: Game lighting is view-specific
 - **WHEN** the game view enables its lighting parameters and the mini-map
@@ -105,6 +109,12 @@ arguments while world-cell eligibility and glyph identity remain shared.
 - **WHEN** the mini-map enables an overlay pass and the game view does not
 - **THEN** markers render only after the mini-map's shared world content and
   do not appear in the game view
+
+#### Scenario: Actor facing is shared across views
+- **WHEN** the player or an enemy has a last horizontal travel direction
+- **THEN** the game view and mini-map SHALL render the actor's glyph with the
+  same left- or right-facing presentation while keeping palette lookup tied to
+  the actor's base glyph identity
 
 ### Requirement: Stable world render pass order
 

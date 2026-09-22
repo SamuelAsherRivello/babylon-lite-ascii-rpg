@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  getRealmDiscoverySnapshot,
   getTimeSnapshot,
   sendRealmAmbientSnapshot,
+  sendRealmDiscoverySnapshot,
   sendCameraModeSnapshot,
   sendGpuLightPassSnapshot,
   sendGlyphBackgroundSnapshot,
@@ -30,6 +32,7 @@ import {
   setGameController,
   subscribeToTime,
   subscribeToMinimapZoom,
+  subscribeToRealmDiscovery,
   PLAYER_MOVED_EVENTS,
   sendPlayerMovedEvent,
   subscribeToPlayerMoved,
@@ -95,6 +98,25 @@ test("publishes time snapshots to subscribers", () => {
   assert.deepEqual(received, [2]);
 });
 
+test("publishes immutable realm discovery snapshots", () => {
+  const received = [];
+  const unsubscribe = subscribeToRealmDiscovery(() => received.push(getRealmDiscoverySnapshot()));
+
+  sendRealmDiscoverySnapshot({ realm: "Underground", percent: 42.4 });
+
+  assert.deepEqual(getRealmDiscoverySnapshot(), { realm: "Underground", percent: 42 });
+  assert.equal(Object.isFrozen(getRealmDiscoverySnapshot()), true);
+
+  sendRealmDiscoverySnapshot({ realm: "Moon", percent: 120 });
+  assert.deepEqual(getRealmDiscoverySnapshot(), { realm: "Overground", percent: 100 });
+  assert.deepEqual(received, [
+    { realm: "Underground", percent: 42 },
+    { realm: "Overground", percent: 100 },
+  ]);
+
+  unsubscribe();
+});
+
 test("publishes key snapshots to subscribers", () => {
   const received = [];
   const unsubscribe = subscribeToKey(() => received.push(getKeySnapshot()));
@@ -150,14 +172,14 @@ test("publishes immutable offense and defense snapshots", () => {
   assert.deepEqual(getCombatStatsSnapshot().offense, {
     current: 13,
     maximum: 25,
-    currentPercent: 52,
+    currentPercent: 13,
     previousPercent: 25,
     revision: 1,
   });
   assert.deepEqual(getCombatStatsSnapshot().defense, {
     current: 13,
     maximum: 25,
-    currentPercent: 52,
+    currentPercent: 13,
     previousPercent: 25,
     revision: 1,
   });

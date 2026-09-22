@@ -1760,6 +1760,20 @@
     },
     {
       "code": null,
+      "unicode": "U+1F93A",
+      "glyph": "🤺",
+      "color": "#ffffff",
+      "alpha": 1
+    },
+    {
+      "code": null,
+      "unicode": "U+1F577",
+      "glyph": "🕷️",
+      "color": "#fa8d8d",
+      "alpha": 1
+    },
+    {
+      "code": null,
       "unicode": "U+25B2",
       "glyph": "▲",
       "color": "#ffffff",

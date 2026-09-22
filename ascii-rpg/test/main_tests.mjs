@@ -94,10 +94,46 @@ test("documents the plain safe-area template", async () => {
   }
   if (!app.includes('action="Character"')
     || !app.includes('action="Map 🔍"')
-    || !app.includes("World: 1   Floor: {activeRealm === \"Underground\" ? \"-1\" : \"1\"}")
+    || !app.includes("World: 1 Realm: {activeRealmLabel} ({realmDiscovery.percent}%)")
+    || !app.includes("Player discovered ${realmDiscovery.percent}% of Realm ${activeRealmLabel} of World 1")
+    || !app.includes('className="hud_tooltip_target"')
+    || !app.includes("<SettingTooltipTarget description={realmDiscoveryTitle}")
+    || !app.includes('<SettingTooltipTarget description="Elapsed time units since game started"')
+    || !app.includes("useSyncExternalStore(subscribeToRealmDiscovery, getRealmDiscoverySnapshot, getRealmDiscoverySnapshot)")
+    || !styles.includes(".hud_tooltip_target")
+    || app.includes("data-tooltip={description}")
+    || app.includes("title={description}")
+    || styles.includes(".setting_tooltip_target::after")
+    || styles.includes("content: attr(data-tooltip)")
+    || !styles.includes("max-width: calc(100vw - 16px)")
+    || !app.includes('className="settings_tooltip"')
     || !app.includes('String(worldTime).padStart(5, "0")')
-    || !styles.includes(".minimap_status")) {
-    throw new Error("The top HUD must display box actions with right-aligned world, floor, and time status below the minimap.");
+    || !styles.includes(".minimap_status")
+    || !styles.includes("pointer-events: auto")) {
+    throw new Error("The top HUD must display box actions with right-aligned compact world, realm, discovered, and time status below the minimap.");
+  }
+  const lowerLeftMarkup = app.slice(app.indexOf('<CornerLayout position="bottom-left">'), app.indexOf('position="bottom-right"'));
+  for (const requiredTooltip of [
+    "settingsHelp.repository",
+    "settingsHelp.windowsSection",
+    "settingsHelp.asciiPalette",
+    "settingsHelp.gameplaySettings",
+    "settingsHelp.arguments",
+    "settingsHelp.lighting",
+    "settingsHelp.statsSection",
+    "settingsHelp.fps",
+    "settingsHelp.version",
+    "settingsHelp.settingsSection",
+    "settingsHelp.fullscreen",
+    "settingsHelp.aspect",
+    "settingsHelp.camera",
+    "settingsHelp.zoom",
+    "settingsHelp.reset",
+    "settingsHelp.showUi",
+  ]) {
+    if (!lowerLeftMarkup.includes(requiredTooltip)) {
+      throw new Error(`The lower-left HUD line for ${requiredTooltip} must have a full-line tooltip.`);
+    }
   }
   if (!gameLayer.includes('import { createLogSystem } from "./systems/log-system.js"')
     || !gameLayer.includes("const logSystem = createLogSystem()")
@@ -221,15 +257,16 @@ test("documents the plain safe-area template", async () => {
   if (!app.includes('id="fps"') || !app.includes("FPS: {fps}") || !app.includes("requestAnimationFrame(updateFps)")) {
     throw new Error("The HUD must display a once-per-second browser FPS counter.");
   }
-  if (!app.includes('id="windows"') || !app.includes('titleId="windows_title"') || !app.includes('title="Windows"')
+  if (!app.includes('id="windows"') || !app.includes('titleId="windows_title"') || !app.includes(">Windows</SettingTooltipTarget>")
     || app.includes('id="windows_2"') || app.includes('titleId="windows_2_title"') || app.includes('title="Windows - 2"')
-    || !app.includes('id="settings"') || !app.includes('titleId="settings_title"') || !app.includes('title="Settings"')) {
+    || !app.includes('id="settings"') || !app.includes('titleId="settings_title"') || !app.includes(">Settings</SettingTooltipTarget>")) {
     throw new Error("The lower-left HUD must include Windows and Settings sections.");
   }
   const windowsMarkup = app.slice(app.indexOf('id="windows"'), app.indexOf('id="stats"'));
-  if (windowsMarkup.indexOf('id="ascii_palette_toggle"') > windowsMarkup.indexOf('id="arguments_toggle"')
-    || windowsMarkup.indexOf('id="arguments_toggle"') > windowsMarkup.indexOf('id="lighting_window_toggle"')) {
-    throw new Error("The Windows controls must be ordered Ascii, Arguments, then Lighting.");
+  if (windowsMarkup.indexOf('id="arguments_toggle"') > windowsMarkup.indexOf('id="ascii_palette_toggle"')
+    || windowsMarkup.indexOf('id="ascii_palette_toggle"') > windowsMarkup.indexOf('id="gameplay_settings_toggle"')
+    || windowsMarkup.indexOf('id="gameplay_settings_toggle"') > windowsMarkup.indexOf('id="lighting_window_toggle"')) {
+    throw new Error("The Windows controls must be ordered alphabetically by visible label.");
   }
   if (!styles.includes(".corner_body") || !styles.includes(".corner_title")
     || !styles.includes(".hud_block_title") || !styles.includes(".hud_block_body")) {
@@ -282,7 +319,8 @@ test("documents the plain safe-area template", async () => {
   const bottomRightStart = app.indexOf('position="bottom-right"');
   const bottomLeftMarkup = app.slice(bottomLeftStart, bottomRightStart);
   if (bottomLeftStart === -1 || !bottomLeftMarkup.includes('id="windows"') || !bottomLeftMarkup.includes('id="settings"')
-    || !bottomLeftMarkup.includes('id="show_ui_toggle"') || !bottomLeftMarkup.includes("Ascii Settings")
+    || !bottomLeftMarkup.includes('id="show_ui_toggle"') || !bottomLeftMarkup.includes("Ascii")
+    || bottomLeftMarkup.includes("Ascii Settings") || bottomLeftMarkup.includes("Gameplay Settings")
     || !bottomLeftMarkup.includes("Fullscreen") || !bottomLeftMarkup.includes("Reset Settings")) {
     throw new Error("The lower-left HUD must contain the Windows and Settings controls.");
   }
@@ -463,7 +501,9 @@ test("documents the plain safe-area template", async () => {
     throw new Error("Realm and test-toast Settings buttons must not be rendered.");
   }
   if (!gameLayer.includes('id = "minimap_canvas"') || !gameLayer.includes("createFogMapsForWorld")
-    || !gameLayer.includes("discoverFromPlayer") || !gameLayer.includes("getMinimapWorldCellGraphic")
+    || !gameLayer.includes("discoverFromPlayer") || !gameLayer.includes("getRealmDiscoveryPercent")
+    || !gameLayer.includes("subscribeToRealmDiscovery")
+    || !gameLayer.includes("getMinimapWorldCellGraphic")
     || !gameLayer.includes("getMinimapMarkers") || !gameLayer.includes("visual.rasters")
     || gameLayer.includes("context.fillText")) {
     throw new Error("The game layer must own fog discovery and actual world-graphic minimap rendering.");
@@ -515,11 +555,12 @@ test("documents the plain safe-area template", async () => {
     || !gameLayer.includes("renderWorldViewComposition(composition")
     || !gameLayer.includes("fog: fogOfWar")
     || !gameLayer.includes("drawOverlay: () =>")
-    || !gameLayer.includes("rasterizeCompositeGlyph(glyph, family, size, paletteColors.get(glyph)")
+    || !gameLayer.includes("rasterizeCompositeGlyph(glyph, family, size, paletteColors.get(getFacingGlyph(glyph))")
     || !gameLayer.includes("buildGpuLightPassSamples(minimapRegion, minimapLightField, lighting.ambient")
     || !gameLayer.includes('context.globalCompositeOperation = "lighter"')
     || styles.includes("--minimap-zoom")
-    || styles.includes("transform: scale")) {
+    || styles.includes(".minimap_status {\n  transform: scale")
+    || styles.includes("#minimap_canvas {\n  transform: scale")) {
     throw new Error("Minimap content zoom must stay hidden, persist independently, preserve canvas bounds, and clean up on disposal.");
   }
   if (!styles.includes("#minimap_canvas") || !styles.includes("24vmin")

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createDynamicOccupancy, getDynamicVisibleGlyph } from "../../../../src/runtime/game-layer-babylon-lite/systems/dynamic-occupancy.js";
-import { getVisibleGlyph, normalizePlayerMarkers } from "../../../../src/runtime/game-layer-babylon-lite/systems/world-system.js";
+import { PLAYER_GLYPH, getVisibleGlyph, normalizePlayerMarkers } from "../../../../src/runtime/game-layer-babylon-lite/systems/world-system.js";
 
 test("claims cells with stable unique entity identities", () => {
   const occupancy = createDynamicOccupancy();
@@ -52,16 +52,16 @@ test("owns the player glyph without leaving a duplicate world character marker",
     rows: 1,
     columns: 2,
     terrain: [[{ glyph: "." }, { glyph: "." }]],
-    characters: [["P", null]],
+    characters: [[PLAYER_GLYPH, null]],
     objects: [],
   };
   const occupancy = createDynamicOccupancy();
   normalizePlayerMarkers(world);
-  occupancy.claim({ id: "player", type: "player", glyph: "P", cell: { x: 0, y: 0 } });
+  occupancy.claim({ id: "player", type: "player", glyph: PLAYER_GLYPH, cell: { x: 0, y: 0 } });
 
   assert.deepEqual(world.characters, [[null, null]]);
-  assert.equal(getDynamicVisibleGlyph(occupancy, world, { x: 0, y: 0 }, getVisibleGlyph), "P");
+  assert.equal(getDynamicVisibleGlyph(occupancy, world, { x: 0, y: 0 }, getVisibleGlyph), PLAYER_GLYPH);
   occupancy.move("player", { x: 1, y: 0 });
   assert.equal(getDynamicVisibleGlyph(occupancy, world, { x: 0, y: 0 }, getVisibleGlyph), ".");
-  assert.equal(getDynamicVisibleGlyph(occupancy, world, { x: 1, y: 0 }, getVisibleGlyph), "P");
+  assert.equal(getDynamicVisibleGlyph(occupancy, world, { x: 1, y: 0 }, getVisibleGlyph), PLAYER_GLYPH);
 });

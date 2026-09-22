@@ -12,6 +12,9 @@ function freezeSnapshot(snapshot) {
 }
 
 function getCriterionValue(criterion, values) {
+  if (criterion.subject === "realmDiscoveryPercent" && criterion.realm) {
+    return Number(values?.realmDiscoveryPercent?.[criterion.realm] ?? 0);
+  }
   return Number(values?.[criterion.subject] ?? 0);
 }
 
@@ -30,10 +33,14 @@ function getDefinitions(definition) {
   }];
 }
 
+function isAnyOrderQuest(quest) {
+  return quest?.definition?.completionOrder === "any";
+}
+
 function matchesCriterion(criterion, event) {
   if (event?.type !== criterion.eventType) return false;
   if (criterion.pickupType && event.pickupType !== criterion.pickupType) return false;
-  if (criterion.realm && event.realm !== criterion.realm) return false;
+  if (criterion.realm && event.realm && event.realm !== criterion.realm) return false;
   return true;
 }
 
@@ -45,7 +52,9 @@ export function createQuestManager(definitions = [], initialValues = {}, { reque
 
   const snapshot = () => {
     if (!activeQuest) return null;
-    const currentStep = activeQuest.steps[activeQuest.activeStepIndex] ?? activeQuest.steps.at(-1);
+    const currentStep = activeQuest.steps[activeQuest.activeStepIndex]
+      ?? activeQuest.steps.find((step) => step.state !== QUEST_STATES.complete)
+      ?? activeQuest.steps.at(-1);
     const criterion = currentStep?.definition.criterion ?? {};
     const steps = activeQuest.steps.map((step) => ({
       id: step.definition.id,
@@ -57,6 +66,7 @@ export function createQuestManager(definitions = [], initialValues = {}, { reque
       target: step.definition.criterion.target ?? 1,
       complete: step.state === QUEST_STATES.complete,
       ...(step.definition.showProgress ? { showProgress: true } : {}),
+      ...(step.definition.hideProgress ? { hideProgress: true } : {}),
     }));
     return freezeSnapshot({
       id: activeQuest.definition.id,
@@ -78,6 +88,22 @@ export function createQuestManager(definitions = [], initialValues = {}, { reque
     for (const listener of listeners) listener(Object.freeze({ type, snapshot: current }));
   };
 
+  const refreshActiveStepIndex = () => {
+    if (!isAnyOrderQuest(activeQuest)) return;
+    const nextStep = activeQuest.steps.find((step) => step.state !== QUEST_STATES.complete);
+    activeQuest.activeStepIndex = nextStep?.index ?? activeQuest.steps.length - 1;
+  };
+
+  const completeQuestIfReady = () => {
+    if (!activeQuest || activeQuest.state !== QUEST_STATES.pending) return false;
+    if (!activeQuest.steps.every((step) => step.state === QUEST_STATES.complete)) return false;
+    activeQuest.state = QUEST_STATES.complete;
+    completedQuestIds.add(activeQuest.definition.id);
+    refreshActiveStepIndex();
+    emit("completed");
+    return true;
+  };
+
   const activateStep = (step, values) => {
     step.state = QUEST_STATES.pending;
     step.baseline = step.definition.criterion.mode === "relative"
@@ -93,7 +119,7 @@ export function createQuestManager(definitions = [], initialValues = {}, { reque
   };
 
   const evaluate = (step, values, emitProgress = true) => {
-    if (!activeQuest || activeQuest.state !== QUEST_STATES.pending || !step) return;
+    if (!activeQuest || activeQuest.state !== QUEST_STATES.pending || !step || step.state === QUEST_STATES.complete) return;
     const criterion = step.definition.criterion;
     const target = criterion.target ?? 1;
     const next = criterion.mode === "event"
@@ -107,17 +133,21 @@ export function createQuestManager(definitions = [], initialValues = {}, { reque
     }
     step.state = QUEST_STATES.complete;
     emit("step-completed");
+    if (isAnyOrderQuest(activeQuest)) {
+      refreshActiveStepIndex();
+      completeQuestIfReady();
+      return;
+    }
     const nextIndex = step.index + 1;
     if (nextIndex >= activeQuest.steps.length) {
-      activeQuest.state = QUEST_STATES.complete;
-      completedQuestIds.add(activeQuest.definition.id);
-      emit("completed");
+      completeQuestIfReady();
       return;
     }
     activeQuest.activeStepIndex = nextIndex;
     const nextStep = activeQuest.steps[nextIndex];
     activateStep(nextStep, values);
     emit("step-started");
+    if (nextStep.definition.criterion.mode !== "event") evaluate(nextStep, values, false);
   };
 
   return Object.freeze({
@@ -131,15 +161,24 @@ export function createQuestManager(definitions = [], initialValues = {}, { reque
           index,
           baseline: 0,
           current: 0,
-          state: index === 0 ? QUEST_STATES.pending : QUEST_STATES.unstarted,
+          state: index === 0 || definition.completionOrder === "any"
+            ? QUEST_STATES.pending
+            : QUEST_STATES.unstarted,
         })),
         activeStepIndex: 0,
         state: QUEST_STATES.pending,
       };
       emit("started");
       const firstStep = activeQuest.steps[0];
-      activateStep(firstStep, values);
-      if (firstStep.definition.criterion.mode !== "event") evaluate(firstStep, values, false);
+      if (isAnyOrderQuest(activeQuest)) {
+        for (const step of activeQuest.steps) {
+          activateStep(step, values);
+          if (step.definition.criterion.mode !== "event") evaluate(step, values, false);
+        }
+      } else {
+        activateStep(firstStep, values);
+        if (firstStep.definition.criterion.mode !== "event") evaluate(firstStep, values, false);
+      }
       return snapshot();
     },
     startNextQuest(values = initialValues) {
@@ -153,6 +192,14 @@ export function createQuestManager(definitions = [], initialValues = {}, { reque
     },
     observe(event, values = initialValues) {
       if (!activeQuest || activeQuest.state !== QUEST_STATES.pending) return snapshot();
+      if (isAnyOrderQuest(activeQuest)) {
+        for (const step of activeQuest.steps) {
+          if (step.state === QUEST_STATES.complete) continue;
+          if (matchesCriterion(step.definition.criterion, event)) evaluate(step, values);
+          if (activeQuest.state === QUEST_STATES.complete) break;
+        }
+        return snapshot();
+      }
       const step = activeQuest.steps[activeQuest.activeStepIndex];
       if (!matchesCriterion(step.definition.criterion, event)) return snapshot();
       evaluate(step, values);

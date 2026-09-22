@@ -1,8 +1,8 @@
 export const WALL_GLYPH = "▒";
 export const FLOOR_GLYPH = "•";
 export const UNDERGROUND_FLOOR_GLYPH = "●";
-export const PLAYER_GLYPH = "P";
-export const ENEMY_GLYPH = "E";
+export const PLAYER_GLYPH = "🤺";
+export const ENEMY_GLYPH = "🕷️";
 export const ENEMY_SPAWNER_GLYPH = "S";
 export const TORCH_GLYPH = "🕯️";
 export const GOLD_GLYPH = "💰";

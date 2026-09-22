@@ -23,6 +23,14 @@ const unlockADoor = {
   ],
 };
 
+const discoverTheWorld = {
+  id: "discover-the-world", title: "Discover the World", objective: "Discover the World", completionOrder: "any",
+  steps: [
+    { id: "discover-overworld", label: "Discover 1% of Overworld", hideProgress: true, criterion: { mode: "absolute", subject: "realmDiscoveryPercent", eventType: "realm-discovery-changed", realm: "Overground", target: 1 } },
+    { id: "discover-underworld", label: "Discover 1% of Underworld", hideProgress: true, criterion: { mode: "absolute", subject: "realmDiscoveryPercent", eventType: "realm-discovery-changed", realm: "Underground", target: 1 } },
+  ],
+};
+
 test("quest data defines the Overground prerequisite and relative Collect Gold step", () => {
   const definition = questData.quests.find((quest) => quest.id === "collect-gold");
   assert.deepEqual(definition.steps.map(({ id, label }) => ({ id, label })), [
@@ -45,6 +53,50 @@ test("quest data defines Unlock A Door with the requested ordered steps", () => 
   ]);
   assert.equal(definition.steps[0].navigation, "nearest-stairs");
   assert.deepEqual(definition.steps.map(({ criterion }) => criterion), unlockADoor.steps.map(({ criterion }) => criterion));
+});
+
+test("quest data defines Discover the World with per-realm discovery goals", () => {
+  const definition = questData.quests.find((quest) => quest.id === "discover-the-world");
+  assert.ok(definition);
+  assert.equal(definition.title, "Discover the World");
+  assert.deepEqual(definition.steps.map(({ id, label }) => ({ id, label })), [
+    { id: "discover-overworld", label: "Discover 1% of Overworld" },
+    { id: "discover-underworld", label: "Discover 1% of Underworld" },
+  ]);
+  assert.deepEqual(definition.steps.map(({ hideProgress }) => hideProgress), [true, true]);
+  assert.equal(definition.completionOrder, "any");
+  assert.deepEqual(definition.steps.map(({ criterion }) => criterion), discoverTheWorld.steps.map(({ criterion }) => criterion));
+});
+
+test("Discover the World tracks both realm discovery percentages in any order before completing", () => {
+  const manager = createQuestManager([discoverTheWorld]);
+  const events = [];
+  manager.subscribe((event) => events.push(event.type));
+  manager.startQuest("discover-the-world", {
+    realmDiscoveryPercent: { Overground: 0, Underground: 0 },
+  });
+
+  manager.observe({ type: "realm-discovery-changed", realm: "Underground" }, {
+    realmDiscoveryPercent: { Overground: 0, Underground: 1 },
+  });
+  assert.equal(manager.getSnapshot().activeStepId, "discover-overworld");
+  assert.equal(manager.getSnapshot().complete, false);
+  assert.deepEqual(manager.getSnapshot().steps.map(({ id, complete }) => ({ id, complete })), [
+    { id: "discover-overworld", complete: false },
+    { id: "discover-underworld", complete: true },
+  ]);
+
+  manager.observe({ type: "realm-discovery-changed", realm: "Overground" }, {
+    realmDiscoveryPercent: { Overground: 1, Underground: 1 },
+  });
+
+  assert.equal(manager.getSnapshot().activeStepId, "discover-underworld");
+  assert.equal(manager.getSnapshot().complete, true);
+  assert.deepEqual(manager.getSnapshot().steps.map(({ id, current, target, complete, hideProgress }) => ({ id, current, target, complete, hideProgress })), [
+    { id: "discover-overworld", current: 1, target: 1, complete: true, hideProgress: true },
+    { id: "discover-underworld", current: 1, target: 1, complete: true, hideProgress: true },
+  ]);
+  assert.deepEqual(events, ["started", "step-completed", "step-completed", "completed"]);
 });
 
 test("Unlock A Door starts from Underground, counts one key, and completes on door unlock", () => {
@@ -78,6 +130,7 @@ test("Collect Gold advances to Unlock A Door in catalog order", () => {
 test("all quest definitions are available to the quest selector catalog", () => {
   assert.ok(questData.quests.some((quest) => quest.id === "collect-gold"));
   assert.ok(questData.quests.some((quest) => quest.id === "unlock-a-door"));
+  assert.ok(questData.quests.some((quest) => quest.id === "discover-the-world"));
   assert.equal(new Set(questData.quests.map((quest) => quest.id)).size, questData.quests.length);
 });
 

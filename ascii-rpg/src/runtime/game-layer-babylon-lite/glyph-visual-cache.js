@@ -4,6 +4,24 @@ const ATLAS_WIDTH = 1024;
 import { getZoomScale } from "./zoom-scale.js";
 
 const MAX_CACHED_ZOOMS = 10;
+const FACING_KEY_SEPARATOR = "\u0000";
+
+export const FACING_LEFT = "left";
+export const FACING_RIGHT = "right";
+
+export function getFacingGlyphKey(glyph, facing = FACING_LEFT) {
+  return facing === FACING_RIGHT ? `${glyph}${FACING_KEY_SEPARATOR}${FACING_RIGHT}` : glyph;
+}
+
+export function getFacingGlyph(glyphKey) {
+  return typeof glyphKey === "string" ? glyphKey.split(FACING_KEY_SEPARATOR)[0] : glyphKey;
+}
+
+export function getFacingGlyphDirection(glyphKey) {
+  return typeof glyphKey === "string" && glyphKey.endsWith(`${FACING_KEY_SEPARATOR}${FACING_RIGHT}`)
+    ? FACING_RIGHT
+    : FACING_LEFT;
+}
 
 export function getGlyphRasterSize(zoom, cellWidth = 32 * getZoomScale(zoom)) {
   // Keep a useful source footprint even when the displayed cell is only a few
@@ -13,6 +31,8 @@ export function getGlyphRasterSize(zoom, cellWidth = 32 * getZoomScale(zoom)) {
 }
 
 export function rasterizeGlyph(glyph, fontFamily, size, color = "#ffffff") {
+  const displayGlyph = getFacingGlyph(glyph);
+  const facing = getFacingGlyphDirection(glyph);
   const canvas = document.createElement("canvas");
   canvas.width = size;
   canvas.height = size;
@@ -23,7 +43,11 @@ export function rasterizeGlyph(glyph, fontFamily, size, color = "#ffffff") {
     target.font = `${targetSize}px ${fontFamily}`;
     target.textAlign = "center";
     target.textBaseline = "middle";
-    target.fillText(glyph, targetSize / 2, targetSize / 2);
+    if (facing === FACING_RIGHT) {
+      target.translate(targetSize, 0);
+      target.scale(-1, 1);
+    }
+    target.fillText(displayGlyph, targetSize / 2, targetSize / 2);
   };
   if (size <= 24) {
     const sourceSize = size * 2;

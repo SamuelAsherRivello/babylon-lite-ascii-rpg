@@ -39,7 +39,7 @@ The game SHALL render through the Babylon Lite game layer into the full browser 
 
 ### Requirement: Grid-aligned player rendering
 
-The game SHALL render one player glyph as the letter `P` through the Babylon
+The game SHALL render one player glyph as `🤺` through the Babylon
 Lite game layer. The glyph SHALL use one grid cell at the default font
 resolution of `1.0`, its visual center SHALL align with the center of the
 player's current logical grid cell, and its color and alpha SHALL come from
@@ -48,7 +48,7 @@ the active palette.
 #### Scenario: Initial player placement
 
 - **WHEN** a new game view is shown
-- **THEN** a `P` SHALL be visible in the center grid cell of the logical
+- **THEN** a `🤺` SHALL be visible in the center grid cell of the logical
   viewport when that cell is walkable, otherwise in a valid connected
   walkable start cell
 
@@ -56,8 +56,8 @@ the active palette.
 
 - **WHEN** the player moves by one cardinal or diagonal step into a walkable
   destination cell
-- **THEN** the `P` SHALL render in the destination grid cell with its center
-  aligned to that cell's center and with the active palette style for `P`
+- **THEN** the `🤺` SHALL render in the destination grid cell with its center
+  aligned to that cell's center and with the active palette style for `🤺`
 
 ### Requirement: Keyboard grid movement
 

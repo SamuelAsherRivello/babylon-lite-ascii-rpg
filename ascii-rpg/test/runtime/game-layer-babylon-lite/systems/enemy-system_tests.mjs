@@ -4,6 +4,7 @@ import { createDynamicOccupancy } from "../../../../src/runtime/game-layer-babyl
 import {
   createCardinalDistanceField,
   createEnemySystem,
+  DEFAULT_ENEMY_FACING,
   ENEMY_GLYPH,
   ENEMY_NAVIGATION_RADIUS,
 } from "../../../../src/runtime/game-layer-babylon-lite/systems/enemy-system.js";
@@ -29,7 +30,7 @@ function createHarness({ playerCell = { x: 6, y: 3 }, activeRealm = "Underground
   const attacks = [];
   const damageEvents = [];
   let distanceFieldBuilds = 0;
-  occupancy.claim({ id: "player", type: "player", glyph: "P", cell: playerCell, realm: activeRealm });
+  occupancy.claim({ id: "player", type: "player", glyph: "🤺", cell: playerCell, realm: activeRealm });
   const system = createEnemySystem({
     timeSystem,
     occupancy,
@@ -42,11 +43,12 @@ function createHarness({ playerCell = { x: 6, y: 3 }, activeRealm = "Underground
   return { timeSystem, occupancy, system, logs, attacks, damageEvents, getDistanceFieldBuilds: () => distanceFieldBuilds };
 }
 
-test("creates red-E enemies with 40 health and derived age", () => {
+test("creates spider enemies with 40 health, default facing, and derived age", () => {
   const harness = createHarness();
   const enemy = harness.system.addEnemy({ id: "enemy-1", realm: "Underground", cell: { x: 2, y: 3 }, bornAtTime: 7 });
 
   assert.equal(enemy.glyph, ENEMY_GLYPH);
+  assert.equal(enemy.facing, DEFAULT_ENEMY_FACING);
   assert.equal(enemy.health, 40);
   assert.equal(enemy.maxHealth, 40);
   assert.equal(enemy.bornAtTime, 7);
@@ -62,10 +64,12 @@ test("waits until age two and then acts on every even age", () => {
   assert.deepEqual(harness.occupancy.get("enemy-1").cell, { x: 2, y: 3 });
   harness.timeSystem.advance();
   assert.deepEqual(harness.occupancy.get("enemy-1").cell, { x: 3, y: 3 });
+  assert.equal(harness.occupancy.get("enemy-1").facing, "right");
   harness.timeSystem.advance();
   assert.deepEqual(harness.occupancy.get("enemy-1").cell, { x: 3, y: 3 });
   harness.timeSystem.advance();
   assert.deepEqual(harness.occupancy.get("enemy-1").cell, { x: 4, y: 3 });
+  assert.equal(harness.occupancy.get("enemy-1").facing, "right");
 });
 
 test("builds a reverse cardinal distance field around walls and rejects unreachable cells", () => {
@@ -141,7 +145,7 @@ test("builds one field for multiple enemies in the same realm and tick", () => {
 
 test("waits when another actor occupies the chosen step", () => {
   const harness = createHarness();
-  harness.occupancy.claim({ id: "blocker", type: "enemy", glyph: "E", cell: { x: 3, y: 3 } });
+  harness.occupancy.claim({ id: "blocker", type: "enemy", glyph: "🕷️", cell: { x: 3, y: 3 } });
   harness.system.addEnemy({ id: "enemy-1", realm: "Underground", cell: { x: 2, y: 3 }, bornAtTime: 1 });
 
   harness.timeSystem.advance(2);
@@ -197,7 +201,7 @@ test("damages Player Lifecycle to zero and publishes death once", () => {
   const lifecycle = createPlayerLifecycle();
   const deaths = [];
   lifecycle.subscribeToDeath((dead) => deaths.push(dead));
-  occupancy.claim({ id: "player", type: "player", glyph: "P", cell: { x: 3, y: 3 }, realm: "Underground" });
+  occupancy.claim({ id: "player", type: "player", glyph: "🤺", cell: { x: 3, y: 3 }, realm: "Underground" });
   const world = createWorld();
   const system = createEnemySystem({
     timeSystem,

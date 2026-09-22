@@ -6,6 +6,7 @@ export const ENEMY_HEALTH = 40;
 export const ENEMY_ATTACK_DAMAGE = 5;
 export const ENEMY_ACTION_INTERVAL = 2;
 export const ENEMY_NAVIGATION_RADIUS = 64;
+export const DEFAULT_ENEMY_FACING = "left";
 
 const CARDINAL_DIRECTIONS = Object.freeze([
   Object.freeze({ x: 0, y: -1 }),
@@ -151,7 +152,10 @@ export function createEnemySystem({
         if (manhattanDistance(cell, player.cell) >= currentManhattanDistance
           || !isWalkable(cell, enemy.realm, player.world)
           || isStaticOccupied(cell, enemy.realm)) continue;
-        if (occupancy.move(id, cell)) onChange();
+        if (occupancy.move(id, cell)) {
+          if (direction.x !== 0) occupancy.update(id, { facing: direction.x > 0 ? "right" : "left" });
+          onChange();
+        }
         return;
       }
     };
@@ -172,7 +176,10 @@ export function createEnemySystem({
       const cell = { x: enemy.cell.x + direction.x, y: enemy.cell.y + direction.y };
       if (!isWalkable(cell, enemy.realm, player.world) || isStaticOccupied(cell, enemy.realm)
         || field.getDistance(cell) !== currentDistance - 1) continue;
-      if (occupancy.move(id, cell)) onChange();
+      if (occupancy.move(id, cell)) {
+        if (direction.x !== 0) occupancy.update(id, { facing: direction.x > 0 ? "right" : "left" });
+        onChange();
+      }
       return;
     }
   };
@@ -182,6 +189,7 @@ export function createEnemySystem({
       id,
       type: "enemy",
       glyph: ENEMY_GLYPH,
+      facing: DEFAULT_ENEMY_FACING,
       realm,
       cell,
       health: ENEMY_HEALTH,

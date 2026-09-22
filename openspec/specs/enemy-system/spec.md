@@ -8,7 +8,7 @@ Defines hostile enemy birth, aging, autonomous simulation, movement, collision c
 
 ### Requirement: Enemy identity, birth, and age
 
-Each enemy SHALL render as a palette-driven red `E`, record the world time at which it is born, start with `100` health, and calculate age as `currentWorldTime - bornAtTime`. An enemy SHALL take no movement or attack action before age `2`, then SHALL become eligible for one action whenever its age is an even positive value.
+Each enemy SHALL render as a palette-driven red `🕷️`, record the world time at which it is born, start with `40` health, default to left-facing presentation, and calculate age as `currentWorldTime - bornAtTime`. An enemy SHALL take no movement or attack action before age `2`, then SHALL become eligible for one action whenever its age is an even positive value.
 
 #### Scenario: Enemy waits until age two
 - **WHEN** an enemy is born at time `7` and processes times `8` and `9`
@@ -17,6 +17,10 @@ Each enemy SHALL render as a palette-driven red `E`, record the world time at wh
 #### Scenario: Later actions use age cadence
 - **WHEN** that enemy remains alive through times `11` and `13`
 - **THEN** it SHALL be eligible for one action at each time because its ages are 4 and 6
+
+#### Scenario: Enemy starts left-facing
+- **WHEN** an enemy is born
+- **THEN** it SHALL render as `🕷️` using its left-facing presentation until it next travels horizontally
 
 ### Requirement: Every enemy simulates on every world tick
 
@@ -33,6 +37,14 @@ On an eligible action, an enemy with a living player in the same realm SHALL tak
 #### Scenario: Enemy advances toward same-realm player
 - **WHEN** an eligible enemy has a traversable cardinal path to a living player in the same realm
 - **THEN** it SHALL move one free cardinal cell along a deterministic shortest path
+
+#### Scenario: Horizontal travel updates enemy facing
+- **WHEN** an enemy successfully moves left or right
+- **THEN** its rendered `🕷️` presentation SHALL face that horizontal travel direction until a later left or right move changes it
+
+#### Scenario: Vertical travel preserves enemy facing
+- **WHEN** an enemy successfully moves up or down
+- **THEN** its rendered `🕷️` presentation SHALL keep the last horizontal travel direction
 
 #### Scenario: Enemy has no cross-realm target
 - **WHEN** an Underground enemy is eligible while the player is in Overground

@@ -5,6 +5,7 @@ export const OPEN_VERTICAL_DOOR_GLYPH = "□";
 export const CLOSED_HORIZONTAL_DOOR_GLYPH = "█";
 export const OPEN_HORIZONTAL_DOOR_GLYPH = "□";
 export const KEY_GLYPH = "⚿";
+export const PLAYER_GLYPH = "🤺";
 export const CIVILIZATION_SCREEN_COLUMNS = 64;
 export const CIVILIZATION_SCREEN_ROWS = 36;
 export const CIVILIZATION_SCREEN_CHANCE = 0.1;
@@ -35,9 +36,9 @@ function isWalkable(world, cell) {
 }
 
 function isReserved(world, cell, reserved) {
-  return reserved.has(cellKey(cell))
+    return reserved.has(cellKey(cell))
     || sameCell(world.playerStart, cell)
-    || world.characters?.[cell.y]?.[cell.x] === "P"
+    || world.characters?.[cell.y]?.[cell.x] === PLAYER_GLYPH
     || world.objects?.some((object) => object.active !== false && sameCell(object.cell, cell));
 }
 

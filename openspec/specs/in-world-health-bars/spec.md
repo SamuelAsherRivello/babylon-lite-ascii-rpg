@@ -40,4 +40,4 @@ The player SHALL NOT render an in-world health bar because the existing Characte
 
 #### Scenario: Player takes damage
 - **WHEN** an enemy damages the visible player
-- **THEN** the Character HUD SHALL update through its existing health snapshot and no health bar SHALL appear above `P`
+- **THEN** the Character HUD SHALL update through its existing health snapshot and no health bar SHALL appear above `🤺`

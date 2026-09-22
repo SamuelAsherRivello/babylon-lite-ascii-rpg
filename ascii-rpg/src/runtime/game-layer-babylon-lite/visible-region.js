@@ -14,9 +14,11 @@ export function getVisibleSlot(region, cell) {
   return y * region.columns + x;
 }
 
-export function shouldUpdateVisibleSprite(previous, glyph, frame, baseColor, lightingFactor, fogVisibility = 100) {
+export function shouldUpdateVisibleSprite(previous, glyph, frame, baseColor, lightingFactor, fogVisibility = 100, visualGlyph = glyph) {
+  const previousVisualGlyph = previous?.visualGlyph ?? previous?.glyph;
   return !previous?.visible
     || previous.glyph !== glyph
+    || previousVisualGlyph !== visualGlyph
     || previous.frame !== frame
     || (previous.baseColor ?? previous.color) !== baseColor
     || previous.lightingFactor !== lightingFactor

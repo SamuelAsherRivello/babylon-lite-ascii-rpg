@@ -20,6 +20,7 @@ let playerGpuShadowBleedRangeSnapshot = 2;
 let glyphBackgroundSnapshot = true;
 let backgroundDarknessSnapshot = 50;
 let minimapZoomSnapshot = 2;
+let realmDiscoverySnapshot = Object.freeze({ realm: realmPreferenceSnapshot, percent: 0 });
 let zoomSnapshot = null;
 let randomSeedSnapshot = null;
 let lightingSnapshot = null;
@@ -50,6 +51,7 @@ let playerDeadSnapshot = false;
 let logSnapshot = [];
 const timeListeners = new Set();
 const realmListeners = new Set();
+const realmDiscoveryListeners = new Set();
 const minimapZoomListeners = new Set();
 const questListeners = new Set();
 const questEventListeners = new Set();
@@ -149,6 +151,20 @@ export function subscribeToRealm(listener) { realmListeners.add(listener); retur
 export function sendRealmSnapshot(realm) {
   realmPreferenceSnapshot = realm === "Underground" ? "Underground" : "Overground";
   for (const listener of realmListeners) listener();
+}
+
+export function getRealmDiscoverySnapshot() { return realmDiscoverySnapshot; }
+export function subscribeToRealmDiscovery(listener) {
+  realmDiscoveryListeners.add(listener);
+  return () => realmDiscoveryListeners.delete(listener);
+}
+export function sendRealmDiscoverySnapshot(snapshot) {
+  const percent = Math.min(100, Math.max(0, Math.round(Number(snapshot?.percent) || 0)));
+  realmDiscoverySnapshot = Object.freeze({
+    realm: snapshot?.realm === "Underground" ? "Underground" : "Overground",
+    percent,
+  });
+  for (const listener of realmDiscoveryListeners) listener();
 }
 
 export function sendTorchLightingSnapshot(profile) {
@@ -274,9 +290,7 @@ export function sendCombatStatsSnapshot(snapshot) {
   const normalize = (value, fallback) => {
     const maximum = Math.max(0, Number(value?.maximum) || fallback.maximum);
     const current = Math.min(maximum, Math.max(0, Number(value?.current) || 0));
-    const currentPercent = maximum > 0
-      ? (current * 100) / maximum
-      : 0;
+    const currentPercent = Math.min(100, Math.max(0, current));
     return Object.freeze({
       current,
       maximum,

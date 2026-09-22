@@ -73,6 +73,38 @@
           }
         }
       ]
+    },
+    {
+      "id": "discover-the-world",
+      "title": "Discover the World",
+      "objective": "Discover the World",
+      "completionOrder": "any",
+      "steps": [
+        {
+          "id": "discover-overworld",
+          "label": "Discover 1% of Overworld",
+          "hideProgress": true,
+          "criterion": {
+            "mode": "absolute",
+            "subject": "realmDiscoveryPercent",
+            "eventType": "realm-discovery-changed",
+            "realm": "Overground",
+            "target": 1
+          }
+        },
+        {
+          "id": "discover-underworld",
+          "label": "Discover 1% of Underworld",
+          "hideProgress": true,
+          "criterion": {
+            "mode": "absolute",
+            "subject": "realmDiscoveryPercent",
+            "eventType": "realm-discovery-changed",
+            "realm": "Underground",
+            "target": 1
+          }
+        }
+      ]
     }
   ],
   "criterionExamples": [

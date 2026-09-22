@@ -54,6 +54,7 @@ import {
   getPlayerDeadSnapshot,
   getRandomSeedSnapshot,
   getQuestSnapshot,
+  getRealmDiscoverySnapshot,
   startQuest,
   getRealmSnapshot,
   sendRealmAmbientSnapshot,
@@ -84,6 +85,7 @@ import {
   subscribeToQuest,
   subscribeToQuestEvent,
   subscribeToRealm,
+  subscribeToRealmDiscovery,
   subscribeToMinimapZoom,
 } from "../bridge-layer/game-bridge.js";
 import {
@@ -151,6 +153,15 @@ const settingsHelp = Object.freeze({
   fullscreen: "Toggle fullscreen.",
   aspect: "Switch between landscape and portrait testing presentation.",
   showUi: "Show or hide the HUD for developer use.",
+  repository: "Open the project repository on GitHub.",
+  windowsSection: "Open utility windows.",
+  asciiPalette: "Open ASCII palette controls.",
+  gameplaySettings: "Open gameplay controls.",
+  arguments: "Open runtime argument details.",
+  statsSection: "View live performance and version information.",
+  fps: "Current rendered frames per second.",
+  version: "Current game version.",
+  settingsSection: "Adjust display and developer settings.",
   lighting: "Open lighting controls.",
   closeLighting: "Close lighting controls.",
   gpuLightPass: "Toggle soft GPU light glow.",
@@ -163,6 +174,7 @@ const settingsHelp = Object.freeze({
   ambientIncrease: `Brighten overall light. ${ambientValueHelp}`,
   ambientDecrease: `Dim overall light. ${ambientValueHelp}`,
   zoomIn: "Make map glyphs larger.",
+  zoom: "Current map glyph zoom level.",
   zoomOut: "Make map glyphs smaller.",
   reset: "Clear local storage and reload.",
 });
@@ -420,7 +432,7 @@ function QuestLayout({ quest, className = "", ariaLabel, onClick, onKeyDown }) {
         return (
         <div key={step.id} className={`quest_tracker_step${step.complete ? " quest_tracker_step_complete" : ""}`}>
           <span className={`quest_tracker_marker${quest.state === "pending" && !quest.complete && isActiveStep ? "" : " quest_tracker_marker_empty"}`} aria-hidden="true" />
-          <span className="quest_tracker_step_label">{step.label}{step.target > 1 || step.showProgress ? ` ${step.current} of ${step.target}` : ""}</span>
+          <span className="quest_tracker_step_label">{step.label}{!step.hideProgress && (step.target > 1 || step.showProgress) ? ` ${step.current} of ${step.target}` : ""}</span>
         </div>
         );
       })}
@@ -492,17 +504,21 @@ function LogBody({ entries }) {
   );
 }
 
-function SettingTooltipTarget({ description, onShow, onHide, children }) {
+function SettingTooltipTarget({ description, onShow, onHide, children, as: Element = "span", className = "", ...props }) {
   return (
-    <span
-      className="setting_tooltip_target"
+    <Element
+      {...props}
+      className={`setting_tooltip_target${className ? ` ${className}` : ""}`}
+      aria-description={description}
       onPointerEnter={(event) => onShow(description, event.currentTarget)}
+      onPointerDown={(event) => onShow(description, event.currentTarget)}
+      onClick={(event) => onShow(description, event.currentTarget)}
       onPointerLeave={onHide}
       onFocus={(event) => onShow(description, event.currentTarget)}
       onBlur={onHide}
     >
       {children}
-    </span>
+    </Element>
   );
 }
 
@@ -1260,6 +1276,7 @@ function AppContent() {
   const savedFontId = useSyncExternalStore(subscribeToFont, getSavedFontId, getSavedFontId);
   const worldTime = useSyncExternalStore(subscribeToTime, getTimeSnapshot, getTimeSnapshot);
   const activeRealm = useSyncExternalStore(subscribeToRealm, getRealmSnapshot, getRealmSnapshot);
+  const realmDiscovery = useSyncExternalStore(subscribeToRealmDiscovery, getRealmDiscoverySnapshot, getRealmDiscoverySnapshot);
   const quest = useSyncExternalStore(subscribeToQuest, getQuestSnapshot, getQuestSnapshot);
   const gold = useSyncExternalStore(subscribeToGold, getGoldSnapshot, getGoldSnapshot);
   const keys = useSyncExternalStore(subscribeToKey, getKeySnapshot, getKeySnapshot);
@@ -1329,8 +1346,11 @@ function AppContent() {
       const top = anchor.top - tooltip.height - gap >= gap
         ? anchor.top - tooltip.height - gap
         : anchor.bottom + gap;
+      const preferredLeft = anchor.right - tooltip.width >= gap
+        ? anchor.right - tooltip.width
+        : anchor.left;
       setSettingTooltipPosition({
-        left: Math.min(Math.max(anchor.left, gap), leftLimit),
+        left: Math.min(Math.max(preferredLeft, gap), leftLimit),
         top: Math.min(Math.max(top, gap), topLimit),
       });
     };
@@ -1385,7 +1405,7 @@ function AppContent() {
         return prior && (step.current > prior.current || (step.complete && !prior.complete));
       });
       if (changedStep) {
-        enqueueToast(changedStep.target > 1
+        enqueueToast(!changedStep.hideProgress && changedStep.target > 1
           ? `Quest Progress: ${changedStep.label} ${changedStep.current} of ${changedStep.target}.`
           : `Quest Progress: ${changedStep.label}.`);
       }
@@ -1625,6 +1645,8 @@ function AppContent() {
   const playerLightingLabel = `Player - ${formatLightingProfile(playerLightingIndex)}`;
   const torchShadowLabel = `Torch Shadow - ${formatShadowProfile(torchShadowIndex)}`;
   const playerShadowLabel = `Player Shadow - ${formatShadowProfile(playerShadowIndex)}`;
+  const activeRealmLabel = activeRealm === "Underground" ? "-1" : "1";
+  const realmDiscoveryTitle = `Player discovered ${realmDiscovery.percent}% of Realm ${activeRealmLabel} of World 1`;
 
   const commitPaletteEntry = async (entryId, draft) => {
     const nextPalette = palette.map((entry) =>
@@ -1680,36 +1702,52 @@ function AppContent() {
             <BoxLayout action="Map 🔍" />
           </CornerLayout>
           <div className="minimap_status" aria-label="World status">
-            <span>World: 1   Floor: {activeRealm === "Underground" ? "-1" : "1"}</span>
-            <span id="time">Time: {String(worldTime).padStart(5, "0")}</span>
+            <SettingTooltipTarget description={realmDiscoveryTitle} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
+              <span className="hud_tooltip_target">World: 1 Realm: {activeRealmLabel} ({realmDiscovery.percent}%)</span>
+            </SettingTooltipTarget>
+            <SettingTooltipTarget description="Elapsed time units since game started" onShow={showSettingTooltip} onHide={hideSettingTooltip}>
+              <span id="time" className="hud_tooltip_target">Time: {String(worldTime).padStart(5, "0")}</span>
+            </SettingTooltipTarget>
           </div>
         </>
       ) : null}
       <CornerLayout position="bottom-left">
-        <a className="project_link" href={repositoryUrl} target="_blank" rel="noopener noreferrer" aria-label="View the repository on GitHub" tabIndex={-1}>
-          <GitHubMark />
-        </a>
-        <HudBlockLayout className="hud_section" id="windows" aria-labelledby="windows_title" titleId="windows_title" title="Windows">
-          <button id="ascii_palette_toggle" className="corner_body settings_option" type="button" tabIndex={-1} onClick={() => setAsciiPaletteOpen(true)}>
-            Ascii Settings
-          </button>
-          <button id="gameplay_settings_toggle" className="corner_body settings_option" type="button" tabIndex={-1} onClick={() => setGameplaySettingsOpen(true)}>
-            Gameplay Settings
-          </button>
-          <button id="arguments_toggle" className="corner_body settings_option" type="button" tabIndex={-1} onClick={() => setArgumentsOpen(true)}>
-            Arguments
-          </button>
+        <SettingTooltipTarget description={settingsHelp.repository} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
+          <a className="project_link" href={repositoryUrl} target="_blank" rel="noopener noreferrer" aria-label="View the repository on GitHub" aria-description={settingsHelp.repository} tabIndex={-1}>
+            <GitHubMark />
+          </a>
+        </SettingTooltipTarget>
+        <HudBlockLayout className="hud_section" id="windows" aria-labelledby="windows_title" titleId="windows_title" title={<SettingTooltipTarget description={settingsHelp.windowsSection} onShow={showSettingTooltip} onHide={hideSettingTooltip}>Windows</SettingTooltipTarget>}>
+          <SettingTooltipTarget description={settingsHelp.arguments} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
+            <button id="arguments_toggle" className="corner_body settings_option" type="button" aria-description={settingsHelp.arguments} tabIndex={-1} onClick={() => setArgumentsOpen(true)}>
+              Arguments
+            </button>
+          </SettingTooltipTarget>
+          <SettingTooltipTarget description={settingsHelp.asciiPalette} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
+            <button id="ascii_palette_toggle" className="corner_body settings_option" type="button" aria-description={settingsHelp.asciiPalette} tabIndex={-1} onClick={() => setAsciiPaletteOpen(true)}>
+              Ascii
+            </button>
+          </SettingTooltipTarget>
+          <SettingTooltipTarget description={settingsHelp.gameplaySettings} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
+            <button id="gameplay_settings_toggle" className="corner_body settings_option" type="button" aria-description={settingsHelp.gameplaySettings} tabIndex={-1} onClick={() => setGameplaySettingsOpen(true)}>
+              Gameplay
+            </button>
+          </SettingTooltipTarget>
           <SettingTooltipTarget description={settingsHelp.lighting} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
             <button id="lighting_window_toggle" className="corner_body settings_option" type="button" aria-expanded={lightingWindowOpen} aria-controls="lighting_window" aria-description={settingsHelp.lighting} tabIndex={-1} onClick={() => setLightingWindowOpen((isOpen) => !isOpen)}>
               Lighting
             </button>
           </SettingTooltipTarget>
         </HudBlockLayout>
-        <HudBlockLayout className="hud_section" id="stats" aria-labelledby="stats_title" titleId="stats_title" title="Stats">
-          <div id="fps" className="corner_body">FPS: {fps}</div>
-          <span id="version" className="corner_body">v{versionNumber}</span>
+        <HudBlockLayout className="hud_section" id="stats" aria-labelledby="stats_title" titleId="stats_title" title={<SettingTooltipTarget description={settingsHelp.statsSection} onShow={showSettingTooltip} onHide={hideSettingTooltip}>Stats</SettingTooltipTarget>}>
+          <SettingTooltipTarget description={`${settingsHelp.fps} Current value: ${fps}.`} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
+            <div id="fps" className="corner_body">FPS: {fps}</div>
+          </SettingTooltipTarget>
+          <SettingTooltipTarget description={`${settingsHelp.version} ${versionNumber}.`} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
+            <span id="version" className="corner_body">v{versionNumber}</span>
+          </SettingTooltipTarget>
         </HudBlockLayout>
-        <HudBlockLayout className="hud_section" id="settings" aria-labelledby="settings_title" titleId="settings_title" title="Settings">
+        <HudBlockLayout className="hud_section" id="settings" aria-labelledby="settings_title" titleId="settings_title" title={<SettingTooltipTarget description={settingsHelp.settingsSection} onShow={showSettingTooltip} onHide={hideSettingTooltip}>Settings</SettingTooltipTarget>}>
           <SettingTooltipTarget description={settingsHelp.fullscreen} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
             <button id="fullscreen_toggle" className="corner_body settings_option" type="button" aria-pressed={fullscreenPreferred} aria-description={settingsHelp.fullscreen} tabIndex={-1} onClick={toggleFullscreen}>
               <span>Fullscreen</span><span id="fullscreen_checkbox" aria-hidden="true">{fullscreenPreferred ? "☑" : "☐"}</span>
@@ -1725,12 +1763,12 @@ function AppContent() {
               {CAMERA_MODE_LABELS[cameraMode] ?? CAMERA_MODE_LABELS[DEFAULT_CAMERA_MODE]}
             </button>
           </SettingTooltipTarget>
-          <div id="zoom_control" className="corner_body zoom_control" aria-label="Zoom">
+          <SettingTooltipTarget as="div" id="zoom_control" className="corner_body zoom_control" aria-label="Zoom" description={`${settingsHelp.zoom} Current value: ${zoom}.`} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
             <span>Zoom</span>
-            <SettingTooltipTarget description={settingsHelp.zoomIn} onShow={showSettingTooltip} onHide={hideSettingTooltip}><button type="button" aria-label="Zoom in" aria-description={settingsHelp.zoomIn} onClick={() => changeZoom(1)} disabled={zoom >= maxZoom}>+</button></SettingTooltipTarget>
+            <button type="button" aria-label="Zoom in" onClick={() => changeZoom(1)} disabled={zoom >= maxZoom}>+</button>
             <span aria-live="polite">{zoom}</span>
-            <SettingTooltipTarget description={settingsHelp.zoomOut} onShow={showSettingTooltip} onHide={hideSettingTooltip}><button type="button" aria-label="Zoom out" aria-description={settingsHelp.zoomOut} onClick={() => changeZoom(-1)} disabled={zoom <= minZoom}>-</button></SettingTooltipTarget>
-          </div>
+            <button type="button" aria-label="Zoom out" onClick={() => changeZoom(-1)} disabled={zoom <= minZoom}>-</button>
+          </SettingTooltipTarget>
           <SettingTooltipTarget description={settingsHelp.reset} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
             <button id="reset_settings" className="corner_body settings_option" type="button" aria-label="Reset Settings" aria-description={settingsHelp.reset} tabIndex={-1} onClick={resetSettings}>Reset Settings</button>
           </SettingTooltipTarget>
