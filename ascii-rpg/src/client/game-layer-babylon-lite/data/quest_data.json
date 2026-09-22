@@ -52,7 +52,7 @@
         },
         {
           "id": "collect-key",
-          "label": "Collect Key",
+          "label": "Collect a key",
           "showProgress": true,
           "navigation": "nearest-key",
           "criterion": {

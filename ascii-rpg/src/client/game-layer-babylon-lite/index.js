@@ -294,7 +294,9 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     width: Math.max(1, canvas.clientWidth || window.innerWidth),
     height: Math.max(1, canvas.clientHeight || window.innerHeight),
   };
+  let lastDevicePixelRatio = window.devicePixelRatio || 1;
   let canvasResizeObserver = null;
+  let browserZoomMediaQuery = null;
   let aspectRebuildFrame = null;
   let world = null;
   let worldRealms = null;
@@ -322,6 +324,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   let viewOrigin = { x: 0, y: 0 };
   let initialWorldRenderComplete = false;
   let startupCameraModeReapplyPending = false;
+  let cameraModeReapplyAfterTransition = false;
   let cameraMode = normalizeCameraMode(initialCameraMode);
   const timeSystem = createTimeSystem();
   const staminaSystem = createStaminaSystem();
@@ -571,12 +574,17 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
           });
           minimapGlyphCanvases.set(cacheKey, glyphCanvas);
         }
+        // The player glyph shares the compact marker footprint, rather than
+        // filling its minimap cell. This keeps the indicator readable while
+        // retaining the player's visual identity.
+        const glyphWidth = baseGlyph === PLAYER_GLYPH ? cellWidth * 0.5 : cellWidth;
+        const glyphHeight = baseGlyph === PLAYER_GLYPH ? cellHeight * 0.5 : cellHeight;
         context.drawImage(
           glyphCanvas,
-          offsetX + localX * cellWidth,
-          offsetY + localY * cellHeight,
-          cellWidth,
-          cellHeight,
+          offsetX + localX * cellWidth + (cellWidth - glyphWidth) / 2,
+          offsetY + localY * cellHeight + (cellHeight - glyphHeight) / 2,
+          glyphWidth,
+          glyphHeight,
         );
       },
       drawOverlay: () => {
@@ -957,7 +965,14 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     direction = { x: 0, y: 0 },
     commit = true,
   } = {}) => {
-    if (transitionActive || !world || !targetCell) return false;
+    if (transitionActive) {
+      if (intent === CAMERA_RESOLVE_INTENTS.initial
+        || intent === CAMERA_RESOLVE_INTENTS.reapply) {
+        cameraModeReapplyAfterTransition = true;
+      }
+      return false;
+    }
+    if (!world || !targetCell) return false;
     let nextOrigin = null;
     if (intent === CAMERA_RESOLVE_INTENTS.initial
       || intent === CAMERA_RESOLVE_INTENTS.reapply) {
@@ -1103,6 +1118,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
         transitionActive = false;
         setTransitionMask({ phase: TRANSITION_PHASES.IDLE, value: 0 });
         transitionCenter = null;
+        reapplyCameraModeAfterTransition();
       },
     });
     if (!started) {
@@ -1155,6 +1171,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
         clearMovementInput();
         setTransitionMask({ phase: TRANSITION_PHASES.IDLE, value: 0 });
         transitionCenter = null;
+        reapplyCameraModeAfterTransition();
       },
     });
     if (!started) {
@@ -1786,6 +1803,14 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     return { renderMs: 0, warmupMs: 0 };
   };
 
+  const reapplyCameraModeAfterTransition = () => {
+    if (!cameraModeReapplyAfterTransition) return;
+    cameraModeReapplyAfterTransition = false;
+    rebuildViewport({ reapplyCameraMode: true });
+    renderMinimap();
+    renderMapview();
+  };
+
   const movePlayer = () => {
     const exhaustedAtAttempt = staminaSystem.getCurrent() === 0;
     if (playerLifecycle.isDead() || gameplayInputLocked) {
@@ -1954,10 +1979,16 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       width: Math.max(1, canvas.clientWidth || window.innerWidth),
       height: Math.max(1, canvas.clientHeight || window.innerHeight),
     };
+    const nextDevicePixelRatio = window.devicePixelRatio || 1;
     // Babylon updates the canvas backing buffer itself. A ResizeObserver must
     // not treat that as a new layout and recursively submit another full frame.
-    if (nextCanvasSize.width === lastCanvasSize.width && nextCanvasSize.height === lastCanvasSize.height) return;
+    // Browser zoom can leave the CSS dimensions unchanged while changing DPR.
+    if (nextCanvasSize.width === lastCanvasSize.width
+      && nextCanvasSize.height === lastCanvasSize.height
+      && nextDevicePixelRatio === lastDevicePixelRatio) return;
     lastCanvasSize = nextCanvasSize;
+    lastDevicePixelRatio = nextDevicePixelRatio;
+    watchBrowserZoom();
     clearTouchInput();
     // Browser zoom changes the canvas' CSS dimensions. Reapply the selected
     // camera mode against that new viewport so the player returns to its
@@ -1969,6 +2000,12 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       generationController.abort();
       generationController = new AbortController();
     }
+  };
+
+  const watchBrowserZoom = () => {
+    browserZoomMediaQuery?.removeEventListener("change", handleResize);
+    browserZoomMediaQuery = window.matchMedia(`(resolution: ${window.devicePixelRatio || 1}dppx)`);
+    browserZoomMediaQuery.addEventListener("change", handleResize, { once: true });
   };
 
   const handlePageHide = () => {
@@ -1999,6 +2036,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     window.addEventListener("keyup", handleKeyUp);
     window.addEventListener("resize", handleResize);
     window.addEventListener("orientationchange", handleResize);
+    watchBrowserZoom();
     canvasResizeObserver = new ResizeObserver(handleResize);
     canvasResizeObserver.observe(canvas);
     canvas.addEventListener("pointerdown", handlePointerDown);
@@ -2347,6 +2385,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     window.removeEventListener("keyup", handleKeyUp);
     window.removeEventListener("resize", handleResize);
     window.removeEventListener("orientationchange", handleResize);
+    browserZoomMediaQuery?.removeEventListener("change", handleResize);
     canvasResizeObserver?.disconnect();
     canvas.removeEventListener("pointerdown", handlePointerDown);
     canvas.removeEventListener("pointermove", handlePointerMove);
@@ -2425,7 +2464,9 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
         startupCameraModeReapplyPending = false;
         result = renderer ? renderWorld() : { renderMs: 0, warmupMs: 0 };
       } else {
-        result = rebuildViewport({ centerOnPlayer: true, zoomChanged: true });
+        // A zoom changes the number of visible cells. Reapply the active
+        // camera mode instead of preserving Lock/Deadzone's old screen cell.
+        result = rebuildViewport({ reapplyCameraMode: true, zoomChanged: true });
       }
       metrics.lastZoomWarmupMs = result.warmupMs;
       metrics.lastZoomRerenderMs = performance.now() - started - result.warmupMs;
@@ -2609,7 +2650,11 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
         // active layout rather than the outgoing portrait frame.
         aspectRebuildFrame = window.requestAnimationFrame(() => {
           aspectRebuildFrame = null;
-          rebuildViewport({ recalculateCamera: true });
+          // The UI can restore Landscape after the game has already begun
+          // painting its initial frame. Reapply rather than preserve that
+          // outgoing frame's camera offset so the player is centered in the
+          // actual selected presentation aspect.
+          rebuildViewport({ reapplyCameraMode: true });
           renderMinimap();
           renderMapview();
         });
@@ -2659,6 +2704,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       window.removeEventListener("keyup", handleKeyUp);
       window.removeEventListener("resize", handleResize);
       window.removeEventListener("orientationchange", handleResize);
+      browserZoomMediaQuery?.removeEventListener("change", handleResize);
       canvasResizeObserver?.disconnect();
       canvas.removeEventListener("pointerdown", handlePointerDown);
       canvas.removeEventListener("pointermove", handlePointerMove);

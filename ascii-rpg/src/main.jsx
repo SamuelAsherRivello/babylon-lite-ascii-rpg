@@ -5,13 +5,10 @@ import { startGameLayer } from "./client/game-layer-babylon-lite/index.js";
 import { getCameraModeSnapshot, getCombatStatsSnapshot, getExperienceSnapshot, getGoldSnapshot, getHealthSnapshot, getLogSnapshot, getPlayerDeadSnapshot, getQuestSnapshot, getRealmDiscoverySnapshot, getRealmSnapshot, getStaminaSnapshot, sendCombatStatsSnapshot, sendExperienceSnapshot, sendFontSnapshot, sendGoldSnapshot, sendHealthSnapshot, sendLogSnapshot, sendMinimapZoomSnapshot, sendPaletteSnapshot, sendPlayerDeadSnapshot, sendQuestEvent, sendQuestSnapshot, sendRandomSeedSnapshot, sendRealmDiscoverySnapshot, sendRealmSnapshot, sendStaminaSnapshot, sendTimeSnapshot, setGameController } from "./client/bridge-layer/game-bridge.js";
 import { fontReady, getFontId, subscribeToFont } from "./client/ui-layer-react/font-store.js";
 import { getPalette, paletteReady, subscribeToPalette } from "./client/ui-layer-react/palette-store.js";
-import { initializeHudHiddenDataset } from "./client/ui-layer-react/platform-settings.js";
 import { generationSettingsReady, getGenerationSettings } from "./client/ui-layer-react/generation-settings-store.js";
 import "./client/ui-layer-react/styles.css";
 
 const gameLayer = document.getElementById("game_layer");
-initializeHudHiddenDataset();
-
 void Promise.all([paletteReady, fontReady, generationSettingsReady])
   .then(() => startGameLayer(gameLayer, getPalette(), getFontId(), getRealmSnapshot(), getCameraModeSnapshot(), getGenerationSettings()))
   .then((controller) => {

@@ -24,11 +24,12 @@ test("builds for the GitHub Pages project path", () => {
   }
 });
 
-test("documents the desktop Portrait forest-gate letterbox", async () => {
+test("documents the randomized desktop Portrait letterbox", async () => {
   const page = await readFile(new URL("index.html", appRoot), "utf8");
   const mapStyles = await readFile(new URL("src/client/ui-layer-react/map.css", appRoot), "utf8");
-  const [backdrop, rail] = await Promise.all([
-    readFile(new URL("src/assets/letterbox/forest-gate-backdrop-v2.png", appRoot)),
+  const [mossy, chained, rail] = await Promise.all([
+    readFile(new URL("src/assets/letterbox/mossy-torch-lit-ruins.png", appRoot)),
+    readFile(new URL("src/assets/letterbox/subtle-chained-brick-dungeon.png", appRoot)),
     readFile(new URL("src/assets/letterbox/forest-gate-rail.png", appRoot)),
   ]);
 
@@ -37,14 +38,20 @@ test("documents the desktop Portrait forest-gate letterbox", async () => {
     || !page.includes('class="letterbox_presentation__rail letterbox_presentation__rail--right"')) {
     throw new Error("The page must provide an independent pair of letterbox rails behind the game and UI layers.");
   }
-  if (backdrop.length < 2_000_000 || rail.length < 90_000) {
-    throw new Error("The RPG must own complete forest-gate backdrop and rail assets.");
+  if (mossy.length < 2_000_000 || chained.length < 1_900_000 || rail.length < 90_000) {
+    throw new Error("The RPG must own both complete randomized backdrop assets and its existing rail asset.");
+  }
+  if (!page.includes('Math.random() < 0.5 ? "mossy" : "chained"')
+    || !page.includes('data-letterbox-layout=""')
+    || !page.includes('dataset.letterboxLayout = document.documentElement.dataset.letterboxLayout')) {
+    throw new Error("The letterbox must select one local layout once while the page loads.");
   }
   for (const fragment of [
     '#letterbox_presentation {',
     'pointer-events: none',
     'z-index: 1',
-    'background: url("../../assets/letterbox/forest-gate-backdrop-v2.png")',
+    'background: url("../../assets/letterbox/mossy-torch-lit-ruins.png")',
+    'background: url("../../assets/letterbox/subtle-chained-brick-dungeon.png")',
     'background: url("../../assets/letterbox/forest-gate-rail.png")',
     'html[data-presentation-aspect="portrait"] #letterbox_presentation',
     '@media (hover: hover) and (pointer: fine)',
@@ -160,24 +167,20 @@ test("documents the plain safe-area template", async () => {
     || !styles.includes("pointer-events: auto")) {
     throw new Error("The top HUD must display box actions with right-aligned compact world, realm, discovered, and time status below the minimap.");
   }
-  const lowerLeftMarkup = app.slice(app.indexOf('<CornerLayout position="bottom-left">'), app.indexOf('position="bottom-right"'));
+  const lowerLeftMarkup = app.slice(app.indexOf('position="bottom-left"'), app.indexOf('position="bottom-right"'));
   for (const requiredTooltip of [
     "settingsHelp.repository",
-    "settingsHelp.windowsSection",
     "settingsHelp.asciiPalette",
     "settingsHelp.gameplaySettings",
     "settingsHelp.arguments",
     "settingsHelp.lighting",
-    "settingsHelp.statsSection",
     "settingsHelp.fps",
     "settingsHelp.version",
-    "settingsHelp.settingsSection",
     "settingsHelp.fullscreen",
     "settingsHelp.aspect",
     "settingsHelp.camera",
     "settingsHelp.zoom",
     "settingsHelp.reset",
-    "settingsHelp.showUi",
   ]) {
     if (!lowerLeftMarkup.includes(requiredTooltip)) {
       throw new Error(`The lower-left HUD line for ${requiredTooltip} must have a full-line tooltip.`);
@@ -315,12 +318,12 @@ test("documents the plain safe-area template", async () => {
   if (!app.includes('id="fps"') || !app.includes("FPS: {fps}") || !app.includes("requestAnimationFrame(updateFps)")) {
     throw new Error("The HUD must display a once-per-second browser FPS counter.");
   }
-  if (!app.includes('id="windows"') || !app.includes('titleId="windows_title"') || !app.includes(">Windows</SettingTooltipTarget>")
+  if (!app.includes('id="windows"') || !app.includes('titleId="windows_title"') || !app.includes('title="Windows"')
     || app.includes('id="windows_2"') || app.includes('titleId="windows_2_title"') || app.includes('title="Windows - 2"')
-    || !app.includes('id="settings"') || !app.includes('titleId="settings_title"') || !app.includes(">Settings</SettingTooltipTarget>")) {
+    || !app.includes('id="settings"') || !app.includes('titleId="settings_title"') || !app.includes('title="Settings"')) {
     throw new Error("The lower-left HUD must include Windows and Settings sections.");
   }
-  if (!app.includes('titleId="stats_title"') || !app.includes(">Info</SettingTooltipTarget>")) {
+  if (!app.includes('titleId="stats_title"') || !app.includes('title="Info"')) {
     throw new Error("The lower-left HUD stats section must be labeled Info.");
   }
   const windowsMarkup = app.slice(app.indexOf('id="windows"'), app.indexOf('id="stats"'));
@@ -371,9 +374,9 @@ test("documents the plain safe-area template", async () => {
     throw new Error("A WebGPU startup failure must leave the game layer unloaded without a canvas fallback.");
   }
   if (!gameLayer.includes("getViewOriginForResize")
-    || !gameLayer.includes("recalculateCamera: true")
+    || !gameLayer.includes("reapplyCameraMode: true")
     || !gameLayer.includes("world && playerCell")) {
-    throw new Error("Viewport resize must recalculate the active camera only when playable world state exists.");
+    throw new Error("Viewport changes must reapply the active camera only when playable world state exists.");
   }
   if (!gameLayer.includes("CAMERA_RESOLVE_INTENTS")
     || !gameLayer.includes('initial: "initial"')
@@ -389,6 +392,7 @@ test("documents the plain safe-area template", async () => {
     || !gameLayer.includes("resolveCameraOrigin(sourceScreenCell")
     || !gameLayer.includes("resolveCameraOrigin(CAMERA_RESOLVE_INTENTS.activeMode, { targetCell: nextCell, direction, commit: false })")
     || !gameLayer.includes("setAspectMode()")
+    || !gameLayer.includes("rebuildViewport({ reapplyCameraMode: true });")
     || !app.includes("sendAspectSnapshot(aspectMode)")
     || !gameBridge.includes("sendAspectSnapshot")
     || !gameBridge.includes("setAspectMode?.(aspectSnapshot)")) {
@@ -404,7 +408,10 @@ test("documents the plain safe-area template", async () => {
   if (!gameLayer.includes("canvas.clientWidth || window.innerWidth")
     || !gameLayer.includes("canvas.clientHeight || window.innerHeight")
     || !gameLayer.includes("new ResizeObserver(handleResize)")
-    || !gameLayer.includes("reapplyCameraMode: true")) {
+    || !gameLayer.includes("reapplyCameraMode: true")
+    || !gameLayer.includes("lastDevicePixelRatio")
+    || !gameLayer.includes("watchBrowserZoom")
+    || !gameLayer.includes("cameraModeReapplyAfterTransition")) {
     throw new Error("The game viewport must follow the canvas dimensions available in the browser.");
   }
   const topLeftStart = app.indexOf('position="top-left"');
@@ -415,11 +422,11 @@ test("documents the plain safe-area template", async () => {
   const bottomLeftStart = app.indexOf('position="bottom-left"');
   const bottomRightStart = app.indexOf('position="bottom-right"');
   const bottomLeftMarkup = app.slice(bottomLeftStart, bottomRightStart);
-  if (bottomLeftStart === -1 || !bottomLeftMarkup.includes('id="windows"') || !bottomLeftMarkup.includes('id="settings"')
-    || !bottomLeftMarkup.includes('id="show_ui_toggle"') || !bottomLeftMarkup.includes("Ascii")
+  if (bottomLeftStart === -1 || !bottomLeftMarkup.includes('id="developer_box"') || !bottomLeftMarkup.includes('>Dev</button>')
+    || !bottomLeftMarkup.includes('id="windows"') || !bottomLeftMarkup.includes('id="settings"') || !bottomLeftMarkup.includes("Ascii")
     || bottomLeftMarkup.includes("Ascii Settings") || bottomLeftMarkup.includes("Gameplay Settings")
-    || !bottomLeftMarkup.includes("Fullscreen") || !bottomLeftMarkup.includes("Reset Settings")) {
-    throw new Error("The lower-left HUD must contain the Windows and Settings controls.");
+    || !bottomLeftMarkup.includes("Fullscreen") || !bottomLeftMarkup.includes("Reset Settings") || bottomLeftMarkup.includes('id="show_ui_toggle"')) {
+    throw new Error("The lower-left Dev panel must contain the retained Windows and Settings controls without the Developer toggle.");
   }
   const lightingWindowStart = app.indexOf('id="lighting_window"');
   const lightingWindowMarkup = app.slice(lightingWindowStart, app.indexOf("</section>", lightingWindowStart));
@@ -453,7 +460,7 @@ test("documents the plain safe-area template", async () => {
     || !app.includes('className="lighting_window tutorial_window"')
     || !app.includes("showCloseButton = true") || !app.includes("showCloseButton = false")
     || !app.includes("showBackdrop = true") || !app.includes("closeOnBackdropClick = true")
-    || !app.includes("showCloseButton={false}") || !app.includes("closeOnBackdropClick")
+    || !app.includes("showCloseButton={true}") || !app.includes("closeOnBackdropClick")
     || !styles.includes("background: rgb(0 0 0 / 50%)")) {
     throw new Error("Lighting and tutorial windows must share the window class and configurable backdrop behavior.");
   }
@@ -462,12 +469,15 @@ test("documents the plain safe-area template", async () => {
   if (closeLightingMarkup.includes("aria-description") || app.slice(Math.max(0, closeLightingStart - 300), closeLightingStart).includes("SettingTooltipTarget")) {
     throw new Error("Close controls must not show a tooltip.");
   }
-  if (!app.includes('id="arguments_title"') || !app.includes("randomSeed")) {
-    throw new Error("The Arguments window must document the randomSeed URL argument.");
+  if (!app.includes('id="arguments_title"') || !app.includes("randomSeed") || !app.includes("skipTutorial")) {
+    throw new Error("The Arguments window must document randomSeed and skipTutorial URL arguments.");
   }
   if (!app.includes("getRandomSeedSnapshot") || !app.includes("subscribeToRandomSeed")
-    || !app.includes("encodeURIComponent(seedValue)") || !app.includes("randomSeed={randomSeed}")) {
+    || !app.includes("value: (seedValue) => seedValue") || !app.includes("randomSeed={randomSeed}")) {
     throw new Error("The randomSeed URL argument example must use the current session seed.");
+  }
+  if (!app.includes('getUrlBooleanArgument(window.location.href, "skipTutorial")')) {
+    throw new Error("skipTutorial must default to false and skip the tutorial only when its URL value is true.");
   }
   if (!app.includes('className="argument_code"') || !app.includes("window.location.assign") || !app.includes("withUrlArgument")) {
     throw new Error("Argument examples must be clickable URL actions that preserve and update query arguments.");
@@ -528,28 +538,25 @@ test("documents the plain safe-area template", async () => {
   if (!styles.includes(".prompt_body") || !styles.includes(".prompt_button")) {
     throw new Error("Prompts must define shared body and button styles.");
   }
-  if (!app.includes('id="show_ui_toggle"') || !app.includes("Developer") || !app.includes("useState(getStoredShowHud)")
-    || !app.includes("localStorage.setItem(showUiStorageKey, showHud ? \"true\" : \"false\")")
-    || !app.includes("const toggleHud") || !app.includes("setShowHud((currentShowHud) => !currentShowHud)")
+  if (!app.includes("developerOpenStorageKey") || !app.includes("useState(() => getStoredBoolean(developerOpenStorageKey, false))")
+    || !app.includes("localStorage.setItem(developerOpenStorageKey, developerOpen ? \"true\" : \"false\")")
+    || !app.includes('className={`developer_panel ${developerOpen ? "developer_panel_open" : "developer_panel_closed"}`}')
+    || !app.includes('className="developer_box_body"') || !app.includes('titleClassName="developer-title"')
+    || !app.includes('bodyClassName="developer-body-text"') || app.includes('id="show_ui_toggle"')
     || !platformSettings.includes('matchMedia("(pointer: coarse)")') || !platformSettings.includes("zoom: 5")
-    || !platformSettings.includes("showHud: false") || !platformSettings.includes("SHOW_UI_STORAGE_KEY")) {
-    throw new Error("Developer must use persisted platform-specific defaults.");
+    || platformSettings.includes("SHOW_UI_STORAGE_KEY") || platformSettings.includes("getStoredShowHud")) {
+    throw new Error("Dev must be persisted closed by default and retire the Show UI setting.");
   }
   if (!app.includes("logOpenStorageKey")
     || !app.includes("useState(() => getStoredBoolean(logOpenStorageKey, true))")
     || !app.includes("localStorage.setItem(logOpenStorageKey, logOpen ? \"true\" : \"false\")")) {
     throw new Error("The Log corner open state must persist and restore locally.");
   }
-  if (app.indexOf('id="show_ui_toggle"') < app.indexOf('id="reset_settings"')) {
-    throw new Error("Developer must remain the bottom item in the lower-left Settings list.");
-  }
-  if (!app.includes('document.documentElement.dataset.hudHidden = String(!showHud)')
-    || !main.includes("initializeHudHiddenDataset();")
-    || !platformSettings.includes("initializeHudHiddenDataset")
-    || !styles.includes('html[data-hud-hidden="true"] .corner_bottom_left > :not(#settings)')
-    || !styles.includes('html[data-hud-hidden="true"] #settings > .hud_block_body > :not(:has(#show_ui_toggle))')
-    || !styles.includes('html[data-hud-hidden="true"] #settings > .hud_block_body > :has(#show_ui_toggle)')) {
-    throw new Error("Hiding the UI must preserve the Developer control in the lower-left Settings HUD.");
+  if (!styles.includes(".developer_box_body") || !styles.includes("overflow: hidden")
+    || !styles.includes(".developer-title") || !styles.includes(".developer-body-text")
+    || !styles.includes("font-size: 8pt") || styles.includes("data-hud-hidden")
+    || main.includes("initializeHudHiddenDataset")) {
+    throw new Error("The Dev panel must use scoped 8pt no-scroll styling without the retired HUD-hidden behavior.");
   }
   if (!app.includes("requestFullscreenOnFirstInteraction")
     || !app.includes('document.addEventListener("pointerdown", requestFullscreenOnFirstInteraction, { capture: true, once: true })')
@@ -762,14 +769,16 @@ test("documents the event-only movement tutorial flow", async () => {
     }
   }
   if (!app.includes("subscribeToPlayerMoved") || !app.includes("tutorialDirectionsRef")
-    || !app.includes("Tutorial Complete.") || !app.includes('const title = "How To Play"')
-    || !app.includes("Use arrow keys or swipe to move. Hold to move faster.")
+    || !app.includes("You completed the tutorial. Enjoy the game!") || !app.includes('const title = "How To Play"')
+    || !app.includes("Move the player")
+    || !app.includes("Use arrow keys (or swipe touch) to move")
+    || !app.includes("Hold shift (or hold touch) to move faster")
     || !app.includes("How To Play") || !app.includes("Next") || !app.includes("Skip Tutorial")
     || !app.includes("tutorialSkipStorageKey") || !app.includes(">Ok</button>")
     || app.includes("Don't show me this again")
-    || app.includes('aria-label="Close Tutorial"') || !app.includes("closeOnBackdropClick")
+    || !app.includes('aria-label="Close Tutorial"') || !app.includes("showCloseButton") || !app.includes("closeOnBackdropClick")
     || !app.includes("onClose={() => setTutorialPhase(\"finished\")}")) {
-    throw new Error("The tutorial must be event-driven, skippable, and dismissible through its action buttons or backdrop.");
+    throw new Error("The tutorial must be event-driven, skippable, and dismissible through its action buttons, close control, or backdrop.");
   }
   if (!styles.includes(".tutorial_window") || styles.includes(".tutorial_window_checkbox")
     || !styles.includes(".tutorial_window_primary") || !styles.includes(".tutorial_window_secondary")
@@ -788,6 +797,25 @@ test("documents the event-only movement tutorial flow", async () => {
   }
   if (gameLayer.includes("tutorialPhase") || gameLayer.includes("tutorialSkipStorageKey")) {
     throw new Error("Tutorial state must remain outside the gameplay layer.");
+  }
+});
+
+test("documents Escape dismissal for closeable windows", async () => {
+  const app = await readFile(new URL("src/client/ui-layer-react/App.jsx", appRoot), "utf8");
+  for (const required of [
+    'event.key !== "Escape"',
+    "closeTopmostWindow",
+    "setProceduralSettingsOpen(false)",
+    "setGameplaySettingsOpen(false)",
+    "setArgumentsOpen(false)",
+    "setAsciiPaletteOpen(false)",
+    "setLightingWindowOpen(false)",
+    'setTutorialPhase("finished")',
+    'window.addEventListener("keydown", closeTopmostWindow, true)',
+  ]) {
+    if (!app.includes(required)) {
+      throw new Error("Escape must close exactly one of the closeable utility or tutorial windows.");
+    }
   }
 });
 

@@ -5,3 +5,9 @@ export function withUrlArgument(currentUrl, name, value) {
   nextUrl.searchParams.set(name, value);
   return nextUrl;
 }
+
+export function getUrlBooleanArgument(currentUrl, name, defaultValue = false) {
+  const value = new URL(currentUrl, urlArgumentBase).searchParams.get(name);
+  if (value === null) return defaultValue;
+  return value === "true";
+}

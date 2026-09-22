@@ -7,7 +7,7 @@ between landscape and portrait mobile-sized viewports.
 ## Requirements
 
 ### Requirement: Responsive four-corner HUD
-The game SHALL retain its HUD regions within one shared inset from the viewport edges. The upper-left and upper-right regions SHALL be equal-sized bordered boxes aligned across the top of the viewport, with the upper-left box serving as the Character box and the upper-right box serving as the Minimap box. The lower-left and lower-right regions SHALL retain their existing responsive behavior and remain usable without clipping or overflow.
+The game SHALL retain its HUD regions within one shared inset from the viewport edges. The upper-left and upper-right regions SHALL be equal-sized bordered boxes aligned across the top of the viewport, with the upper-left box serving as the Character box and the upper-right box serving as the Minimap box. The lower-left Dev panel and lower-right Log panel SHALL retain matching open dimensions, remain anchored to their respective lower corners, and keep all visible lower-left tools usable without clipping, scrollbars, or overflow.
 
 #### Scenario: Matching top boxes in landscape
 - **WHEN** the game is shown in a landscape viewport
@@ -16,6 +16,10 @@ The game SHALL retain its HUD regions within one shared inset from the viewport 
 #### Scenario: Constrained landscape HUD
 - **WHEN** the browser is resized to a short landscape viewport
 - **THEN** all four corner regions and every Windows and Settings control are visible inside the shared margins without vertical overflow
+
+#### Scenario: Matching lower panels when open
+- **WHEN** both Dev and Log are open
+- **THEN** their panels have matching width and height without changing their lower-left and lower-right anchors
 
 #### Scenario: Matching top boxes in portrait
 - **WHEN** the game is shown in a portrait or mobile-sized viewport
@@ -204,3 +208,30 @@ without displacing controls outside the Character box.
 - **WHEN** the Character box renders with the five-bar layout
 - **THEN** each resource or slot box SHALL use the `22.4px` square geometry and
   remain aligned within the responsive Character box
+
+### Requirement: Responsive tutorial window geometry
+
+The Tutorial and Tutorial Complete windows SHALL remain fully visible and
+operable within the browser viewport on desktop and mobile-sized landscape and
+portrait presentations. Their title, instruction or completion content, and
+action controls SHALL remain reachable without page or horizontal overflow,
+and the game canvas SHALL remain usable behind the non-modal window.
+
+#### Scenario: Tutorial opens in portrait
+
+- **WHEN** a new session starts in a portrait viewport
+- **THEN** the Tutorial title, instruction, `Next`, and `Skip Tutorial` actions
+  are visible within the viewport and the window does not create horizontal
+  overflow
+
+#### Scenario: Tutorial opens in constrained landscape
+
+- **WHEN** a new session starts in a short landscape viewport
+- **THEN** the Tutorial title, instruction, `Next`, and `Skip Tutorial` actions
+  remain visible inside the shared UI margins
+
+#### Scenario: Completion window remains operable
+
+- **WHEN** the Tutorial Complete window appears in any supported presentation
+- **THEN** its title, matching body layout, and `Ok` action remain visible and
+  operable without clipping or scrolling the page

@@ -1,11 +1,6 @@
-# platform-default-settings Specification
+# Spec Delta
 
-## Purpose
-
-Provides platform-appropriate first-run settings and an immersive mobile entry
-without replacing settings that a player has already chosen and saved.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Platform-specific unset-setting defaults
 The game SHALL classify a browser as Mobile when its primary pointing input is coarse; all other browsers SHALL be classified as PC. When a persisted setting is absent, both platforms SHALL use the current default values, including Zoom `5` and Dev closed. Existing persisted values SHALL take precedence over platform defaults, and first-run defaults SHALL be persisted using the existing settings storage so Reset Settings causes the applicable platform defaults to be selected again. The game SHALL NOT retain a Show UI preference or HUD-hidden mode.
@@ -29,28 +24,3 @@ The game SHALL classify a browser as Mobile when its primary pointing input is c
 #### Scenario: Retired Show UI preference is ignored
 - **WHEN** a browser has a previously stored Show UI value
 - **THEN** the game does not hide the HUD or expose a Show UI control
-
-### Requirement: Mobile first-click fullscreen entry
-On each Mobile page load, the game SHALL make one fullscreen request from the
-first eligible user click after the application has loaded. It SHALL make at
-most one automatic request per page load, SHALL leave the triggering click's
-normal game or UI action available, and SHALL not retry an automatic request
-after it is denied or unsupported. PC sessions SHALL not automatically request
-fullscreen; their existing Fullscreen control SHALL remain available.
-
-#### Scenario: First mobile click enters fullscreen
-- **WHEN** a Mobile player clicks after a loaded game has not yet made its
-  automatic fullscreen request and fullscreen is supported
-- **THEN** the game requests fullscreen once and still processes the click's
-  normal target action
-
-#### Scenario: Rejected mobile fullscreen request
-- **WHEN** the first Mobile click causes a fullscreen request that is rejected
-  or unsupported
-- **THEN** the game continues normally and makes no further automatic
-  fullscreen request until the next page load
-
-#### Scenario: Desktop does not auto-enter fullscreen
-- **WHEN** a PC player clicks after the game loads
-- **THEN** the game does not automatically request fullscreen and the existing
-  Fullscreen control remains usable

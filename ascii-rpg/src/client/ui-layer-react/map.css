@@ -3,6 +3,7 @@
 #game_layer,
 #game_canvas {
   display: block;
+  background: #000;
 }
 
 #letterbox_presentation {
@@ -24,8 +25,14 @@
   pointer-events: none;
 }
 
-#letterbox_presentation::before {
-  background: url("../../assets/letterbox/forest-gate-backdrop-v2.png") center / cover no-repeat;
+#letterbox_presentation[data-letterbox-layout="mossy"]::before {
+  background: url("../../assets/letterbox/mossy-torch-lit-ruins.png") center / cover no-repeat;
+  filter: brightness(.94) saturate(.95) contrast(1.02);
+  transform: scale(1.015);
+}
+
+#letterbox_presentation[data-letterbox-layout="chained"]::before {
+  background: url("../../assets/letterbox/subtle-chained-brick-dungeon.png") center / cover no-repeat;
   filter: brightness(.94) saturate(.95) contrast(1.02);
   transform: scale(1.015);
 }

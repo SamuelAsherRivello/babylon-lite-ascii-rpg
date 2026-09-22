@@ -4,12 +4,20 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Ascii RPG</title>
+    <style>html, body, #game_layer, #game_canvas { background: #000; }</style>
+    <script>
+      document.documentElement.dataset.letterboxLayout = Math.random() < 0.5 ? "mossy" : "chained";
+    </script>
   </head>
   <body>
-    <div id="letterbox_presentation" aria-hidden="true">
+    <div id="letterbox_presentation" aria-hidden="true" data-letterbox-layout="">
       <span class="letterbox_presentation__rail letterbox_presentation__rail--left"></span>
       <span class="letterbox_presentation__rail letterbox_presentation__rail--right"></span>
     </div>
+
+    <script>
+      document.getElementById("letterbox_presentation").dataset.letterboxLayout = document.documentElement.dataset.letterboxLayout;
+    </script>
 
     <!-- Babylon Lite owns the game world in game_layer. -->
     <div id="game_layer"></div>

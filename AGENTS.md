@@ -91,6 +91,11 @@ existing Node tests, build checks, and manual browser verification only when
 the user explicitly requests Playwright test work or when a later request
 explicitly overrides this policy.
 
+## README screenshots
+
+- Every README screenshot of the game MUST use the URL argument
+  `?skipTutorial=true` so the tutorial does not obstruct the captured page.
+
 ## OpenSpec skill discovery
 
 Do not create, update, or execute Playwright test files by default. Use the

@@ -361,3 +361,64 @@ Babylon Lite SHALL own mapview world rendering, mutable world data, entity posit
 #### Scenario: Closing mapview restores input ownership
 - **WHEN** the mapview closes
 - **THEN** Babylon Lite restores normal keyboard input handling without React mutating game input state directly
+
+### Requirement: Game-layer transitions do not cover the UI layer
+
+Transition presentation SHALL be owned and mounted within `game_layer` and
+SHALL cover the complete game presentation, including its game-layer canvases,
+without covering or disabling the React-owned `ui_layer`. The transition mask
+SHALL not become a React-rendered gameplay surface or expose mutable world
+state to React.
+
+#### Scenario: HUD remains visible during an iris
+
+- **WHEN** a realm transition is closing, covered, or opening
+- **THEN** the React HUD and settings surfaces remain visible above the game
+  layer and are not obscured by the black iris
+
+#### Scenario: Game layer owns transition state
+
+- **WHEN** a transition is active
+- **THEN** Babylon Lite owns its animation progress, mask rendering, input lock,
+  midpoint callback, and disposal without React inspecting world cells or
+  renderer internals
+
+### Requirement: Publish generic successful cardinal movement events
+
+The game layer SHALL dispatch a generic event for each successful cardinal
+player movement using the explicit event meanings `player moved up`, `player
+moved down`, `player moved left`, and `player moved right`. These events SHALL
+be emitted for both keyboard and canvas-swipe movement. The game layer SHALL
+not contain tutorial-specific state, sequencing, or completion logic. Any UI
+consumer MAY listen for these events, but SHALL NOT receive or mutate player
+coordinates, collision state, world cells, or movement timers.
+
+#### Scenario: Keyboard movement event
+
+- **WHEN** a mapped arrow-key input successfully moves the player one cardinal
+  grid cell
+- **THEN** the game dispatches exactly one corresponding generic player-moved
+  event, such as `player moved up`
+
+#### Scenario: Swipe movement event
+
+- **WHEN** a cardinal canvas swipe successfully moves the player one grid cell
+- **THEN** the game dispatches exactly one corresponding generic player-moved
+  event
+
+#### Scenario: Blocked movement event
+
+- **WHEN** keyboard or swipe input cannot move the player into its destination
+- **THEN** the game dispatches no player-moved event
+
+#### Scenario: Diagonal movement events
+
+- **WHEN** a diagonal input successfully moves the player
+- **THEN** the game dispatches no cardinal player-moved event for that single
+  diagonal step
+
+#### Scenario: Tutorial remains an event consumer only
+
+- **WHEN** the tutorial updates progress after receiving a player-moved event
+- **THEN** the tutorial changes only its own UI state and the game contains no
+  tutorial-specific progress or completion behavior

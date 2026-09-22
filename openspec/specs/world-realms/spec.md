@@ -37,27 +37,31 @@ additional player marker after the player arrives elsewhere.
   controllable player position after every transfer
 
 ### Requirement: Active world and realm display
-The upper-right Minimap box SHALL display the active world and floor using the compact labels `W: 1` and `F: 1` for Overground or `F: -1` for Underground, alongside the current time. A newly generated world SHALL still start in Overground unless the stored active-realm preference is Underground.
+The upper-right Minimap status SHALL display the active world, realm floor, and realm-local discovered percentage using the compact line `World: 1 Realm: 1 (N%)` for Overground or `World: 1 Realm: -1 (N%)` for Underground, alongside the current time. `N%` SHALL be the active realm's walkable discovery percentage. Hovering the status line SHALL expose the explanatory text `Player discovered N% of Realm X of World 1`, using the active realm value for `X`. A newly generated world SHALL still start in Overground unless the stored active-realm preference is Underground.
 
 #### Scenario: Overground minimap status
 - **WHEN** the active realm is Overground in world 1
-- **THEN** the Minimap box displays `W: 1` and `F: 1`
+- **THEN** the Minimap status displays `World: 1 Realm: 1 (N%)` using Overground's discovered percentage
 
 #### Scenario: New session defaults to Overground
 - **WHEN** no active-realm preference exists in local storage
-- **THEN** the game starts in Overground and the Minimap box displays `W: 1` and `F: 1`
+- **THEN** the game starts in Overground and the Minimap status displays `World: 1 Realm: 1 (N%)` using Overground's discovered percentage
 
 #### Scenario: Underground minimap status
 - **WHEN** the active realm is Underground in world 1
-- **THEN** the Minimap box displays `W: 1` and `F: -1`
+- **THEN** the Minimap status displays `World: 1 Realm: -1 (N%)` using Underground's discovered percentage
+
+#### Scenario: Discovery status hover explains the compact value
+- **WHEN** the active realm is Underground in world 1 and its discovered percentage is `0%`
+- **THEN** hovering the Minimap status line exposes `Player discovered 0% of Realm -1 of World 1`
 
 #### Scenario: Stored Underground preference restores the realm
 - **WHEN** the stored active-realm preference is Underground and a new world is generated after refresh
-- **THEN** the player starts in Underground and the Minimap box displays `W: 1` and `F: -1`
+- **THEN** the player starts in Underground and the Minimap status displays `World: 1 Realm: -1 (N%)` using Underground's discovered percentage
 
 #### Scenario: Realm transfer updates floor
 - **WHEN** the player transfers between Overground and Underground
-- **THEN** the Minimap box updates the floor indicator to the destination realm's mapped value
+- **THEN** the Minimap status updates the realm indicator and discovered percentage to the destination realm's mapped value and walkable discovery percentage
 
 ### Requirement: Realm-specific terrain profiles
 Overground SHALL use walkable grass as its default terrain and non-walkable
@@ -72,7 +76,8 @@ feature occurrence probabilities and parameters.
   respective profiles and mountains and walls remain non-walkable
 
 ### Requirement: Synchronized paired stairs
-Each world SHALL generate non-blocking `▤` stairs in both realms at the same
+
+Each world SHALL generate non-blocking `S` stairs in both realms at the same
 grid coordinates. The requested stair count SHALL equal the requested torch
 count, subject to valid placement capacity. Every accepted paired coordinate
 SHALL be walkable and reachable in both realms, SHALL not be either realm's
@@ -80,19 +85,33 @@ player start, and SHALL remain deterministic for the same world identity and
 generation parameters.
 
 #### Scenario: Stairs match across realms
+
 - **WHEN** a generated world's stair coordinates are inspected
-- **THEN** each Overground `▤` has an Underground `▤` at the identical
+- **THEN** each Overground `S` has an Underground `S` at the identical
   coordinate and both underlying terrain cells are walkable
 
 #### Scenario: Entering stairs transfers realms once
-- **WHEN** the player successfully enters an `S` cell
-- **THEN** the active realm changes to its paired realm and the player arrives
-  on the paired `S` coordinate without immediately transferring back
+
+- **WHEN** the player successfully enters an `S` cell and no transition is
+  active
+- **THEN** the game starts the realm iris, pauses input, changes to the paired
+  realm only at full iris coverage, arrives on the paired `S` coordinate,
+  preserves the player's pre-transfer screen-space position, and cannot
+  immediately transfer back during that transition
 
 #### Scenario: Entering Underground persists active realm
-- **WHEN** the player enters Overground stairs and transfers to Underground
-- **THEN** Underground becomes the stored active-realm preference for the
-  next refresh
+
+- **WHEN** the realm iris completes after entering Overground stairs
+- **THEN** Underground becomes the stored active-realm preference for the next
+  refresh
+
+#### Scenario: Stair transfer uses the same realm presentation
+
+- **WHEN** the player enters the paired stairs and the game moves the player along
+  the shortest reachable path to an `S` cell
+- **THEN** the paired-realm transfer uses the same blocking iris sequence,
+  preserves discovery of every source-route cell, and arrives at the paired
+  coordinate before the opening phase reveals the destination
 
 ### Requirement: Realm-scoped fog of war
 Each realm SHALL own a separate fog-of-war record for the lifetime of its

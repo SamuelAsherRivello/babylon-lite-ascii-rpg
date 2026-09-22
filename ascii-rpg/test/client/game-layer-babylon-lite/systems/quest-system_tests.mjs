@@ -18,7 +18,7 @@ const unlockADoor = {
   id: "unlock-a-door", title: "Unlock A Door", objective: "Unlock A Door",
   steps: [
     { id: "enter-underground", label: "Enter Underground Realm", criterion: { mode: "event", eventType: "realm-entered", realm: "Underground", target: 1 } },
-    { id: "collect-key", label: "Collect Key", showProgress: true, criterion: { mode: "event", eventType: "pickup-collected", pickupType: "key", target: 1 } },
+    { id: "collect-key", label: "Collect a key", showProgress: true, criterion: { mode: "event", eventType: "pickup-collected", pickupType: "key", target: 1 } },
     { id: "open-door", label: "Open a door", criterion: { mode: "event", eventType: "door-unlocked", target: 1 } },
   ],
 };
@@ -48,7 +48,7 @@ test("quest data defines Unlock A Door with the requested ordered steps", () => 
   assert.ok(definition);
   assert.deepEqual(definition.steps.map(({ id, label }) => ({ id, label })), [
     { id: "enter-underground", label: "Enter Underground Realm" },
-    { id: "collect-key", label: "Collect Key" },
+    { id: "collect-key", label: "Collect a key" },
     { id: "open-door", label: "Open a door" },
   ]);
   assert.equal(definition.steps[0].navigation, "nearest-stairs");

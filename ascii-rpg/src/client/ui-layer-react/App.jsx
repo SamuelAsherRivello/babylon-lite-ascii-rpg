@@ -27,7 +27,7 @@ import {
   sortPaletteEntries,
   getPaletteStyle,
 } from "../bridge-layer/palette.js";
-import { withUrlArgument } from "./url-arguments.js";
+import { getUrlBooleanArgument, withUrlArgument } from "./url-arguments.js";
 import { ToastProvider, useToast } from "./ToastProvider.jsx";
 import { BoxLayout, CornerLayout, HudBlockLayout } from "./HudLayouts.jsx";
 import { removeFocusableElementsFromTabOrder } from "./button-tab-order.js";
@@ -43,12 +43,10 @@ import { colorToLinearRgba } from "../game-layer-babylon-lite/palette-color-cach
 import { DEFAULT_ZOOM } from "../game-layer-babylon-lite/zoom-scale.js";
 import {
   getPlatformSettingsDefaults,
-  getStoredShowHud,
   getStoredAspectMode,
   getStoredBooleanValue,
   getMigratedStoredZoomValue,
   isMobilePlatform,
-  SHOW_UI_STORAGE_KEY,
 } from "./platform-settings.js";
 import { MAX_ZOOM, MIN_ZOOM, ZOOM_SCALE_STORAGE_VERSION } from "../game-layer-babylon-lite/zoom-scale.js";
 import {
@@ -123,7 +121,7 @@ import questData from "../game-layer-babylon-lite/data/quest_data.json";
 
 const fullscreenStorageKey = "babylon-lite-ascii-rpg.fullscreen";
 const aspectStorageKey = "babylon-lite-ascii-rpg.aspect";
-const showUiStorageKey = SHOW_UI_STORAGE_KEY;
+const developerOpenStorageKey = "babylon-lite-ascii-rpg.developer-open";
 const logOpenStorageKey = "babylon-lite-ascii-rpg.log-open";
 const zoomStorageKey = "babylon-lite-ascii-rpg.zoom";
 const zoomStorageVersionKey = "babylon-lite-ascii-rpg.zoom-version";
@@ -171,7 +169,6 @@ function formatTooltipDescription(description) {
 const settingsHelp = Object.freeze({
   fullscreen: "Toggle fullscreen.",
   aspect: "Switch between landscape and portrait testing presentation.",
-  showUi: "Show or hide the HUD for developer use.",
   repository: "Open the project repository on GitHub.",
   windowsSection: "Open utility windows.",
   asciiPalette: "Open ASCII palette controls.",
@@ -579,7 +576,6 @@ function WindowBackdrop({ visible, closesOnClick, onClose }) {
 
 function TutorialWindow({ complete, onConfirm, onSkip, showCloseButton = false, showBackdrop = true, closeOnBackdropClick = true, onClose }) {
   const title = "How To Play";
-  const copy = complete ? "Tutorial Complete." : "Use arrow keys or swipe to move. Hold to move faster.";
   const titleId = complete ? "tutorial_complete_title" : "tutorial_title";
 
   return (
@@ -594,12 +590,34 @@ function TutorialWindow({ complete, onConfirm, onSkip, showCloseButton = false, 
         data-close-button-visible={showCloseButton}
         onPointerDown={(event) => event.stopPropagation()}
         onPointerMove={(event) => event.stopPropagation()}
-      >
-        <div className="lighting_window_titlebar tutorial_window_titlebar">
-          <div id={titleId} className="corner_title">{title}</div>
-        </div>
+        >
+          <div className="lighting_window_titlebar tutorial_window_titlebar">
+            <div id={titleId} className="corner_title">{title}</div>
+            {showCloseButton ? (
+              <button
+                className="corner_body settings_option lighting_window_close"
+                type="button"
+                aria-label="Close Tutorial"
+                tabIndex={-1}
+                onPointerDown={(event) => event.stopPropagation()}
+                onClick={onClose}
+              >
+                X
+              </button>
+            ) : null}
+          </div>
         <div className="lighting_window_body tutorial_window_body">
-          <p className="corner_body tutorial_window_copy">{copy}</p>
+          {complete ? (
+            <p className="corner_body tutorial_window_copy">You completed the tutorial. Enjoy the game!</p>
+          ) : (
+            <div className="corner_body tutorial_window_copy tutorial_window_instructions">
+              <p>Move the player</p>
+              <ul>
+                <li>Use arrow keys (or swipe touch) to move</li>
+                <li>Hold shift (or hold touch) to move faster</li>
+              </ul>
+            </div>
+          )}
           <div className="tutorial_window_actions">
             {complete ? (
               <button className="corner_body tutorial_window_primary tutorial_window_ok" type="button" onClick={onConfirm}>Ok</button>
@@ -1214,7 +1232,16 @@ const argumentBlocks = [
   {
     name: "RandomSeed",
     parameter: "randomSeed",
+    value: (seedValue) => seedValue,
     description: "fixes the generated level seed.",
+    fallback: "Without it, each new level receives a fresh random seed.",
+  },
+  {
+    name: "SkipTutorial",
+    parameter: "skipTutorial",
+    value: () => "true",
+    description: "skips the tutorial for this page load.",
+    fallback: "Without it, the tutorial starts unless the saved browser setting skips it.",
   },
 ];
 
@@ -1248,7 +1275,8 @@ export function ArgumentsWindow({ onClose, randomSeed }) {
         </div>
         <div className="prompt_body window_body">
           {argumentBlocks.map((argument) => {
-            const example = `?${argument.parameter}=${encodeURIComponent(seedValue)}`;
+            const value = argument.value(seedValue);
+            const example = `?${argument.parameter}=${encodeURIComponent(value)}`;
             return (
             <section className="argument_block" key={argument.parameter}>
               <h2>{argument.name}</h2>
@@ -1257,14 +1285,14 @@ export function ArgumentsWindow({ onClose, randomSeed }) {
                   <button
                     className="argument_code"
                     type="button"
-                    disabled={!seedValue}
-                    onClick={() => applyUrlArgument(argument.parameter, seedValue)}
+                    disabled={!value}
+                    onClick={() => applyUrlArgument(argument.parameter, value)}
                   >
                     <code>{example}</code>
                   </button>{" "}
                   {argument.description}
                 </li>
-                <li>Without it, each new level receives a fresh random seed.</li>
+                <li>{argument.fallback}</li>
               </ul>
             </section>
             );
@@ -1513,7 +1541,6 @@ function AppContent() {
   const [settingTooltip, setSettingTooltip] = useState(null);
   const [settingTooltipPosition, setSettingTooltipPosition] = useState({ top: 0, left: 0 });
   const settingTooltipRef = useRef(null);
-  const [showHud, setShowHud] = useState(getStoredShowHud);
   const [fullscreenPreferred, setFullscreenPreferred] = useState(() => {
     return localStorage.getItem(fullscreenStorageKey) === "true";
   });
@@ -1534,10 +1561,13 @@ function AppContent() {
   const [playerShadowIndex, setPlayerShadowIndex] = useState(() => getStoredSourceIndex(playerShadowStorageKey, 3));
   const [lightingWindowOpen, setLightingWindowOpen] = useState(false);
   const [mapviewOpen, setMapviewOpen] = useState(false);
+  const [developerOpen, setDeveloperOpen] = useState(() => getStoredBoolean(developerOpenStorageKey, false));
   const [logOpen, setLogOpen] = useState(() => getStoredBoolean(logOpenStorageKey, true));
   const [lightingWindowPosition, setLightingWindowPosition] = useState(getStoredLightingWindowPosition);
   const [tutorialPhase, setTutorialPhase] = useState(() => (
-    getStoredBoolean(tutorialSkipStorageKey, false) ? "finished" : "initial"
+    getUrlBooleanArgument(window.location.href, "skipTutorial") || getStoredBoolean(tutorialSkipStorageKey, false)
+      ? "finished"
+      : "initial"
   ));
   const tutorialDirectionsRef = useRef(new Set());
   const [asciiPaletteOpen, setAsciiPaletteOpen] = useState(false);
@@ -1600,6 +1630,29 @@ function AppContent() {
     window.addEventListener("keydown", blockTutorialInput, true);
     return () => window.removeEventListener("keydown", blockTutorialInput, true);
   }, [tutorialPhase]);
+
+  useEffect(() => {
+    const closeTopmostWindow = (event) => {
+      if (event.key !== "Escape") return;
+
+      const closeAction = [
+        proceduralSettingsOpen && (() => setProceduralSettingsOpen(false)),
+        gameplaySettingsOpen && (() => setGameplaySettingsOpen(false)),
+        argumentsOpen && (() => setArgumentsOpen(false)),
+        asciiPaletteOpen && (() => setAsciiPaletteOpen(false)),
+        lightingWindowOpen && (() => setLightingWindowOpen(false)),
+        (tutorialPhase === "initial" || tutorialPhase === "complete") && (() => setTutorialPhase("finished")),
+      ].find(Boolean);
+      if (!closeAction) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      closeAction();
+    };
+
+    window.addEventListener("keydown", closeTopmostWindow, true);
+    return () => window.removeEventListener("keydown", closeTopmostWindow, true);
+  }, [argumentsOpen, asciiPaletteOpen, gameplaySettingsOpen, lightingWindowOpen, proceduralSettingsOpen, tutorialPhase]);
 
   useEffect(() => {
     if (!playerDead) return undefined;
@@ -1720,10 +1773,8 @@ function AppContent() {
   }, [aspectMode]);
 
   useEffect(() => {
-    localStorage.setItem(showUiStorageKey, showHud ? "true" : "false");
-    document.documentElement.dataset.hudHidden = String(!showHud);
-    return () => delete document.documentElement.dataset.hudHidden;
-  }, [showHud]);
+    localStorage.setItem(developerOpenStorageKey, developerOpen ? "true" : "false");
+  }, [developerOpen]);
 
   useEffect(() => {
     localStorage.setItem(logOpenStorageKey, logOpen ? "true" : "false");
@@ -1847,11 +1898,6 @@ function AppContent() {
     } finally {
       fullscreenRequestInProgressRef.current = false;
     }
-  };
-
-  const toggleHud = () => {
-    setSettingTooltip(null);
-    setShowHud((currentShowHud) => !currentShowHud);
   };
 
   const toggleAspectMode = () => {
@@ -2018,13 +2064,25 @@ function AppContent() {
           </div>
         </>
       ) : null}
-      <CornerLayout position="bottom-left">
+      <CornerLayout
+        position="bottom-left"
+        className={`developer_panel ${developerOpen ? "developer_panel_open" : "developer_panel_closed"}`}
+        aria-label="Developer tools"
+      >
+        {developerOpen ? (
+          <BoxLayout
+            id="developer_box"
+            className="developer_box"
+            actionPosition="top"
+            action={<button className="developer_action" type="button" aria-expanded="true" aria-controls="developer_box" onClick={() => setDeveloperOpen(false)}>Dev</button>}
+          >
+            <div className="developer_box_body">
         <SettingTooltipTarget description={settingsHelp.repository} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
           <a className="project_link" href={repositoryUrl} target="_blank" rel="noopener noreferrer" aria-label="View the repository on GitHub" aria-description={settingsHelp.repository} tabIndex={-1}>
             <GitHubMark />
           </a>
         </SettingTooltipTarget>
-        <HudBlockLayout className="hud_section" id="windows" aria-labelledby="windows_title" titleId="windows_title" title={<SettingTooltipTarget description={settingsHelp.windowsSection} onShow={showSettingTooltip} onHide={hideSettingTooltip}>Windows</SettingTooltipTarget>}>
+        <HudBlockLayout className="hud_section" id="windows" aria-labelledby="windows_title" titleId="windows_title" titleClassName="developer-title" bodyClassName="developer-body-text" title="Windows">
           <div className="windows_control_row">
             <SettingTooltipTarget description={settingsHelp.arguments} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
               <button id="arguments_toggle" className="corner_body settings_option" type="button" aria-description={settingsHelp.arguments} tabIndex={-1} onClick={() => setArgumentsOpen(true)}>
@@ -2059,7 +2117,7 @@ function AppContent() {
             </SettingTooltipTarget>
           </div>
         </HudBlockLayout>
-        <HudBlockLayout className="hud_section" id="stats" aria-labelledby="stats_title" titleId="stats_title" title={<SettingTooltipTarget description={settingsHelp.statsSection} onShow={showSettingTooltip} onHide={hideSettingTooltip}>Info</SettingTooltipTarget>}>
+        <HudBlockLayout className="hud_section" id="stats" aria-labelledby="stats_title" titleId="stats_title" titleClassName="developer-title" bodyClassName="developer-body-text" title="Info">
           <SettingTooltipTarget description={`${settingsHelp.fps} Current value: ${fps}.`} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
             <div id="fps" className="corner_body">FPS: {fps}</div>
           </SettingTooltipTarget>
@@ -2072,7 +2130,7 @@ function AppContent() {
             </button>
           </SettingTooltipTarget>
         </HudBlockLayout>
-        <HudBlockLayout className="hud_section" id="settings" aria-labelledby="settings_title" titleId="settings_title" title={<SettingTooltipTarget description={settingsHelp.settingsSection} onShow={showSettingTooltip} onHide={hideSettingTooltip}>Settings</SettingTooltipTarget>}>
+        <HudBlockLayout className="hud_section" id="settings" aria-labelledby="settings_title" titleId="settings_title" titleClassName="developer-title" bodyClassName="developer-body-text" title="Settings">
           <SettingTooltipTarget description={settingsHelp.fullscreen} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
             <button id="fullscreen_toggle" className="corner_body settings_option" type="button" aria-pressed={fullscreenPreferred} aria-description={settingsHelp.fullscreen} tabIndex={-1} onClick={toggleFullscreen}>
               <span>Fullscreen</span><span id="fullscreen_checkbox" aria-hidden="true">{fullscreenPreferred ? "☑" : "☐"}</span>
@@ -2097,12 +2155,12 @@ function AppContent() {
           <SettingTooltipTarget description={settingsHelp.reset} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
             <button id="reset_settings" className="corner_body settings_option" type="button" aria-label="Reset Settings" aria-description={settingsHelp.reset} tabIndex={-1} onClick={resetSettings}>Reset Settings</button>
           </SettingTooltipTarget>
-          <SettingTooltipTarget description={settingsHelp.showUi} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
-            <button id="show_ui_toggle" className="corner_body settings_option" type="button" aria-pressed={showHud} aria-description={settingsHelp.showUi} tabIndex={-1} onClick={toggleHud}>
-              <span>Developer</span><span id="show_ui_checkbox" aria-hidden="true">{showHud ? "☑" : "☐"}</span>
-            </button>
-          </SettingTooltipTarget>
         </HudBlockLayout>
+            </div>
+          </BoxLayout>
+        ) : (
+          <button className="developer_action developer_launcher" type="button" aria-expanded="false" aria-controls="developer_box" onClick={() => setDeveloperOpen(true)}>Dev</button>
+        )}
       </CornerLayout>
       <CornerLayout
         position="bottom-right"
@@ -2163,7 +2221,7 @@ function AppContent() {
           complete={tutorialPhase === "complete"}
           onConfirm={confirmTutorial}
           onSkip={skipTutorial}
-          showCloseButton={false}
+          showCloseButton={true}
           showBackdrop
           closeOnBackdropClick
           onClose={() => setTutorialPhase("finished")}

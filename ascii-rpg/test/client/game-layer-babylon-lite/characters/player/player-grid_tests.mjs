@@ -242,10 +242,17 @@ test("recalculates camera origins for a resized viewport without moving the play
 test("reapplying a camera mode after browser zoom centers the player", () => {
   const world = { columns: 256, rows: 256 };
   const playerCell = { x: 90, y: 70 };
-  const zoomedViewport = createViewport({ screenWidth: 960, screenHeight: 540, zoom: 10 });
+  const initialViewport = createViewport({ screenWidth: 960, screenHeight: 540, zoom: 9 });
+  const zoomedViewport = createViewport({ screenWidth: 960, screenHeight: 540, zoom: 5 });
 
   for (const mode of ["center", "deadzone", "lock"]) {
+    const initialOrigin = getInitialViewOriginForCamera(mode, playerCell, initialViewport, world);
     const origin = getInitialViewOriginForCamera(mode, playerCell, zoomedViewport, world);
+    assert.notDeepEqual(
+      { x: playerCell.x - initialOrigin.x, y: playerCell.y - initialOrigin.y },
+      getCenterCell(zoomedViewport),
+      `${mode} must not retain its old-zoom screen cell`,
+    );
     assert.deepEqual(
       { x: playerCell.x - origin.x, y: playerCell.y - origin.y },
       getCenterCell(zoomedViewport),
