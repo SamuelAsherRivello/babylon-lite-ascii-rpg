@@ -2,7 +2,8 @@
 
 1. [Philosophy](#philosophy)
    1. [Embrace ASCII](#embrace-ascii)
-   2. [Don't subvert ASCII (list)](#dont-subvert-ascii-list)
+      1. [DO](#do)
+      2. [DON'T](#dont)
 2. [Workflows](#workflows)
 3. [Possible Features](#possible-features)
 
@@ -12,9 +13,15 @@
 
 Maybe: Embrace the limitations of ASCII instead of trying to subvert them by breaking the illusion.
 
-## Don't subvert ASCII (list)
+### DO
 
-Ways to break the illusion (AVOID THESE?)
+- Keep artwork aligned to a consistent character grid.
+- Use ASCII glyphs as the primary language for characters, environments, effects, and UI.
+- Make movement, scale, and rotation feel intentional within the grid.
+- Express lighting and shadows through readable glyphs and contrast.
+- Let ASCII limitations shape the gameplay, atmosphere, and interface.
+
+### DON'T
 
 - Using smooth, high-resolution artwork that does not follow the character grid.
 - Rendering non-ASCII sprites, particles, or effects that clash with the glyph language.
