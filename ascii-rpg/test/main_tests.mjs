@@ -854,7 +854,7 @@ test("documents the quest tracker, live gold bridge, and quest toasts", async ()
   if (!app.includes("Quest: ${quest.title}") || !app.includes("quest_tracker_step_complete")
     || !app.includes("quest_tracker_title_complete")
     || !app.includes("quest_tracker_marker") || !app.includes("isActiveStep") || !app.includes('quest.state === "pending"')
-    || !app.includes("quest.steps") || !app.includes("step.label")
+    || !app.includes("quest.steps") || !app.includes("step.label") || !app.includes("!step.hideProgress && step.target > 1")
     || !app.includes("subscribeToQuestEvent") || !app.includes("Quest Started: ${quest.title}.") || !app.includes("Quest Progress: ${changedStep.label}")
     || !app.includes("Quest Completed: ${quest.title}.")) {
     throw new Error("The React HUD must render live quest text and state-specific quest toasts.");

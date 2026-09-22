@@ -574,17 +574,12 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
           });
           minimapGlyphCanvases.set(cacheKey, glyphCanvas);
         }
-        // The player glyph shares the compact marker footprint, rather than
-        // filling its minimap cell. This keeps the indicator readable while
-        // retaining the player's visual identity.
-        const glyphWidth = baseGlyph === PLAYER_GLYPH ? cellWidth * 0.5 : cellWidth;
-        const glyphHeight = baseGlyph === PLAYER_GLYPH ? cellHeight * 0.5 : cellHeight;
         context.drawImage(
           glyphCanvas,
-          offsetX + localX * cellWidth + (cellWidth - glyphWidth) / 2,
-          offsetY + localY * cellHeight + (cellHeight - glyphHeight) / 2,
-          glyphWidth,
-          glyphHeight,
+          offsetX + localX * cellWidth,
+          offsetY + localY * cellHeight,
+          cellWidth,
+          cellHeight,
         );
       },
       drawOverlay: () => {
@@ -700,6 +695,8 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       getVisibility: getMapviewVisibility,
     });
     const visual = minimapGlyphCache.ensure(1, destination.cellWidth, collectWorldViewGlyphs(composition));
+    const mapviewMarkerWidth = Math.max(2 * devicePixelRatio, destination.cellWidth * 0.7);
+    const mapviewMarkerHeight = Math.max(2 * devicePixelRatio, destination.cellHeight * 0.7);
     const renderJob = renderWorldViewCompositionCooperatively(composition, {
       drawBackground: () => {
         context.globalAlpha = 1;
@@ -719,17 +716,22 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
           glyphCanvas = createGlyphRasterCanvas(raster, litColor, { alphaScale: 1, colorScale: 1, tint: true });
           mapviewGlyphCanvases.set(cacheKey, glyphCanvas);
         }
+        // `glyph` can carry rendering-only facing and palette-offset keys, so
+        // identify the player from the authoritative active player cell.
+        const isPlayerCell = mapviewWorld.realmName === activeRealm
+          && cell.x === playerCell?.x
+          && cell.y === playerCell?.y;
+        const glyphWidth = isPlayerCell ? mapviewMarkerWidth : destination.cellWidth;
+        const glyphHeight = isPlayerCell ? mapviewMarkerHeight : destination.cellHeight;
         context.drawImage(
           glyphCanvas,
-          destination.x + localX * destination.cellWidth,
-          destination.y + localY * destination.cellHeight,
-          destination.cellWidth,
-          destination.cellHeight,
+          destination.x + localX * destination.cellWidth + (destination.cellWidth - glyphWidth) / 2,
+          destination.y + localY * destination.cellHeight + (destination.cellHeight - glyphHeight) / 2,
+          glyphWidth,
+          glyphHeight,
         );
       },
       drawOverlay: () => {
-        const markerWidth = Math.max(2 * devicePixelRatio, destination.cellWidth * 0.7);
-        const markerHeight = Math.max(2 * devicePixelRatio, destination.cellHeight * 0.7);
         const occupancy = getOccupancyForWorld(mapviewWorld);
         const markers = getMapviewMarkers({
           world: mapviewWorld,
@@ -754,10 +756,10 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
             context.stroke();
           }
           context.fillRect(
-            destination.x + marker.cell.x * destination.cellWidth + (destination.cellWidth - markerWidth) / 2,
-            destination.y + marker.cell.y * destination.cellHeight + (destination.cellHeight - markerHeight) / 2,
-            markerWidth,
-            markerHeight,
+            destination.x + marker.cell.x * destination.cellWidth + (destination.cellWidth - mapviewMarkerWidth) / 2,
+            destination.y + marker.cell.y * destination.cellHeight + (destination.cellHeight - mapviewMarkerHeight) / 2,
+            mapviewMarkerWidth,
+            mapviewMarkerHeight,
           );
         }
       },

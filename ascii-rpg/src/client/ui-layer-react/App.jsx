@@ -478,7 +478,7 @@ function QuestLayout({ quest, className = "", ariaLabel, onClick, onKeyDown }) {
         return (
         <div key={step.id} className={`quest_tracker_step${step.complete ? " quest_tracker_step_complete" : ""}`}>
           <span className={`quest_tracker_marker${quest.state === "pending" && !quest.complete && isActiveStep ? "" : " quest_tracker_marker_empty"}`} aria-hidden="true" />
-          <span className="quest_tracker_step_label">{step.label}{!step.hideProgress && (step.target > 1 || step.showProgress) ? ` ${step.current} of ${step.target}` : ""}</span>
+          <span className="quest_tracker_step_label">{step.label}{!step.hideProgress && step.target > 1 ? ` ${step.current} of ${step.target}` : ""}</span>
         </div>
         );
       })}
@@ -498,7 +498,6 @@ function getQuestPreview(definition, activeQuest) {
       current: 0,
       target: step.criterion?.target ?? 1,
       complete: false,
-      ...(step.showProgress ? { showProgress: true } : {}),
     })),
   };
 }

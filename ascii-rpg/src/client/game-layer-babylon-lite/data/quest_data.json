@@ -53,7 +53,6 @@
         {
           "id": "collect-key",
           "label": "Collect a key",
-          "showProgress": true,
           "navigation": "nearest-key",
           "criterion": {
             "mode": "event",
