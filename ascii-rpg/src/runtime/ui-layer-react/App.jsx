@@ -67,6 +67,7 @@ import {
   sendRealmAmbientSnapshot,
   sendRealmPreferenceSnapshot,
   sendCameraModeSnapshot,
+  sendAspectSnapshot,
   sendGpuLightPassSnapshot,
   sendGlyphBackgroundSnapshot,
   sendBackgroundDarknessSnapshot,
@@ -1496,6 +1497,7 @@ function AppContent() {
   useEffect(() => {
     localStorage.setItem(aspectStorageKey, aspectMode);
     document.documentElement.dataset.presentationAspect = aspectMode;
+    sendAspectSnapshot(aspectMode);
     return () => delete document.documentElement.dataset.presentationAspect;
   }, [aspectMode]);
 

@@ -305,6 +305,31 @@ test("documents the plain safe-area template", async () => {
     || !gameLayer.includes("world && playerCell")) {
     throw new Error("Viewport resize must recalculate the active camera only when playable world state exists.");
   }
+  if (!gameLayer.includes("CAMERA_RESOLVE_INTENTS")
+    || !gameLayer.includes('initial: "initial"')
+    || !gameLayer.includes('activeMode: "active-mode"')
+    || !gameLayer.includes('resize: "resize"')
+    || !gameLayer.includes('transitionPreserve: "transition-preserve"')
+    || !gameLayer.includes("const resolveCameraOrigin =")
+    || !gameLayer.includes("commit = true")) {
+    throw new Error("Camera origin changes must route through named game-layer resolver intents.");
+  }
+  if (!gameLayer.includes("resolveCameraOrigin(CAMERA_RESOLVE_INTENTS.initial)")
+    || !gameLayer.includes("resolveCameraOrigin(sourceScreenCell")
+    || !gameLayer.includes("resolveCameraOrigin(CAMERA_RESOLVE_INTENTS.activeMode, { targetCell: nextCell, direction, commit: false })")
+    || !gameLayer.includes("setAspectMode()")
+    || !app.includes("sendAspectSnapshot(aspectMode)")
+    || !gameBridge.includes("sendAspectSnapshot")
+    || !gameBridge.includes("setAspectMode?.(aspectSnapshot)")) {
+    throw new Error("Camera mode must be considered for startup, realm, movement, aspect, and bridge trigger paths.");
+  }
+  if (!gameLayer.includes("hideGameCell(slot)")
+    || !gameLayer.includes("for (let slot = region.count; slot < spriteIndexes.length; slot += 1)")
+    || !gameLayer.includes("resetLayerSprites();")
+    || !gameLayer.includes("renderWorld({ refreshLighting: true });")
+    || !gameLayer.includes("? CAMERA_RESOLVE_INTENTS.transitionPreserve")) {
+    throw new Error("Camera-triggered renders must reconcile stale cells and preserve covered realm transition presentation.");
+  }
   if (!gameLayer.includes("canvas.clientWidth || window.innerWidth")
     || !gameLayer.includes("canvas.clientHeight || window.innerHeight")
     || !gameLayer.includes("new ResizeObserver(handleResize)")) {

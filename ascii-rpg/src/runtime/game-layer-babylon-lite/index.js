@@ -122,6 +122,12 @@ const REALM_TRANSITION_OPEN_MS = 500;
 const INITIAL_TRANSITION_OPEN_MS = 1000;
 const INITIAL_SPRITE_LAYER_CAPACITY = 4096;
 const STARTING_FOG_CLEAR_ZOOM = 5;
+const CAMERA_RESOLVE_INTENTS = Object.freeze({
+  initial: "initial",
+  activeMode: "active-mode",
+  resize: "resize",
+  transitionPreserve: "transition-preserve",
+});
 
 function getInitialSpriteLayerCapacity(viewport) {
   return Math.max(1, Math.min(INITIAL_SPRITE_LAYER_CAPACITY, viewport.rows * viewport.columns));
@@ -233,6 +239,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     height: Math.max(1, canvas.clientHeight || window.innerHeight),
   };
   let canvasResizeObserver = null;
+  let aspectRebuildFrame = null;
   let world = null;
   let worldRealms = null;
   let sessionSeed = null;
@@ -645,6 +652,36 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     notifyRealmDiscovery();
   };
 
+  const resolveCameraOrigin = (intent = CAMERA_RESOLVE_INTENTS.activeMode, {
+    previousViewport = viewport,
+    screenCell = null,
+    targetCell = playerCell,
+    direction = { x: 0, y: 0 },
+    commit = true,
+  } = {}) => {
+    if (transitionActive || !world || !targetCell) return false;
+    let nextOrigin = null;
+    if (intent === CAMERA_RESOLVE_INTENTS.initial) {
+      nextOrigin = getInitialViewOriginForCamera(cameraMode, targetCell, viewport, world);
+    } else if (intent === CAMERA_RESOLVE_INTENTS.resize) {
+      nextOrigin = getViewOriginForResize(
+        cameraMode,
+        targetCell,
+        previousViewport,
+        viewport,
+        world,
+        viewOrigin,
+      );
+    } else if (intent === CAMERA_RESOLVE_INTENTS.transitionPreserve && screenCell) {
+      nextOrigin = getViewOriginForPreservedPlayerPosition(targetCell, screenCell, viewport, world);
+    } else {
+      nextOrigin = getViewOriginForCamera(cameraMode, targetCell, viewport, world, viewOrigin, direction);
+    }
+    if (!nextOrigin) return false;
+    if (commit) viewOrigin = nextOrigin;
+    return nextOrigin;
+  };
+
   const activateRealm = (name, arrival = null) => {
     if (!worldRealms?.realms?.[name]) return;
     const sourceScreenCell = playerCell
@@ -666,9 +703,9 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     // Preserve the player's current screen-cell offset across the realm swap.
     // This keeps center, deadzone, and locked-camera positions visually stable
     // instead of recentering the destination realm at its origin.
-    viewOrigin = sourceScreenCell
-      ? getViewOriginForPreservedPlayerPosition(playerCell, sourceScreenCell, viewport, world)
-      : getViewOriginForCamera(cameraMode, playerCell, viewport, world, viewOrigin);
+    resolveCameraOrigin(sourceScreenCell
+      ? CAMERA_RESOLVE_INTENTS.transitionPreserve
+      : CAMERA_RESOLVE_INTENTS.activeMode, { screenCell: sourceScreenCell });
     for (const listener of realmListeners) listener(activeRealm);
     notifyRealmDiscovery();
     // Discover the destination around the arriving player before rendering it.
@@ -890,10 +927,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   };
 
   const resolveViewForPlayer = ({ initial = false } = {}) => {
-    if (transitionActive || !world || !playerCell) return;
-    viewOrigin = initial
-      ? getInitialViewOriginForCamera(cameraMode, playerCell, viewport, world)
-      : getViewOriginForCamera(cameraMode, playerCell, viewport, world, viewOrigin);
+    resolveCameraOrigin(initial ? CAMERA_RESOLVE_INTENTS.initial : CAMERA_RESOLVE_INTENTS.activeMode);
   };
 
   const clearRepeat = () => {
@@ -1211,7 +1245,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   const renderWorld = ({ refreshLighting = false } = {}) => {
     if (!world || !renderer) return { renderMs: 0, warmupMs: 0 };
     if (!initialWorldRenderComplete) {
-      viewOrigin = getInitialViewOriginForCamera(cameraMode, playerCell, viewport, world);
+      resolveCameraOrigin(CAMERA_RESOLVE_INTENTS.initial);
       initialWorldRenderComplete = true;
     }
     const started = performance.now();
@@ -1329,16 +1363,9 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     const previousViewport = viewport;
     viewport = createViewportForCanvas(canvas, zoom);
     if (centerOnPlayer) {
-      resolveViewForPlayer();
+      resolveCameraOrigin(CAMERA_RESOLVE_INTENTS.activeMode);
     } else if (recalculateCamera && world && playerCell) {
-      viewOrigin = getViewOriginForResize(
-        cameraMode,
-        playerCell,
-        previousViewport,
-        viewport,
-        world,
-        viewOrigin,
-      );
+      resolveCameraOrigin(CAMERA_RESOLVE_INTENTS.resize, { previousViewport });
     } else {
       clampViewOrigin();
     }
@@ -1395,7 +1422,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     }
     const nextCell = moveWorldCell(playerCell, direction, world);
     if (nextCell.x === playerCell.x && nextCell.y === playerCell.y) return exhaustedAtAttempt;
-    const nextOrigin = getViewOriginForCamera(cameraMode, nextCell, viewport, world, viewOrigin, direction);
+    const nextOrigin = resolveCameraOrigin(CAMERA_RESOLVE_INTENTS.activeMode, { targetCell: nextCell, direction, commit: false });
     if (!nextOrigin) return exhaustedAtAttempt;
     if (!getOccupancyForWorld()?.move("player", nextCell)) return exhaustedAtAttempt;
     setPlayerFacingFromDirection(direction);
@@ -1935,7 +1962,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       if (startupCameraModeReapplyPending) {
         viewport = createViewportForCanvas(canvas, zoom);
         if (world && playerCell) {
-          viewOrigin = getInitialViewOriginForCamera(cameraMode, playerCell, viewport, world);
+          resolveCameraOrigin(CAMERA_RESOLVE_INTENTS.initial);
         }
         startupCameraModeReapplyPending = false;
         result = renderer ? renderWorld() : { renderMs: 0, warmupMs: 0 };
@@ -2087,6 +2114,14 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       minimapZoom = nextZoom;
       renderMinimap();
     },
+    setAspectMode() {
+      if (aspectRebuildFrame !== null) window.cancelAnimationFrame(aspectRebuildFrame);
+      aspectRebuildFrame = window.requestAnimationFrame(() => {
+        aspectRebuildFrame = null;
+        rebuildViewport({ recalculateCamera: true });
+        renderMinimap();
+      });
+    },
     setCameraMode(nextMode) {
       const selected = normalizeCameraMode(nextMode);
       if (selected === cameraMode) {
@@ -2109,6 +2144,10 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       disposed = true;
       clearMovementInput();
       generationController.abort();
+      if (aspectRebuildFrame !== null) {
+        window.cancelAnimationFrame(aspectRebuildFrame);
+        aspectRebuildFrame = null;
+      }
       window.removeEventListener("pagehide", handlePageHide);
       window.removeEventListener("blur", handleWindowBlur);
       window.removeEventListener("keydown", handleKeyDown);

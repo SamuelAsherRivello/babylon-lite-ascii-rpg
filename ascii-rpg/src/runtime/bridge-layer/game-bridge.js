@@ -20,6 +20,9 @@ let playerGpuShadowBleedRangeSnapshot = 2;
 let glyphBackgroundSnapshot = true;
 let backgroundDarknessSnapshot = 50;
 let minimapZoomSnapshot = 2;
+let aspectSnapshot = typeof localStorage !== "undefined" && localStorage.getItem("babylon-lite-ascii-rpg.aspect") === "portrait"
+  ? "portrait"
+  : "landscape";
 let realmDiscoverySnapshot = Object.freeze({ realm: realmPreferenceSnapshot, percent: 0 });
 let zoomSnapshot = null;
 let randomSeedSnapshot = null;
@@ -87,6 +90,7 @@ export function setGameController(controller) {
   gameController?.setGlyphBackground?.(glyphBackgroundSnapshot);
   gameController?.setBackgroundDarkness?.(backgroundDarknessSnapshot);
   gameController?.setMinimapZoom?.(minimapZoomSnapshot);
+  gameController?.setAspectMode?.(aspectSnapshot);
   if (zoomSnapshot !== null) gameController?.setZoom?.(zoomSnapshot);
   if (lightingSnapshot !== null) gameController?.setLighting?.(lightingSnapshot);
 }
@@ -125,6 +129,11 @@ export function sendMinimapZoomSnapshot(zoom) {
 export function subscribeToMinimapZoom(listener) {
   minimapZoomListeners.add(listener);
   return () => minimapZoomListeners.delete(listener);
+}
+
+export function sendAspectSnapshot(aspect) {
+  aspectSnapshot = aspect === "portrait" ? "portrait" : "landscape";
+  gameController?.setAspectMode?.(aspectSnapshot);
 }
 
 export function sendLightingSnapshot(config) {
