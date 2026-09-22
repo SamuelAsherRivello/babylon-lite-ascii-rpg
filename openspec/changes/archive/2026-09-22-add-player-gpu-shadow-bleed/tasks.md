@@ -14,5 +14,5 @@
 
 ## 3. Integrated validation
 
-- [ ] 3.1 Run `npm.cmd test`, `npm.cmd run build`, and `npx.cmd openspec validate add-player-gpu-shadow-bleed --strict` from the repository root; verify all commands succeed. (Blocked by an unrelated concurrent duplicate `playerShadowStart` declaration in `ascii-rpg/test/main_tests.mjs`.)
+- [x] 3.1 Run `npm.cmd test`, `npm.cmd run build`, and `npx.cmd openspec validate add-player-gpu-shadow-bleed --strict` from the repository root; verify all commands succeed.
 - [x] 3.2 Manually verify the live Vite game: a fresh or reset profile displays GPU Light Pass enabled, Player Lighting `X High`, Player Shadow `High`, and shadow-bleed range `2`; at ambient `0`, player light remains full in clear cells, uses only the selected dim bounded fringe behind walls, and has zero player glow beyond the range; above `0`, the hard-shadow core shows only ambient light; at ambient `1`, no lighting setting has a visible result; preserve valid torch light and restore saved choices after reload.
