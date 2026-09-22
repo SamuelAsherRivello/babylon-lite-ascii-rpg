@@ -17,4 +17,4 @@
 - [x] 3.1 Add or update focused Node/source checks for the owned asset references, non-interactive layering, Portrait eligibility, and mobile/landscape exclusions; verify the affected checks pass without creating Playwright tests.
 - [x] 3.2 Run `npm.cmd test` and `npm.cmd run build` from the repository root; verify the results and distinguish unrelated pre-existing failures if present.
 - [x] 3.3 Manually verify the served RPG in a non-mobile browser: landscape absent; Portrait visible; fullscreen Portrait visible; HUD-hidden Portrait visible; and a narrow Portrait viewport crops only outer art; verify game and HUD input remain usable.
-- [ ] 3.4 Manually verify mobile/coarse-pointer Portrait fills its native viewport without gutters or rails; verify no mobile presentation regression.
+- [x] 3.4 Manually verify mobile/coarse-pointer Portrait fills its native viewport without gutters or rails; verify no mobile presentation regression.
