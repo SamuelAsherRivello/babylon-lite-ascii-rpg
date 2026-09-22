@@ -5,6 +5,7 @@ import { getZoomScale } from "./zoom-scale.js";
 
 const MAX_CACHED_ZOOMS = 10;
 const FACING_KEY_SEPARATOR = "\u0000";
+const DEFAULT_GLYPH_OFFSETS = Object.freeze({ offsetX: 0, offsetY: 0, offsetScale: 0 });
 
 export const FACING_LEFT = "left";
 export const FACING_RIGHT = "right";
@@ -18,7 +19,7 @@ export function getFacingGlyph(glyphKey) {
 }
 
 export function getFacingGlyphDirection(glyphKey) {
-  return typeof glyphKey === "string" && glyphKey.endsWith(`${FACING_KEY_SEPARATOR}${FACING_RIGHT}`)
+  return typeof glyphKey === "string" && glyphKey.split(FACING_KEY_SEPARATOR).includes(FACING_RIGHT)
     ? FACING_RIGHT
     : FACING_LEFT;
 }
@@ -30,9 +31,37 @@ export function getGlyphRasterSize(zoom, cellWidth = 32 * getZoomScale(zoom)) {
   return Math.max(64, Math.min(128, Math.round(cellWidth * 4)));
 }
 
-export function rasterizeGlyph(glyph, fontFamily, size, color = "#ffffff") {
+export function normalizeGlyphOffsets(offsets = DEFAULT_GLYPH_OFFSETS) {
+  return {
+    offsetX: Number.isInteger(offsets.offsetX) ? Math.min(10, Math.max(-10, offsets.offsetX)) : 0,
+    offsetY: Number.isInteger(offsets.offsetY) ? Math.min(10, Math.max(-10, offsets.offsetY)) : 0,
+    offsetScale: Number.isInteger(offsets.offsetScale) ? Math.min(100, Math.max(-100, offsets.offsetScale)) : 0,
+  };
+}
+
+export function getGlyphOffsetKey(offsets = DEFAULT_GLYPH_OFFSETS) {
+  const normalized = normalizeGlyphOffsets(offsets);
+  return `${normalized.offsetX},${normalized.offsetY},${normalized.offsetScale}`;
+}
+
+export function getOffsetGlyphKey(glyph, offsets = DEFAULT_GLYPH_OFFSETS) {
+  const key = getGlyphOffsetKey(offsets);
+  return key === "0,0,0" ? glyph : `${glyph}${FACING_KEY_SEPARATOR}offset:${key}`;
+}
+
+export function getGlyphOffsetsFromKey(glyphKey) {
+  if (typeof glyphKey !== "string") return DEFAULT_GLYPH_OFFSETS;
+  const offsetPart = glyphKey.split(FACING_KEY_SEPARATOR).find((part) => part.startsWith("offset:"));
+  if (!offsetPart) return DEFAULT_GLYPH_OFFSETS;
+  const [offsetX, offsetY, offsetScale] = offsetPart.slice("offset:".length).split(",").map((value) => Number.parseInt(value, 10));
+  return normalizeGlyphOffsets({ offsetX, offsetY, offsetScale });
+}
+
+export function rasterizeGlyph(glyph, fontFamily, size, color = "#ffffff", offsets = DEFAULT_GLYPH_OFFSETS) {
   const displayGlyph = getFacingGlyph(glyph);
   const facing = getFacingGlyphDirection(glyph);
+  const normalizedOffsets = normalizeGlyphOffsets(offsets);
+  const scale = Math.max(0, 1 + normalizedOffsets.offsetScale / 100);
   const canvas = document.createElement("canvas");
   canvas.width = size;
   canvas.height = size;
@@ -40,14 +69,19 @@ export function rasterizeGlyph(glyph, fontFamily, size, color = "#ffffff") {
   if (!context) throw new Error("Glyph rasterization needs a 2D canvas context.");
   const paint = (target, targetSize) => {
     target.fillStyle = color;
-    target.font = `${targetSize}px ${fontFamily}`;
+    target.font = `${targetSize * scale}px ${fontFamily}`;
     target.textAlign = "center";
     target.textBaseline = "middle";
+    const offsetScale = targetSize / size;
+    const offsetX = normalizedOffsets.offsetX * offsetScale;
+    const offsetY = normalizedOffsets.offsetY * offsetScale;
     if (facing === FACING_RIGHT) {
       target.translate(targetSize, 0);
       target.scale(-1, 1);
+      target.fillText(displayGlyph, targetSize / 2 - offsetX, targetSize / 2 + offsetY);
+    } else {
+      target.fillText(displayGlyph, targetSize / 2 + offsetX, targetSize / 2 + offsetY);
     }
-    target.fillText(displayGlyph, targetSize / 2, targetSize / 2);
   };
   if (size <= 24) {
     const sourceSize = size * 2;
@@ -63,7 +97,7 @@ export function rasterizeGlyph(glyph, fontFamily, size, color = "#ffffff") {
   } else {
     paint(context, size);
   }
-  return { pixels: context.getImageData(0, 0, size, size).data, width: size, height: size, name: glyph };
+  return { pixels: context.getImageData(0, 0, size, size).data, width: size, height: size, name: glyph, offsets: normalizedOffsets };
 }
 
 export function darkenGlyphColor(color, darkness = 50) {
@@ -91,8 +125,8 @@ export function tintGlyphRgb(rgb, color) {
   ];
 }
 
-export function rasterizeCompositeGlyph(glyph, fontFamily, size, color, darkness = 50) {
-  const glyphRaster = rasterizeGlyph(glyph, fontFamily, size, "#ffffff");
+export function rasterizeCompositeGlyph(glyph, fontFamily, size, color, darkness = 50, offsets = DEFAULT_GLYPH_OFFSETS) {
+  const glyphRaster = rasterizeGlyph(glyph, fontFamily, size, "#ffffff", offsets);
   const background = darkenGlyphColor(color, darkness);
   const pixels = new Uint8ClampedArray(glyphRaster.pixels.length);
   for (let index = 0; index < glyphRaster.pixels.length; index += 4) {

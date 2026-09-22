@@ -1,2105 +1,3005 @@
 {
-  "version": 2,
+  "version": 3,
   "entries": [
     {
       "code": 32,
       "unicode": null,
       "glyph": " ",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 33,
       "unicode": null,
       "glyph": "!",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 34,
       "unicode": null,
       "glyph": "\"",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 35,
       "unicode": null,
       "glyph": "#",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 36,
       "unicode": null,
       "glyph": "$",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 37,
       "unicode": null,
       "glyph": "%",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 38,
       "unicode": null,
       "glyph": "&",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 39,
       "unicode": null,
       "glyph": "'",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 40,
       "unicode": null,
       "glyph": "(",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 41,
       "unicode": null,
       "glyph": ")",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 42,
       "unicode": null,
       "glyph": "*",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 43,
       "unicode": null,
       "glyph": "+",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 44,
       "unicode": null,
       "glyph": ",",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 45,
       "unicode": null,
       "glyph": "-",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 46,
       "unicode": null,
       "glyph": ".",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 47,
       "unicode": null,
       "glyph": "/",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 48,
       "unicode": null,
       "glyph": "0",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 49,
       "unicode": null,
       "glyph": "1",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 50,
       "unicode": null,
       "glyph": "2",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 51,
       "unicode": null,
       "glyph": "3",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 52,
       "unicode": null,
       "glyph": "4",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 53,
       "unicode": null,
       "glyph": "5",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 54,
       "unicode": null,
       "glyph": "6",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 55,
       "unicode": null,
       "glyph": "7",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 56,
       "unicode": null,
       "glyph": "8",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 57,
       "unicode": null,
       "glyph": "9",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 58,
       "unicode": null,
       "glyph": ":",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 59,
       "unicode": null,
       "glyph": ";",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 60,
       "unicode": null,
       "glyph": "<",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 61,
       "unicode": null,
       "glyph": "=",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 62,
       "unicode": null,
       "glyph": ">",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 63,
       "unicode": null,
       "glyph": "?",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 64,
       "unicode": null,
       "glyph": "@",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 65,
       "unicode": null,
       "glyph": "A",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 66,
       "unicode": null,
       "glyph": "B",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 67,
       "unicode": null,
       "glyph": "C",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 68,
       "unicode": null,
       "glyph": "D",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 69,
       "unicode": null,
       "glyph": "E",
       "color": "#ff3b3b",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 70,
       "unicode": null,
       "glyph": "F",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 71,
       "unicode": null,
       "glyph": "G",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 72,
       "unicode": null,
       "glyph": "H",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 73,
       "unicode": null,
       "glyph": "I",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 74,
       "unicode": null,
       "glyph": "J",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 75,
       "unicode": null,
       "glyph": "K",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 76,
       "unicode": null,
       "glyph": "L",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 77,
       "unicode": null,
       "glyph": "M",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 78,
       "unicode": null,
       "glyph": "N",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 79,
       "unicode": null,
       "glyph": "O",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 80,
       "unicode": null,
       "glyph": "P",
       "color": "#f5d800",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 81,
       "unicode": null,
       "glyph": "Q",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 82,
       "unicode": null,
       "glyph": "R",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 83,
       "unicode": null,
       "glyph": "S",
       "color": "#ff3b3b",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 84,
       "unicode": null,
       "glyph": "T",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 85,
       "unicode": null,
       "glyph": "U",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 86,
       "unicode": null,
       "glyph": "V",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 87,
       "unicode": null,
       "glyph": "W",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 88,
       "unicode": null,
       "glyph": "X",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 89,
       "unicode": null,
       "glyph": "Y",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 90,
       "unicode": null,
       "glyph": "Z",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 91,
       "unicode": null,
       "glyph": "[",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 92,
       "unicode": null,
       "glyph": "\\",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 93,
       "unicode": null,
       "glyph": "]",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 94,
       "unicode": null,
       "glyph": "^",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 95,
       "unicode": null,
       "glyph": "_",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 96,
       "unicode": null,
       "glyph": "`",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 97,
       "unicode": null,
       "glyph": "a",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 98,
       "unicode": null,
       "glyph": "b",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 99,
       "unicode": null,
       "glyph": "c",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 100,
       "unicode": null,
       "glyph": "d",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 101,
       "unicode": null,
       "glyph": "e",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 102,
       "unicode": null,
       "glyph": "f",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 103,
       "unicode": null,
       "glyph": "g",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 104,
       "unicode": null,
       "glyph": "h",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 105,
       "unicode": null,
       "glyph": "i",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 106,
       "unicode": null,
       "glyph": "j",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 107,
       "unicode": null,
       "glyph": "k",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 108,
       "unicode": null,
       "glyph": "l",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 109,
       "unicode": null,
       "glyph": "m",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 110,
       "unicode": null,
       "glyph": "n",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 111,
       "unicode": null,
       "glyph": "o",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 112,
       "unicode": null,
       "glyph": "p",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 113,
       "unicode": null,
       "glyph": "q",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 114,
       "unicode": null,
       "glyph": "r",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 115,
       "unicode": null,
       "glyph": "s",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 116,
       "unicode": null,
       "glyph": "t",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 117,
       "unicode": null,
       "glyph": "u",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 118,
       "unicode": null,
       "glyph": "v",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 119,
       "unicode": null,
       "glyph": "w",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 120,
       "unicode": null,
       "glyph": "x",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 121,
       "unicode": null,
       "glyph": "y",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 122,
       "unicode": null,
       "glyph": "z",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 123,
       "unicode": null,
       "glyph": "{",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 124,
       "unicode": null,
       "glyph": "|",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 125,
       "unicode": null,
       "glyph": "}",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 126,
       "unicode": null,
       "glyph": "~",
       "color": "#62c7ff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 127,
       "unicode": null,
       "glyph": "⌂",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 128,
       "unicode": null,
       "glyph": "Ç",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 129,
       "unicode": null,
       "glyph": "ü",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 130,
       "unicode": null,
       "glyph": "é",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 131,
       "unicode": null,
       "glyph": "â",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 132,
       "unicode": null,
       "glyph": "ä",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 133,
       "unicode": null,
       "glyph": "à",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 134,
       "unicode": null,
       "glyph": "å",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 135,
       "unicode": null,
       "glyph": "ç",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 136,
       "unicode": null,
       "glyph": "ê",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 137,
       "unicode": null,
       "glyph": "ë",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 138,
       "unicode": null,
       "glyph": "è",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 139,
       "unicode": null,
       "glyph": "ï",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 140,
       "unicode": null,
       "glyph": "î",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 141,
       "unicode": null,
       "glyph": "ì",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 142,
       "unicode": null,
       "glyph": "Ä",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 143,
       "unicode": null,
       "glyph": "Å",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 144,
       "unicode": null,
       "glyph": "É",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 145,
       "unicode": null,
       "glyph": "æ",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 146,
       "unicode": null,
       "glyph": "Æ",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 147,
       "unicode": null,
       "glyph": "ô",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 148,
       "unicode": null,
       "glyph": "ö",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 149,
       "unicode": null,
       "glyph": "ò",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 150,
       "unicode": null,
       "glyph": "û",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 151,
       "unicode": null,
       "glyph": "ù",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 152,
       "unicode": null,
       "glyph": "ÿ",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 153,
       "unicode": null,
       "glyph": "Ö",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 154,
       "unicode": null,
       "glyph": "Ü",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 155,
       "unicode": null,
       "glyph": "ø",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 156,
       "unicode": null,
       "glyph": "£",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 157,
       "unicode": null,
       "glyph": "Ø",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 158,
       "unicode": null,
       "glyph": "×",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 159,
       "unicode": null,
       "glyph": "ƒ",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 160,
       "unicode": null,
       "glyph": "á",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 161,
       "unicode": null,
       "glyph": "í",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 162,
       "unicode": null,
       "glyph": "ó",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 163,
       "unicode": null,
       "glyph": "ú",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 164,
       "unicode": null,
       "glyph": "ñ",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 165,
       "unicode": null,
       "glyph": "Ñ",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 166,
       "unicode": null,
       "glyph": "ª",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 167,
       "unicode": null,
       "glyph": "º",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 168,
       "unicode": null,
       "glyph": "¿",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 169,
       "unicode": null,
       "glyph": "⌐",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 170,
       "unicode": null,
       "glyph": "¬",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 171,
       "unicode": null,
       "glyph": "½",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 172,
       "unicode": null,
       "glyph": "¼",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 173,
       "unicode": null,
       "glyph": "¡",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 174,
       "unicode": null,
       "glyph": "«",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 175,
       "unicode": null,
       "glyph": "»",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 176,
       "unicode": null,
       "glyph": "░",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 177,
       "unicode": null,
       "glyph": "▒",
       "color": "#af0000",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 178,
       "unicode": null,
       "glyph": "▓",
       "color": "#0b3d91",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 179,
       "unicode": null,
       "glyph": "│",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 180,
       "unicode": null,
       "glyph": "┤",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 181,
       "unicode": null,
       "glyph": "╡",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 182,
       "unicode": null,
       "glyph": "╢",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 183,
       "unicode": null,
       "glyph": "╖",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 184,
       "unicode": null,
       "glyph": "╕",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 185,
       "unicode": null,
       "glyph": "╣",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 186,
       "unicode": null,
       "glyph": "║",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 187,
       "unicode": null,
       "glyph": "╗",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 188,
       "unicode": null,
       "glyph": "╝",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 189,
       "unicode": null,
       "glyph": "╜",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 190,
       "unicode": null,
       "glyph": "╛",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 191,
       "unicode": null,
       "glyph": "┐",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 192,
       "unicode": null,
       "glyph": "└",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 193,
       "unicode": null,
       "glyph": "┴",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 194,
       "unicode": null,
       "glyph": "┬",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 195,
       "unicode": null,
       "glyph": "├",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 196,
       "unicode": null,
       "glyph": "─",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 197,
       "unicode": null,
       "glyph": "┼",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 198,
       "unicode": null,
       "glyph": "╞",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 199,
       "unicode": null,
       "glyph": "╟",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 200,
       "unicode": null,
       "glyph": "╚",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 201,
       "unicode": null,
       "glyph": "╔",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 202,
       "unicode": null,
       "glyph": "╩",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 203,
       "unicode": null,
       "glyph": "╦",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 204,
       "unicode": null,
       "glyph": "╠",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 205,
       "unicode": null,
       "glyph": "═",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 206,
       "unicode": null,
       "glyph": "╬",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 207,
       "unicode": null,
       "glyph": "╧",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 208,
       "unicode": null,
       "glyph": "╨",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 209,
       "unicode": null,
       "glyph": "╤",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 210,
       "unicode": null,
       "glyph": "╥",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 211,
       "unicode": null,
       "glyph": "╙",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 212,
       "unicode": null,
       "glyph": "╘",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 213,
       "unicode": null,
       "glyph": "╒",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 214,
       "unicode": null,
       "glyph": "╓",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 215,
       "unicode": null,
       "glyph": "╫",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 216,
       "unicode": null,
       "glyph": "╪",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 217,
       "unicode": null,
       "glyph": "┘",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 218,
       "unicode": null,
       "glyph": "┌",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 219,
       "unicode": null,
       "glyph": "█",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 220,
       "unicode": null,
       "glyph": "▄",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 221,
       "unicode": null,
       "glyph": "▌",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 222,
       "unicode": null,
       "glyph": "▐",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 223,
       "unicode": null,
       "glyph": "▀",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 224,
       "unicode": null,
       "glyph": "α",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 225,
       "unicode": null,
       "glyph": "ß",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 226,
       "unicode": null,
       "glyph": "Γ",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 227,
       "unicode": null,
       "glyph": "π",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 228,
       "unicode": null,
       "glyph": "Σ",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 229,
       "unicode": null,
       "glyph": "σ",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 230,
       "unicode": null,
       "glyph": "µ",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 231,
       "unicode": null,
       "glyph": "τ",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 232,
       "unicode": null,
       "glyph": "Φ",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 233,
       "unicode": null,
       "glyph": "Θ",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 234,
       "unicode": null,
       "glyph": "Ω",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 235,
       "unicode": null,
       "glyph": "δ",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 236,
       "unicode": null,
       "glyph": "∞",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 237,
       "unicode": null,
       "glyph": "φ",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 238,
       "unicode": null,
       "glyph": "ε",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 239,
       "unicode": null,
       "glyph": "∩",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 240,
       "unicode": null,
       "glyph": "≡",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 241,
       "unicode": null,
       "glyph": "±",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 242,
       "unicode": null,
       "glyph": "≥",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 243,
       "unicode": null,
       "glyph": "≤",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 244,
       "unicode": null,
       "glyph": "⌠",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 245,
       "unicode": null,
       "glyph": "⌡",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 246,
       "unicode": null,
       "glyph": "÷",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 247,
       "unicode": null,
       "glyph": "≈",
       "color": "#247fc3",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 248,
       "unicode": null,
       "glyph": "°",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 249,
       "unicode": null,
       "glyph": "∙",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 250,
       "unicode": null,
       "glyph": "·",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 251,
       "unicode": null,
       "glyph": "√",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 252,
       "unicode": null,
       "glyph": "ⁿ",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 253,
       "unicode": null,
       "glyph": "²",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": 254,
       "unicode": null,
       "glyph": "■",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+2022",
       "glyph": "•",
       "color": "#55aa55",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+2191",
       "glyph": "↑",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+2193",
       "glyph": "↓",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+2190",
       "glyph": "←",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+2192",
       "glyph": "→",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+2196",
       "glyph": "↖",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+2197",
       "glyph": "↗",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+2198",
       "glyph": "↘",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+2199",
       "glyph": "↙",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+2194",
       "glyph": "↔",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+2195",
       "glyph": "↕",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+21E7",
       "glyph": "⇧",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+21E9",
       "glyph": "⇩",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+21A9",
       "glyph": "↩",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+21AA",
       "glyph": "↪",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+2665",
       "glyph": "♥",
       "color": "#ef3340",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 10,
+      "offsetScale": 34
     },
     {
       "code": null,
       "unicode": "U+2661",
       "glyph": "♡",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+2666",
       "glyph": "♦",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+2662",
       "glyph": "♢",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+2663",
       "glyph": "♣",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+2667",
       "glyph": "♧",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+2660",
       "glyph": "♠",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+2664",
       "glyph": "♤",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+25C7",
       "glyph": "◇",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+25C6",
       "glyph": "◆",
       "color": "#ffff00",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+1FA99",
       "glyph": "🪙",
       "color": "#ffff00",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 2,
+      "offsetY": 10,
+      "offsetScale": -18
     },
     {
       "code": null,
       "unicode": "U+1F4B0",
       "glyph": "💰",
       "color": "#ffff00",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 8,
+      "offsetScale": -23
     },
     {
       "code": null,
       "unicode": "U+1F56F",
       "glyph": "🕯️",
       "color": "#ffcc66",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 10,
+      "offsetScale": -19
     },
     {
       "code": null,
       "unicode": "U+1F93A",
       "glyph": "🤺",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": -4,
+      "offsetY": 10,
+      "offsetScale": -25
     },
     {
       "code": null,
       "unicode": "U+1F577",
       "glyph": "🕷️",
       "color": "#fa8d8d",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 1,
+      "offsetY": 9,
+      "offsetScale": -23
     },
     {
       "code": null,
       "unicode": "U+25B2",
       "glyph": "▲",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+25BC",
       "glyph": "▼",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+25B3",
       "glyph": "△",
       "color": "#5a3700",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+25BD",
       "glyph": "▽",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+25CB",
       "glyph": "○",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+25CF",
       "glyph": "●",
       "color": "#8b5a2b",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+25C9",
       "glyph": "◉",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+25CE",
       "glyph": "◎",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+2299",
       "glyph": "⊙",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+2316",
       "glyph": "⌖",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+2311",
       "glyph": "⌑",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+2606",
       "glyph": "☆",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+2605",
       "glyph": "★",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+2726",
       "glyph": "✦",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+2727",
       "glyph": "✧",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+2736",
       "glyph": "✶",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+266A",
       "glyph": "♪",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+266B",
       "glyph": "♫",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+263C",
       "glyph": "☼",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+2600",
       "glyph": "☀",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+263E",
       "glyph": "☾",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+263D",
       "glyph": "☽",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+2601",
       "glyph": "☁",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+2602",
       "glyph": "☂",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+2603",
       "glyph": "☃",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+2744",
       "glyph": "❄",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+2668",
       "glyph": "♨",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+2694",
       "glyph": "⚔",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+2692",
       "glyph": "⚒",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+2699",
       "glyph": "⚙",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+2691",
       "glyph": "⚑",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+2690",
       "glyph": "⚐",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+26A0",
       "glyph": "⚠",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+2620",
       "glyph": "☠",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 2,
+      "offsetY": 10,
+      "offsetScale": -18
     },
     {
       "code": null,
       "unicode": "U+2618",
       "glyph": "☘",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+2696",
       "glyph": "⚖",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+2697",
       "glyph": "⚗",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+2695",
       "glyph": "⚕",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+271D",
       "glyph": "✝",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+262F",
       "glyph": "☯",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+25A4",
       "glyph": "▤",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 10,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+25AC",
       "glyph": "▬",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+25AD",
       "glyph": "▭",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+25AE",
       "glyph": "▮",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+25AF",
       "glyph": "▯",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+26BF",
       "glyph": "⚿",
       "color": "#858585",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     },
     {
       "code": null,
       "unicode": "U+25A1",
       "glyph": "□",
       "color": "#ffffff",
-      "alpha": 1
+      "alpha": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "offsetScale": 0
     }
   ]
 }

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createGlyphVisualCache, darkenGlyphColor, getGlyphRasterSize, tintGlyphRgb } from "../../../src/runtime/game-layer-babylon-lite/glyph-visual-cache.js";
+import { createGlyphVisualCache, darkenGlyphColor, getGlyphOffsetKey, getGlyphOffsetsFromKey, getGlyphRasterSize, getOffsetGlyphKey, tintGlyphRgb } from "../../../src/runtime/game-layer-babylon-lite/glyph-visual-cache.js";
 import { collectVisibleGlyphs, getVisibleRegion, getVisibleSlot, shouldUpdateVisibleSprite } from "../../../src/runtime/game-layer-babylon-lite/visible-region.js";
 import { createFrameCheckpoint, getVisibleGlyph } from "../../../src/runtime/game-layer-babylon-lite/systems/world-system.js";
 import { colorToLinearRgba, linearRgbaToHex, linearRgbaToRendererHex, reconcilePaletteColors } from "../../../src/runtime/game-layer-babylon-lite/palette-color-cache.js";
@@ -63,6 +63,19 @@ test("raster footprints are scaled for distant and close zooms", () => {
   assert.equal(getGlyphRasterSize(1, 6.4), 64);
   assert.equal(getGlyphRasterSize(5, 32), 128);
   assert.equal(getGlyphRasterSize(10, 64), 128);
+});
+
+test("glyph offset keys are stable and reusable for visual cache identity", () => {
+  assert.equal(getGlyphOffsetKey({ offsetX: 0, offsetY: 0, offsetScale: 0 }), "0,0,0");
+  assert.equal(getOffsetGlyphKey("🤺", { offsetX: 0, offsetY: 0, offsetScale: 0 }), "🤺");
+  const key = getOffsetGlyphKey("🤺", { offsetX: 4, offsetY: -3, offsetScale: 25 });
+  assert.notEqual(key, "🤺");
+  assert.deepEqual(getGlyphOffsetsFromKey(key), { offsetX: 4, offsetY: -3, offsetScale: 25 });
+  assert.deepEqual(getGlyphOffsetsFromKey(getOffsetGlyphKey("🤺", { offsetX: 40, offsetY: -40, offsetScale: 200 })), {
+    offsetX: 10,
+    offsetY: -10,
+    offsetScale: 100,
+  });
 });
 
 test("glyph background darkness moves palette colors toward black", () => {

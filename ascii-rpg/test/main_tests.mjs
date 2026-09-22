@@ -390,16 +390,16 @@ test("documents the plain safe-area template", async () => {
   if (!app.includes("paletteViewState") || !app.includes("setPaletteViewState") || app.includes("sessionStorage")) {
     throw new Error("Palette filter and sort choices must last for the page session without surviving refresh.");
   }
-  if (!app.includes("HexColorPicker") || !app.includes("createGlyphRasterCanvas") || !app.includes('rasterizeGlyph(glyph, fontFamily, size, colorize ? "#ffffff" : color)') || !app.includes("{ tint: true }") || !app.includes("const displayColor = entryId === selectedEntryId && draft ? draft.color : entry.color") || !app.includes("<PaletteGlyph glyph={selectedEntry.glyph}") || !app.includes("colorize fontFamily") || app.includes("palette_alpha_control") || !app.includes("Confirm") || !app.includes("Reset") || !app.includes("Cancel")) {
-    throw new Error("The palette glyph editor must include a color picker, no alpha control, Confirm, Reset, and Cancel controls.");
+  if (!app.includes("HexColorPicker") || !app.includes("createGlyphRasterCanvas") || !app.includes("rasterizeCompositeGlyph(") || !app.includes("colorToLinearRgba({ color, alpha: 1 })") || !app.includes("backgroundDarkness={backgroundDarkness}") || !app.includes("const displayColor = entryId === selectedEntryId && draft ? draft.color : entry.color") || !app.includes("const displayOffsets = entryId === selectedEntryId && draft ? draft : getPaletteEntryOffsets(entry)") || !app.includes("<PaletteGlyph glyph={selectedEntry.glyph}") || !app.includes("offsets={draft}") || !app.includes("Offset X") || !app.includes("Offset Y") || !app.includes("Offset Scale") || app.includes("colorize fontFamily") || app.includes("palette_alpha_control") || !app.includes('aria-label="Glyph Details"') || !app.includes("Confirm") || !app.includes("Reset") || !app.includes("Cancel")) {
+    throw new Error("The Glyph Details window must use the shared composite glyph renderer, no alpha control, glyph offset sliders, Confirm, Reset, and Cancel controls.");
   }
   const confirmStart = app.indexOf("confirmEdit = async");
   const confirmEnd = app.indexOf("acknowledgeWarning", confirmStart);
   if (!app.slice(confirmStart, confirmEnd).includes("this.cancelEdit()") || !app.includes("{asciiPaletteOpen ? (")) {
     throw new Error("Confirming a glyph must close only its editor and keep the main palette window open.");
   }
-  if (!app.includes("getPaletteEditorPosition") || !app.includes("innerHeight") || !styles.includes("max-height: 100vh")) {
-    throw new Error("The palette editor must remain completely onscreen at every glyph position.");
+  if (!app.includes("getGlyphDetailsWindowPosition") || !app.includes("containerBounds.height") || !styles.includes(".glyph_details_window") || !styles.includes("max-height: calc(100% - 32px)")) {
+    throw new Error("The Glyph Details window must remain inside the Ascii Settings window at every glyph position.");
   }
   if (!app.includes("Hide warning") || !app.includes("Local palette change") || !app.includes("PALETTE_WARNING_KEY")) {
     throw new Error("The deployed palette persistence warning must include the Hide warning choice.");
@@ -431,11 +431,11 @@ test("documents the plain safe-area template", async () => {
   if (!styles.includes(".prompt_body") || !styles.includes(".prompt_button")) {
     throw new Error("Prompts must define shared body and button styles.");
   }
-  if (!app.includes('id="show_ui_toggle"') || !app.includes("Developer") || !app.includes("getPlatformSettingsDefaults().showHud")
+  if (!app.includes('id="show_ui_toggle"') || !app.includes("Developer") || !app.includes("useState(getStoredShowHud)")
     || !app.includes("localStorage.setItem(showUiStorageKey, showHud ? \"true\" : \"false\")")
     || !app.includes("const toggleHud") || !app.includes("setShowHud((currentShowHud) => !currentShowHud)")
     || !platformSettings.includes('matchMedia("(pointer: coarse)")') || !platformSettings.includes("zoom: 5")
-    || !platformSettings.includes("showHud: false")) {
+    || !platformSettings.includes("showHud: false") || !platformSettings.includes("SHOW_UI_STORAGE_KEY")) {
     throw new Error("Developer must use persisted platform-specific defaults.");
   }
   if (!app.includes("logOpenStorageKey")
@@ -447,6 +447,8 @@ test("documents the plain safe-area template", async () => {
     throw new Error("Developer must remain the bottom item in the lower-left Settings list.");
   }
   if (!app.includes('document.documentElement.dataset.hudHidden = String(!showHud)')
+    || !main.includes("initializeHudHiddenDataset();")
+    || !platformSettings.includes("initializeHudHiddenDataset")
     || !styles.includes('html[data-hud-hidden="true"] .corner_bottom_left > :not(#settings)')
     || !styles.includes('html[data-hud-hidden="true"] #settings > .hud_block_body > :not(:has(#show_ui_toggle))')
     || !styles.includes('html[data-hud-hidden="true"] #settings > .hud_block_body > :has(#show_ui_toggle)')) {

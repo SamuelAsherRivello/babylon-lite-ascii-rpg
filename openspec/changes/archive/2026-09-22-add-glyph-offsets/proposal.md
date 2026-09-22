@@ -6,8 +6,8 @@ Emoji glyphs such as the fencer render with a different apparent footprint in th
 
 ## What Changes
 
-- Render each glyph preview in the Ascii Settings glyph grid on a white square that represents the glyph's grid cell, using the same glyph sizing and placement rules as the runtime renderer.
-- Render the color picker popup preview on the same square-backed grid-cell preview, so the table preview, popup preview, and world rendering communicate the same relationship between glyph and cell.
+- Render each glyph preview in the Ascii Settings glyph grid through the same composite grid-cell rendering path used by the game and mini-map, including the glyph background, glyph tint, offsets, and default lighting treatment.
+- Render the color picker popup preview with the same shared composite grid-cell renderer, so the table preview, popup preview, world view, and mini-map communicate the same relationship between glyph and cell.
 - Add three staged sliders to the color picker popup:
   - `Offset X`, constrained to integer values from `-10` through `10`, default `0`.
   - `Offset Y`, constrained to integer values from `-10` through `10`, default `0`.

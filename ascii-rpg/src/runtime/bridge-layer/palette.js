@@ -1,8 +1,11 @@
 export const DEFAULT_PALETTE_COLOR = "#ffffff";
 export const DEFAULT_PALETTE_ALPHA = 1;
+export const DEFAULT_GLYPH_OFFSET_X = 0;
+export const DEFAULT_GLYPH_OFFSET_Y = 0;
+export const DEFAULT_GLYPH_OFFSET_SCALE = 0;
 export const PALETTE_STORAGE_KEY = "babylon-lite-ascii-rpg.palette";
 export const PALETTE_WARNING_KEY = "babylon-lite-ascii-rpg.palette-warning-hidden";
-export const PALETTE_VERSION = 2;
+export const PALETTE_VERSION = 3;
 
 const BULLET_GLYPH = "•";
 const BULLET_ID = "U+2022";
@@ -89,6 +92,9 @@ function createDefaultEntry({ code = null, unicode = null, glyph }) {
     glyph,
     color: DEFAULT_PALETTE_COLOR,
     alpha: DEFAULT_PALETTE_ALPHA,
+    offsetX: DEFAULT_GLYPH_OFFSET_X,
+    offsetY: DEFAULT_GLYPH_OFFSET_Y,
+    offsetScale: DEFAULT_GLYPH_OFFSET_SCALE,
   };
 }
 
@@ -112,7 +118,10 @@ export function createDefaultPalette() {
 }
 
 export function isPaletteEntryCustomized(entry) {
-  return entry.color.toLowerCase() !== DEFAULT_PALETTE_COLOR;
+  return entry.color.toLowerCase() !== DEFAULT_PALETTE_COLOR
+    || entry.offsetX !== DEFAULT_GLYPH_OFFSET_X
+    || entry.offsetY !== DEFAULT_GLYPH_OFFSET_Y
+    || entry.offsetScale !== DEFAULT_GLYPH_OFFSET_SCALE;
 }
 
 function isValidColor(color) {
@@ -122,6 +131,27 @@ function isValidColor(color) {
 function isValidIdentity(entry) {
   return (Number.isInteger(entry.code) && entry.code >= 32 && entry.code <= 254 && entry.unicode === null)
     || (entry.code === null && supportedUnicodeIds.has(entry.unicode));
+}
+
+export function getPaletteEntryOffsets(entry = {}) {
+  return {
+    offsetX: entry.offsetX ?? DEFAULT_GLYPH_OFFSET_X,
+    offsetY: entry.offsetY ?? DEFAULT_GLYPH_OFFSET_Y,
+    offsetScale: entry.offsetScale ?? DEFAULT_GLYPH_OFFSET_SCALE,
+  };
+}
+
+function normalizePaletteEntry(entry) {
+  return {
+    ...entry,
+    ...getPaletteEntryOffsets(entry),
+  };
+}
+
+function isValidGlyphOffset(entry) {
+  return Number.isInteger(entry.offsetX) && entry.offsetX >= -10 && entry.offsetX <= 10
+    && Number.isInteger(entry.offsetY) && entry.offsetY >= -10 && entry.offsetY <= 10
+    && Number.isInteger(entry.offsetScale) && entry.offsetScale >= -100 && entry.offsetScale <= 100;
 }
 
 function getGroupLetter(glyph) {
@@ -202,6 +232,9 @@ export function validatePaletteEntries(entries) {
     if (!isValidColor(entry.color) || !Number.isFinite(entry.alpha) || entry.alpha < 0 || entry.alpha > 1) {
       throw new TypeError("Palette entries need a six-digit color and alpha from 0 to 1.");
     }
+    if (!isValidGlyphOffset(entry)) {
+      throw new TypeError("Palette entries need integer glyph offsets: offsetX and offsetY from -10 to 10, offsetScale from -100 to 100.");
+    }
     seen.add(getPaletteEntryId(entry));
   }
   if (seen.size !== expectedIds.size) {
@@ -213,7 +246,7 @@ export function validatePaletteEntries(entries) {
 export function createPalette(data = {}) {
   const defaults = createDefaultPalette();
   const entries = data.entries ?? defaults;
-  const palette = entries.map((entry) => ({ ...entry }));
+  const palette = entries.map(normalizePaletteEntry);
   if (data.version === 1 && data.entries?.length === LEGACY_PALETTE_SIZE) {
     palette.push(...defaults.slice(LEGACY_PALETTE_SIZE));
   } else if (data.entries) {
@@ -229,7 +262,7 @@ export function createPalette(data = {}) {
       if (!entry) {
         throw new TypeError(`Unknown palette identity: ${id}`);
       }
-      Object.assign(entry, override);
+      Object.assign(entry, normalizePaletteEntry({ ...entry, ...override }));
     }
   }
   validatePaletteEntries(palette);

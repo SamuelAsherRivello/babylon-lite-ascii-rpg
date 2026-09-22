@@ -4,7 +4,7 @@
 
 See `proposal.md` for motivation. The current application is a React/Vite browser RPG with a React Ascii Settings editor, a bridge-layer palette model, and a Babylon Lite renderer. Palette entries currently persist `color` and runtime-owned `alpha`; local development writes the complete palette JSON through the Vite palette endpoint, while deployed builds write the same palette payload to browser storage. The renderer builds glyph rasters in `glyph-visual-cache.js` and shares the world-view composition path between game view and mini-map.
 
-Current glyph previews call the same rasterization helpers but do not show the glyph against a cell-sized square, so oversized emoji can appear plausible in the editor while being visibly misaligned in the world.
+Current glyph previews can drift from the runtime presentation if they paint their own preview background or tint path, so oversized emoji can appear plausible in the editor while being visibly misaligned or differently colored in the world.
 
 ## Goals / Non-Goals
 
@@ -40,13 +40,13 @@ Rationale: the palette module is already the boundary that protects renderer and
 
 Alternative considered: clamp invalid values during validation. Rejection is safer for corrupt stored palettes and matches the current validation stance for malformed colors and alpha.
 
-### Reuse one square-backed preview component
+### Reuse the runtime composite cell renderer in previews
 
-`PaletteGlyph` should become an offset-aware cell preview component used by both palette cards and the color editor preview. The preview should draw a white cell square first, then render the glyph using the same raster dimensions and offsets as the renderer. CSS should reserve stable square dimensions for the card and popup variants so large emoji do not resize the layout.
+`PaletteGlyph` should become an offset-aware cell preview component used by both palette cards and the color editor preview. The preview should call the same composite rasterization path as the game and mini-map, using the palette color, glyph background darkness, active font, and offset values. CSS should reserve stable square dimensions for the card and popup variants so large emoji do not resize the layout.
 
 Rationale: the issue is a mismatch between visual contexts. A single preview component reduces drift between the table and popup.
 
-Alternative considered: CSS-only white background behind the current canvas. That shows a square but does not guarantee the glyph is being positioned and scaled like the world raster.
+Alternative considered: CSS-only white background behind the current canvas. That shows a square but does not guarantee the glyph is using the same background, tint, lighting, positioning, and scale as the world raster.
 
 ### Apply offsets in glyph rasterization, not gameplay coordinates
 

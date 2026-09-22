@@ -1,4 +1,4 @@
-import { Component, Fragment, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
+import { Component, Fragment, createRef, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { HexColorPicker } from "react-colorful";
 import versionText from "../../../../version.txt?raw";
 import {
@@ -13,10 +13,14 @@ import { DEFAULT_FONT_ID, FONT_OPTIONS, getFontOption } from "../bridge-layer/fo
 import { commitPalette, getPalette, subscribeToPalette } from "./palette-store.js";
 import {
   filterPaletteEntries,
+  DEFAULT_GLYPH_OFFSET_SCALE,
+  DEFAULT_GLYPH_OFFSET_X,
+  DEFAULT_GLYPH_OFFSET_Y,
   DEFAULT_PALETTE_COLOR,
   getPaletteGroup,
   getPaletteGroupLabel,
   getPaletteEntryId,
+  getPaletteEntryOffsets,
   PALETTE_WARNING_KEY,
   sortPaletteEntries,
   getPaletteStyle,
@@ -32,14 +36,17 @@ import {
   getCharacterBarMaximumPercent,
   getCharacterBarSegments,
 } from "./character-bar-presentation.js";
-import { createGlyphRasterCanvas, rasterizeGlyph, getGlyphRasterSize } from "../game-layer-babylon-lite/glyph-visual-cache.js";
+import { createGlyphRasterCanvas, rasterizeCompositeGlyph, getGlyphRasterSize } from "../game-layer-babylon-lite/glyph-visual-cache.js";
+import { colorToLinearRgba } from "../game-layer-babylon-lite/palette-color-cache.js";
 import { DEFAULT_ZOOM } from "../game-layer-babylon-lite/zoom-scale.js";
 import {
   getPlatformSettingsDefaults,
+  getStoredShowHud,
   getStoredAspectMode,
   getStoredBooleanValue,
   getMigratedStoredZoomValue,
   isMobilePlatform,
+  SHOW_UI_STORAGE_KEY,
 } from "./platform-settings.js";
 import { MAX_ZOOM, MIN_ZOOM, ZOOM_SCALE_STORAGE_VERSION } from "../game-layer-babylon-lite/zoom-scale.js";
 import {
@@ -111,7 +118,7 @@ import questData from "../game-layer-babylon-lite/data/quest_data.json";
 
 const fullscreenStorageKey = "babylon-lite-ascii-rpg.fullscreen";
 const aspectStorageKey = "babylon-lite-ascii-rpg.aspect";
-const showUiStorageKey = "babylon-lite-ascii-rpg.show-ui";
+const showUiStorageKey = SHOW_UI_STORAGE_KEY;
 const logOpenStorageKey = "babylon-lite-ascii-rpg.log-open";
 const zoomStorageKey = "babylon-lite-ascii-rpg.zoom";
 const zoomStorageVersionKey = "babylon-lite-ascii-rpg.zoom-version";
@@ -135,9 +142,9 @@ const maxZoom = MAX_ZOOM;
 const repositoryUrl = "https://github.com/SamuelAsherRivello/babylon-lite-ascii-rpg";
 const uiMarginPixels = 20;
 const mapGlyphs = new Set(PROJECT_MAP_GLYPHS);
-const paletteEditorWidth = 286;
-const paletteEditorHeight = 340;
-const paletteEditorMargin = 16;
+const glyphDetailsWindowWidth = 220;
+const glyphDetailsWindowHeight = 280;
+const glyphDetailsWindowMargin = 16;
 const lightingWindowMargin = 12;
 const defaultLightingWindowPosition = { left: 180, top: 410 };
 const DEFAULT_GLYPH_BACKGROUND = true;
@@ -226,18 +233,24 @@ function getStoredPlayerGpuShadowBleedRange() {
   return PLAYER_GPU_SHADOW_BLEED_RANGES.includes(stored) ? stored : 2;
 }
 
-export function getPaletteEditorPosition(anchor, viewport = { width: window.innerWidth, height: window.innerHeight }) {
-  const availableHeight = Math.max(0, viewport.height - paletteEditorMargin * 2);
-  const editorHeight = Math.min(paletteEditorHeight, availableHeight);
-  const maxLeft = Math.max(paletteEditorMargin, viewport.width - paletteEditorWidth - paletteEditorMargin);
-  const maxTop = Math.max(paletteEditorMargin, viewport.height - editorHeight - paletteEditorMargin);
-  const preferredTop = anchor.top + editorHeight <= viewport.height - paletteEditorMargin
-    ? anchor.top
-    : anchor.top - editorHeight - paletteEditorMargin;
+export function getGlyphDetailsWindowPosition(anchor, containerBounds = { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight, scrollLeft: 0, scrollTop: 0 }) {
+  const availableHeight = Math.max(0, containerBounds.height - glyphDetailsWindowMargin * 2);
+  const detailsHeight = Math.min(glyphDetailsWindowHeight, availableHeight);
+  const scrollLeft = containerBounds.scrollLeft ?? 0;
+  const scrollTop = containerBounds.scrollTop ?? 0;
+  const minLeft = scrollLeft + glyphDetailsWindowMargin;
+  const minTop = scrollTop + glyphDetailsWindowMargin;
+  const maxLeft = Math.max(minLeft, scrollLeft + containerBounds.width - glyphDetailsWindowWidth - glyphDetailsWindowMargin);
+  const maxTop = Math.max(minTop, scrollTop + containerBounds.height - detailsHeight - glyphDetailsWindowMargin);
+  const anchorTop = anchor.top - containerBounds.top + scrollTop;
+  const anchorRight = anchor.left - containerBounds.left + scrollLeft;
+  const preferredTop = anchorTop + detailsHeight <= scrollTop + containerBounds.height - glyphDetailsWindowMargin
+    ? anchorTop
+    : anchorTop - detailsHeight - glyphDetailsWindowMargin;
 
   return {
-    top: Math.min(Math.max(preferredTop, paletteEditorMargin), maxTop),
-    left: Math.min(Math.max(anchor.left + 12, paletteEditorMargin), maxLeft),
+    top: Math.min(Math.max(preferredTop, minTop), maxTop),
+    left: Math.min(Math.max(anchorRight + 12, minLeft), maxLeft),
   };
 }
 
@@ -750,30 +763,36 @@ function LightingWindow({
   );
 }
 
-function PaletteGlyph({ glyph, color, fontFamily, colorize = false }) {
+function PaletteGlyph({ glyph, color, fontFamily, offsets = null, backgroundDarkness = 50 }) {
   const canvasRef = useRef(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return undefined;
     const size = getGlyphRasterSize(DEFAULT_ZOOM, 32);
-    const raster = rasterizeGlyph(glyph, fontFamily, size, colorize ? "#ffffff" : color);
+    const raster = rasterizeCompositeGlyph(
+      glyph,
+      fontFamily,
+      size,
+      colorToLinearRgba({ color, alpha: 1 }),
+      backgroundDarkness,
+      offsets ?? undefined,
+    );
     canvas.width = raster.width;
     canvas.height = raster.height;
     const context = canvas.getContext("2d");
     if (!context) return undefined;
-    if (colorize) {
-      context.drawImage(createGlyphRasterCanvas(raster, color, { tint: true }), 0, 0);
-    } else {
-      context.putImageData(new ImageData(raster.pixels, raster.width, raster.height), 0, 0);
-    }
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(createGlyphRasterCanvas(raster), 0, 0);
     return undefined;
-  }, [color, colorize, fontFamily, glyph]);
+  }, [backgroundDarkness, color, fontFamily, glyph, offsets?.offsetScale, offsets?.offsetX, offsets?.offsetY]);
 
   return <canvas ref={canvasRef} className="palette_glyph_canvas" aria-label={glyph} />;
 }
 
 export class PromptWindow extends Component {
+  windowRef = createRef();
+
   state = {
     activeTab: "palette",
     selectedEntryId: null,
@@ -808,15 +827,24 @@ export class PromptWindow extends Component {
     const bounds = event.currentTarget.getBoundingClientRect();
     this.setState({
       selectedEntryId: getPaletteEntryId(entry),
-      draft: { color: entry.color },
+      draft: { color: entry.color, ...getPaletteEntryOffsets(entry) },
       anchor: { top: bounds.top, left: bounds.right },
     });
   };
 
   updateColor = (color) => this.setState((state) => ({ draft: { ...state.draft, color } }));
 
+  updateOffset = (name, value) => this.setState((state) => ({
+    draft: { ...state.draft, [name]: Number.parseInt(value, 10) },
+  }));
+
   resetEdit = () => this.setState({
-    draft: { color: DEFAULT_PALETTE_COLOR },
+    draft: {
+      color: DEFAULT_PALETTE_COLOR,
+      offsetX: DEFAULT_GLYPH_OFFSET_X,
+      offsetY: DEFAULT_GLYPH_OFFSET_Y,
+      offsetScale: DEFAULT_GLYPH_OFFSET_SCALE,
+    },
   });
 
   cancelEdit = () => this.setState({ selectedEntryId: null, draft: null, anchor: null });
@@ -881,7 +909,19 @@ export class PromptWindow extends Component {
     } = this.state;
     const { filter, sortBy, sortDirection } = viewState;
     const selectedEntry = palette.find((entry) => getPaletteEntryId(entry) === selectedEntryId);
-    const editorPosition = anchor ? getPaletteEditorPosition(anchor) : null;
+    const windowElement = this.windowRef.current;
+    const windowRect = windowElement?.getBoundingClientRect();
+    const windowBounds = windowElement && windowRect
+      ? {
+        left: windowRect.left,
+        top: windowRect.top,
+        width: windowRect.width,
+        height: windowRect.height,
+        scrollLeft: windowElement.scrollLeft,
+        scrollTop: windowElement.scrollTop,
+      }
+      : null;
+    const glyphDetailsWindowPosition = anchor && windowBounds ? getGlyphDetailsWindowPosition(anchor, windowBounds) : null;
     const visibleEntries = sortPaletteEntries(
       filterPaletteEntries(palette, filter, mapGlyphs),
       sortBy,
@@ -892,6 +932,7 @@ export class PromptWindow extends Component {
       <div className="prompt_window" role="presentation">
         <div className="window_backdrop" aria-hidden="true" onClick={onClose} />
         <section
+          ref={this.windowRef}
           className="window"
           role="dialog"
           aria-modal="true"
@@ -991,6 +1032,7 @@ export class PromptWindow extends Component {
             {visibleEntries.map((entry, index) => {
               const entryId = getPaletteEntryId(entry);
               const displayColor = entryId === selectedEntryId && draft ? draft.color : entry.color;
+              const displayOffsets = entryId === selectedEntryId && draft ? draft : getPaletteEntryOffsets(entry);
               const groupHeaderVisible = sortBy === "group"
                 && (index === 0 || getPaletteGroup(entry) !== getPaletteGroup(visibleEntries[index - 1]));
               return (
@@ -1010,24 +1052,46 @@ export class PromptWindow extends Component {
                   >
                     <span className="palette_index">{entry.code ?? entry.unicode}</span>
                     <span className="palette_glyph">
-                      <PaletteGlyph glyph={entry.glyph} color={displayColor} colorize fontFamily={getFontOption(fontId).family} />
+                      <PaletteGlyph glyph={entry.glyph} color={displayColor} offsets={displayOffsets} backgroundDarkness={backgroundDarkness} fontFamily={getFontOption(fontId).family} />
                     </span>
                   </button>
                 </Fragment>
               );
             })}
           </div>
-          {selectedEntry && draft && editorPosition ? (
+          {selectedEntry && draft && glyphDetailsWindowPosition ? (
             <div
-              className="palette_editor"
-              style={{ top: `${editorPosition.top}px`, left: `${editorPosition.left}px` }}
+              className="glyph_details_window"
+              role="dialog"
+              aria-label="Glyph Details"
+              style={{ top: `${glyphDetailsWindowPosition.top}px`, left: `${glyphDetailsWindowPosition.left}px` }}
               onClick={(event) => event.stopPropagation()}
             >
-              <div className="palette_preview">
-                <PaletteGlyph glyph={selectedEntry.glyph} color={draft.color} colorize fontFamily={getFontOption(fontId).family} />
+              <div className="glyph_details_preview">
+                <PaletteGlyph glyph={selectedEntry.glyph} color={draft.color} offsets={draft} backgroundDarkness={backgroundDarkness} fontFamily={getFontOption(fontId).family} />
               </div>
               <HexColorPicker color={draft.color} onChange={this.updateColor} />
-              <div className="palette_editor_actions">
+              <div className="palette_offset_controls" aria-label="Glyph offsets">
+                {[
+                  ["offsetX", "Offset X", -10, 10, draft.offsetX],
+                  ["offsetY", "Offset Y", -10, 10, draft.offsetY],
+                  ["offsetScale", "Offset Scale", -100, 100, draft.offsetScale],
+                ].map(([name, label, min, max, value]) => (
+                  <label className="palette_offset_control" key={name}>
+                    <span>{label}</span>
+                    <input
+                      type="range"
+                      min={min}
+                      max={max}
+                      step="1"
+                      value={value}
+                      onChange={(event) => this.updateOffset(name, event.target.value)}
+                    />
+                    <span>{name === "offsetScale" ? `${value}%` : value}</span>
+                  </label>
+                ))}
+              </div>
+              <div className="glyph_details_actions">
                 <button type="button" onClick={this.confirmEdit}>Confirm</button>
                 <button type="button" onClick={this.resetEdit}>Reset</button>
                 <button type="button" onClick={this.cancelEdit}>Cancel</button>
@@ -1048,7 +1112,7 @@ export class PromptWindow extends Component {
               <div className="font_preview" style={{ fontFamily: getFontOption(fontDraftId ?? fontId).family }}>
                 W • P
               </div>
-              <div className="palette_editor_actions">
+              <div className="glyph_details_actions">
                 <button type="button" onClick={this.confirmFontEdit}>Confirm</button>
                 <button type="button" onClick={this.resetFontDraft}>Reset</button>
                 <button type="button" onClick={this.cancelFontEdit}>Cancel</button>
@@ -1233,7 +1297,7 @@ function AppContent() {
   const [settingTooltip, setSettingTooltip] = useState(null);
   const [settingTooltipPosition, setSettingTooltipPosition] = useState({ top: 0, left: 0 });
   const settingTooltipRef = useRef(null);
-  const [showHud, setShowHud] = useState(() => getStoredBoolean(showUiStorageKey, getPlatformSettingsDefaults().showHud));
+  const [showHud, setShowHud] = useState(getStoredShowHud);
   const [fullscreenPreferred, setFullscreenPreferred] = useState(() => {
     return localStorage.getItem(fullscreenStorageKey) === "true";
   });

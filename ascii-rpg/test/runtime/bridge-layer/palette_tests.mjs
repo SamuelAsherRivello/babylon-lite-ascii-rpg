@@ -4,6 +4,9 @@ import test from "node:test";
 import {
   DEFAULT_PALETTE_ALPHA,
   DEFAULT_PALETTE_COLOR,
+  DEFAULT_GLYPH_OFFSET_SCALE,
+  DEFAULT_GLYPH_OFFSET_X,
+  DEFAULT_GLYPH_OFFSET_Y,
   PALETTE_VERSION,
   createDefaultPalette,
   createPalette,
@@ -40,6 +43,9 @@ test("migrates saved 224-entry palettes while preserving existing colors", () =>
 
   assert.equal(palette.length, 300);
   assert.equal(palette.find((entry) => entry.glyph === "•").color, "#4c4c4c");
+  assert.equal(palette.find((entry) => entry.glyph === "•").offsetX, DEFAULT_GLYPH_OFFSET_X);
+  assert.equal(palette.find((entry) => entry.glyph === "•").offsetY, DEFAULT_GLYPH_OFFSET_Y);
+  assert.equal(palette.find((entry) => entry.glyph === "•").offsetScale, DEFAULT_GLYPH_OFFSET_SCALE);
   assert.equal(palette.find((entry) => entry.glyph === "↑").color, DEFAULT_PALETTE_COLOR);
 });
 
@@ -54,17 +60,23 @@ test("backfills newly supported identities in an otherwise current palette", () 
   assert.equal(palette.find((entry) => entry.glyph === "★").color, "#ffff00");
 });
 
-test("defaults entries to white and fully opaque", () => {
+test("defaults entries to white, fully opaque, and zero offsets", () => {
   const entry = createDefaultPalette().find((candidate) => candidate.glyph === "W");
   assert.equal(entry.color, DEFAULT_PALETTE_COLOR);
   assert.equal(entry.alpha, DEFAULT_PALETTE_ALPHA);
+  assert.equal(entry.offsetX, DEFAULT_GLYPH_OFFSET_X);
+  assert.equal(entry.offsetY, DEFAULT_GLYPH_OFFSET_Y);
+  assert.equal(entry.offsetScale, DEFAULT_GLYPH_OFFSET_SCALE);
   assert.equal(isPaletteEntryCustomized(entry), false);
 });
 
 test("applies a stored bullet override and derives customized status", () => {
-  const palette = createPalette({ overrides: { "U+2022": { color: "#999999", alpha: 1 } } });
+  const palette = createPalette({ overrides: { "U+2022": { color: "#999999", alpha: 1, offsetX: 2, offsetY: -3, offsetScale: 25 } } });
   const bullet = palette.find((entry) => entry.unicode === "U+2022");
   assert.equal(bullet.color, "#999999");
+  assert.equal(bullet.offsetX, 2);
+  assert.equal(bullet.offsetY, -3);
+  assert.equal(bullet.offsetScale, 25);
   assert.equal(isPaletteEntryCustomized(bullet), true);
 });
 
@@ -73,21 +85,31 @@ test("rejects malformed palette entries", () => {
   assert.throws(() => validatePaletteEntries(palette.slice(1)), /missing/);
   assert.throws(() => validatePaletteEntries(palette.map((entry) => ({ ...entry, alpha: 2 }))), /alpha/);
   assert.throws(() => validatePaletteEntries(palette.map((entry, index) => index === 0 ? { ...entry, color: "red" } : entry)), /color/);
+  assert.throws(() => validatePaletteEntries(palette.map((entry, index) => index === 0 ? { ...entry, offsetX: 11 } : entry)), /offset/);
+  assert.throws(() => validatePaletteEntries(palette.map((entry, index) => index === 0 ? { ...entry, offsetY: -11 } : entry)), /offset/);
+  assert.throws(() => validatePaletteEntries(palette.map((entry, index) => index === 0 ? { ...entry, offsetScale: 101 } : entry)), /offset/);
+  assert.throws(() => validatePaletteEntries(palette.map((entry, index) => index === 0 ? { ...entry, offsetScale: 1.5 } : entry)), /offset/);
 });
 
 test("serializes a complete validated palette", () => {
   const serialized = JSON.parse(serializePalette(createDefaultPalette()));
   assert.equal(serialized.version, PALETTE_VERSION);
   assert.equal(serialized.entries.length, 300);
+  assert.equal(serialized.entries[0].offsetX, 0);
+  assert.equal(serialized.entries[0].offsetY, 0);
+  assert.equal(serialized.entries[0].offsetScale, 0);
 });
 
 test("filters the palette by map usage and customized styles", () => {
-  const palette = createPalette({ overrides: { "U+2022": { color: "#999999", alpha: 1 } } });
+  const palette = createPalette({ overrides: {
+    "U+2022": { color: "#999999", alpha: 1 },
+    "U+1F93A": { offsetX: 4, offsetY: 0, offsetScale: 0 },
+  } });
   const inMaps = filterPaletteEntries(palette, "in-maps", new Set(["W", "•", "🤺"]));
   const customized = filterPaletteEntries(palette, "customized", new Set());
 
   assert.deepEqual(inMaps.map((entry) => entry.glyph), ["W", "•", "🤺"]);
-  assert.deepEqual(customized.map((entry) => entry.glyph), ["•"]);
+  assert.deepEqual(customized.map((entry) => entry.glyph), ["•", "🤺"]);
 });
 
 test("toggles index and alphabet palette ordering", () => {

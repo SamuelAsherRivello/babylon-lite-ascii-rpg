@@ -40,7 +40,7 @@ import {
 } from "./characters/player/player-grid.js";
 import { normalizeCameraMode } from "../bridge-layer/camera.js";
 import { getFontOption, validateFontId } from "../bridge-layer/font.js";
-import { getPaletteStyle, validatePaletteEntries } from "../bridge-layer/palette.js";
+import { getPaletteEntryId, getPaletteEntryOffsets, getPaletteStyle, validatePaletteEntries } from "../bridge-layer/palette.js";
 import { PLAYER_MOVED_EVENTS, sendKeySnapshot, sendPlayerMovedEvent } from "../bridge-layer/game-bridge.js";
 import {
   createGeneratedSeed,
@@ -58,7 +58,7 @@ import {
   normalizePlayerMarkers,
 } from "./systems/world-system.js";
 import { createTimeSystem } from "./systems/time-system.js";
-import { FACING_LEFT, FACING_RIGHT, createGlyphRasterCanvas, createGlyphVisualCache, getFacingGlyph, getFacingGlyphKey, rasterizeCompositeGlyph, rasterizeGlyph } from "./glyph-visual-cache.js";
+import { FACING_LEFT, FACING_RIGHT, createGlyphRasterCanvas, createGlyphVisualCache, getFacingGlyph, getFacingGlyphKey, getGlyphOffsetsFromKey, getGlyphOffsetKey, getOffsetGlyphKey, rasterizeCompositeGlyph, rasterizeGlyph } from "./glyph-visual-cache.js";
 import { getVisibleRegion, getVisibleSlot, shouldUpdateVisibleSprite } from "./visible-region.js";
 import { collectWorldViewGlyphs, createWorldViewComposition, renderWorldViewComposition } from "./world-view.js";
 import { colorToLinearRgba, linearRgbaToRendererHex, reconcilePaletteColors } from "./palette-color-cache.js";
@@ -270,6 +270,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   const realmSystem = createRealmSystem({ eventSystem: gameplayEvents });
   let palette = initialPalette.map((entry) => ({ ...entry }));
   let paletteColors = reconcilePaletteColors(null, palette).colors;
+  let paletteOffsets = new Map(palette.map((entry) => [entry.glyph, getPaletteEntryOffsets(entry)]));
   let lighting = {
     ambient: DEFAULT_LIGHTING.ambient,
     torchProfile: getLightingProfile("Med").config,
@@ -306,7 +307,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   const getRuntimeVisibleGlyphKey = (targetWorld, cell) => {
     const record = getRuntimeVisibleRecord(targetWorld, cell);
     const glyph = record?.glyph ?? getVisibleGlyph(targetWorld, cell);
-    return getFacingGlyphKey(glyph, record?.facing);
+    return getOffsetGlyphKey(getFacingGlyphKey(glyph, record?.facing), paletteOffsets.get(glyph));
   };
   const setPlayerFacingFromDirection = (direction) => {
     if (direction.x === 0) return;
@@ -488,7 +489,8 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
         if (!raster) return;
         const lightingFactor = minimapLightField.getFactor({ x: sourceX + localX, y: sourceY + localY });
         const fogOpacity = visibility / 100;
-        const baseColor = paletteColors.get(graphic.glyph) ?? colorToLinearRgba(getPaletteStyle(palette, graphic.glyph));
+        const baseGlyph = getFacingGlyph(graphic.glyph);
+        const baseColor = paletteColors.get(baseGlyph) ?? colorToLinearRgba(getPaletteStyle(palette, baseGlyph));
         const litColor = linearRgbaToRendererHex(applyLightingToColor(baseColor, lightingFactor));
         const cacheKey = `${glyph}:${litColor}:${lightingFactor.toFixed(6)}:${fogOpacity.toFixed(2)}:${raster.width}`;
         let glyphCanvas = minimapGlyphCanvases.get(cacheKey);
@@ -940,8 +942,8 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     fontFamily: getFontOption(fontId).family,
     glyphLimit: GLYPHS.length + 2,
     rasterize: (glyph, family, size) => glyphBackgroundEnabled
-      ? rasterizeCompositeGlyph(glyph, family, size, paletteColors.get(getFacingGlyph(glyph)) ?? [1, 1, 1], backgroundDarkness)
-      : rasterizeGlyph(glyph, family, size),
+      ? rasterizeCompositeGlyph(glyph, family, size, paletteColors.get(getFacingGlyph(glyph)) ?? [1, 1, 1], backgroundDarkness, getGlyphOffsetsFromKey(glyph))
+      : rasterizeGlyph(glyph, family, size, "#ffffff", getGlyphOffsetsFromKey(glyph)),
   });
 
   const createMinimapGlyphCache = () => createGlyphVisualCache(engine, {
@@ -949,9 +951,25 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     fontFamily: getFontOption(fontId).family,
     glyphLimit: GLYPHS.length + 2,
     rasterize: (glyph, family, size) => glyphBackgroundEnabled
-      ? rasterizeCompositeGlyph(glyph, family, size, paletteColors.get(getFacingGlyph(glyph)) ?? [1, 1, 1], backgroundDarkness)
-      : rasterizeGlyph(glyph, family, size),
+      ? rasterizeCompositeGlyph(glyph, family, size, paletteColors.get(getFacingGlyph(glyph)) ?? [1, 1, 1], backgroundDarkness, getGlyphOffsetsFromKey(glyph))
+      : rasterizeGlyph(glyph, family, size, "#ffffff", getGlyphOffsetsFromKey(glyph)),
   });
+
+  const collectChangedOffsetGlyphs = (previousPalette, nextPalette) => {
+    const previousById = new Map(previousPalette.map((entry) => [getPaletteEntryId(entry), entry]));
+    const changedGlyphs = new Set();
+    for (const entry of nextPalette) {
+      const previous = previousById.get(getPaletteEntryId(entry));
+      if (!previous) {
+        changedGlyphs.add(entry.glyph);
+        continue;
+      }
+      if (getGlyphOffsetKey(getPaletteEntryOffsets(previous)) !== getGlyphOffsetKey(getPaletteEntryOffsets(entry))) {
+        changedGlyphs.add(entry.glyph);
+      }
+    }
+    return changedGlyphs;
+  };
 
   const rebuildGameGlyphCache = () => {
     if (renderer && layer) removeSpriteRendererLayer(renderer, layer);
@@ -1866,10 +1884,12 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   return Object.freeze({
     setPalette(nextPalette) {
       validatePaletteEntries(nextPalette);
+      const offsetChanged = collectChangedOffsetGlyphs(palette, nextPalette);
       palette = nextPalette.map((entry) => ({ ...entry }));
       const { colors, changed } = reconcilePaletteColors(paletteColors, palette);
       paletteColors = colors;
-      if (glyphBackgroundEnabled) {
+      paletteOffsets = new Map(palette.map((entry) => [entry.glyph, getPaletteEntryOffsets(entry)]));
+      if (glyphBackgroundEnabled || offsetChanged.size > 0) {
         rebuildGameGlyphCache();
         rebuildMinimapGlyphCache();
         renderWorld();

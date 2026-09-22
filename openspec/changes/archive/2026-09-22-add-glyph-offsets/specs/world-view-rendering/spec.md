@@ -16,6 +16,10 @@ The world-view renderer SHALL apply the confirmed per-glyph offset values whenev
 - **THEN** the mini-map SHALL apply the same offset semantics adapted to its destination cell scale
 - **AND** the mini-map SHALL preserve the same fog, lighting, and overlay ordering as other world-view content
 
+#### Scenario: Ascii previews share runtime cell rendering
+- **WHEN** the Ascii Settings palette grid or glyph editor preview renders a glyph
+- **THEN** it SHALL use the same composite cell rendering technology as the game view and mini-map for the glyph background, glyph pixels, offsets, and fully visible lighting treatment
+
 #### Scenario: Facing and offsets combine
 - **WHEN** the player or an enemy renders with a left- or right-facing presentation
 - **THEN** the renderer SHALL apply the actor's facing presentation and the base glyph's confirmed offsets together
