@@ -22,10 +22,6 @@ Ways to break the illusion (AVOID THESE?)
 - Adding camera shakes, zooms, or transitions that ignore the established grid rhythm.
 - Using lighting and shadows that imply more geometry than the ASCII symbols communicate.
 
-# Workflows
-
-- Openspec AI Workflow inspiration: [watch short](https://www.youtube.com/shorts/lce1edytViI)
-
 # Inspiration
 
 - ASCII game inspiration: [watch video](https://www.youtube.com/watch?v=zjEDWA8uQEw)
