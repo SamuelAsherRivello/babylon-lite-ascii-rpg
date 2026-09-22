@@ -68,12 +68,9 @@ builds. The application targets modern desktop and mobile browsers.
 
 #### OpenSpec
 
-[OpenSpec](https://openspec.dev/) keeps feature intent, implementation, and
-current specifications aligned.
-
 | # | Name | Command | Comment |
 | --- | --- | --- | --- |
-| 1 | Explore | `$openspec-explore` | Optional feature discovery and planning. |
+| 1 | Explore | `$openspec-explore` | (Optional) Brainstorm possibilities. |
 | 2 | Propose | `$openspec-propose` | Creates one focused feature change. |
 | 3 | Apply | `$openspec-apply-change` | Implements and completes one change. |
 | 4 | Sync | `$openspec-sync-specs` | Updates main specs without archiving. |
