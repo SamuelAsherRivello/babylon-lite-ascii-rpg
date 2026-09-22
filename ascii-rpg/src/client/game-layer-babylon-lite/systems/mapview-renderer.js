@@ -99,6 +99,6 @@ export function getMapviewMarkers({
     markers.push(makeMarker(entity.type === "enemy" ? "enemy" : "enemySpawner", entity.cell, { entityId: entity.id }));
   }
 
-  if (playerCell) markers.push(makeMarker("player", playerCell));
+  if (playerCell) markers.push(makeMarker("player", playerCell, { shape: "ring" }));
   return Object.freeze(markers.sort((left, right) => left.depth - right.depth));
 }

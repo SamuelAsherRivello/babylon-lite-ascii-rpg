@@ -71,4 +71,5 @@ test("mapview markers include diagnostic entities and no edge indicators", () =>
   assert.deepEqual(markers.map((marker) => marker.type), ["start", "quest", "torch", "item", "enemySpawner", "enemy", "player"]);
   assert.equal(markers.some((marker) => marker.type.includes("edge")), false);
   assert.equal(markers.find((marker) => marker.type === "enemy")?.depth, MAPVIEW_MARKER_DEPTHS.enemy);
+  assert.equal(markers.find((marker) => marker.type === "player")?.shape, "ring");
 });

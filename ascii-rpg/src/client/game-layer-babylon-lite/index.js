@@ -60,7 +60,7 @@ import {
 import { createTimeSystem } from "./systems/time-system.js";
 import { FACING_LEFT, FACING_RIGHT, createGlyphRasterCanvas, createGlyphVisualCache, getFacingGlyph, getFacingGlyphKey, getGlyphOffsetsFromKey, getGlyphOffsetKey, getOffsetGlyphKey, rasterizeCompositeGlyph, rasterizeGlyph } from "./glyph-visual-cache.js";
 import { getVisibleRegion, getVisibleSlot, shouldUpdateVisibleSprite } from "./visible-region.js";
-import { collectWorldViewGlyphs, createWorldViewComposition, renderWorldViewComposition } from "./world-view.js";
+import { collectWorldViewGlyphs, createWorldViewComposition, renderWorldViewComposition, renderWorldViewCompositionCooperatively } from "./world-view.js";
 import { colorToLinearRgba, linearRgbaToRendererHex, reconcilePaletteColors } from "./palette-color-cache.js";
 import {
   applyLightingToColor,
@@ -244,6 +244,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   let gameplayInputLocked = false;
   let mapviewOpen = false;
   let mapviewRealm = null;
+  let mapviewRenderJob = null;
   let transitionSystem = null;
   let transitionCenter = null;
   let playerRenderCenter = null;
@@ -610,7 +611,23 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     });
   };
 
+  const cancelMapviewRender = () => {
+    if (!mapviewRenderJob) return;
+    mapviewRenderJob.cancel();
+    mapviewRenderJob = null;
+  };
+
+  const releaseMapviewResources = () => {
+    cancelMapviewRender();
+    const context = mapviewCanvas.getContext("2d");
+    context.clearRect(0, 0, mapviewCanvas.width, mapviewCanvas.height);
+    mapviewGlyphCanvases.clear();
+    mapviewCanvas.width = 1;
+    mapviewCanvas.height = 1;
+  };
+
   const renderMapview = () => {
+    cancelMapviewRender();
     if (!mapviewOpen || !world || !minimapGlyphCache) return;
     const mapviewWorld = worldRealms?.realms?.[mapviewRealm] ?? world;
     if (mapviewGlyphCanvases.size > 16384) mapviewGlyphCanvases.clear();
@@ -634,7 +651,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       getVisibility: getMapviewVisibility,
     });
     const visual = minimapGlyphCache.ensure(1, destination.cellWidth, collectWorldViewGlyphs(composition));
-    renderWorldViewComposition(composition, {
+    const renderJob = renderWorldViewCompositionCooperatively(composition, {
       drawBackground: () => {
         context.globalAlpha = 1;
         context.fillStyle = "#000";
@@ -695,6 +712,14 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
           );
         }
       },
+      sliceMs: 6,
+      scheduleFrame: (callback) => window.requestAnimationFrame(callback),
+      cancelFrame: (handle) => window.cancelAnimationFrame(handle),
+    });
+    mapviewRenderJob = renderJob;
+    renderJob.finished.then(() => {
+      if (mapviewRenderJob !== renderJob) return;
+      mapviewRenderJob = null;
     });
   };
 
@@ -2346,6 +2371,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       const nextOpen = open === true;
       if (nextOpen === mapviewOpen) {
         if (mapviewOpen) renderMapview();
+        else releaseMapviewResources();
         return;
       }
       mapviewOpen = nextOpen;
@@ -2357,11 +2383,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
         renderMapview();
       }
       else {
-        const context = mapviewCanvas.getContext("2d");
-        context.clearRect(0, 0, mapviewCanvas.width, mapviewCanvas.height);
-        mapviewGlyphCanvases.clear();
-        mapviewCanvas.width = 1;
-        mapviewCanvas.height = 1;
+        releaseMapviewResources();
         mapviewRealm = activeRealm;
       }
     },
@@ -2422,6 +2444,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       canvas.removeEventListener("lostpointercapture", handlePointerStop);
       minimapCanvas.removeEventListener("click", handleMinimapClick);
       cancelScheduledRenders();
+      cancelMapviewRender();
       transitionSystem.dispose();
       transitionMask.remove();
       if (typeof disposeGpuLightPass === "function") disposeGpuLightPass();
@@ -2430,7 +2453,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       disposeSpriteRenderer(renderer);
       glyphCache.dispose();
       minimapGlyphCache.dispose();
-      mapviewGlyphCanvases.clear();
+      releaseMapviewResources();
       disposeEngine(engine);
       stopStaminaTimeRecovery();
       staminaSystem.dispose();

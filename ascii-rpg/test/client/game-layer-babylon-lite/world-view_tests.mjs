@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   collectWorldViewGlyphs,
   createWorldViewComposition,
+  renderWorldViewCompositionCooperatively,
   renderWorldViewComposition,
 } from "../../../src/client/game-layer-babylon-lite/world-view.js";
 import { createViewport, getViewOriginForCamera } from "../../../src/client/game-layer-babylon-lite/characters/player/player-grid.js";
@@ -71,6 +72,105 @@ test("world-view composition renders background, cells, and overlay in order", (
     drawOverlay: () => order.push("overlay"),
   });
   assert.deepEqual(order, ["background", "glyph:0", "glyph:1", "overlay"]);
+});
+
+test("cooperative world-view rendering yields and resumes without restarting cells", async () => {
+  const scheduled = [];
+  let nextHandle = 0;
+  const order = [];
+  const composition = createWorldViewComposition({
+    world: createWorld(3, 1),
+    fog: {},
+    source: { x: 0, y: 0, width: 3, height: 1 },
+    getGlyph: () => ".",
+    discovered: () => true,
+  });
+  const job = renderWorldViewCompositionCooperatively(composition, {
+    drawBackground: () => order.push("background"),
+    drawCell: (cell) => order.push(`glyph:${cell.localX}`),
+    drawOverlay: () => order.push("overlay"),
+    sliceMs: 0,
+    scheduleFrame: (callback) => {
+      scheduled.push(callback);
+      nextHandle += 1;
+      return nextHandle;
+    },
+    cancelFrame: () => {},
+    now: () => 0,
+  });
+
+  assert.deepEqual(order, ["background", "glyph:0"]);
+  assert.equal(scheduled.length, 1);
+  scheduled.shift()();
+  assert.deepEqual(order, ["background", "glyph:0", "glyph:1"]);
+  scheduled.shift()();
+  const result = await job.finished;
+  assert.deepEqual(order, ["background", "glyph:0", "glyph:1", "glyph:2", "overlay"]);
+  assert.deepEqual(result, { cells: 3, discoveredCells: 3, cancelled: false });
+});
+
+test("cooperative world-view rendering cancellation prevents later cells and overlay", async () => {
+  const scheduled = [];
+  const order = [];
+  const composition = createWorldViewComposition({
+    world: createWorld(3, 1),
+    fog: {},
+    source: { x: 0, y: 0, width: 3, height: 1 },
+    getGlyph: () => ".",
+    discovered: () => true,
+  });
+  const job = renderWorldViewCompositionCooperatively(composition, {
+    drawBackground: () => order.push("background"),
+    drawCell: (cell) => order.push(`glyph:${cell.localX}`),
+    drawOverlay: () => order.push("overlay"),
+    sliceMs: 0,
+    scheduleFrame: (callback) => {
+      scheduled.push(callback);
+      return scheduled.length;
+    },
+    cancelFrame: () => {},
+    now: () => 0,
+  });
+
+  job.cancel();
+  scheduled.shift()?.();
+  const result = await job.finished;
+  assert.deepEqual(order, ["background", "glyph:0"]);
+  assert.deepEqual(result, { cells: 3, discoveredCells: 1, cancelled: true });
+});
+
+test("cooperative world-view rendering preserves synchronous final pass order", async () => {
+  const composition = createWorldViewComposition({
+    world: createWorld(2, 1),
+    fog: {},
+    source: { x: 0, y: 0, width: 2, height: 1 },
+    getGlyph: () => ".",
+    discovered: () => true,
+  });
+  const synchronousOrder = [];
+  const cooperativeOrder = [];
+  const callbacks = {
+    drawBackground: () => synchronousOrder.push("background"),
+    drawCell: (cell) => synchronousOrder.push(`glyph:${cell.localX}`),
+    drawOverlay: () => synchronousOrder.push("overlay"),
+  };
+  const syncResult = renderWorldViewComposition(composition, callbacks);
+  const coopJob = renderWorldViewCompositionCooperatively(composition, {
+    drawBackground: () => cooperativeOrder.push("background"),
+    drawCell: (cell) => cooperativeOrder.push(`glyph:${cell.localX}`),
+    drawOverlay: () => cooperativeOrder.push("overlay"),
+    sliceMs: 100,
+    scheduleFrame: (callback) => {
+      callback();
+      return 1;
+    },
+    cancelFrame: () => {},
+    now: () => 0,
+  });
+  const coopResult = await coopJob.finished;
+
+  assert.deepEqual(cooperativeOrder, synchronousOrder);
+  assert.deepEqual(coopResult, { ...syncResult, cancelled: false });
 });
 
 test("world-view rendering queries persistent fog without mutating discovery", () => {

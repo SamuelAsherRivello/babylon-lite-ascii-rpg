@@ -83,61 +83,62 @@ Ways to break the illusion (AVOID THESE?)
 ## Enemies
 
 24. Boss phases. ☐
-25. Enemies. ☑
-26. Enemy factions. ☐
-27. Melee combat. ☑
-28. Ranged combat. ☐
-29. Separate combat screen that opens for significant boss battles, with a different gameplay look and feel. ☐
-30. Status effects and conditions. ☐
+25. Dicerolls for actions. ☐
+26. Enemies. ☑
+27. Enemy factions. ☐
+28. Melee combat. ☑
+29. Ranged combat. ☐
+30. Separate combat screen that opens for significant boss battles, with a different gameplay look and feel. ☐
+31. Status effects and conditions. ☐
 
 ## NPCs
 
-31. Character relationships. ☐
-32. Companion loyalty systems. ☐
-33. Dialogue trees for conversations with NPCs and player choices. ☐
-34. Shops. ☐
-35. Traveling in a group of NPCs. ☐
+32. Character relationships. ☐
+33. Companion loyalty systems. ☐
+34. Dialogue trees for conversations with NPCs and player choices. ☐
+35. Shops. ☐
+36. Traveling in a group of NPCs. ☐
 
 ## Objects and pickups
 
-36. Add health item and log it. ☑
-37. Add trap that damages health and log it. ☑
-38. Boats and rafts that can float on water. ☐
-39. Bombs. ☐
-40. Disguises and disguisable identities. ☐
-41. Door and key puzzles. ☑
-42. Gold. ☑
-43. Hidden treasure maps. ☐
-44. Items and inventory. ☐
-45. Man-made environments such as houses, homes, and buildings that can be entered. ☐
-46. Pick axes. ☐
-47. Spawn a few health items and traps around the world. ☑
-48. Weapons and armor. ☐
+37. Add health item and log it. ☑
+38. Add trap that damages health and log it. ☑
+39. Boats and rafts that can float on water. ☐
+40. Bombs. ☐
+41. Disguises and disguisable identities. ☐
+42. Door and key puzzles. ☑
+43. Gold. ☑
+44. Hidden treasure maps. ☐
+45. Items and inventory. ☐
+46. Man-made environments such as houses, homes, and buildings that can be entered. ☐
+47. Pick axes. ☐
+48. Spawn a few health items and traps around the world. ☑
+49. Weapons and armor. ☐
 
 ## Player activities
 
-49. Character building with traits. ☐
-50. Cooking recipes. ☐
-51. Crafting. ☐
-52. Digging. ☐
-53. Farming and gardening. ☐
-54. Fishing. ☐
-55. Magic spells. ☐
-56. Minigames. ☐
-57. Quests. ☑
-58. Resource gathering. ☐
-59. Stealing items. ☐
-60. Terraforming. ☐
-61. Update log for coin collection. ☑
-62. Update log for realm entry. ☑
-63. Vehicles. ☐
-64. Working (Chop trees for wood, mine rocks for ore). ☐
+50. Character building with traits. ☐
+51. Cooking recipes. ☐
+52. Crafting. ☐
+53. Digging. ☐
+54. Farming and gardening. ☐
+55. Fishing. ☐
+56. Magic spells. ☐
+57. Minigames. ☐
+58. Quests. ☑
+59. Resource gathering. ☐
+60. Stealing items. ☐
+61. Terraforming. ☐
+62. Update log for coin collection. ☑
+63. Update log for realm entry. ☑
+64. Vehicles. ☐
+65. Working (Chop trees for wood, mine rocks for ore). ☐
 
 ## Procedural level generation
 
-65. Day-and-night cycles. ☐
-66. Overworld vs. world vs. underground. ☑
-67. Procedural cafes. ☑
-68. Procedural dungeons. ☐
-69. Randomly generated story points. ☐
-70. Weather that affects gameplay. ☐
+66. Day-and-night cycles. ☐
+67. Overworld vs. world vs. underground. ☑
+68. Procedural cafes. ☑
+69. Procedural dungeons. ☐
+70. Randomly generated story points. ☐
+71. Weather that affects gameplay. ☐

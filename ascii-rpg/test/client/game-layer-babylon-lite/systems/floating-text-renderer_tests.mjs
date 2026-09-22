@@ -20,7 +20,7 @@ test("anchors text above health-bar space and moves up by ten percent of grid wi
   const style = getFloatingTextStyle(
     { x: 100, y: 80 },
     { gridWidth: 40, gridHeight: 50 },
-    { text: "-3", colorRole: "damage", alpha: 0.5, progress: 1 },
+    { text: "-3", colorRole: "damage", alpha: 0.5, progress: 1, travelProgress: 1 },
   );
 
   assert.equal(FLOATING_TEXT_TRAVEL_RATIO, 0.1);
@@ -31,6 +31,19 @@ test("anchors text above health-bar space and moves up by ten percent of grid wi
   assert.deepEqual(style.positionPx, [100, 33.5]);
   assert.equal(style.travelPx, 4);
   assert.equal(style.clearancePx, 17.5);
+  assert.equal(style.travelProgress, 1);
+});
+
+test("uses eased travel progress so upward motion decelerates", () => {
+  const style = getFloatingTextStyle(
+    { x: 100, y: 80 },
+    { gridWidth: 40, gridHeight: 50 },
+    { text: "-3", colorRole: "damage", alpha: 1, progress: 0.5, travelProgress: 0.75 },
+  );
+
+  assert.equal(style.travelPx, 3);
+  assert.deepEqual(style.positionPx, [100, 34.5]);
+  assert.equal(style.travelProgress, 0.75);
 });
 
 test("game integration owns floating text outside minimap and React bridge", async () => {

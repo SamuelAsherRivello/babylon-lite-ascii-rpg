@@ -15,6 +15,11 @@ export function formatFloatingTextDelta(delta) {
   return rounded > 0 ? `+${rounded}` : `${rounded}`;
 }
 
+export function easeFloatingTextTravelProgress(progress) {
+  const normalized = clamp(Number(progress) || 0, 0, 1);
+  return 1 - ((1 - normalized) * (1 - normalized));
+}
+
 export function createFloatingTextSystem({
   fadeInMs = FLOATING_TEXT_FADE_IN_MS,
   holdMs = FLOATING_TEXT_HOLD_MS,
@@ -38,10 +43,12 @@ export function createFloatingTextSystem({
       const fadeElapsed = elapsed - fadeInMs - holdMs;
       alpha = fadeOutMs === 0 ? 0 : clamp(1 - fadeElapsed / fadeOutMs, 0, 1);
     }
+    const progress = totalMs === 0 ? 1 : clamp(elapsed / totalMs, 0, 1);
     return Object.freeze({
       ...record,
       alpha,
-      progress: totalMs === 0 ? 1 : clamp(elapsed / totalMs, 0, 1),
+      progress,
+      travelProgress: easeFloatingTextTravelProgress(progress),
     });
   };
 

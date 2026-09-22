@@ -88,3 +88,98 @@ export function renderWorldViewComposition(composition, {
   drawOverlay?.(composition.destination, composition.region);
   return { cells: composition.cells.length, discoveredCells };
 }
+
+function defaultScheduleFrame(callback) {
+  if (typeof window !== "undefined" && typeof window.requestAnimationFrame === "function") {
+    return window.requestAnimationFrame(callback);
+  }
+  return setTimeout(callback, 0);
+}
+
+function defaultCancelFrame(handle) {
+  if (typeof window !== "undefined" && typeof window.cancelAnimationFrame === "function") {
+    window.cancelAnimationFrame(handle);
+    return;
+  }
+  clearTimeout(handle);
+}
+
+export function renderWorldViewCompositionCooperatively(composition, {
+  drawBackground,
+  drawCell,
+  drawOverlay,
+  sliceMs = 8,
+  scheduleFrame = defaultScheduleFrame,
+  cancelFrame = defaultCancelFrame,
+  now = () => performance.now(),
+} = {}) {
+  let cancelled = false;
+  let frameHandle = null;
+  let cellIndex = 0;
+  let discoveredCells = 0;
+  const result = { cells: composition?.cells.length ?? 0, discoveredCells: 0, cancelled: false };
+
+  let resolveFinished;
+  const finished = new Promise((resolve) => {
+    resolveFinished = resolve;
+  });
+
+  const finish = () => {
+    frameHandle = null;
+    result.cancelled = cancelled;
+    result.discoveredCells = discoveredCells;
+    resolveFinished({ ...result });
+  };
+
+  const cancel = () => {
+    if (cancelled) return;
+    cancelled = true;
+    if (frameHandle !== null) {
+      cancelFrame(frameHandle);
+      frameHandle = null;
+    }
+    finish();
+  };
+
+  if (!composition) {
+    finish();
+    return { cancel, finished, get cancelled() { return cancelled; } };
+  }
+
+  drawBackground?.(composition.destination, composition.region);
+
+  const renderBatch = () => {
+    frameHandle = null;
+    if (cancelled) {
+      finish();
+      return;
+    }
+    const batchStart = now();
+    while (cellIndex < composition.cells.length) {
+      if (cancelled) {
+        finish();
+        return;
+      }
+      const cell = composition.cells[cellIndex];
+      cellIndex += 1;
+      if (cell.discovered) discoveredCells += 1;
+      drawCell?.(cell, composition.destination, composition.region);
+      if (cellIndex < composition.cells.length && now() - batchStart >= sliceMs) {
+        frameHandle = scheduleFrame(renderBatch);
+        return;
+      }
+    }
+    if (!cancelled) drawOverlay?.(composition.destination, composition.region);
+    finish();
+  };
+
+  renderBatch();
+
+  return {
+    cancel,
+    finished,
+    get cancelled() {
+      return cancelled;
+    },
+  };
+}

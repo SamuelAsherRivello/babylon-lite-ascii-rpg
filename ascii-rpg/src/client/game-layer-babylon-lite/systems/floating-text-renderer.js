@@ -11,7 +11,8 @@ export function getFloatingTextStyle(center, viewport, state) {
   const gridWidth = Math.max(1, Number(viewport?.gridWidth) || 1);
   const gridHeight = Math.max(1, Number(viewport?.gridHeight) || gridWidth);
   const progress = Math.max(0, Math.min(1, Number(state?.progress) || 0));
-  const travel = gridWidth * FLOATING_TEXT_TRAVEL_RATIO * progress;
+  const travelProgress = Math.max(0, Math.min(1, Number(state?.travelProgress ?? progress) || 0));
+  const travel = gridWidth * FLOATING_TEXT_TRAVEL_RATIO * travelProgress;
   const clearance = gridHeight * FLOATING_TEXT_HEALTH_BAR_CLEARANCE_RATIO;
   return Object.freeze({
     text: state.text,
@@ -23,5 +24,6 @@ export function getFloatingTextStyle(center, viewport, state) {
     ]),
     travelPx: travel,
     clearancePx: clearance,
+    travelProgress,
   });
 }

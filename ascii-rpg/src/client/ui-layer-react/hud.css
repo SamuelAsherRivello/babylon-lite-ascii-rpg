@@ -27,7 +27,10 @@
   font-size: var(--hud-body-font);
 }
 
-.corner_top_left > .box_layout,
+.corner_top_left > .box_layout {
+  padding: 4px 4px 14px;
+}
+
 .corner_top_right > .box_layout {
   padding: 8px;
 }

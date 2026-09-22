@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   createFloatingTextSystem,
+  easeFloatingTextTravelProgress,
   FLOATING_TEXT_FADE_IN_MS,
   FLOATING_TEXT_FADE_OUT_MS,
   FLOATING_TEXT_HOLD_MS,
@@ -23,15 +24,34 @@ test("fades in, holds, fades out, and expires", () => {
   assert.equal(state.colorRole, "damage");
   assert.equal(floatingText.getState(state.id, 1_000).alpha, 0);
   assert.equal(floatingText.getState(state.id, 1_000).progress, 0);
+  assert.equal(floatingText.getState(state.id, 1_000).travelProgress, 0);
   assert.equal(floatingText.getState(state.id, 1_050).alpha, 0.5);
   assert.ok(floatingText.getState(state.id, 1_050).progress > 0);
+  assert.ok(floatingText.getState(state.id, 1_050).travelProgress > floatingText.getState(state.id, 1_050).progress);
   assert.equal(floatingText.getState(state.id, 1_000 + FLOATING_TEXT_FADE_IN_MS).alpha, 1);
   assert.ok(floatingText.getState(state.id, 1_000 + FLOATING_TEXT_FADE_IN_MS).progress > floatingText.getState(state.id, 1_050).progress);
   assert.equal(floatingText.getState(state.id, 1_000 + FLOATING_TEXT_FADE_IN_MS + FLOATING_TEXT_HOLD_MS).alpha, 1);
   assert.ok(floatingText.getState(state.id, 1_000 + FLOATING_TEXT_FADE_IN_MS + FLOATING_TEXT_HOLD_MS).progress > floatingText.getState(state.id, 1_000 + FLOATING_TEXT_FADE_IN_MS).progress);
   assert.equal(floatingText.getState(state.id, 1_650).alpha, 0.5);
   assert.ok(floatingText.getState(state.id, 1_650).progress > floatingText.getState(state.id, 1_000 + FLOATING_TEXT_FADE_IN_MS + FLOATING_TEXT_HOLD_MS).progress);
+  assert.ok(floatingText.getState(state.id, 1_650).travelProgress > floatingText.getState(state.id, 1_650).progress);
   assert.equal(floatingText.getState(state.id, 1_000 + FLOATING_TEXT_FADE_IN_MS + FLOATING_TEXT_HOLD_MS + FLOATING_TEXT_FADE_OUT_MS), null);
+});
+
+test("travel progress eases upward with evenly decreasing speed", () => {
+  assert.equal(easeFloatingTextTravelProgress(0), 0);
+  assert.equal(easeFloatingTextTravelProgress(0.25), 0.4375);
+  assert.equal(easeFloatingTextTravelProgress(0.5), 0.75);
+  assert.equal(easeFloatingTextTravelProgress(0.75), 0.9375);
+  assert.equal(easeFloatingTextTravelProgress(1), 1);
+
+  const firstQuarterDistance = easeFloatingTextTravelProgress(0.25) - easeFloatingTextTravelProgress(0);
+  const secondQuarterDistance = easeFloatingTextTravelProgress(0.5) - easeFloatingTextTravelProgress(0.25);
+  const thirdQuarterDistance = easeFloatingTextTravelProgress(0.75) - easeFloatingTextTravelProgress(0.5);
+  const fourthQuarterDistance = easeFloatingTextTravelProgress(1) - easeFloatingTextTravelProgress(0.75);
+
+  assert.equal(firstQuarterDistance - secondQuarterDistance, secondQuarterDistance - thirdQuarterDistance);
+  assert.equal(secondQuarterDistance - thirdQuarterDistance, thirdQuarterDistance - fourthQuarterDistance);
 });
 
 test("creates independent instances for rapid repeated deltas", () => {
