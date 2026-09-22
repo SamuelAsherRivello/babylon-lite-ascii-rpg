@@ -104,22 +104,27 @@ module boundary as the code they cover, and test filenames SHALL add
 React SHALL communicate with Babylon Lite through deliberate UI commands and
 confirmed data snapshots only. Palette updates SHALL use complete, validated
 palette snapshots rather than mutable store access or individual glyph patches.
-React SHALL NOT directly mutate game state,
-movement state, world cells, renderer internals, or input state. Babylon Lite
-SHALL remain authoritative for client game state and input.
+React SHALL NOT directly mutate game state, movement state, world cells,
+renderer internals, or input state. Babylon Lite SHALL remain authoritative
+for client game state, stamina-derived combat statistics, and damage
+resolution. Babylon Lite SHALL publish only immutable Offense and Defense
+snapshots needed by the Character HUD; React SHALL not calculate those values.
 
 #### Scenario: Palette command
-
 - **WHEN** a developer confirms an Ascii Palette edit in React
-- **THEN** React SHALL send the confirmed palette snapshot to Babylon Lite and
-  Babylon Lite SHALL apply it to in-world glyph rendering
+- **THEN** React SHALL send the confirmed palette snapshot to Babylon Lite and Babylon Lite SHALL apply it to in-world glyph rendering
 
 #### Scenario: Startup argument consumption
+- **WHEN** React changes a supported argument such as `?randomSeed=value` through its Arguments UI
+- **THEN** React SHALL write the URL and Babylon Lite SHALL consume that argument when the game starts; React SHALL NOT send it as a live game command
 
-- **WHEN** React changes a supported argument such as `?randomSeed=value`
-  through its Arguments UI
-- **THEN** React SHALL write the URL and Babylon Lite SHALL consume that
-  argument when the game starts; React SHALL NOT send it as a live game command
+#### Scenario: Combat snapshot remains narrow
+- **WHEN** stamina changes after an attack or movement-driven recovery
+- **THEN** Babylon Lite SHALL publish immutable Offense and Defense current/max snapshots and React SHALL update only the corresponding HUD bars
+
+#### Scenario: React cannot resolve combat damage
+- **WHEN** a player or enemy attack is resolved
+- **THEN** Babylon Lite SHALL calculate current Offense, current Defense, and applied damage without requiring React state or UI calculations
 
 ### Requirement: Player GPU shadow-bleed command remains narrow
 
@@ -340,3 +345,19 @@ Babylon Lite SHALL own floating-text health-change event capture, lifetime timin
 #### Scenario: Offscreen simulation avoids presentation work
 - **WHEN** an offscreen or inactive-realm entity receives a health delta during a world-time tick
 - **THEN** the game layer updates simulation state without allocating a floating-text presentation record
+
+### Requirement: Developer mapview remains game-layer owned
+
+Babylon Lite SHALL own mapview world rendering, mutable world data, entity positions, enemy and spawner state, fog bypass evaluation, diagnostic lighting, marker projection, and keyboard input suppression while the mapview is open. React SHALL own only the Info launcher, overlay open/close state, and narrow commands or snapshots needed to request the mapview; React SHALL NOT receive or render mutable world cells, fog fields, entity collections, enemy positions, or renderer resources.
+
+#### Scenario: React launches without owning world data
+- **WHEN** a developer activates the `Map` control
+- **THEN** React sends only a narrow mapview open request and does not receive mutable world cells or entity collections
+
+#### Scenario: Game layer owns mapview rendering
+- **WHEN** the mapview is visible
+- **THEN** Babylon Lite renders the active realm and marker overlay from authoritative game-layer state
+
+#### Scenario: Closing mapview restores input ownership
+- **WHEN** the mapview closes
+- **THEN** Babylon Lite restores normal keyboard input handling without React mutating game input state directly
