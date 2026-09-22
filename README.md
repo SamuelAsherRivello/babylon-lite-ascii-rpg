@@ -56,7 +56,9 @@ commands from the repository root:
 
 ## Workflows
 
-### 📦 ApenSpec
+### 📦 OpenSpec
+
+Here is a workflow for collaborative work with minimal code conflicts.
 
 | # | Name | Command | Comment |
 | --- | --- | --- | --- |
