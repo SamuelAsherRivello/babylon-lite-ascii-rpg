@@ -72,9 +72,10 @@ builds. The application targets modern desktop and mobile browsers.
 | --- | --- | --- | --- |
 | 1 | Explore | `$openspec-explore` | (Optional) Brainstorm possibilities. |
 | 2 | Propose | `$openspec-propose` | Creates one focused feature change. |
-| 3 | Apply | `$openspec-apply-change` | Implements and completes one change. |
-| 4 | Sync | `$openspec-sync-specs` | Updates main specs without archiving. |
-| 5 | Archive | `$openspec-archive-change` | Finalizes and archives a change. |
+| 3 | Explore | `$openspec-explore {n}` | (Optional) Clear doubts via {n} multi-choice questions |
+| 4 | Apply | `$openspec-apply-change` | Implements and completes one change. |
+| 5 | Sync | `$openspec-sync-specs` | Updates main specs without archiving. |
+| 6 | Archive | `$openspec-archive-change` | Finalizes and archives a change. |
 
 ### 📦 Packages
 
