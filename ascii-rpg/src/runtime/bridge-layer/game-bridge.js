@@ -20,6 +20,7 @@ let playerGpuShadowBleedRangeSnapshot = 2;
 let glyphBackgroundSnapshot = true;
 let backgroundDarknessSnapshot = 50;
 let minimapZoomSnapshot = 2;
+let mapviewOpenSnapshot = false;
 let aspectSnapshot = typeof localStorage !== "undefined" && localStorage.getItem("babylon-lite-ascii-rpg.aspect") === "portrait"
   ? "portrait"
   : "landscape";
@@ -90,6 +91,7 @@ export function setGameController(controller) {
   gameController?.setGlyphBackground?.(glyphBackgroundSnapshot);
   gameController?.setBackgroundDarkness?.(backgroundDarknessSnapshot);
   gameController?.setMinimapZoom?.(minimapZoomSnapshot);
+  gameController?.setMapviewOpen?.(mapviewOpenSnapshot);
   gameController?.setAspectMode?.(aspectSnapshot);
   if (zoomSnapshot !== null) gameController?.setZoom?.(zoomSnapshot);
   if (lightingSnapshot !== null) gameController?.setLighting?.(lightingSnapshot);
@@ -131,9 +133,18 @@ export function subscribeToMinimapZoom(listener) {
   return () => minimapZoomListeners.delete(listener);
 }
 
+export function sendMapviewSnapshot(open) {
+  mapviewOpenSnapshot = open === true;
+  gameController?.setMapviewOpen?.(mapviewOpenSnapshot);
+}
+
 export function sendAspectSnapshot(aspect) {
   aspectSnapshot = aspect === "portrait" ? "portrait" : "landscape";
   gameController?.setAspectMode?.(aspectSnapshot);
+}
+
+export function sendMapviewRealmToggle() {
+  gameController?.toggleMapviewRealm?.();
 }
 
 export function sendLightingSnapshot(config) {

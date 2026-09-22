@@ -10,6 +10,8 @@ import {
   sendGlyphBackgroundSnapshot,
   sendBackgroundDarknessSnapshot,
   sendMinimapZoomSnapshot,
+  sendMapviewRealmToggle,
+  sendMapviewSnapshot,
   sendAspectSnapshot,
   sendFontSnapshot,
   sendPlayerLightingSnapshot,
@@ -325,6 +327,22 @@ test("publishes minimap zoom selections without changing game zoom", () => {
   setGameController({ setMinimapZoom(zoom) { restored = zoom; } });
   assert.equal(restored, 10);
   unsubscribe();
+});
+
+test("forwards mapview open state without exposing world internals", () => {
+  const received = [];
+  let toggles = 0;
+  setGameController({
+    setMapviewOpen(open) { received.push(open); },
+    toggleMapviewRealm() { toggles += 1; },
+  });
+
+  sendMapviewSnapshot(true);
+  sendMapviewRealmToggle();
+  sendMapviewSnapshot(false);
+
+  assert.deepEqual(received, [false, true, false]);
+  assert.equal(toggles, 1);
 });
 
 test("forwards camera mode changes and reapplies the latest mode to a new controller", () => {

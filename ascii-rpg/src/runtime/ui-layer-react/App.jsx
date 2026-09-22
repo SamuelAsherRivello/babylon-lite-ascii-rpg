@@ -67,11 +67,13 @@ import {
   sendRealmAmbientSnapshot,
   sendRealmPreferenceSnapshot,
   sendCameraModeSnapshot,
-  sendAspectSnapshot,
   sendGpuLightPassSnapshot,
   sendGlyphBackgroundSnapshot,
   sendBackgroundDarknessSnapshot,
   sendMinimapZoomSnapshot,
+  sendMapviewRealmToggle,
+  sendMapviewSnapshot,
+  sendAspectSnapshot,
   sendPlayerGpuShadowBleedRangeSnapshot,
   sendPlayerLightingSnapshot,
   sendPlayerShadowSnapshot,
@@ -157,6 +159,13 @@ const defaultPaletteViewState = { filter: "in-maps", sortBy: "index", sortDirect
 const lightingValueHelp = "R Radius · M Maximum · F Falloff";
 const shadowValueHelp = "O Occlusion · B Bleed";
 const ambientValueHelp = "0 dark · 1 bright";
+
+function formatTooltipDescription(description) {
+  const text = String(description ?? "").trim().replace(/\?+/g, "");
+  if (!text) return "";
+  return /[.!]$/.test(text) ? text : `${text}.`;
+}
+
 const settingsHelp = Object.freeze({
   fullscreen: "Toggle fullscreen.",
   aspect: "Switch between landscape and portrait testing presentation.",
@@ -165,6 +174,7 @@ const settingsHelp = Object.freeze({
   windowsSection: "Open utility windows.",
   asciiPalette: "Open ASCII palette controls.",
   gameplaySettings: "Open gameplay controls.",
+  mapview: "Open the developer map.",
   arguments: "Open runtime argument details.",
   statsSection: "View live performance and version information.",
   fps: "Current rendered frames per second.",
@@ -291,7 +301,7 @@ const characterBarRows = [
   { key: "experience", label: "Experience", tooltip: "Experience: The progress of your character.", icon: "✦", color: "#5f3df5" },
 ];
 
-function CharacterBarRow({ row, data, color }) {
+function CharacterBarRow({ row, data, color, onShowTooltip, onHideTooltip }) {
   const text = row.key === "experience" ? `O${data.level}` : null;
   const derivedColors = deriveBarColors(color);
   const currentPercent = data.currentPercent;
@@ -318,29 +328,30 @@ function CharacterBarRow({ row, data, color }) {
   return (
     <div className="character_bar_row" data-stat={row.key} style={{ "--character-bar-color": color }}>
       <span className="character_stat_icon" aria-hidden="true">{row.icon}</span>
-      <div
-        className="character_bar"
-        role="progressbar"
-        aria-label={row.label}
-        title={row.tooltip}
-        aria-valuemin="0"
-        aria-valuemax={data.maximum ?? 100}
-        aria-valuenow={data.currentValue ?? data.currentPercent}
-        style={{
-          "--character-bar-color": derivedColors.current,
-          "--character-bar-delta": derivedColors.delta,
-          "--character-bar-unfilled": derivedColors.unfilled,
-          "--character-bar-current": `${segments.currentPercent}%`,
-          "--character-bar-current-max": `${maximumPercent}%`,
-          "--character-bar-delta-start": `${segments.deltaStartPercent}%`,
-          "--character-bar-delta-width": `${segments.deltaWidthPercent}%`,
-        }}
-      >
-        <span className="character_bar_current" />
-        <span className="character_bar_pending" />
-        <span className="character_bar_current_max" aria-hidden="true" />
-        {text ? <span className="character_bar_text">{text}</span> : null}
-      </div>
+      <SettingTooltipTarget className="character_bar_tooltip_target" description={row.tooltip} onShow={onShowTooltip} onHide={onHideTooltip}>
+        <div
+          className="character_bar"
+          role="progressbar"
+          aria-label={row.label}
+          aria-valuemin="0"
+          aria-valuemax={data.maximum ?? 100}
+          aria-valuenow={data.currentValue ?? data.currentPercent}
+          style={{
+            "--character-bar-color": derivedColors.current,
+            "--character-bar-delta": derivedColors.delta,
+            "--character-bar-unfilled": derivedColors.unfilled,
+            "--character-bar-current": `${segments.currentPercent}%`,
+            "--character-bar-current-max": `${maximumPercent}%`,
+            "--character-bar-delta-start": `${segments.deltaStartPercent}%`,
+            "--character-bar-delta-width": `${segments.deltaWidthPercent}%`,
+          }}
+        >
+          <span className="character_bar_current" />
+          <span className="character_bar_pending" />
+          <span className="character_bar_current_max" aria-hidden="true" />
+          {text ? <span className="character_bar_text">{text}</span> : null}
+        </div>
+      </SettingTooltipTarget>
     </div>
   );
 }
@@ -353,6 +364,8 @@ function CharacterDetails({
   combatStats = { offense: INITIAL_CHARACTER.offense, defense: INITIAL_CHARACTER.defense },
   experience = INITIAL_CHARACTER.experience,
   palette,
+  onShowTooltip,
+  onHideTooltip,
 }) {
   const goldStyle = getPaletteStyle(palette, "💰");
   const keyStyle = getPaletteStyle(palette, "⚿");
@@ -390,27 +403,46 @@ function CharacterDetails({
   return (
     <div className="character_details" aria-label="Character details">
       <div className="character_bar_container">
-        {characterBarRows.map((row) => <CharacterBarRow key={row.key} row={row} color={row.color} data={characterData[row.key]} />)}
+        {characterBarRows.map((row) => (
+          <CharacterBarRow
+            key={row.key}
+            row={row}
+            color={row.color}
+            data={characterData[row.key]}
+            onShowTooltip={onShowTooltip}
+            onHideTooltip={onHideTooltip}
+          />
+        ))}
       </div>
       <div className="character_slots_container">
-        <div className="character_resource" data-resource="gold" aria-label="Gold" title="Gold: The currency of your character.">
-          <span className="character_resource_icon" aria-hidden="true" style={{ color: goldStyle.color }}>💰</span>
-          <span className="character_resource_value">{gold}</span>
+        <div className="character_slots_grid">
+          <SettingTooltipTarget description="Gold: The currency of your character." onShow={onShowTooltip} onHide={onHideTooltip}>
+            <div className="character_resource" data-resource="gold" aria-label="Gold">
+              <span className="character_resource_icon" aria-hidden="true" style={{ color: goldStyle.color }}>💰</span>
+              <span className="character_resource_value">{gold}</span>
+            </div>
+          </SettingTooltipTarget>
+          {["Slot 01", "Slot 02"].map((slot) => (
+            <SettingTooltipTarget description={slot} onShow={onShowTooltip} onHide={onHideTooltip} key={slot}>
+              <div className="character_resource character_slot" aria-label={slot}>
+                <span className="character_slot_text">{slot}</span>
+              </div>
+            </SettingTooltipTarget>
+          ))}
+          <SettingTooltipTarget description="Keys: The keys your character is holding." onShow={onShowTooltip} onHide={onHideTooltip}>
+            <div className="character_resource" data-resource="keys" aria-label="Keys">
+              <span className="character_resource_icon" aria-hidden="true" style={{ color: keyStyle.color }}>⚿</span>
+              <span className="character_resource_value">{keys}</span>
+            </div>
+          </SettingTooltipTarget>
+          {["Slot 03", "Slot 04"].map((slot) => (
+            <SettingTooltipTarget description={slot} onShow={onShowTooltip} onHide={onHideTooltip} key={slot}>
+              <div className="character_resource character_slot" aria-label={slot}>
+                <span className="character_slot_text">{slot}</span>
+              </div>
+            </SettingTooltipTarget>
+          ))}
         </div>
-        {["Slot 01", "Slot 02"].map((slot) => (
-          <div className="character_resource character_slot" key={slot} aria-label={slot} title={slot}>
-            <span className="character_slot_text">{slot}</span>
-          </div>
-        ))}
-        <div className="character_resource" data-resource="keys" aria-label="Keys" title="Keys: The keys your character is holding.">
-          <span className="character_resource_icon" aria-hidden="true" style={{ color: keyStyle.color }}>⚿</span>
-          <span className="character_resource_value">{keys}</span>
-        </div>
-        {["Slot 03", "Slot 04"].map((slot) => (
-          <div className="character_resource character_slot" key={slot} aria-label={slot} title={slot}>
-            <span className="character_slot_text">{slot}</span>
-          </div>
-        ))}
       </div>
     </div>
   );
@@ -519,16 +551,17 @@ function LogBody({ entries }) {
 }
 
 function SettingTooltipTarget({ description, onShow, onHide, children, as: Element = "span", className = "", ...props }) {
+  const tooltipDescription = formatTooltipDescription(description);
   return (
     <Element
       {...props}
       className={`setting_tooltip_target${className ? ` ${className}` : ""}`}
-      aria-description={description}
-      onPointerEnter={(event) => onShow(description, event.currentTarget)}
-      onPointerDown={(event) => onShow(description, event.currentTarget)}
-      onClick={(event) => onShow(description, event.currentTarget)}
+      aria-description={tooltipDescription}
+      onPointerEnter={(event) => onShow(tooltipDescription, event.currentTarget)}
+      onPointerDown={(event) => onShow(tooltipDescription, event.currentTarget)}
+      onClick={(event) => onShow(tooltipDescription, event.currentTarget)}
       onPointerLeave={onHide}
-      onFocus={(event) => onShow(description, event.currentTarget)}
+      onFocus={(event) => onShow(tooltipDescription, event.currentTarget)}
       onBlur={onHide}
     >
       {children}
@@ -1318,6 +1351,7 @@ function AppContent() {
   const [torchShadowIndex, setTorchShadowIndex] = useState(() => getStoredSourceIndex(torchShadowStorageKey, 4));
   const [playerShadowIndex, setPlayerShadowIndex] = useState(() => getStoredSourceIndex(playerShadowStorageKey, 3));
   const [lightingWindowOpen, setLightingWindowOpen] = useState(false);
+  const [mapviewOpen, setMapviewOpen] = useState(false);
   const [logOpen, setLogOpen] = useState(() => getStoredBoolean(logOpenStorageKey, true));
   const [lightingWindowPosition, setLightingWindowPosition] = useState(getStoredLightingWindowPosition);
   const [tutorialPhase, setTutorialPhase] = useState(() => (
@@ -1510,6 +1544,15 @@ function AppContent() {
   useEffect(() => {
     localStorage.setItem(logOpenStorageKey, logOpen ? "true" : "false");
   }, [logOpen]);
+
+  useEffect(() => {
+    sendMapviewSnapshot(mapviewOpen);
+    document.documentElement.dataset.mapviewOpen = String(mapviewOpen);
+    return () => {
+      sendMapviewSnapshot(false);
+      delete document.documentElement.dataset.mapviewOpen;
+    };
+  }, [mapviewOpen]);
 
   useEffect(() => {
     localStorage.setItem(CAMERA_STORAGE_KEY, cameraMode);
@@ -1751,7 +1794,17 @@ function AppContent() {
         onKeyDown={(event) => handleTopPanelKeyDown(event, activateDetails)}
       >
         <BoxLayout action="Character">
-          <CharacterDetails gold={gold} keys={keys} health={health} stamina={stamina} combatStats={combatStats} experience={experience} palette={palette} />
+          <CharacterDetails
+            gold={gold}
+            keys={keys}
+            health={health}
+            stamina={stamina}
+            combatStats={combatStats}
+            experience={experience}
+            palette={palette}
+            onShowTooltip={showSettingTooltip}
+            onHideTooltip={hideSettingTooltip}
+          />
         </BoxLayout>
       </CornerLayout>
       <QuestTracker quest={quest} />
@@ -1784,33 +1837,44 @@ function AppContent() {
           </a>
         </SettingTooltipTarget>
         <HudBlockLayout className="hud_section" id="windows" aria-labelledby="windows_title" titleId="windows_title" title={<SettingTooltipTarget description={settingsHelp.windowsSection} onShow={showSettingTooltip} onHide={hideSettingTooltip}>Windows</SettingTooltipTarget>}>
-          <SettingTooltipTarget description={settingsHelp.arguments} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
-            <button id="arguments_toggle" className="corner_body settings_option" type="button" aria-description={settingsHelp.arguments} tabIndex={-1} onClick={() => setArgumentsOpen(true)}>
-              Arguments
-            </button>
-          </SettingTooltipTarget>
-          <SettingTooltipTarget description={settingsHelp.asciiPalette} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
-            <button id="ascii_palette_toggle" className="corner_body settings_option" type="button" aria-description={settingsHelp.asciiPalette} tabIndex={-1} onClick={() => setAsciiPaletteOpen(true)}>
-              Ascii
-            </button>
-          </SettingTooltipTarget>
-          <SettingTooltipTarget description={settingsHelp.gameplaySettings} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
-            <button id="gameplay_settings_toggle" className="corner_body settings_option" type="button" aria-description={settingsHelp.gameplaySettings} tabIndex={-1} onClick={() => setGameplaySettingsOpen(true)}>
-              Gameplay
-            </button>
-          </SettingTooltipTarget>
-          <SettingTooltipTarget description={settingsHelp.lighting} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
-            <button id="lighting_window_toggle" className="corner_body settings_option" type="button" aria-expanded={lightingWindowOpen} aria-controls="lighting_window" aria-description={settingsHelp.lighting} tabIndex={-1} onClick={() => setLightingWindowOpen((isOpen) => !isOpen)}>
-              Lighting
-            </button>
-          </SettingTooltipTarget>
+          <div className="windows_control_row">
+            <SettingTooltipTarget description={settingsHelp.arguments} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
+              <button id="arguments_toggle" className="corner_body settings_option" type="button" aria-description={settingsHelp.arguments} tabIndex={-1} onClick={() => setArgumentsOpen(true)}>
+                Args
+              </button>
+            </SettingTooltipTarget>
+            <span className="corner_body windows_control_separator" aria-hidden="true">/</span>
+            <SettingTooltipTarget description={settingsHelp.asciiPalette} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
+              <button id="ascii_palette_toggle" className="corner_body settings_option" type="button" aria-description={settingsHelp.asciiPalette} tabIndex={-1} onClick={() => setAsciiPaletteOpen(true)}>
+                Ascii
+              </button>
+            </SettingTooltipTarget>
+          </div>
+          <div className="windows_control_row">
+            <SettingTooltipTarget description={settingsHelp.gameplaySettings} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
+              <button id="gameplay_settings_toggle" className="corner_body settings_option" type="button" aria-description={settingsHelp.gameplaySettings} tabIndex={-1} onClick={() => setGameplaySettingsOpen(true)}>
+                Gameplay
+              </button>
+            </SettingTooltipTarget>
+            <span className="corner_body windows_control_separator" aria-hidden="true">/</span>
+            <SettingTooltipTarget description={settingsHelp.lighting} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
+              <button id="lighting_window_toggle" className="corner_body settings_option" type="button" aria-expanded={lightingWindowOpen} aria-controls="lighting_window" aria-description={settingsHelp.lighting} tabIndex={-1} onClick={() => setLightingWindowOpen((isOpen) => !isOpen)}>
+                Lighting
+              </button>
+            </SettingTooltipTarget>
+          </div>
         </HudBlockLayout>
-        <HudBlockLayout className="hud_section" id="stats" aria-labelledby="stats_title" titleId="stats_title" title={<SettingTooltipTarget description={settingsHelp.statsSection} onShow={showSettingTooltip} onHide={hideSettingTooltip}>Stats</SettingTooltipTarget>}>
+        <HudBlockLayout className="hud_section" id="stats" aria-labelledby="stats_title" titleId="stats_title" title={<SettingTooltipTarget description={settingsHelp.statsSection} onShow={showSettingTooltip} onHide={hideSettingTooltip}>Info</SettingTooltipTarget>}>
           <SettingTooltipTarget description={`${settingsHelp.fps} Current value: ${fps}.`} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
             <div id="fps" className="corner_body">FPS: {fps}</div>
           </SettingTooltipTarget>
           <SettingTooltipTarget description={`${settingsHelp.version} ${versionNumber}.`} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
             <span id="version" className="corner_body">v{versionNumber}</span>
+          </SettingTooltipTarget>
+          <SettingTooltipTarget description={settingsHelp.mapview} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
+            <button id="mapview_toggle" className="corner_body settings_option" type="button" aria-expanded={mapviewOpen} aria-controls="mapview_overlay" aria-description={settingsHelp.mapview} tabIndex={-1} onClick={() => setMapviewOpen(true)}>
+              Map
+            </button>
           </SettingTooltipTarget>
         </HudBlockLayout>
         <HudBlockLayout className="hud_section" id="settings" aria-labelledby="settings_title" titleId="settings_title" title={<SettingTooltipTarget description={settingsHelp.settingsSection} onShow={showSettingTooltip} onHide={hideSettingTooltip}>Settings</SettingTooltipTarget>}>
@@ -1890,6 +1954,14 @@ function AppContent() {
           showBackdrop
           closeOnBackdropClick
         />
+      ) : null}
+      {mapviewOpen ? (
+        <div id="mapview_overlay" className="mapview_overlay" role="dialog" aria-modal="true" aria-label="Map">
+          <div className="mapview_controls">
+            <button className="mapview_close" type="button" aria-label="Close Map" onClick={() => setMapviewOpen(false)}>X</button>
+            <button className="mapview_realm_toggle" type="button" onClick={sendMapviewRealmToggle}>Toggle Realm</button>
+          </div>
+        </div>
       ) : null}
       {!playerDead && (tutorialPhase === "initial" || tutorialPhase === "complete") ? (
         <TutorialWindow

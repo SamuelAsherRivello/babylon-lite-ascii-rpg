@@ -322,6 +322,56 @@ html[data-presentation-aspect="portrait"] .tutorial_window {
   outline-offset: 3px;
 }
 
+.mapview_overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9;
+  box-sizing: border-box;
+  color: #f5f5f5;
+  pointer-events: auto;
+}
+
+.mapview_controls {
+  position: fixed;
+  bottom: var(--ui-margin-y, 20px);
+  left: var(--ui-margin-x, 20px);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.mapview_close,
+.mapview_realm_toggle {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid #f5f5f5;
+  background: #000;
+  color: #f5f5f5;
+  cursor: pointer;
+  font: inherit;
+  line-height: 1;
+}
+
+.mapview_close {
+  width: 2rem;
+}
+
+.mapview_realm_toggle {
+  width: auto;
+  padding: 0 0.5rem;
+}
+
+.mapview_close:focus-visible,
+.mapview_realm_toggle:focus-visible {
+  outline: 2px solid #f5f5f5;
+  outline-offset: 3px;
+}
+
 .palette_grid {
   position: relative;
   z-index: 1;
@@ -623,8 +673,8 @@ html[data-presentation-aspect="portrait"] .tutorial_window {
 
 @media (max-width: 560px) {
   .character_bar_row {
-    grid-template-columns: 1.1rem minmax(0, 1fr);
-    gap: 0.25rem;
+    grid-template-columns: calc(var(--ui-bar-icon-font) + 4px) minmax(0, 1fr);
+    gap: 0;
   }
 }
 

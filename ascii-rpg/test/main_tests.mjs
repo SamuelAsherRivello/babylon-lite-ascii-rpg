@@ -90,7 +90,7 @@ test("documents the plain safe-area template", async () => {
   const statsMarkup = app.slice(app.indexOf('id="stats"'), app.indexOf('id="settings"'));
   if (statsMarkup.indexOf('id="fps"') > statsMarkup.indexOf('id="version"')
     || app.slice(app.indexOf('id="settings"'), app.indexOf('position="bottom-right"')).includes('id="version"')) {
-    throw new Error("The version display must be directly below FPS in the Stats section.");
+    throw new Error("The version display must be directly below FPS in the Info section.");
   }
   if (!app.includes('action="Character"')
     || !app.includes('action="Map 🔍"')
@@ -105,7 +105,18 @@ test("documents the plain safe-area template", async () => {
     || app.includes("title={description}")
     || styles.includes(".setting_tooltip_target::after")
     || styles.includes("content: attr(data-tooltip)")
+    || styles.includes("cursor: help")
     || !styles.includes("max-width: calc(100vw - 16px)")
+    || !app.includes("function formatTooltipDescription(description)")
+    || !app.includes('replace(/\\?+/g, "")')
+    || !app.includes('<SettingTooltipTarget className="character_bar_tooltip_target"')
+    || app.includes("title={row.tooltip}")
+    || app.includes('title="Gold: The currency of your character."')
+    || app.includes('title="Keys: The keys your character is holding."')
+    || !styles.includes(".character_bar_tooltip_target")
+    || !styles.includes("font-family: inherit")
+    || !styles.includes("font-size: var(--box-body-font)")
+    || !styles.includes("font-weight: 400")
     || !app.includes('className="settings_tooltip"')
     || !app.includes('String(worldTime).padStart(5, "0")')
     || !styles.includes(".minimap_status")
@@ -177,14 +188,17 @@ test("documents the plain safe-area template", async () => {
   if (!styles.includes("grid-template-columns: repeat(3, minmax(0, 1fr))")
     || !styles.includes("grid-auto-rows: auto")
     || !styles.includes("width: min(calc(100dvw")
-    || !styles.includes("height: min(calc(100dvh")
-    || !styles.includes("flex: 0 0 auto")
     || !styles.includes("height: auto")
-    || !styles.includes("height: calc((var(--character-bar-height) * 5) + (var(--character-bar-gap) * 4))")
-    || !styles.includes("grid-template-rows: repeat(5, var(--character-bar-height))")
+    || !styles.includes("max-height: calc(100dvh")
+    || !styles.includes("flex: 0 0 calc((var(--character-slot-size) * 2) + var(--character-slot-gap))")
+    || !styles.includes("height: auto")
+    || !styles.includes("height: calc((var(--character-bar-height) * 4) + var(--character-experience-bar-height) + (var(--character-bar-gap) * 4))")
+    || !styles.includes("grid-template-rows: repeat(4, var(--character-bar-height)) var(--character-experience-bar-height)")
     || !styles.includes("--character-bar-gap: 5px")
+    || !styles.includes(".character_slots_grid")
     || !styles.includes(".character_slot")
-    || !styles.includes("width: 22.4px")
+    || !styles.includes("--character-slot-size: 22.4px")
+    || !styles.includes("width: var(--character-slot-size)")
     || !styles.includes("aspect-ratio: 1 / 1")
     || !styles.includes("min-height: 0")) {
     throw new Error("Character resources and empty inventory slots must share a six-cell grid.");
@@ -262,11 +276,23 @@ test("documents the plain safe-area template", async () => {
     || !app.includes('id="settings"') || !app.includes('titleId="settings_title"') || !app.includes(">Settings</SettingTooltipTarget>")) {
     throw new Error("The lower-left HUD must include Windows and Settings sections.");
   }
+  if (!app.includes('titleId="stats_title"') || !app.includes(">Info</SettingTooltipTarget>")) {
+    throw new Error("The lower-left HUD stats section must be labeled Info.");
+  }
   const windowsMarkup = app.slice(app.indexOf('id="windows"'), app.indexOf('id="stats"'));
   if (windowsMarkup.indexOf('id="arguments_toggle"') > windowsMarkup.indexOf('id="ascii_palette_toggle"')
     || windowsMarkup.indexOf('id="ascii_palette_toggle"') > windowsMarkup.indexOf('id="gameplay_settings_toggle"')
     || windowsMarkup.indexOf('id="gameplay_settings_toggle"') > windowsMarkup.indexOf('id="lighting_window_toggle"')) {
     throw new Error("The Windows controls must be ordered alphabetically by visible label.");
+  }
+  if (!windowsMarkup.includes('className="windows_control_row"')
+    || !windowsMarkup.includes('className="corner_body windows_control_separator" aria-hidden="true">/</span>')
+    || !windowsMarkup.includes("Args")
+    || windowsMarkup.includes("Arguments\n")
+    || !styles.includes(".windows_control_row")
+    || !styles.includes(".windows_control_separator")
+    || !styles.includes("grid-template-columns: max-content max-content max-content")) {
+    throw new Error("The Windows controls must render as two compact slash-separated two-button rows.");
   }
   if (!styles.includes(".corner_body") || !styles.includes(".corner_title")
     || !styles.includes(".hud_block_title") || !styles.includes(".hud_block_body")) {
@@ -596,6 +622,43 @@ test("documents the plain safe-area template", async () => {
   }
   if (!app.includes('aria-label="Map icon"') || !app.includes('onClick={activateMinimapZoom}')) {
     throw new Error("The upper-right HUD must expose the box-wide minimap map action.");
+  }
+  const infoMarkup = app.slice(app.indexOf('id="stats"'), app.indexOf('id="settings"'));
+  if (!app.includes('id="mapview_toggle"')
+    || !infoMarkup.includes('id="mapview_toggle"')
+    || windowsMarkup.includes('id="mapview_toggle"')
+    || !app.includes("sendMapviewSnapshot(mapviewOpen)")
+    || !app.includes('id="mapview_overlay"')
+    || !app.includes('aria-label="Map"')
+    || !app.includes('aria-label="Close Map"')
+    || !app.includes(">X</button>")
+    || !app.includes("Toggle Realm")
+    || !app.includes("sendMapviewRealmToggle")
+    || app.includes('id="mapview_title"')
+    || app.includes("mapview_header")
+    || app.includes(">Close</button>")
+    || !gameBridge.includes("export function sendMapviewSnapshot(open)")
+    || !gameLayer.includes('mapviewCanvas.id = "mapview_canvas"')
+    || !gameLayer.includes("getMapviewVisibility")
+    || !gameLayer.includes("getMapviewLightingFactor")
+    || !gameLayer.includes("getMapviewMarkers")
+    || !gameLayer.includes("setMapviewOpen(open)")
+    || !gameLayer.includes("toggleMapviewRealm()")
+    || !gameLayer.includes("mapviewRealm = activeRealm")
+    || !gameLayer.includes("worldRealms?.realms?.[mapviewRealm] ?? world")
+    || !gameLayer.includes("mapviewGlyphCanvases.clear()")
+    || !gameLayer.includes("mapviewCanvas.width = 1")
+    || !gameLayer.includes("mapviewCanvas.height = 1")
+    || !gameBridge.includes("export function sendMapviewRealmToggle()")
+    || !styles.includes("#mapview_canvas")
+    || !styles.includes(".mapview_overlay")
+    || !styles.includes(".mapview_controls")
+    || !styles.includes(".mapview_realm_toggle")
+    || !styles.includes('html[data-mapview-open="true"] #ui_layer > :not(#mapview_overlay)')
+    || !styles.includes("visibility: hidden")
+    || !styles.includes("bottom: var(--ui-margin-y, 20px)")
+    || !styles.includes("left: var(--ui-margin-x, 20px)")) {
+    throw new Error("The Developer Info Map option must open a game-layer-owned fullscreen mapview with lower-left close and realm toggle controls.");
   }
   if (!app.includes("tabIndex={-1}")) {
     throw new Error("The corner UI controls must be removed from the tabbing order.");

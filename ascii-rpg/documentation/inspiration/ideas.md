@@ -65,6 +65,14 @@ Ways to break the illusion (AVOID THESE?)
     - Save game (3 slots). ☐
 19. View toggles (env only, enemies only, items only). ☐
 
+## Animations
+
+- Use x/y/scale/rotation to procedurally animate. ☐
+- Idle. ☐
+- Move. ☐
+- Attack. ☐
+- Take damage. ☐
+
 ## BIS integration
 
 20. Achievements. ☐
