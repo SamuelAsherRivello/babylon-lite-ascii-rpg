@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createGlyphVisualCache, darkenGlyphColor, FACING_RIGHT, getFacingGlyphKey, getFacingGlyphOffsets, getGlyphOffsetKey, getGlyphOffsetsFromKey, getGlyphRasterSize, getOffsetGlyphKey, tintGlyphRgb } from "../../../src/client/game-layer-babylon-lite/glyph-visual-cache.js";
+import { createGlyphVisualCache, darkenGlyphColor, FACING_RIGHT, getFacingGlyphKey, getFacingGlyphOffsets, getGlyphOffsetKey, getGlyphOffsetsFromKey, getGlyphRasterSize, getOffsetGlyphKey, rasterizeSolidGlyph, tintGlyphRgb } from "../../../src/client/game-layer-babylon-lite/glyph-visual-cache.js";
 import { collectVisibleGlyphs, getVisibleRegion, getVisibleSlot, shouldUpdateVisibleSprite } from "../../../src/client/game-layer-babylon-lite/visible-region.js";
 import { createFrameCheckpoint, getVisibleGlyph } from "../../../src/client/game-layer-babylon-lite/systems/world-system.js";
 import { colorToLinearRgba, linearRgbaToHex, linearRgbaToRendererHex, reconcilePaletteColors } from "../../../src/client/game-layer-babylon-lite/palette-color-cache.js";
@@ -93,6 +93,12 @@ test("glyph background darkness moves palette colors toward black", () => {
   assert.deepEqual(darkenGlyphColor([1, 0.5, 0.2], 50), [0.5, 0.25, 0.1]);
   assert.deepEqual(darkenGlyphColor([1, 0.5, 0.2], 100), [0, 0, 0]);
   assert.throws(() => darkenGlyphColor([1, 0.5, 0.2], 101), /0 through 100/);
+});
+
+test("solid fog backing is fully opaque and independent of glyph artwork", () => {
+  const raster = rasterizeSolidGlyph(2, [12, 12, 12, 255]);
+  assert.deepEqual([...raster.pixels], Array(4).fill([12, 12, 12, 255]).flat());
+  assert.throws(() => rasterizeSolidGlyph(0), /positive integer/);
 });
 
 test("glyph tinting preserves source artwork while applying palette color", () => {

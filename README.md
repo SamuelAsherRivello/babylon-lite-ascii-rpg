@@ -21,10 +21,18 @@ preference, version display, and GitHub Pages deployment path.
 
 1. [Images](#images)
 2. [Live Demo](#live-demo)
-3. [Possible Game Ideas](#possible-game-ideas)
-4. [Getting Started](#getting-started)
-5. [Project Details](#project-details)
-6. [Credits](#credits)
+3. [Collaborate](#collaborate)
+4. [Possible Game Ideas](#possible-game-ideas)
+5. [Getting Started](#getting-started)
+6. [Project Details](#project-details)
+7. [Credits](#credits)
+
+## Collaborate
+
+1. Clone [Ascii RPG](https://github.com/SamuelAsherRivello/babylon-lite-ascii-rpg)
+   to work on the game locally.
+2. Add shared reusable skills from the
+   [AI Skills Library](https://github.com/SamuelAsherRivello/ai-skills-library).
 
 ## Getting Started
 

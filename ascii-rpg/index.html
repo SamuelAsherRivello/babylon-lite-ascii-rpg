@@ -6,11 +6,17 @@
     <title>Ascii RPG</title>
   </head>
   <body>
+    <div id="letterbox_presentation" aria-hidden="true">
+      <span class="letterbox_presentation__rail letterbox_presentation__rail--left"></span>
+      <span class="letterbox_presentation__rail letterbox_presentation__rail--right"></span>
+    </div>
+
     <!-- Babylon Lite owns the game world in game_layer. -->
     <div id="game_layer"></div>
 
     <!-- Any UI, HTML, React, or user-interface content belongs in ui_layer. -->
     <div id="ui_layer"></div>
+    <div id="temporary_red_overlay" aria-hidden="true"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

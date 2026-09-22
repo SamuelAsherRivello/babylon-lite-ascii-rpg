@@ -5,10 +5,87 @@
   display: block;
 }
 
-#game_layer {
+#letterbox_presentation {
+  --letterbox-rail-width: clamp(1.8rem, 2.45vw, 2.9rem);
   position: fixed;
   inset: 0;
   z-index: 0;
+  display: none;
+  overflow: hidden;
+  background: #090c16;
+  pointer-events: none;
+}
+
+#letterbox_presentation::before,
+#letterbox_presentation::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  pointer-events: none;
+}
+
+#letterbox_presentation::before {
+  background: url("../../assets/letterbox/forest-gate-backdrop-v2.png") center / cover no-repeat;
+  filter: brightness(.94) saturate(.95) contrast(1.02);
+  transform: scale(1.015);
+}
+
+#letterbox_presentation::after {
+  background:
+    linear-gradient(90deg, rgb(4 10 13 / 10%), transparent 22%, transparent 78%, rgb(4 10 13 / 10%)),
+    radial-gradient(ellipse at center, transparent 18%, rgb(5 10 14 / 20%) 76%);
+}
+
+.letterbox_presentation__rail {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 1;
+  width: var(--letterbox-rail-width);
+  border-inline: 1px solid #0a1214;
+  overflow: hidden;
+  background: #071013;
+  --letterbox-rail-finish:
+    inset 3px 0 0 rgb(187 207 194 / 25%),
+    inset -3px 0 0 rgb(0 0 0 / 52%),
+    0 0 0 1px rgb(2 6 8 / 90%);
+}
+
+.letterbox_presentation__rail::before {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background: url("../../assets/letterbox/forest-gate-rail.png") center / 100% 100% no-repeat;
+}
+
+.letterbox_presentation__rail--left {
+  left: calc((100vw - var(--presentation-frame-width)) / 2 - var(--letterbox-rail-width));
+  box-shadow: var(--letterbox-rail-finish), -30px 0 30px -8px rgb(0 0 0 / 72%);
+}
+
+.letterbox_presentation__rail--left::before {
+  transform: scaleX(-1);
+}
+
+.letterbox_presentation__rail--right {
+  right: calc((100vw - var(--presentation-frame-width)) / 2 - var(--letterbox-rail-width));
+  box-shadow: var(--letterbox-rail-finish), 30px 0 30px -8px rgb(0 0 0 / 72%);
+}
+
+#game_layer {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+}
+
+#temporary_red_overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  box-sizing: border-box;
+  border: 1px solid red;
+  pointer-events: none;
+  transform: translateZ(0);
 }
 
 html[data-mapview-open="true"] #game_layer {
@@ -62,8 +139,8 @@ html[data-mapview-open="true"] #ui_layer > :not(#mapview_overlay) {
 
 #minimap_canvas {
   position: absolute;
-  top: var(--ui-margin-y, 20px);
-  right: var(--ui-margin-x, 20px);
+  top: var(--ui-margin-y, 10px);
+  right: var(--ui-margin-x, 10px);
   z-index: 2;
   box-sizing: border-box;
   width: var(--top-panel-size);
@@ -98,11 +175,26 @@ html[data-mapview-open="true"] #ui_layer > :not(#mapview_overlay) {
 html[data-presentation-aspect="portrait"] {
   --presentation-frame-width: min(100vw, 56.25vh);
   --presentation-frame-height: min(100vh, 177.78vw);
-  --portrait-ui-width: max(0px, calc(var(--presentation-frame-width) - 2 * var(--ui-margin-x, 20px)));
-  --portrait-ui-height: max(0px, calc(var(--presentation-frame-height) - 2 * var(--ui-margin-y, 20px)));
+  --portrait-ui-width: max(0px, calc(var(--presentation-frame-width) - 2 * var(--ui-margin-x, 10px)));
+  --portrait-ui-height: max(0px, calc(var(--presentation-frame-height) - 2 * var(--ui-margin-y, 10px)));
+}
+
+@media (hover: hover) and (pointer: fine) {
+  html[data-presentation-aspect="portrait"] #letterbox_presentation {
+    display: block;
+  }
 }
 
 html[data-presentation-aspect="portrait"] #game_layer {
+  inset: auto;
+  top: 50%;
+  left: 50%;
+  width: var(--presentation-frame-width);
+  height: var(--presentation-frame-height);
+  transform: translate(-50%, -50%);
+}
+
+html[data-presentation-aspect="portrait"] #temporary_red_overlay {
   inset: auto;
   top: 50%;
   left: 50%;
@@ -131,8 +223,15 @@ html[data-presentation-aspect="portrait"] #ui_layer {
     transform: none;
   }
 
+  html[data-presentation-aspect="portrait"] #temporary_red_overlay {
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    transform: none;
+  }
+
   html[data-presentation-aspect="portrait"] #ui_layer {
-    inset: var(--ui-margin-y, 20px) var(--ui-margin-x, 20px);
+    inset: var(--ui-margin-y, 10px) var(--ui-margin-x, 10px);
     width: auto;
     height: auto;
     transform: none;

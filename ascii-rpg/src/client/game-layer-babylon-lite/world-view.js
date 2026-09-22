@@ -108,7 +108,8 @@ export function renderWorldViewCompositionCooperatively(composition, {
   drawBackground,
   drawCell,
   drawOverlay,
-  sliceMs = 8,
+  sliceMs = 16,
+  budgetCheckInterval = 128,
   scheduleFrame = defaultScheduleFrame,
   cancelFrame = defaultCancelFrame,
   now = () => performance.now(),
@@ -155,6 +156,7 @@ export function renderWorldViewCompositionCooperatively(composition, {
       return;
     }
     const batchStart = now();
+    const checkInterval = Math.max(1, Math.floor(budgetCheckInterval));
     while (cellIndex < composition.cells.length) {
       if (cancelled) {
         finish();
@@ -164,7 +166,9 @@ export function renderWorldViewCompositionCooperatively(composition, {
       cellIndex += 1;
       if (cell.discovered) discoveredCells += 1;
       drawCell?.(cell, composition.destination, composition.region);
-      if (cellIndex < composition.cells.length && now() - batchStart >= sliceMs) {
+      if (cellIndex < composition.cells.length &&
+          cellIndex % checkInterval === 0 &&
+          now() - batchStart >= sliceMs) {
         frameHandle = scheduleFrame(renderBatch);
         return;
       }

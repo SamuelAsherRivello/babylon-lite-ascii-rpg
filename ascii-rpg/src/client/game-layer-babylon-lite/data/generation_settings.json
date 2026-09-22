@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "passes": [
+    {
+      "id": "ground",
+      "title": "Ground",
+      "order": 1,
+      "density": "Med"
+    },
+    {
+      "id": "cave-walls",
+      "title": "Cave / Walls",
+      "order": 2,
+      "density": "Med"
+    },
+    {
+      "id": "water",
+      "title": "Water",
+      "order": 3,
+      "density": "Med"
+    },
+    {
+      "id": "walkability",
+      "title": "Walkability",
+      "order": 4,
+      "density": "Med"
+    },
+    {
+      "id": "player-position",
+      "title": "Player Position",
+      "order": 5,
+      "configurable": false,
+      "density": "Med"
+    },
+    {
+      "id": "object-heart",
+      "title": "Heart Distribution",
+      "order": 6,
+      "density": "Med"
+    },
+    {
+      "id": "object-trap",
+      "title": "Trap Distribution",
+      "order": 7,
+      "density": "Med"
+    },
+    {
+      "id": "object-torch",
+      "title": "Torch Distribution",
+      "order": 8,
+      "density": "Med"
+    },
+    {
+      "id": "civilization",
+      "title": "Civilization",
+      "order": 9,
+      "density": "Med"
+    },
+    {
+      "id": "enemy-spawner",
+      "title": "Enemy Spawner Distribution",
+      "order": 10,
+      "density": "Med"
+    }
+  ]
+}

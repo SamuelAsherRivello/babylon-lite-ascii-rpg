@@ -90,6 +90,7 @@ test("cooperative world-view rendering yields and resumes without restarting cel
     drawCell: (cell) => order.push(`glyph:${cell.localX}`),
     drawOverlay: () => order.push("overlay"),
     sliceMs: 0,
+    budgetCheckInterval: 1,
     scheduleFrame: (callback) => {
       scheduled.push(callback);
       nextHandle += 1;
@@ -124,6 +125,7 @@ test("cooperative world-view rendering cancellation prevents later cells and ove
     drawCell: (cell) => order.push(`glyph:${cell.localX}`),
     drawOverlay: () => order.push("overlay"),
     sliceMs: 0,
+    budgetCheckInterval: 1,
     scheduleFrame: (callback) => {
       scheduled.push(callback);
       return scheduled.length;

@@ -24,6 +24,43 @@ test("builds for the GitHub Pages project path", () => {
   }
 });
 
+test("documents the desktop Portrait forest-gate letterbox", async () => {
+  const page = await readFile(new URL("index.html", appRoot), "utf8");
+  const mapStyles = await readFile(new URL("src/client/ui-layer-react/map.css", appRoot), "utf8");
+  const [backdrop, rail] = await Promise.all([
+    readFile(new URL("src/assets/letterbox/forest-gate-backdrop-v2.png", appRoot)),
+    readFile(new URL("src/assets/letterbox/forest-gate-rail.png", appRoot)),
+  ]);
+
+  if (!page.includes('id="letterbox_presentation"')
+    || !page.includes('class="letterbox_presentation__rail letterbox_presentation__rail--left"')
+    || !page.includes('class="letterbox_presentation__rail letterbox_presentation__rail--right"')) {
+    throw new Error("The page must provide an independent pair of letterbox rails behind the game and UI layers.");
+  }
+  if (backdrop.length < 2_000_000 || rail.length < 90_000) {
+    throw new Error("The RPG must own complete forest-gate backdrop and rail assets.");
+  }
+  for (const fragment of [
+    '#letterbox_presentation {',
+    'pointer-events: none',
+    'z-index: 1',
+    'background: url("../../assets/letterbox/forest-gate-backdrop-v2.png")',
+    'background: url("../../assets/letterbox/forest-gate-rail.png")',
+    'html[data-presentation-aspect="portrait"] #letterbox_presentation',
+    '@media (hover: hover) and (pointer: fine)',
+    'transform: scaleX(-1)',
+    'box-shadow: var(--letterbox-rail-finish)',
+    'calc((100vw - var(--presentation-frame-width)) / 2 - var(--letterbox-rail-width))',
+  ]) {
+    if (!mapStyles.includes(fragment)) {
+      throw new Error(`The desktop Portrait letterbox is missing its required ${fragment} contract.`);
+    }
+  }
+  if (mapStyles.includes("stealth-steel")) {
+    throw new Error("The RPG letterbox must not fetch its presentation assets from Stealth & Steel at runtime.");
+  }
+});
+
 test("documents the plain safe-area template", async () => {
   const page = await readFile(new URL("index.html", appRoot), "utf8");
   const app = await readFile(new URL("src/client/ui-layer-react/App.jsx", appRoot), "utf8");
@@ -50,8 +87,8 @@ test("documents the plain safe-area template", async () => {
   if (!page.includes('src="/src/main.jsx"')) {
     throw new Error("The page must load the React application module.");
   }
-  if (!app.includes("const uiMarginPixels = 20")) {
-    throw new Error("The UI margin must be set from a single 20px target.");
+  if (!app.includes("const uiMarginPixels = 10")) {
+    throw new Error("The UI margin must be set from a single 10px target.");
   }
   if (!app.includes("--ui-margin-x") || !app.includes("--ui-margin-y")) {
     throw new Error("The UI margin must use separate percentage values for horizontal and vertical sides.");
@@ -62,11 +99,11 @@ test("documents the plain safe-area template", async () => {
   if (!app.includes('window.addEventListener("resize", syncUiMargin)')) {
     throw new Error("The UI margin percentages must stay current when the viewport resizes.");
   }
-  if (!styles.includes("inset: var(--ui-margin-y, 20px) var(--ui-margin-x, 20px)")) {
-    throw new Error("The page must apply percentage-based UI margins with a 20px fallback.");
+  if (!styles.includes("inset: var(--ui-margin-y, 10px) var(--ui-margin-x, 10px)")) {
+    throw new Error("The page must apply percentage-based UI margins with a 10px fallback.");
   }
-  if (!styles.includes("--portrait-ui-width: max(0px, calc(var(--presentation-frame-width) - 2 * var(--ui-margin-x, 20px)))")
-    || !styles.includes("--portrait-ui-height: max(0px, calc(var(--presentation-frame-height) - 2 * var(--ui-margin-y, 20px)))")
+  if (!styles.includes("--portrait-ui-width: max(0px, calc(var(--presentation-frame-width) - 2 * var(--ui-margin-x, 10px)))")
+    || !styles.includes("--portrait-ui-height: max(0px, calc(var(--presentation-frame-height) - 2 * var(--ui-margin-y, 10px)))")
     || !styles.includes("width: var(--portrait-ui-width)")
     || !styles.includes("height: var(--portrait-ui-height)")) {
     throw new Error("Portrait HUD regions must share the inset portrait UI frame.");
@@ -342,6 +379,7 @@ test("documents the plain safe-area template", async () => {
     || !gameLayer.includes('initial: "initial"')
     || !gameLayer.includes('activeMode: "active-mode"')
     || !gameLayer.includes('resize: "resize"')
+    || !gameLayer.includes('reapply: "reapply"')
     || !gameLayer.includes('transitionPreserve: "transition-preserve"')
     || !gameLayer.includes("const resolveCameraOrigin =")
     || !gameLayer.includes("commit = true")) {
@@ -356,7 +394,7 @@ test("documents the plain safe-area template", async () => {
     || !gameBridge.includes("setAspectMode?.(aspectSnapshot)")) {
     throw new Error("Camera mode must be considered for startup, realm, movement, aspect, and bridge trigger paths.");
   }
-  if (!gameLayer.includes("hideGameCell(slot)")
+  if ((!gameLayer.includes("hideGameCell(slot)") && !gameLayer.includes("renderFogBackingCell"))
     || !gameLayer.includes("for (let slot = region.count; slot < spriteIndexes.length; slot += 1)")
     || !gameLayer.includes("resetLayerSprites();")
     || !gameLayer.includes("renderWorld({ refreshLighting: true });")
@@ -365,7 +403,8 @@ test("documents the plain safe-area template", async () => {
   }
   if (!gameLayer.includes("canvas.clientWidth || window.innerWidth")
     || !gameLayer.includes("canvas.clientHeight || window.innerHeight")
-    || !gameLayer.includes("new ResizeObserver(handleResize)")) {
+    || !gameLayer.includes("new ResizeObserver(handleResize)")
+    || !gameLayer.includes("reapplyCameraMode: true")) {
     throw new Error("The game viewport must follow the canvas dimensions available in the browser.");
   }
   const topLeftStart = app.indexOf('position="top-left"');
@@ -666,8 +705,8 @@ test("documents the plain safe-area template", async () => {
     || !styles.includes(".mapview_realm_toggle")
     || !styles.includes('html[data-mapview-open="true"] #ui_layer > :not(#mapview_overlay)')
     || !styles.includes("visibility: hidden")
-    || !styles.includes("bottom: var(--ui-margin-y, 20px)")
-    || !styles.includes("left: var(--ui-margin-x, 20px)")) {
+    || !styles.includes("bottom: var(--ui-margin-y, 10px)")
+    || !styles.includes("left: var(--ui-margin-x, 10px)")) {
     throw new Error("The Developer Info Map option must open a game-layer-owned fullscreen mapview with lower-left close and realm toggle controls.");
   }
   if (!app.includes("tabIndex={-1}")) {

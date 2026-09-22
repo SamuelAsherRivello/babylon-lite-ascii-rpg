@@ -6,13 +6,14 @@ import { getCameraModeSnapshot, getCombatStatsSnapshot, getExperienceSnapshot, g
 import { fontReady, getFontId, subscribeToFont } from "./client/ui-layer-react/font-store.js";
 import { getPalette, paletteReady, subscribeToPalette } from "./client/ui-layer-react/palette-store.js";
 import { initializeHudHiddenDataset } from "./client/ui-layer-react/platform-settings.js";
+import { generationSettingsReady, getGenerationSettings } from "./client/ui-layer-react/generation-settings-store.js";
 import "./client/ui-layer-react/styles.css";
 
 const gameLayer = document.getElementById("game_layer");
 initializeHudHiddenDataset();
 
-void Promise.all([paletteReady, fontReady])
-  .then(() => startGameLayer(gameLayer, getPalette(), getFontId(), getRealmSnapshot(), getCameraModeSnapshot()))
+void Promise.all([paletteReady, fontReady, generationSettingsReady])
+  .then(() => startGameLayer(gameLayer, getPalette(), getFontId(), getRealmSnapshot(), getCameraModeSnapshot(), getGenerationSettings()))
   .then((controller) => {
     setGameController(controller);
     controller.subscribeToMinimapZoom(sendMinimapZoomSnapshot);

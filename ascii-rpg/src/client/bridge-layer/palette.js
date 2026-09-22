@@ -9,13 +9,16 @@ export const PALETTE_VERSION = 3;
 
 const BULLET_GLYPH = "•";
 const BULLET_ID = "U+2022";
+const LEGACY_PLAYER_GLYPH_ID = "U+1F93A";
+const PLAYER_GLYPH_ID = "U+1F464";
+const PLAYER_GLYPH = "👤";
 const LEGACY_PALETTE_SIZE = 224;
 
 const TEXT_SYMBOL_GLYPHS = [
   "↑", "↓", "←", "→", "↖", "↗", "↘", "↙", "↔", "↕", "⇧", "⇩", "↩", "↪",
   "♥", "♡", "♦", "♢", "♣", "♧", "♠", "♤",
   "◇", "◆", "▲", "▼", "△", "▽", "○", "●", "◉", "◎", "⊙", "⌖", "⌑", "☆", "★", "✦", "✧", "✶",
-  "🪙", "💰", "🕯️", "🤺", "🕷️", "▤", "□", "▬", "▭", "▮", "▯", "⚿",
+  "🪙", "💰", "🕯️", "👤", "🕷️", "▤", "□", "▬", "▭", "▮", "▯", "⚿",
   "♪", "♫", "☼", "☀", "☾", "☽", "☁", "☂", "☃", "❄", "♨",
   "⚔", "⚒", "⚙", "⚑", "⚐", "⚠", "☠", "☘", "⚖", "⚗", "⚕", "✝", "☯",
 ];
@@ -148,6 +151,11 @@ function normalizePaletteEntry(entry) {
   };
 }
 
+function migrateLegacyPlayerGlyph(entry) {
+  if (entry?.unicode !== LEGACY_PLAYER_GLYPH_ID) return entry;
+  return { ...entry, unicode: PLAYER_GLYPH_ID, glyph: PLAYER_GLYPH };
+}
+
 function isValidGlyphOffset(entry) {
   return Number.isInteger(entry.offsetX) && entry.offsetX >= -10 && entry.offsetX <= 10
     && Number.isInteger(entry.offsetY) && entry.offsetY >= -10 && entry.offsetY <= 10
@@ -245,7 +253,7 @@ export function validatePaletteEntries(entries) {
 
 export function createPalette(data = {}) {
   const defaults = createDefaultPalette();
-  const entries = data.entries ?? defaults;
+  const entries = (data.entries ?? defaults).map(migrateLegacyPlayerGlyph);
   const palette = entries.map(normalizePaletteEntry);
   if (data.version === 1 && data.entries?.length === LEGACY_PALETTE_SIZE) {
     palette.push(...defaults.slice(LEGACY_PALETTE_SIZE));

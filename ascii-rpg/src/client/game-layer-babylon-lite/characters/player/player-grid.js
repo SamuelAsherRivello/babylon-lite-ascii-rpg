@@ -93,8 +93,12 @@ export function createViewport({
     fontResolution,
     gridWidth: scaledGridWidth,
     gridHeight: scaledGridHeight,
-    columns: Math.max(1, Math.floor(logicalWidth / scaledGridWidth)),
-    rows: Math.max(1, Math.floor(logicalHeight / scaledGridHeight)),
+    // Include an edge tile whenever the canvas ends between grid boundaries.
+    // Rendering complete tiles only leaves an uncovered strip along the right
+    // and bottom of any viewport whose dimensions are not exact multiples of
+    // the displayed grid size. The GPU clips the partial tile to the canvas.
+    columns: Math.max(1, Math.ceil(logicalWidth / scaledGridWidth)),
+    rows: Math.max(1, Math.ceil(logicalHeight / scaledGridHeight)),
   };
 }
 
@@ -217,6 +221,22 @@ export function getCellCenter(cell, viewport) {
   return {
     x: cell.x * viewport.gridWidth + viewport.gridWidth / 2,
     y: cell.y * viewport.gridHeight + viewport.gridHeight / 2,
+  };
+}
+
+// Adjacent sprites with fractional dimensions can be rasterized on different
+// sides of a physical pixel.  Use inclusive pixel coverage for each cell so
+// their bounds meet (or share one edge pixel) at every displayed zoom.
+export function getPixelSnappedCellBounds(cell, viewport, offset = { x: 0, y: 0 }) {
+  const offsetX = Number.isFinite(offset.x) ? offset.x : 0;
+  const offsetY = Number.isFinite(offset.y) ? offset.y : 0;
+  const left = Math.floor(offsetX + cell.x * viewport.gridWidth);
+  const right = Math.ceil(offsetX + (cell.x + 1) * viewport.gridWidth);
+  const top = Math.floor(offsetY + cell.y * viewport.gridHeight);
+  const bottom = Math.ceil(offsetY + (cell.y + 1) * viewport.gridHeight);
+  return {
+    center: { x: (left + right) / 2, y: (top + bottom) / 2 },
+    size: { width: right - left, height: bottom - top },
   };
 }
 

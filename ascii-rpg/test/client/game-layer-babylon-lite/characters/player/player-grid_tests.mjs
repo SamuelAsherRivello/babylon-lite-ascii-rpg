@@ -14,6 +14,7 @@ import {
   clampCell,
   createViewport,
   getCellCenter,
+  getPixelSnappedCellBounds,
   getCenterCell,
   getCombinedDirection,
   getDirectionForKey,
@@ -33,14 +34,21 @@ test("creates remapped and upscaled logical viewports", () => {
   const oneToOne = createViewport({ screenWidth: 1280, screenHeight: 720 });
   assert.equal(oneToOne.logicalWidth, 1280);
   assert.equal(oneToOne.logicalHeight, 720);
-  assert.equal(oneToOne.columns, 22);
-  assert.equal(oneToOne.rows, 12);
+  assert.equal(oneToOne.columns, 23);
+  assert.equal(oneToOne.rows, 13);
 
   const upscaled = createViewport({ screenWidth: 1280, screenHeight: 720, upscale: 2 });
   assert.equal(upscaled.logicalWidth, 640);
   assert.equal(upscaled.logicalHeight, 360);
-  assert.equal(upscaled.columns, 11);
-  assert.equal(upscaled.rows, 6);
+  assert.equal(upscaled.columns, 12);
+  assert.equal(upscaled.rows, 7);
+});
+
+test("includes clipped edge tiles so the game view covers the full canvas", () => {
+  const viewport = createViewport({ screenWidth: 332, screenHeight: 591, zoom: 5 });
+
+  assert.ok(viewport.columns * viewport.gridWidth >= viewport.screenWidth);
+  assert.ok(viewport.rows * viewport.gridHeight >= viewport.screenHeight);
 });
 
 test("changes glyph density with logarithmically remapped zoom", () => {
@@ -50,7 +58,7 @@ test("changes glyph density with logarithmically remapped zoom", () => {
 
   assert.deepEqual(
     { columns: current.columns, rows: current.rows, gridWidth: current.gridWidth },
-    { columns: 22, rows: 12, gridWidth: 56.96 },
+    { columns: 23, rows: 13, gridWidth: 56.96 },
   );
   assert.deepEqual(
     { columns: zoomedOut.columns, rows: zoomedOut.rows, gridWidth: zoomedOut.gridWidth },
@@ -58,7 +66,7 @@ test("changes glyph density with logarithmically remapped zoom", () => {
   );
   assert.deepEqual(
     { columns: zoomedIn.columns, rows: zoomedIn.rows, gridWidth: zoomedIn.gridWidth },
-    { columns: 20, rows: 11, gridWidth: 64 },
+    { columns: 20, rows: 12, gridWidth: 64 },
   );
   assert.equal(createViewport({ screenWidth: 1280, screenHeight: 720, zoom: 100 }).zoom, MAX_ZOOM);
   assert.equal(createViewport({ screenWidth: 1280, screenHeight: 720, zoom: -2 }).zoom, MIN_ZOOM);
@@ -68,9 +76,9 @@ test("centers the viewport on zoom and clamps it to the world", () => {
   const viewport = createViewport({ screenWidth: 1280, screenHeight: 720, zoom: 10 });
   const world = { columns: 100, rows: 80 };
 
-  assert.deepEqual(getViewOriginForPlayer({ x: 50, y: 40 }, viewport, world), { x: 40, y: 35 });
+  assert.deepEqual(getViewOriginForPlayer({ x: 50, y: 40 }, viewport, world), { x: 40, y: 34 });
   assert.deepEqual(getViewOriginForPlayer({ x: 0, y: 0 }, viewport, world), { x: 0, y: 0 });
-  assert.deepEqual(getViewOriginForPlayer({ x: 99, y: 79 }, viewport, world), { x: 80, y: 69 });
+  assert.deepEqual(getViewOriginForPlayer({ x: 99, y: 79 }, viewport, world), { x: 80, y: 68 });
 });
 
 test("camera center and deadzone resolve bounded origins", () => {
@@ -78,15 +86,15 @@ test("camera center and deadzone resolve bounded origins", () => {
   const world = { columns: 100, rows: 80 };
   assert.deepEqual(
     getViewOriginForCamera("center", { x: 50, y: 40 }, viewport, world, { x: 0, y: 0 }),
-    { x: 40, y: 35 },
+    { x: 40, y: 34 },
   );
   assert.deepEqual(
     getViewOriginForCamera("deadzone", { x: 59, y: 50 }, viewport, world, { x: 30, y: 29 }),
-    { x: 45, y: 43 },
+    { x: 45, y: 42 },
   );
   assert.deepEqual(
     getViewOriginForCamera("deadzone", { x: 50, y: 40 }, viewport, world, { x: 30, y: 29 }),
-    { x: 36, y: 33 },
+    { x: 36, y: 32 },
   );
 });
 
@@ -107,7 +115,7 @@ test("camera lock shifts the viewport to show a player entering from the opposit
   );
   assert.deepEqual(
     getViewOriginForCamera("lock", { x: 50, y: 19 }, viewport, world, { x: 40, y: 20 }, { x: 0, y: -1 }),
-    { x: 50, y: 15 },
+    { x: 50, y: 14 },
   );
   assert.equal(
     getViewOriginForCamera("lock", { x: -1, y: 20 }, viewport, world, { x: 0, y: 20 }, { x: -1, y: 0 }),
@@ -231,6 +239,21 @@ test("recalculates camera origins for a resized viewport without moving the play
   );
 });
 
+test("reapplying a camera mode after browser zoom centers the player", () => {
+  const world = { columns: 256, rows: 256 };
+  const playerCell = { x: 90, y: 70 };
+  const zoomedViewport = createViewport({ screenWidth: 960, screenHeight: 540, zoom: 10 });
+
+  for (const mode of ["center", "deadzone", "lock"]) {
+    const origin = getInitialViewOriginForCamera(mode, playerCell, zoomedViewport, world);
+    assert.deepEqual(
+      { x: playerCell.x - origin.x, y: playerCell.y - origin.y },
+      getCenterCell(zoomedViewport),
+      `${mode} must center the player when reapplied after browser zoom`,
+    );
+  }
+});
+
 test("recalculates resized camera origins at world boundaries", () => {
   const world = { columns: 20, rows: 20 };
   const previousViewport = createViewport({ screenWidth: 640, screenHeight: 352, zoom: 10 });
@@ -274,19 +297,30 @@ test("uses diagonal direction at the equal-angle sector boundary", () => {
   assert.deepEqual(getDirectionForSwipe(-30, -30 * Math.tan(Math.PI / 8)), { x: -1, y: -1 });
 });
 
-test("centers and clamps the player to complete grid cells", () => {
+test("centers and clamps the player while retaining partial edge cells", () => {
   const viewport = createViewport({ screenWidth: 1280, screenHeight: 720 });
   const center = getCenterCell(viewport);
   assert.deepEqual(center, { x: 11, y: 6 });
   assert.deepEqual(getCellCenter(center, viewport), { x: 655.0400000000001, y: 370.24 });
-  assert.deepEqual(clampCell({ x: -1, y: 99 }, viewport), { x: 0, y: 11 });
+  assert.deepEqual(clampCell({ x: -1, y: 99 }, viewport), { x: 0, y: 12 });
   assert.deepEqual(moveCell({ x: 0, y: 0 }, { x: -1, y: -1 }, viewport), { x: 0, y: 0 });
   assert.deepEqual(
     moveCell({ x: 20, y: 11 }, { x: 1, y: 1 }, viewport),
-    { x: 21, y: 11 },
+    { x: 21, y: 12 },
   );
   assert.equal(viewport.gridWidth, DEFAULT_GRID_WIDTH * (getEffectiveZoom(DEFAULT_ZOOM) / 5));
   assert.equal(viewport.gridHeight, DEFAULT_GRID_HEIGHT * (getEffectiveZoom(DEFAULT_ZOOM) / 5));
+});
+
+test("pixel-snapped tile bounds cover every fractional-zoom edge", () => {
+  const viewport = createViewport({ screenWidth: 1280, screenHeight: 720, zoom: DEFAULT_ZOOM });
+  const first = getPixelSnappedCellBounds({ x: 0, y: 0 }, viewport);
+  const second = getPixelSnappedCellBounds({ x: 1, y: 0 }, viewport);
+  const below = getPixelSnappedCellBounds({ x: 0, y: 1 }, viewport);
+
+  assert.deepEqual(first, { center: { x: 28.5, y: 28.5 }, size: { width: 57, height: 57 } });
+  assert.equal(first.center.x + first.size.width / 2 >= second.center.x - second.size.width / 2, true);
+  assert.equal(first.center.y + first.size.height / 2 >= below.center.y - below.size.height / 2, true);
 });
 
 test("uses the agreed held-key timing constants", () => {

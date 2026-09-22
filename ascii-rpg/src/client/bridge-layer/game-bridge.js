@@ -147,6 +147,10 @@ export function sendMapviewRealmToggle() {
   gameController?.toggleMapviewRealm?.();
 }
 
+export function sendGenerationSettingsPreview(canvas, settings, realm, seedMode) {
+  gameController?.renderGenerationSettingsPreview?.(canvas, settings, realm, seedMode);
+}
+
 export function sendLightingSnapshot(config) {
   lightingSnapshot = config;
   gameController?.setLighting(config);

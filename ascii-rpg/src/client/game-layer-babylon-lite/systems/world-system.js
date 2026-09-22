@@ -1,7 +1,7 @@
 export const WALL_GLYPH = "▒";
 export const FLOOR_GLYPH = "•";
 export const UNDERGROUND_FLOOR_GLYPH = "●";
-export const PLAYER_GLYPH = "🤺";
+export const PLAYER_GLYPH = "👤";
 export const ENEMY_GLYPH = "🕷️";
 export const ENEMY_SPAWNER_GLYPH = "S";
 export const TORCH_GLYPH = "🕯️";
@@ -64,7 +64,9 @@ export const GENERATION_PASSES = Object.freeze([
   "water",
   "walkability",
   "player-position",
-  "object-spawner",
+  "object-heart",
+  "object-trap",
+  "object-torch",
   "civilization",
   "enemy-spawner",
 ]);
@@ -416,7 +418,7 @@ function getCenterPreferredStart(region, rows, columns) {
   return getCenterMostCell(region, rows, columns);
 }
 
-function createWaterPass({ region, rows, columns, random, waterFillPercent }) {
+function createWaterPass({ region, rows, columns, random, waterFillPercent, waterLakeCount }) {
   if (region.length === 0 || random() * 100 >= waterFillPercent) return { depths: new Map(), lakes: [] };
 
   const lakes = [];
@@ -424,7 +426,7 @@ function createWaterPass({ region, rows, columns, random, waterFillPercent }) {
   for (const cell of region) scratch.regionKeys[cellIndex(cell, columns)] = 1;
   let selectedCount = 0;
   let failedLakeAttempts = 0;
-  const lakeCount = random() < 0.35 ? 2 : 1;
+  const lakeCount = waterLakeCount ?? (waterFillPercent >= 75 ? 3 : random() < 0.35 ? 2 : 1);
   let preferredStart = getCenterPreferredStart(region, rows, columns);
 
   while (lakes.length < lakeCount && failedLakeAttempts < 5000) {
@@ -585,8 +587,10 @@ export function createWorld({
   smoothingIterations = DEFAULT_SMOOTHING_ITERATIONS,
   minWalkablePercent = DEFAULT_MIN_WALKABLE_PERCENT,
   waterFillPercent = DEFAULT_WATER_FILL_PERCENT,
+  waterLakeCount,
   torchCount = 3,
   seed,
+  playerStartMode = "center",
 } = {}) {
   assertDimensions(rows, columns);
   if (wallFillPercent < 0 || wallFillPercent > 100) throw new RangeError("wallFillPercent must be between 0 and 100.");
@@ -612,7 +616,7 @@ export function createWorld({
       walls[y][x] || !caveRegionKeys[y * columns + x] ? "wall" : kind
     )));
     const region = caveRegion.filter((cell) => terrainKinds[cell.y][cell.x] !== "wall");
-    const waterPass = createWaterPass({ region, rows, columns, random, waterFillPercent });
+    const waterPass = createWaterPass({ region, rows, columns, random, waterFillPercent, waterLakeCount });
     for (const [key, depth] of waterPass.depths) {
       const [x, y] = key.split(",").map(Number);
       terrainKinds[y][x] = `${depth}Water`;
@@ -633,7 +637,9 @@ export function createWorld({
     }
 
     const terrain = createTerrainCells(terrainKinds, walkability);
-    const start = getCenterMostCell(walkableRegion, rows, columns);
+    const start = playerStartMode === "broad"
+      ? walkableRegion[Math.floor(random() * walkableRegion.length)]
+      : getCenterMostCell(walkableRegion, rows, columns);
     const torchCandidates = collectObjectCandidates("torch", terrain, start, rows, columns);
     const torchCells = distributeObjectOfType("torch", torchCandidates, random, torchCount);
 
@@ -746,7 +752,7 @@ async function getLargestRegionCooperative(grid, rows, columns, isBlocked, check
   return largestRegion;
 }
 
-async function createWaterPassCooperative({ region, rows, columns, random, waterFillPercent, checkpoint, markPhase }) {
+async function createWaterPassCooperative({ region, rows, columns, random, waterFillPercent, waterLakeCount, checkpoint, markPhase }) {
   if (region.length === 0 || random() * 100 >= waterFillPercent) {
     markPhase("water-lakes");
     return { depths: new Map(), lakes: [] };
@@ -757,7 +763,7 @@ async function createWaterPassCooperative({ region, rows, columns, random, water
   for (const cell of region) scratch.regionKeys[cellIndex(cell, columns)] = 1;
   let selectedCount = 0;
   let failedLakeAttempts = 0;
-  const lakeCount = random() < 0.35 ? 2 : 1;
+  const lakeCount = waterLakeCount ?? (waterFillPercent >= 75 ? 3 : random() < 0.35 ? 2 : 1);
   let preferredStart = getCenterPreferredStart(region, rows, columns);
   while (lakes.length < lakeCount && failedLakeAttempts < 5000) {
     const targetSize = getWaterLakeTargetSize(random, region.length - selectedCount);
@@ -792,6 +798,7 @@ export async function createWorldCooperative({
   smoothingIterations = DEFAULT_SMOOTHING_ITERATIONS,
   minWalkablePercent = DEFAULT_MIN_WALKABLE_PERCENT,
   waterFillPercent = DEFAULT_WATER_FILL_PERCENT,
+  waterLakeCount,
   torchCount = 3,
   seed,
 } = {}, scheduling = {}) {
@@ -838,7 +845,7 @@ export async function createWorldCooperative({
     ), checkpoint);
     markPhase("cave-region");
     const region = caveRegion.filter((cell) => terrainKinds[cell.y][cell.x] !== "wall");
-    const waterPass = await createWaterPassCooperative({ region, rows, columns, random, waterFillPercent, checkpoint, markPhase });
+    const waterPass = await createWaterPassCooperative({ region, rows, columns, random, waterFillPercent, waterLakeCount, checkpoint, markPhase });
     markPhase("water");
     let depthIndex = 0;
     for (const [key, depth] of waterPass.depths) {
@@ -995,12 +1002,19 @@ function addPairedStairs(realms, stairCount, seed) {
   return stairs;
 }
 
-export async function createWorldRealms({ rows, columns, torchCount = 3, seed = createGeneratedSeed(), initialRealm = "Overground" } = {}, scheduling = {}) {
+export async function createWorldRealms({ rows, columns, torchCount = 3, seed = createGeneratedSeed(), initialRealm = "Overground", wallFillOffset = 0, waterFillPercent = DEFAULT_WATER_FILL_PERCENT, waterLakeCount, minWalkableMultiplier = 1, playerStartMode = "center" } = {}, scheduling = {}) {
   const realms = {};
   const realmOrder = initialRealm === "Underground" ? ["Underground", "Overground"] : ["Overground", "Underground"];
   for (const name of realmOrder) {
     const profile = REALM_PROFILES[name];
-    const realm = await createWorldCooperative({ rows, columns, torchCount, seed: `${seed}:${name}`, wallFillPercent: profile.wallFillPercent, minWalkablePercent: profile.minWalkablePercent }, scheduling);
+    const realm = await createWorldCooperative({
+      rows, columns, torchCount, seed: `${seed}:${name}`,
+      wallFillPercent: Math.min(100, Math.max(0, profile.wallFillPercent + wallFillOffset)),
+      minWalkablePercent: Math.min(0.95, Math.max(0.05, profile.minWalkablePercent * minWalkableMultiplier)),
+      waterFillPercent,
+      waterLakeCount,
+      playerStartMode,
+    }, scheduling);
     realms[name] = applyRealmProfile(realm, name);
   }
   const stairs = addPairedStairs(realms, torchCount, seed);

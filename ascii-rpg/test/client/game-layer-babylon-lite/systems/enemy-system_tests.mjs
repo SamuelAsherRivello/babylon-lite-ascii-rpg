@@ -30,7 +30,7 @@ function createHarness({ playerCell = { x: 6, y: 3 }, activeRealm = "Underground
   const attacks = [];
   const damageEvents = [];
   let distanceFieldBuilds = 0;
-  occupancy.claim({ id: "player", type: "player", glyph: "🤺", cell: playerCell, realm: activeRealm });
+  occupancy.claim({ id: "player", type: "player", glyph: "👤", cell: playerCell, realm: activeRealm });
   const system = createEnemySystem({
     timeSystem,
     occupancy,
@@ -201,7 +201,7 @@ test("damages Player Lifecycle to zero and publishes death once", () => {
   const lifecycle = createPlayerLifecycle();
   const deaths = [];
   lifecycle.subscribeToDeath((dead) => deaths.push(dead));
-  occupancy.claim({ id: "player", type: "player", glyph: "🤺", cell: { x: 3, y: 3 }, realm: "Underground" });
+  occupancy.claim({ id: "player", type: "player", glyph: "👤", cell: { x: 3, y: 3 }, realm: "Underground" });
   const world = createWorld();
   const system = createEnemySystem({
     timeSystem,

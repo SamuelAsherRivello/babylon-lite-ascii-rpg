@@ -344,6 +344,24 @@ test("creates deterministic paired realm stairs on walkable terrain", async () =
   }
 });
 
+test("applies deterministic pass-scoped realm settings without breaking valid starts", async () => {
+  const options = {
+    rows: 128, columns: 128, torchCount: 2, seed: "density-profile",
+    wallFillOffset: -10, waterFillPercent: 15, minWalkableMultiplier: 0.8, playerStartMode: "broad",
+  };
+  const first = await createWorldRealms(options);
+  const second = await createWorldRealms(options);
+
+  assert.deepEqual(first, second);
+  assert.equal(first.realms.Overground.options.wallFillPercent, 15);
+  assert.equal(first.realms.Underground.options.wallFillPercent, 40);
+  assert.equal(first.realms.Overground.options.waterFillPercent, 15);
+  for (const realm of Object.values(first.realms)) {
+    const start = realm.playerStart;
+    assert.equal(realm.terrain[start.y][start.x].walkable, true);
+  }
+});
+
 test("realm activation state keeps exactly one player at the paired arrival cell", async () => {
   const { realms } = await createWorldRealms({ rows: 96, columns: 96, torchCount: 2, seed: "single-player-realms" });
   const overground = realms.Overground;

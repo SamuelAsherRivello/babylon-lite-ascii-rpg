@@ -2,9 +2,9 @@
 
 .toast {
   position: fixed;
-  top: var(--ui-margin-y, 20px);
+  top: var(--ui-margin-y, 10px);
   --toast-horizontal-inset: calc(
-    var(--ui-margin-x, 20px) + var(--top-panel-size) + var(--top-panel-gap)
+    var(--ui-margin-x, 10px) + var(--top-panel-size) + var(--top-panel-gap)
   );
   right: var(--toast-horizontal-inset);
   left: var(--toast-horizontal-inset);

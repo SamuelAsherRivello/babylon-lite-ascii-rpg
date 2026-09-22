@@ -10,10 +10,27 @@ const repositoryRoot = dirname(fileURLToPath(import.meta.url));
 
 function palettePersistencePlugin() {
   const palettePath = `${repositoryRoot}/ascii-rpg/src/client/game-layer-babylon-lite/data/palette_data.json`;
+  const generationSettingsPath = `${repositoryRoot}/ascii-rpg/src/client/game-layer-babylon-lite/data/generation_settings.json`;
 
   return {
     name: "ascii-palette-persistence",
     configureServer(server) {
+      server.middlewares.use("/__ascii_generation_settings", async (request, response, next) => {
+        if (request.method === "GET") {
+          try { response.statusCode = 200; response.setHeader("Content-Type", "application/json"); response.end(await readFile(generationSettingsPath, "utf8")); } catch (error) { response.statusCode = 500; response.end(JSON.stringify({ error: error.message })); }
+          return;
+        }
+        if (request.method !== "POST") { next(); return; }
+        try {
+          const chunks = []; for await (const chunk of request) chunks.push(chunk);
+          const payload = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+          if (!Array.isArray(payload.passes) || payload.passes.some((pass) => !["Low", "Med", "High"].includes(pass?.density))) throw new Error("Invalid generation settings.");
+          const temporaryPath = `${generationSettingsPath}.tmp`;
+          await writeFile(temporaryPath, JSON.stringify({ version: 1, passes: payload.passes }, null, 2) + "\n", "utf8");
+          await rename(temporaryPath, generationSettingsPath);
+          response.statusCode = 200; response.setHeader("Content-Type", "application/json"); response.end(JSON.stringify({ ok: true }));
+        } catch (error) { response.statusCode = 400; response.setHeader("Content-Type", "application/json"); response.end(JSON.stringify({ error: error.message })); }
+      });
       server.middlewares.use("/__ascii_palette", async (request, response, next) => {
         if (request.method === "GET") {
           try {

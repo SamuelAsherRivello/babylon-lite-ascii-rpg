@@ -2,7 +2,7 @@
 
 #ui_layer {
   position: fixed;
-  inset: var(--ui-margin-y, 20px) var(--ui-margin-x, 20px);
+  inset: var(--ui-margin-y, 10px) var(--ui-margin-x, 10px);
   /* Keep HTML controls above the game canvas and its transition mask. */
   z-index: 3;
   pointer-events: none;

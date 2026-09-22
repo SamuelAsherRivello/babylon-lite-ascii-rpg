@@ -107,6 +107,16 @@ export function rasterizeGlyph(glyph, fontFamily, size, color = "#ffffff", offse
   return { pixels: context.getImageData(0, 0, size, size).data, width: size, height: size, name: glyph, offsets: normalizedOffsets };
 }
 
+export function rasterizeSolidGlyph(size, color = [255, 255, 255, 255]) {
+  if (!Number.isInteger(size) || size < 1) throw new RangeError("Solid glyph size must be a positive integer.");
+  if (!Array.isArray(color) || color.length !== 4 || color.some((channel) => !Number.isInteger(channel) || channel < 0 || channel > 255)) {
+    throw new TypeError("Solid glyph color must be four byte channels.");
+  }
+  const pixels = new Uint8ClampedArray(size * size * 4);
+  for (let index = 0; index < pixels.length; index += 4) pixels.set(color, index);
+  return { pixels, width: size, height: size, name: "solid" };
+}
+
 export function darkenGlyphColor(color, darkness = 50) {
   if (!Array.isArray(color) || color.length < 3 || color.some((channel) => !Number.isFinite(channel))) {
     throw new TypeError("Glyph color must contain finite RGB channels.");

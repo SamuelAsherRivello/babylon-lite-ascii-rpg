@@ -11,6 +11,8 @@ import {
 } from "./font-store.js";
 import { DEFAULT_FONT_ID, FONT_OPTIONS, getFontOption } from "../bridge-layer/font.js";
 import { commitPalette, getPalette, subscribeToPalette } from "./palette-store.js";
+import { commitGenerationSettings, DENSITY_LEVELS, GENERATION_DENSITY_DETAILS, GENERATION_PASS_DESCRIPTIONS, GENERATION_PASS_REALMS, getGenerationSettings, normalizeGenerationSettings, subscribeToGenerationSettings } from "./generation-settings-store.js";
+import { sendGenerationSettingsPreview } from "../bridge-layer/game-bridge.js";
 import {
   filterPaletteEntries,
   DEFAULT_GLYPH_OFFSET_SCALE,
@@ -143,7 +145,7 @@ const defaultQuestStorageKey = "babylon-lite-ascii-rpg.default-quest";
 const minZoom = MIN_ZOOM;
 const maxZoom = MAX_ZOOM;
 const repositoryUrl = "https://github.com/SamuelAsherRivello/babylon-lite-ascii-rpg";
-const uiMarginPixels = 20;
+const uiMarginPixels = 10;
 const mapGlyphs = new Set(PROJECT_MAP_GLYPHS);
 const glyphDetailsWindowWidth = 220;
 const glyphDetailsWindowHeight = 280;
@@ -174,6 +176,7 @@ const settingsHelp = Object.freeze({
   windowsSection: "Open utility windows.",
   asciiPalette: "Open ASCII palette controls.",
   gameplaySettings: "Open gameplay controls.",
+  proceduralSettings: "Open procedural level-generation controls.",
   mapview: "Open the developer map.",
   arguments: "Open client argument details.",
   statsSection: "View live performance and version information.",
@@ -1326,6 +1329,185 @@ export function GameplaySettingsWindow({ quest, defaultQuestId, onSelectQuest, o
   );
 }
 
+export function ProceduralSettingsWindow({ settings, onConfirm, onClose }) {
+  const [draft, setDraft] = useState(() => normalizeGenerationSettings(settings));
+  const [previewRealm, setPreviewRealm] = useState("Overground");
+  const [previewSeed, setPreviewSeed] = useState("random");
+  const [previewViewport, setPreviewViewport] = useState({ zoom: 1, x: 0, y: 0 });
+  const [error, setError] = useState("");
+  const previewCanvasRef = useRef(null);
+  const objectPassIds = new Set(["object-heart", "object-trap", "object-torch"]);
+  const orderedPasses = [...draft.passes].sort((left, right) => left.order - right.order);
+  const objectPasses = orderedPasses.filter((pass) => objectPassIds.has(pass.id));
+  const previewDragRef = useRef(null);
+
+  useEffect(() => {
+    sendGenerationSettingsPreview(previewCanvasRef.current, draft, previewRealm, previewSeed);
+    return () => sendGenerationSettingsPreview(null, null);
+  }, [draft, previewRealm, previewSeed]);
+
+  const selectDensity = (id, density) => {
+    setDraft((current) => normalizeGenerationSettings({
+      ...current,
+      passes: current.passes.map((pass) => pass.id === id ? { ...pass, density } : pass),
+    }));
+  };
+
+  const confirm = async () => {
+    try {
+      setError("");
+      await onConfirm(draft);
+    } catch (nextError) {
+      setError(nextError.message || "Unable to save generation settings.");
+    }
+  };
+
+  const resetDraft = () => {
+    setError("");
+    setDraft(normalizeGenerationSettings({ passes: [] }));
+  };
+
+  const constrainPreviewViewport = (viewport, bounds) => {
+    const maxX = Math.max(0, (bounds.width * (viewport.zoom - 1)) / 2);
+    const maxY = Math.max(0, (bounds.height * (viewport.zoom - 1)) / 2);
+    return {
+      ...viewport,
+      x: Math.max(-maxX, Math.min(maxX, viewport.x)),
+      y: Math.max(-maxY, Math.min(maxY, viewport.y)),
+    };
+  };
+
+  const zoomPreview = (event) => {
+    event.preventDefault();
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const direction = event.deltaY < 0 ? 1 : -1;
+    setPreviewViewport((current) => {
+      const zoom = Math.max(1, Math.min(4, current.zoom + (direction * 0.25)));
+      if (zoom === current.zoom) return current;
+      const scale = zoom / current.zoom;
+      const cursorX = event.clientX - bounds.left - (bounds.width / 2);
+      const cursorY = event.clientY - bounds.top - (bounds.height / 2);
+      return constrainPreviewViewport({
+        zoom,
+        x: (1 - scale) * cursorX + (scale * current.x),
+        y: (1 - scale) * cursorY + (scale * current.y),
+      }, bounds);
+    });
+  };
+
+  const startPreviewPan = (event) => {
+    if (event.button !== 0) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    previewDragRef.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
+  };
+
+  const panPreview = (event) => {
+    const drag = previewDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    const bounds = event.currentTarget.getBoundingClientRect();
+    setPreviewViewport((current) => constrainPreviewViewport({
+      ...current,
+      x: current.x + event.clientX - drag.x,
+      y: current.y + event.clientY - drag.y,
+    }, bounds));
+    previewDragRef.current = { ...drag, x: event.clientX, y: event.clientY };
+  };
+
+  const stopPreviewPan = (event) => {
+    if (previewDragRef.current?.pointerId !== event.pointerId) return;
+    previewDragRef.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+  };
+
+  return (
+    <div className="prompt_window" role="presentation">
+      <div className="window_backdrop" aria-hidden="true" onClick={onClose} />
+      <section className="window gameplay_settings_window procedural_settings_window" role="dialog" aria-modal="true" aria-labelledby="procedural_settings_title" onClick={(event) => event.stopPropagation()}>
+        <div className="window_header">
+          <h1 id="procedural_settings_title" className="prompt_title">Procedural</h1>
+          <div className="title_tabs" role="tablist" aria-label="Procedural settings sections">
+            <button className="prompt_tab" type="button" role="tab" aria-selected="true">Level Generation</button>
+          </div>
+          <button className="prompt_button window_close" type="button" aria-label="Close Procedural" onClick={onClose}>X</button>
+        </div>
+        <div className="prompt_body procedural_settings_body">
+          <div className="procedural_settings_options">
+            <div className="procedural_settings_options_scroll">
+              <h2>Procedural Level Generation Passes</h2>
+              <p className="gameplay_settings_hint">Set the density &amp; distribution to feed the system.{" "}<span className="procedural_settings_notice">Some of these buttons apparently do nothing yet</span></p>
+              <div className="quest_settings_list">
+                {orderedPasses.filter((pass) => pass.order <= 5).map((pass) => (
+                <section key={pass.id} className="quest_settings_card procedural_settings_card" aria-label={`${pass.title}, pass ${pass.order}`}>
+                <h3>{pass.order}. {pass.title}</h3>
+                {pass.configurable === false ? <span className="procedural_realm_scope procedural_realm_scope_static">Realms: {GENERATION_PASS_REALMS[pass.id]}</span> : <div className="procedural_density_controls" role="group" aria-label={`${pass.title} density and distribution`}>
+                  <span className="procedural_realm_scope">Realms: {GENERATION_PASS_REALMS[pass.id]}</span>
+                  {DENSITY_LEVELS.map((density) => (
+                    <button key={density} className={`prompt_button${pass.density === density ? " procedural_density_selected" : ""}`} type="button" aria-pressed={pass.density === density} title={GENERATION_DENSITY_DETAILS[pass.id][density]} onClick={() => selectDensity(pass.id, density)}>
+                      {density}
+                    </button>
+                  ))}
+                </div>}
+                <span className="procedural_settings_description">{GENERATION_PASS_DESCRIPTIONS[pass.id]}</span>
+              </section>
+                ))}
+                <section className="quest_settings_card procedural_object_settings_card" aria-label="Object Distribution, pass 6">
+                  <div className="procedural_object_settings_header">
+                    <h3>6. Object Distribution</h3>
+                    <span className="procedural_settings_description">Controls world object placement density</span>
+                    <span className="procedural_realm_scope">Realms: All</span>
+                  </div>
+                  {objectPasses.map((pass) => (
+                    <div key={pass.id} className="procedural_object_density_row">
+                      <span>{pass.title.replace(" Distribution", "")}</span>
+                      <div className="procedural_density_controls procedural_object_density_controls" role="group" aria-label={`${pass.title} density and distribution`}>
+                        {DENSITY_LEVELS.map((density) => (
+                          <button key={density} className={`prompt_button${pass.density === density ? " procedural_density_selected" : ""}`} type="button" aria-pressed={pass.density === density} title={GENERATION_DENSITY_DETAILS[pass.id][density]} onClick={() => selectDensity(pass.id, density)}>
+                            {density}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </section>
+                {orderedPasses.filter((pass) => pass.order > 8).map((pass) => (
+                <section key={pass.id} className="quest_settings_card procedural_settings_card" aria-label={`${pass.title}, pass ${pass.order}`}>
+                <h3>{pass.order - 2}. {pass.title}</h3>
+                <div className="procedural_density_controls" role="group" aria-label={`${pass.title} density and distribution`}>
+                  <span className="procedural_realm_scope">Realms: {GENERATION_PASS_REALMS[pass.id]}</span>
+                  {DENSITY_LEVELS.map((density) => (
+                    <button key={density} className={`prompt_button${pass.density === density ? " procedural_density_selected" : ""}`} type="button" aria-pressed={pass.density === density} title={GENERATION_DENSITY_DETAILS[pass.id][density]} onClick={() => selectDensity(pass.id, density)}>
+                      {density}
+                    </button>
+                  ))}
+                </div>
+                <span className="procedural_settings_description">{GENERATION_PASS_DESCRIPTIONS[pass.id]}</span>
+              </section>
+                ))}
+              </div>
+            </div>
+            <div className="procedural_settings_actions">
+              <div className="procedural_settings_actions_left">
+                <button className="prompt_button" type="button" onClick={confirm}>Confirm</button>
+                <button className="prompt_button" type="button" onClick={resetDraft}>Reset</button>
+                <button className="prompt_button" type="button" onClick={onClose}>Cancel</button>
+              </div>
+              <div className="procedural_settings_actions_right">
+                <button className="prompt_button" type="button" aria-pressed={previewRealm === "Underground"} onClick={() => setPreviewRealm((realm) => realm === "Overground" ? "Underground" : "Overground")}>{previewRealm === "Overground" ? "Overworld" : "Underworld"}</button>
+                <button className="prompt_button" type="button" aria-pressed={previewSeed === "0"} onClick={() => setPreviewSeed((seed) => seed === "random" ? "0" : "random")}>{previewSeed === "random" ? "Seed=Random" : "Seed=0"}</button>
+              </div>
+              {error ? <span className="procedural_settings_error" role="alert">{error}</span> : null}
+            </div>
+          </div>
+          <div className="settings_map_view" aria-label="Generation settings map preview" onWheel={zoomPreview} onPointerDown={startPreviewPan} onPointerMove={panPreview} onPointerUp={stopPreviewPan} onPointerCancel={stopPreviewPan}>
+            <canvas id="settings-map-view" ref={previewCanvasRef} aria-label="Settings map view preview" style={{ transform: `translate(${previewViewport.x}px, ${previewViewport.y}px) scale(${previewViewport.zoom})` }} />
+            <span className="settings_map_low_rez">Low Rez.</span>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 function AppContent() {
   const { enqueueToast } = useToast();
   const [settingTooltip, setSettingTooltip] = useState(null);
@@ -1360,6 +1542,8 @@ function AppContent() {
   const tutorialDirectionsRef = useRef(new Set());
   const [asciiPaletteOpen, setAsciiPaletteOpen] = useState(false);
   const [gameplaySettingsOpen, setGameplaySettingsOpen] = useState(false);
+  const [proceduralSettingsOpen, setProceduralSettingsOpen] = useState(false);
+  const generationSettings = useSyncExternalStore(subscribeToGenerationSettings, getGenerationSettings, getGenerationSettings);
   const [defaultQuestId, setDefaultQuestId] = useState(() => {
     const stored = localStorage.getItem(defaultQuestStorageKey);
     const fallback = questData.quests[0]?.id ?? "";
@@ -1771,6 +1955,10 @@ function AppContent() {
       return { ok: false };
     }
   };
+  const confirmGenerationSettings = async (nextSettings) => {
+    await commitGenerationSettings(nextSettings);
+    window.location.reload();
+  };
 
   const commitFontSelection = async (nextFontId) => {
     try {
@@ -1854,6 +2042,13 @@ function AppContent() {
             <SettingTooltipTarget description={settingsHelp.gameplaySettings} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
               <button id="gameplay_settings_toggle" className="corner_body settings_option" type="button" aria-description={settingsHelp.gameplaySettings} tabIndex={-1} onClick={() => setGameplaySettingsOpen(true)}>
                 Gameplay
+              </button>
+            </SettingTooltipTarget>
+          </div>
+          <div className="windows_control_row">
+            <SettingTooltipTarget description={settingsHelp.proceduralSettings} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
+              <button id="procedural_settings_toggle" className="corner_body settings_option" type="button" aria-description={settingsHelp.proceduralSettings} tabIndex={-1} onClick={() => setProceduralSettingsOpen(true)}>
+                Procedural
               </button>
             </SettingTooltipTarget>
             <span className="corner_body windows_control_separator" aria-hidden="true">/</span>
@@ -2013,6 +2208,7 @@ function AppContent() {
           onClose={() => setGameplaySettingsOpen(false)}
         />
       ) : null}
+      {proceduralSettingsOpen ? <ProceduralSettingsWindow settings={generationSettings} onConfirm={confirmGenerationSettings} onClose={() => setProceduralSettingsOpen(false)} /> : null}
     </>
   );
 }

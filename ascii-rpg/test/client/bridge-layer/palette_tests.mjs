@@ -30,7 +30,7 @@ test("creates every visible Code Page 437 entry, the bullet, and civilization te
   assert.ok(ids.has("32"));
   assert.ok(ids.has("254"));
   assert.ok(ids.has("U+2022"));
-  for (const id of ["U+2191", "U+2665", "U+25C7", "U+266A", "U+2694", "U+1F93A", "U+1F577", "U+25AC", "U+25AD", "U+25AE", "U+25AF", "U+26BF"]) {
+  for (const id of ["U+2191", "U+2665", "U+25C7", "U+266A", "U+2694", "U+1F464", "U+1F577", "U+25AC", "U+25AD", "U+25AE", "U+25AF", "U+26BF"]) {
     assert.ok(ids.has(id));
   }
 });
@@ -58,6 +58,19 @@ test("backfills newly supported identities in an otherwise current palette", () 
   assert.equal(palette.length, 300);
   assert.equal(palette.find((entry) => entry.glyph === "💰").color, DEFAULT_PALETTE_COLOR);
   assert.equal(palette.find((entry) => entry.glyph === "★").color, "#ffff00");
+});
+
+test("migrates saved player styling from the fencer glyph to the player glyph", () => {
+  const legacyEntries = createDefaultPalette().map((entry) => (
+    entry.glyph === "👤" ? { ...entry, unicode: "U+1F93A", glyph: "🤺", color: "#334455", offsetX: 3 } : entry
+  ));
+
+  const palette = createPalette({ version: PALETTE_VERSION, entries: legacyEntries });
+  const player = palette.find((entry) => entry.glyph === "👤");
+
+  assert.equal(player.unicode, "U+1F464");
+  assert.equal(player.color, "#334455");
+  assert.equal(player.offsetX, 3);
 });
 
 test("defaults entries to white, fully opaque, and zero offsets", () => {
@@ -103,13 +116,13 @@ test("serializes a complete validated palette", () => {
 test("filters the palette by map usage and customized styles", () => {
   const palette = createPalette({ overrides: {
     "U+2022": { color: "#999999", alpha: 1 },
-    "U+1F93A": { offsetX: 4, offsetY: 0, offsetScale: 0 },
+    "U+1F464": { offsetX: 4, offsetY: 0, offsetScale: 0 },
   } });
-  const inMaps = filterPaletteEntries(palette, "in-maps", new Set(["W", "•", "🤺"]));
+  const inMaps = filterPaletteEntries(palette, "in-maps", new Set(["W", "•", "👤"]));
   const customized = filterPaletteEntries(palette, "customized", new Set());
 
-  assert.deepEqual(inMaps.map((entry) => entry.glyph), ["W", "•", "🤺"]);
-  assert.deepEqual(customized.map((entry) => entry.glyph), ["•", "🤺"]);
+  assert.deepEqual(inMaps.map((entry) => entry.glyph), ["W", "•", "👤"]);
+  assert.deepEqual(customized.map((entry) => entry.glyph), ["•", "👤"]);
 });
 
 test("toggles index and alphabet palette ordering", () => {
