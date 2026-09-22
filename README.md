@@ -60,6 +60,29 @@ commands from the repository root:
 Ascii RPG uses React for the UI and Vite for local development and production
 builds. The application targets modern desktop and mobile browsers.
 
+### 📦 AI
+
+- `AGENTS.md` contains repository-specific AI agent guidance.
+- [openspec](openspec/) contains the repository's specification workflow
+  configuration.
+
+#### OpenSpec
+
+[OpenSpec](https://openspec.dev/) keeps feature intent, implementation, and
+current specifications aligned.
+
+| # | Name | Command | Comment |
+| --- | --- | --- | --- |
+| 1 | Explore | `$openspec-explore` | Optional feature discovery and planning. |
+| 2 | Propose | `$openspec-propose` | Creates one focused feature change. |
+| 3 | Apply | `$openspec-apply-change` | Implements and completes one change. |
+| 4 | Sync | `$openspec-sync-specs` | Updates main specs without archiving. |
+| 5 | Archive | `$openspec-archive-change` | Finalizes and archives a change. |
+
+### 📦 Packages
+
+- [Vite](https://vite.dev/) provides local development and production builds.
+
 ### 📝 Structure
 
 - `ascii-rpg/index.html` provides the HTML shell and application layers.
@@ -67,16 +90,6 @@ builds. The application targets modern desktop and mobile browsers.
 - `ascii-rpg/test/` contains focused automated checks for the starter.
 - `ascii-rpg/documentation/` contains canonical README images.
 - `.github/workflows/deploy-pages.yml` builds and deploys the browser demo.
-
-### 📦 AI
-
-- `AGENTS.md` contains repository-specific AI agent guidance.
-- [openspec](openspec/) contains the repository's specification workflow
-  configuration.
-
-### 📦 Packages
-
-- [Vite](https://vite.dev/) provides local development and production builds.
 
 
 ## Credits
