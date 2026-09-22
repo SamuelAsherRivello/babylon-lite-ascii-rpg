@@ -16,6 +16,8 @@ export const MOBILE_SETTINGS_DEFAULTS = Object.freeze({
   showHud: false,
 });
 
+export const SHOW_UI_STORAGE_KEY = "babylon-lite-ascii-rpg.show-ui";
+
 export function isMobilePlatform(matchMedia = globalThis.window?.matchMedia) {
   return typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches;
 }
@@ -39,6 +41,20 @@ export { MAX_ZOOM, MIN_ZOOM };
 
 export function getStoredBooleanValue(storedValue, fallback) {
   return storedValue === null ? fallback : storedValue === "true";
+}
+
+export function getStoredShowHud(storage = globalThis.localStorage, matchMedia) {
+  const defaults = getPlatformSettingsDefaults(matchMedia);
+  try {
+    return getStoredBooleanValue(storage?.getItem(SHOW_UI_STORAGE_KEY) ?? null, defaults.showHud);
+  } catch {
+    return defaults.showHud;
+  }
+}
+
+export function initializeHudHiddenDataset(documentRef = globalThis.document, storage, matchMedia) {
+  if (!documentRef?.documentElement) return;
+  documentRef.documentElement.dataset.hudHidden = String(!getStoredShowHud(storage, matchMedia));
 }
 
 export function getStoredAspectMode(storedValue) {

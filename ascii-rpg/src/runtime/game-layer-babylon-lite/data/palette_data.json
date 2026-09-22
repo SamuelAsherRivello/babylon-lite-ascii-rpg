@@ -1465,7 +1465,7 @@
       "code": 178,
       "unicode": null,
       "glyph": "▓",
-      "color": "#0b3d91",
+      "color": "#657592",
       "alpha": 1,
       "offsetX": 0,
       "offsetY": 0,
@@ -2505,7 +2505,7 @@
       "code": null,
       "unicode": "U+1F56F",
       "glyph": "🕯️",
-      "color": "#ffcc66",
+      "color": "#f8f56c",
       "alpha": 1,
       "offsetX": 0,
       "offsetY": 10,
@@ -2517,9 +2517,9 @@
       "glyph": "🤺",
       "color": "#ffffff",
       "alpha": 1,
-      "offsetX": -4,
+      "offsetX": -2,
       "offsetY": 10,
-      "offsetScale": -25
+      "offsetScale": -11
     },
     {
       "code": null,
@@ -2555,7 +2555,7 @@
       "code": null,
       "unicode": "U+25B3",
       "glyph": "△",
-      "color": "#5a3700",
+      "color": "#7289a6",
       "alpha": 1,
       "offsetX": 0,
       "offsetY": 0,

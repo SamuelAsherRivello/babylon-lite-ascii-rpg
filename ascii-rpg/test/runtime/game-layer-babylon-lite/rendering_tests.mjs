@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createGlyphVisualCache, darkenGlyphColor, getGlyphOffsetKey, getGlyphOffsetsFromKey, getGlyphRasterSize, getOffsetGlyphKey, tintGlyphRgb } from "../../../src/runtime/game-layer-babylon-lite/glyph-visual-cache.js";
+import { createGlyphVisualCache, darkenGlyphColor, FACING_RIGHT, getFacingGlyphKey, getFacingGlyphOffsets, getGlyphOffsetKey, getGlyphOffsetsFromKey, getGlyphRasterSize, getOffsetGlyphKey, tintGlyphRgb } from "../../../src/runtime/game-layer-babylon-lite/glyph-visual-cache.js";
 import { collectVisibleGlyphs, getVisibleRegion, getVisibleSlot, shouldUpdateVisibleSprite } from "../../../src/runtime/game-layer-babylon-lite/visible-region.js";
 import { createFrameCheckpoint, getVisibleGlyph } from "../../../src/runtime/game-layer-babylon-lite/systems/world-system.js";
 import { colorToLinearRgba, linearRgbaToHex, linearRgbaToRendererHex, reconcilePaletteColors } from "../../../src/runtime/game-layer-babylon-lite/palette-color-cache.js";
@@ -75,6 +75,16 @@ test("glyph offset keys are stable and reusable for visual cache identity", () =
     offsetX: 10,
     offsetY: -10,
     offsetScale: 100,
+  });
+});
+
+test("right-facing glyphs mirror their x offset with the artwork", () => {
+  const offsets = { offsetX: 4, offsetY: -3, offsetScale: 25 };
+  assert.deepEqual(getFacingGlyphOffsets("🤺", offsets), offsets);
+  assert.deepEqual(getFacingGlyphOffsets(getFacingGlyphKey("🤺", FACING_RIGHT), offsets), {
+    offsetX: -4,
+    offsetY: -3,
+    offsetScale: 25,
   });
 });
 

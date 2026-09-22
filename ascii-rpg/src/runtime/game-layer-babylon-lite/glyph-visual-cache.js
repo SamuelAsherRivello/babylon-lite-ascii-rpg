@@ -57,10 +57,17 @@ export function getGlyphOffsetsFromKey(glyphKey) {
   return normalizeGlyphOffsets({ offsetX, offsetY, offsetScale });
 }
 
+export function getFacingGlyphOffsets(glyphKey, offsets = DEFAULT_GLYPH_OFFSETS) {
+  const normalized = normalizeGlyphOffsets(offsets);
+  return getFacingGlyphDirection(glyphKey) === FACING_RIGHT
+    ? { ...normalized, offsetX: -normalized.offsetX }
+    : normalized;
+}
+
 export function rasterizeGlyph(glyph, fontFamily, size, color = "#ffffff", offsets = DEFAULT_GLYPH_OFFSETS) {
   const displayGlyph = getFacingGlyph(glyph);
   const facing = getFacingGlyphDirection(glyph);
-  const normalizedOffsets = normalizeGlyphOffsets(offsets);
+  const normalizedOffsets = getFacingGlyphOffsets(glyph, offsets);
   const scale = Math.max(0, 1 + normalizedOffsets.offsetScale / 100);
   const canvas = document.createElement("canvas");
   canvas.width = size;

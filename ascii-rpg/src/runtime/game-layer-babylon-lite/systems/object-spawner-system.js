@@ -185,7 +185,12 @@ export function createObjectSpawnerSystem({ catalog = [], eventSystem = null } =
   const collideAtCell = (cell, context = {}) => {
     const object = getActiveObjectAtCell(cell, context);
     if (!object) return null;
-    if (object.IsPickup) object.active = false;
+    if (object.IsPickup) {
+      object.active = false;
+      if (context.world?.characters?.[object.cell.y]?.[object.cell.x] === object.glyph) {
+        context.world.characters[object.cell.y][object.cell.x] = null;
+      }
+    }
     object.effect(context);
     const event = {
       type: object.IsPickup ? "pickup-collected" : "object-collided",

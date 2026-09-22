@@ -39,12 +39,17 @@ test("pickups disappear after collision while persistent objects remain", () => 
     { type: "trap", name: "Trap", glyph: "☠", IsPickup: false, IsLevelSpawned: true, logText: "Lost -25 Health from Trap" },
   ] });
   let health = 10;
-  system.addObject({ id: "heart-1", type: "heart", cell: { x: 2, y: 2 }, effect: () => { health += 2; } });
-  system.addObject({ id: "trap-1", type: "trap", cell: { x: 3, y: 3 }, effect: () => { health -= 25; } });
-  assert.equal(system.collideAtCell({ x: 2, y: 2 }).logText, "Collected +2 Health from Heart");
+  const world = createWorld();
+  system.addObject({ id: "heart-1", type: "heart", cell: { x: 2, y: 2 }, realm: world, effect: () => { health += 2; } });
+  system.addObject({ id: "trap-1", type: "trap", cell: { x: 3, y: 3 }, realm: world, effect: () => { health -= 25; } });
+  world.characters[2][2] = "♥";
+  world.characters[3][3] = "☠";
+  assert.equal(system.collideAtCell({ x: 2, y: 2 }, { world }).logText, "Collected +2 Health from Heart");
   assert.equal(system.getActiveObjects().some((object) => object.id === "heart-1"), false);
-  assert.equal(system.collideAtCell({ x: 3, y: 3 }).logText, "Lost -25 Health from Trap");
+  assert.equal(world.characters[2][2], null);
+  assert.equal(system.collideAtCell({ x: 3, y: 3 }, { world }).logText, "Lost -25 Health from Trap");
   assert.equal(system.getActiveObjects().some((object) => object.id === "trap-1"), true);
+  assert.equal(world.characters[3][3], "☠");
   assert.equal(health, -13);
 });
 

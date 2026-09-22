@@ -5,9 +5,11 @@ import { startGameLayer } from "./runtime/game-layer-babylon-lite/index.js";
 import { getCameraModeSnapshot, getCombatStatsSnapshot, getExperienceSnapshot, getGoldSnapshot, getHealthSnapshot, getLogSnapshot, getPlayerDeadSnapshot, getQuestSnapshot, getRealmDiscoverySnapshot, getRealmSnapshot, getStaminaSnapshot, sendCombatStatsSnapshot, sendExperienceSnapshot, sendFontSnapshot, sendGoldSnapshot, sendHealthSnapshot, sendLogSnapshot, sendMinimapZoomSnapshot, sendPaletteSnapshot, sendPlayerDeadSnapshot, sendQuestEvent, sendQuestSnapshot, sendRandomSeedSnapshot, sendRealmDiscoverySnapshot, sendRealmSnapshot, sendStaminaSnapshot, sendTimeSnapshot, setGameController } from "./runtime/bridge-layer/game-bridge.js";
 import { fontReady, getFontId, subscribeToFont } from "./runtime/ui-layer-react/font-store.js";
 import { getPalette, paletteReady, subscribeToPalette } from "./runtime/ui-layer-react/palette-store.js";
+import { initializeHudHiddenDataset } from "./runtime/ui-layer-react/platform-settings.js";
 import "./runtime/ui-layer-react/styles.css";
 
 const gameLayer = document.getElementById("game_layer");
+initializeHudHiddenDataset();
 
 void Promise.all([paletteReady, fontReady])
   .then(() => startGameLayer(gameLayer, getPalette(), getFontId(), getRealmSnapshot(), getCameraModeSnapshot()))
