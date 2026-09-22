@@ -58,7 +58,7 @@ There are many cool ideas! Here is a partial list.
 
 ### 🕹️ 2. Implement 
 
-Here is an [openspec](openspec/) workflow for collaboration with minimal code conflicts.
+Here is an [openspec](openspec/) workflow for collaboration with minimal code conflicts. See this 30-second [video short](https://www.youtube.com/shorts/lce1edytViI). 
 
 | # | Name | Command | Comment |
 | --- | --- | --- | --- |
