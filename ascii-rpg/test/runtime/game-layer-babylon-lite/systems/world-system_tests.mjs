@@ -75,7 +75,7 @@ test("publishes every glyph used by the project maps", () => {
     CLOSED_HORIZONTAL_DOOR_GLYPH,
     OPEN_HORIZONTAL_DOOR_GLYPH,
   ]));
-  assert.equal(paletteData.entries.find(({ glyph }) => glyph === ENEMY_GLYPH)?.color, "#ff3b3b");
+  assert.equal(paletteData.entries.find(({ glyph }) => glyph === ENEMY_GLYPH)?.color, "#fa8d8d");
   assert.equal(paletteData.entries.find(({ glyph }) => glyph === ENEMY_SPAWNER_GLYPH)?.color, "#ff3b3b");
 });
 
