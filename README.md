@@ -17,12 +17,6 @@ preference, version display, and GitHub Pages deployment path.
 
 - [Ascii RPG on GitHub Pages](https://samuelasherrivello.github.io/babylon-lite-ascii-rpg/)
 
-## Possible Game Ideas
-
-There are many cool ideas to be added. Here is a list.
-
-- [Possible Game Ideas](ascii-rpg/documentation/inspiration/ideas.md)
-
 ## Table of Contents
 
 1. [Images](#images)
@@ -56,9 +50,15 @@ commands from the repository root:
 
 ## Workflows
 
-### 📦 OpenSpec
+## 🕹️ 1. Choose new feature
 
-Here is a workflow for collaborative work with minimal code conflicts.
+There are many cool ideas! Here is a partial list.
+
+- [Possible Game Mechanics](ascii-rpg/documentation/inspiration/ideas.md)
+
+### 🕹️ 2. Implement 
+
+Here is an [openspec](openspec/) workflow for collaboration with minimal code conflicts.
 
 | # | Name | Command | Comment |
 | --- | --- | --- | --- |
