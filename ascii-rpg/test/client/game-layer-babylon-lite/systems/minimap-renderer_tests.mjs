@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createFogOfWar, discoverCell, discoverFromPlayer, getMinimapCoverage } from "../../../../src/client/game-layer-babylon-lite/systems/fog-of-war-system.js";
+import { moveWorldCell } from "../../../../src/client/game-layer-babylon-lite/characters/player/player-grid.js";
 import { findNearestNavigationTarget, getMinimapEdgeIndicators, getMinimapIndicatorSafeArea, getMinimapMarkers, getMinimapWorldCellGraphic, getMinimapWorldGraphic, getMinimapWorldPixel, MINIMAP_INDICATOR_MIN_SIZE, MINIMAP_INDICATOR_SAFE_INSET, MINIMAP_MARKER_DEPTHS } from "../../../../src/client/game-layer-babylon-lite/systems/minimap-renderer.js";
 import { canHandleMinimapScale, getMinimapCellLayout, getMinimapCellSize, getMinimapViewport, getNextMinimapScale, migrateMinimapScale } from "../../../../src/client/game-layer-babylon-lite/systems/minimap-zoom.js";
+import { damageMountainTarget, getDiggableMountainTarget } from "../../../../src/client/game-layer-babylon-lite/systems/mountain-system.js";
 
 function createWorld() {
   return {
@@ -41,6 +43,28 @@ test("minimap world graphics preserve discovered glyphs and palette colors", () 
     color: "#ff0000",
   });
   assert.equal(getMinimapWorldCellGraphic(world, fog, palette, { x: 1, y: 1 }), null);
+});
+
+test("destroyed mountains appear as grass after later player discovery", () => {
+  const world = createWorld();
+  const targetCell = { x: 2, y: 1 };
+  const terrain = world.terrain[targetCell.y][targetCell.x];
+  Object.assign(terrain, { kind: "mountain", glyph: "△", color: "#999999", walkable: false, health: 10, maxHealth: 100 });
+  world.fogUnclearRadius = 1;
+  const fog = createFogOfWar(world);
+  const mountainPalette = [...palette, { glyph: "•", color: "#55aa55", alpha: 1 }];
+
+  assert.equal(getMinimapWorldCellGraphic(world, fog, mountainPalette, targetCell), null);
+  const target = getDiggableMountainTarget(world, "Overground", targetCell);
+  assert.equal(damageMountainTarget(target, 10).killed, true);
+  assert.equal(getMinimapWorldCellGraphic(world, fog, mountainPalette, targetCell), null);
+
+  const nextCell = moveWorldCell({ x: 2, y: 2 }, { x: 0, y: -1 }, world);
+  discoverFromPlayer(fog, world, nextCell);
+  assert.deepEqual(getMinimapWorldCellGraphic(world, fog, mountainPalette, targetCell), {
+    glyph: "•",
+    color: "#55aa55",
+  });
 });
 
 test("minimap uses discovered world content and proportional fog opacity", () => {

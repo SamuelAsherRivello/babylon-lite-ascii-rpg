@@ -968,13 +968,23 @@ export function normalizePlayerMarkers(world) {
 
 function applyRealmProfile(realm, name) {
   const profile = REALM_PROFILES[name];
-  for (const row of realm.terrain) for (const cell of row) {
+  for (let y = 0; y < realm.terrain.length; y += 1) for (let x = 0; x < realm.terrain[y].length; x += 1) {
+    const cell = realm.terrain[y][x];
     if (cell.kind === "ground") {
       cell.kind = profile.groundKind;
       cell.glyph = profile.groundGlyph;
       cell.color = profile.groundColor;
     }
-    if (cell.kind === "wall") { cell.kind = profile.blockedKind; cell.glyph = profile.blockedGlyph; }
+    if (cell.kind === "wall") {
+      cell.kind = profile.blockedKind;
+      cell.glyph = name === "Overground" && (x === 0 || y === 0 || x === realm.columns - 1 || y === realm.rows - 1)
+        ? WALL_GLYPH
+        : profile.blockedGlyph;
+      if (name === "Overground" && cell.glyph !== WALL_GLYPH) {
+        cell.health = 100;
+        cell.maxHealth = 100;
+      }
+    }
   }
   realm.realm = name;
   realm.fogUnclearRadius = profile.fogUnclearRadius;

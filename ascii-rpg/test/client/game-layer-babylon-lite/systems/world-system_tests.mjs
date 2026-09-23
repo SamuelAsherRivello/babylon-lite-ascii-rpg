@@ -344,6 +344,38 @@ test("creates deterministic paired realm stairs on walkable terrain", async () =
   }
 });
 
+test("initializes durability only on interior Overground mountains and distinguishes its border", async () => {
+  const { realms } = await createWorldRealms({ rows: 64, columns: 64, torchCount: 1, seed: "diggable-mountain-terrain" });
+  const overground = realms.Overground;
+  const underground = realms.Underground;
+  let interiorMountains = 0;
+
+  for (let y = 0; y < overground.rows; y += 1) {
+    for (let x = 0; x < overground.columns; x += 1) {
+      const cell = overground.terrain[y][x];
+      if (cell.kind === "mountain" && x > 0 && y > 0 && x < overground.columns - 1 && y < overground.rows - 1) {
+        interiorMountains += 1;
+        assert.equal(cell.health, 100);
+        assert.equal(cell.maxHealth, 100);
+        assert.equal(cell.glyph, MOUNTAIN_GLYPH);
+      }
+      if (x === 0 || y === 0 || x === overground.columns - 1 || y === overground.rows - 1) {
+        assert.equal(cell.walkable, false);
+        assert.equal(cell.glyph, WALL_GLYPH);
+        assert.equal("health" in cell, false);
+      }
+    }
+  }
+  assert.ok(interiorMountains > 0, "seed should generate interior Overground mountains");
+  for (const row of underground.terrain) for (const cell of row) {
+    if (cell.kind === "wall") {
+      assert.equal(cell.health, undefined);
+      assert.equal(cell.maxHealth, undefined);
+      assert.equal(cell.glyph, WALL_GLYPH);
+    }
+  }
+});
+
 test("applies deterministic pass-scoped realm settings without breaking valid starts", async () => {
   const options = {
     rows: 128, columns: 128, torchCount: 2, seed: "density-profile",
