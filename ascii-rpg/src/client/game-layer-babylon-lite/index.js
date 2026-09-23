@@ -108,6 +108,7 @@ import { createNpcSystem } from "./systems/npc-system.js";
 import { createNpcSpawnerSystem, selectNpcSpawnerCells } from "./systems/npc-spawner-system.js";
 import { getMapviewLayout, getMapviewLightingFactor, getMapviewMarkers } from "./systems/mapview-renderer.js";
 import { resolvePlayerCombatTurn } from "./systems/combat-system.js";
+import { damageMountainTarget, getDiggableMountainTarget } from "./systems/mountain-system.js";
 import { createHealthBarSystem } from "./systems/health-bar-system.js";
 import { createFloatingTextSystem } from "./systems/floating-text-system.js";
 import { getFloatingTextStyle } from "./systems/floating-text-renderer.js";
@@ -345,6 +346,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   let enemySpawnerSystem = null;
   let npcSystem = null;
   let npcSpawnerSystem = null;
+  let mountainSystem = null;
   const dynamicOccupancies = new Map();
   const staticOccupancyIndexes = new Map();
   const healthBarSystem = createHealthBarSystem();
@@ -1502,8 +1504,8 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     const states = healthBarSystem.getVisible(now, {
       realm: activeRealm,
       isCellVisible: () => true,
-    }).map((state) => ({ state, entity: occupancy?.get(state.id) }))
-      .filter(({ entity }) => entity && getVisibleSlot(region, entity.cell) !== -1
+    }).map((state) => ({ state, entity: occupancy?.get(state.id) ?? state }))
+      .filter(({ entity }) => getVisibleSlot(region, entity.cell) !== -1
         && isDiscovered(fogOfWar, world, entity.cell));
 
     if (states.length > 0) ensureHealthBarOverlay(states.length * 4);
@@ -1511,8 +1513,8 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     for (const { state, entity } of states) {
       activeIds.add(state.id);
       const center = getRenderedCellCenter({
-        x: entity.cell.x - region.x,
-        y: entity.cell.y - region.y,
+        x: state.cell.x - region.x,
+        y: state.cell.y - region.y,
       }, viewport, world);
       const geometry = getHealthBarSpriteGeometry(center, viewport, state.fillRatio, {
         deltaStartRatio: state.deltaStartRatio,
@@ -1907,13 +1909,16 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     const direction = getHeldDirection();
     if (direction.x === 0 && direction.y === 0) return exhaustedAtAttempt;
     const attemptedCell = { x: playerCell.x + direction.x, y: playerCell.y + direction.y };
-    const collision = resolvePlayerCombatTurn(getOccupancyForWorld()?.getAt(attemptedCell), {
+    const occupant = getOccupancyForWorld()?.getAt(attemptedCell)
+      ?? getDiggableMountainTarget(world, activeRealm, attemptedCell);
+    const collision = resolvePlayerCombatTurn(occupant, {
       timeSystem,
       staminaSystem,
       experienceSystem,
       combatStatsSystem,
       enemySystem,
       spawnerSystem: enemySpawnerSystem,
+      mountainSystem,
     });
     if (collision.handled) {
       scheduleMovementRender();
@@ -2464,6 +2469,20 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       });
       scheduleEntityRender();
       scheduleHealthBarAnimation();
+    };
+    mountainSystem = {
+      damage: (target, amount) => {
+        const result = damageMountainTarget(target, amount);
+        if (!result.handled) return result;
+        logSystem.log({ message: `Player dug Mountain for -${result.appliedDamage} Health` });
+        recordEntityDamage(result.target, performance.now());
+        if (result.killed) {
+          scheduleMovementRender({ refreshLighting: true });
+          scheduleMinimapRender();
+          renderMapview();
+        }
+        return result;
+      },
     };
     enemySystem = createEnemySystem({
       timeSystem,

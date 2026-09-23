@@ -5,6 +5,7 @@ export const PLAYER_BASE_DAMAGE = 20;
 export function resolvePlayerDynamicCollision(occupant, {
   enemySystem,
   spawnerSystem,
+  mountainSystem,
   combatStatsSystem,
 } = {}) {
   if (!occupant) return Object.freeze({ handled: false, killed: false });
@@ -17,6 +18,10 @@ export function resolvePlayerDynamicCollision(occupant, {
     result = enemySystem?.damage(occupant.id, damage, { attacker: "player" });
   } else if (occupant.type === "enemy-spawner") {
     result = spawnerSystem?.damage(occupant.id, damage, { attacker: "player" });
+  } else if (occupant.type === "mountain") {
+    result = mountainSystem?.damage(occupant, damage, { attacker: "player" });
+    if (!result?.handled) return Object.freeze({ handled: false, killed: false });
+    return Object.freeze({ handled: true, killed: result.killed });
   } else {
     return Object.freeze({ handled: false, killed: false });
   }
@@ -29,11 +34,13 @@ export function resolvePlayerCombatTurn(occupant, {
   experienceSystem,
   enemySystem,
   spawnerSystem,
+  mountainSystem,
   combatStatsSystem,
 } = {}) {
   const result = resolvePlayerDynamicCollision(occupant, {
     enemySystem,
     spawnerSystem,
+    mountainSystem,
     combatStatsSystem,
   });
   if (result.handled) {

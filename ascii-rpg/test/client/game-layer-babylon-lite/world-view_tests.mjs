@@ -8,6 +8,8 @@ import {
 } from "../../../src/client/game-layer-babylon-lite/world-view.js";
 import { createViewport, getViewOriginForCamera } from "../../../src/client/game-layer-babylon-lite/characters/player/player-grid.js";
 import { createFogOfWar, discoverCell } from "../../../src/client/game-layer-babylon-lite/systems/fog-of-war-system.js";
+import { damageMountainTarget, getDiggableMountainTarget } from "../../../src/client/game-layer-babylon-lite/systems/mountain-system.js";
+import { getVisibleGlyph } from "../../../src/client/game-layer-babylon-lite/systems/world-system.js";
 
 function createWorld(columns = 5, rows = 4) {
   return { columns, rows };
@@ -42,6 +44,30 @@ test("world-view composition shares fog eligibility and excludes hidden glyphs",
   assert.equal(composition.cells.find(({ cell }) => cell.x === 1).glyph, null);
 });
 
+test("game and map world views read the same converted mountain terrain", () => {
+  const terrain = { kind: "mountain", glyph: "△", color: "#999999", walkable: false, health: 10, maxHealth: 100 };
+  const world = {
+    columns: 3,
+    rows: 3,
+    terrain: Array.from({ length: 3 }, (_, y) => Array.from({ length: 3 }, (_, x) =>
+      x === 1 && y === 1 ? terrain : { kind: "grass", glyph: ".", walkable: true })),
+    characters: Array.from({ length: 3 }, () => Array.from({ length: 3 }, () => null)),
+  };
+  const target = getDiggableMountainTarget(world, "Overground", { x: 1, y: 1 });
+  assert.equal(damageMountainTarget(target, 10).killed, true);
+  assert.equal(terrain.walkable, true);
+
+  const composition = createWorldViewComposition({
+    world,
+    fog: {},
+    source: { x: 0, y: 0, width: 3, height: 3 },
+    getGlyph: getVisibleGlyph,
+    discovered: () => true,
+  });
+  assert.equal(composition.cells.find(({ cell }) => cell.x === 1 && cell.y === 1).glyph, "•");
+  assert.equal(collectWorldViewGlyphs(composition).has("•"), true);
+});
+
 test("world-view never prepares fogged or off-region NPC and spawner glyphs", () => {
   const calls = [];
   const composition = createWorldViewComposition({
@@ -51,6 +77,7 @@ test("world-view never prepares fogged or off-region NPC and spawner glyphs", ()
   });
   assert.deepEqual(calls, [1]);
   assert.deepEqual([...collectWorldViewGlyphs(composition)], ["☺"]);
+});
 });
 
 test("world-view composition carries numeric fog visibility", () => {
