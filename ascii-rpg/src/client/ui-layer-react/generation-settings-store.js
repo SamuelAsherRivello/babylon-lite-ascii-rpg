@@ -4,7 +4,7 @@ export const GENERATION_SETTINGS_STORAGE_KEY = "babylon-lite-ascii-rpg.generatio
 export const DENSITY_LEVELS = Object.freeze(["Low", "Med", "High"]);
 export const GENERATION_DENSITY_DETAILS = Object.freeze({
   ground: Object.freeze({ Low: "70% walkable target", Med: "Current walkable target", High: "120% walkable target" }),
-  "overground-walls": Object.freeze({ Low: "30% walls, larger clumps", Med: "35% walls, larger clumps", High: "45% walls, largest clumps" }),
+  "overground-walls": Object.freeze({ Low: "11.25% walls, larger clumps", Med: "22.5% walls, larger clumps", High: "45% walls, largest clumps" }),
   "underground-caves": Object.freeze({ Low: "30% walls, smaller cave clumps", Med: "40% walls, larger cave clumps", High: "50% walls, largest cave clumps" }),
   water: Object.freeze({ Low: "5% lake chance", Med: "30% lake chance", High: "Guaranteed nine lakes" }),
   walkability: Object.freeze({ Low: "70% of current floor target", Med: "Current floor target", High: "200% floor target, open tunnels" }),

@@ -11,13 +11,13 @@
       "id": "overground-walls",
       "title": "Overground Walls",
       "order": 2,
-      "density": "Med"
+      "density": "High"
     },
     {
       "id": "underground-caves",
       "title": "Underground Caves",
       "order": 3,
-      "density": "Med"
+      "density": "High"
     },
     {
       "id": "water",
