@@ -3,7 +3,7 @@ export function resolveGenerationProfile(generationSettings = { passes: [] }) {
   const densityMultiplier = (id, values) => values[densityFor(id)] ?? values.Med;
   return Object.freeze({
     caveWallFillPercents: Object.freeze({
-      Overground: densityMultiplier("overground-walls", { Low: 11.25, Med: 22.5, High: 45 }),
+      Overground: densityMultiplier("overground-walls", { Low: 30, Med: 35, High: 45 }),
       Underground: densityMultiplier("underground-caves", { Low: 30, Med: 40, High: 50 }),
     }),
     caveSmoothingIterationsByRealm: Object.freeze({
