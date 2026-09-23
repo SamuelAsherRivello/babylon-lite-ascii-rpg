@@ -82,7 +82,7 @@ import {
   isDiscovered,
 } from "./systems/fog-of-war-system.js";
 import { findNearestNavigationTarget, getMinimapEdgeIndicators, getMinimapIndicatorSafeArea, getMinimapMarkers, getMinimapWorldCellGraphic, MINIMAP_INDICATOR_MIN_SIZE, MINIMAP_INDICATOR_SAFE_INSET } from "./systems/minimap-renderer.js";
-import { canHandleMinimapScale, getMinimapCellLayout, getNextMinimapScale, MINIMAP_SCALE_LEVELS } from "./systems/minimap-zoom.js";
+import { canHandleMinimapScale, getMinimapCellLayout, getMinimapCellSize, getNextMinimapScale, MINIMAP_SCALE_LEVELS } from "./systems/minimap-zoom.js";
 import { createTransitionSystem, TRANSITION_PHASES } from "./systems/transition-system.js";
 import questData from "./data/quest_data.json";
 import objectData from "./data/object_data.json";
@@ -115,10 +115,17 @@ import {
 } from "./systems/health-bar-renderer.js";
 import { attachReplacementRendererLayer } from "./systems/renderer-layer-handoff.js";
 import { createCoalescedFrameScheduler } from "./movement-render-scheduler.js";
+import { PERFORMANCE_SCENARIOS, performanceMonitor } from "./performance-monitor.js";
 
 const GLYPHS = PROJECT_MAP_GLYPHS;
 const FOG_BACKING_GLYPH = "\u0000fog-backing";
 const FOG_BACKING_COLOR = Object.freeze([0.06, 0.06, 0.06, 1]);
+// Match default emoji presentation or an explicit emoji variation selector.
+// This makes a newly added emoji automatically use the world-view footprint
+// below, while text-presentation symbols such as ♥ and ☠ retain normal sizing.
+const EMOJI_PRESENTATION_PATTERN = /\p{Emoji_Presentation}/u;
+const EMOJI_VARIATION_SELECTOR = "\uFE0F";
+const MINIMAP_EMOJI_CELL_RATIO = 0.7;
 const WORLD_ROWS = 512;
 const WORLD_COLUMNS = 512;
 const TORCHES_PER_SCREEN = 3;
@@ -138,6 +145,16 @@ const CAMERA_RESOLVE_INTENTS = Object.freeze({
 
 function getInitialSpriteLayerCapacity(viewport) {
   return Math.max(1, Math.min(INITIAL_SPRITE_LAYER_CAPACITY, viewport.rows * viewport.columns));
+}
+
+function getMinimapGlyphBounds(glyph, x, y, cellWidth, cellHeight) {
+  const displayGlyph = getFacingGlyph(glyph);
+  const isEmoji = EMOJI_PRESENTATION_PATTERN.test(displayGlyph)
+    || displayGlyph.includes(EMOJI_VARIATION_SELECTOR);
+  if (!isEmoji) return { x, y, width: cellWidth, height: cellHeight };
+  const width = cellWidth * MINIMAP_EMOJI_CELL_RATIO;
+  const height = cellHeight * MINIMAP_EMOJI_CELL_RATIO;
+  return { x: x + (cellWidth - width) / 2, y: y + (cellHeight - height) / 2, width, height };
 }
 
 function getRenderedCellCenter(cell, viewport, world) {
@@ -217,7 +234,7 @@ function resolveGenerationProfile(generationSettings = { passes: [] }) {
  * Starts the non-React Babylon Lite game client and returns its narrow UI bridge.
  * The bridge deliberately exposes only the UI-facing game state and controls.
  */
-export async function startGameLayer(container, initialPalette, initialFontId = "monospace", initialRealm = "Overground", initialCameraMode = "lock", generationSettings = { passes: [] }) {
+export async function startGameLayer(container, initialPalette, initialFontId = "monospace", initialRealm = "Overground", initialCameraMode = "lock", generationSettings = { passes: [] }, initialZoom = DEFAULT_ZOOM) {
   if (!container || !navigator.gpu) {
     throw new Error("Babylon Lite requires WebGPU; the game world was not started.");
   }
@@ -289,7 +306,8 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   let transitionSystem = null;
   let transitionCenter = null;
   let playerRenderCenter = null;
-  let viewport = createViewportForCanvas(canvas);
+  let zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.round(Number(initialZoom) || DEFAULT_ZOOM)));
+  let viewport = createViewportForCanvas(canvas, zoom);
   let lastCanvasSize = {
     width: Math.max(1, canvas.clientWidth || window.innerWidth),
     height: Math.max(1, canvas.clientHeight || window.innerHeight),
@@ -298,6 +316,9 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   let canvasResizeObserver = null;
   let browserZoomMediaQuery = null;
   let aspectRebuildFrame = null;
+  let activeAspectMode = document.documentElement.dataset.presentationAspect === "portrait"
+    ? "portrait"
+    : "landscape";
   let world = null;
   let worldRealms = null;
   let sessionSeed = null;
@@ -323,7 +344,6 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   let minimapZoom = 2;
   let viewOrigin = { x: 0, y: 0 };
   let initialWorldRenderComplete = false;
-  let startupCameraModeReapplyPending = false;
   let cameraModeReapplyAfterTransition = false;
   let cameraMode = normalizeCameraMode(initialCameraMode);
   const timeSystem = createTimeSystem();
@@ -350,7 +370,6 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   let realmAmbient = { Overground: 0.9, Underground: 0.1 };
   const lightingFieldCache = createSceneLightingFieldCache();
   let fontId = initialFontId;
-  let zoom = DEFAULT_ZOOM;
   let glyphBackgroundEnabled = true;
   let backgroundDarkness = 50;
   const spriteIndexes = [];
@@ -366,6 +385,24 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     generationMs: null, firstVisibleRenderMs: null, totalReadyMs: null,
     lastZoomRerenderMs: null, lastZoomWarmupMs: null,
     generationYields: 0, generationWaitMs: 0, generationPhases: {},
+  };
+
+  const getPerformanceEnvironment = () => ({
+    viewport: {
+      width: canvas.clientWidth || window.innerWidth,
+      height: canvas.clientHeight || window.innerHeight,
+    },
+    devicePixelRatio: window.devicePixelRatio || 1,
+    zoom,
+    visibility: document.visibilityState,
+    focused: document.hasFocus?.() ?? true,
+  });
+  performanceMonitor.updateEnvironment(getPerformanceEnvironment());
+
+  const finishStartupPerformance = () => {
+    if (performanceMonitor.getActiveScenario() !== PERFORMANCE_SCENARIOS.STARTUP) return;
+    performanceMonitor.mark("input-unlocked");
+    performanceMonitor.stop("completed");
   };
 
   const getOccupancyForWorld = (targetWorld = world) => dynamicOccupancies.get(targetWorld?.realmName) ?? null;
@@ -439,6 +476,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     // generated realm world is being assigned.
     const activeFog = world?.fog ?? fogOfWar;
     if (!activeFog) return;
+    const started = performance.now();
     if (minimapGlyphCanvases.size > 8192) minimapGlyphCanvases.clear();
     minimapCanvas.hidden = false;
     const bounds = minimapCanvas.getBoundingClientRect();
@@ -452,31 +490,12 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     // reduced into the minimap's destination cells.
     context.imageSmoothingEnabled = true;
     context.imageSmoothingQuality = "high";
-    // The minimap uses the game canvas dimensions to select its source cells,
-    // then maps those cells into its own fixed canvas. This keeps matching
-    // game/minimap zooms on the same viewport composition instead of making a
-    // smaller minimap panel define a different camera.
-    const gameScreenWidth = canvas.clientWidth || window.innerWidth;
-    const gameScreenHeight = canvas.clientHeight || window.innerHeight;
-    const minimapBaseViewport = createViewport({
-      screenWidth: gameScreenWidth,
-      screenHeight: gameScreenHeight,
-      upscale: DEFAULT_UPSCALE,
-      zoom: minimapZoom,
-      fontResolution: DEFAULT_FONT_RESOLUTION,
-      gridWidth: DEFAULT_GRID_WIDTH,
-      gridHeight: DEFAULT_GRID_HEIGHT,
-    });
     const minimapPixelRatio = devicePixelRatio;
-    const fixedCellWidth = minimapBaseViewport.gridWidth * minimapPixelRatio;
-    const fixedCellHeight = minimapBaseViewport.gridHeight * minimapPixelRatio;
-    const sourceColumns = Math.min(world.columns,
-      Math.max(1, minimapBaseViewport.columns),
-      Math.max(1, Math.floor(minimapCanvas.width / fixedCellWidth)),
-    );
+    const fixedCellWidth = getMinimapCellSize(minimapZoom) * minimapPixelRatio;
+    const fixedCellHeight = fixedCellWidth;
+    const sourceColumns = Math.min(world.columns, Math.max(1, Math.floor(minimapCanvas.width / fixedCellWidth)));
     const sourceRows = Math.min(
       world.rows,
-      Math.max(1, minimapBaseViewport.rows),
       Math.max(1, Math.floor(minimapCanvas.height / fixedCellHeight)),
     );
     // A fixed-footprint minimap is necessarily a crop when its panel is
@@ -538,7 +557,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     }
     const visual = minimapGlyphCache.ensure(
       minimapZoom,
-      minimapBaseViewport.gridWidth,
+      fixedCellWidth,
       collectWorldViewGlyphs(composition),
     );
     renderWorldViewComposition(composition, {
@@ -574,13 +593,14 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
           });
           minimapGlyphCanvases.set(cacheKey, glyphCanvas);
         }
-        context.drawImage(
-          glyphCanvas,
+        const glyphBounds = getMinimapGlyphBounds(
+          glyph,
           offsetX + localX * cellWidth,
           offsetY + localY * cellHeight,
           cellWidth,
           cellHeight,
         );
+        context.drawImage(glyphCanvas, glyphBounds.x, glyphBounds.y, glyphBounds.width, glyphBounds.height);
       },
       drawOverlay: () => {
         context.globalAlpha = 1;
@@ -653,6 +673,14 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
         }
       },
     });
+    if (performanceMonitor.isActive()) {
+      performanceMonitor.recordPhase("minimap", performance.now() - started, {
+        visibleCells: minimapRegion.count,
+        zoom: minimapZoom,
+        warmupMs: visual.warmupMs ?? 0,
+        refresh: "ordinary",
+      });
+    }
   };
 
   const cancelMapviewRender = () => {
@@ -695,8 +723,6 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       getVisibility: getMapviewVisibility,
     });
     const visual = minimapGlyphCache.ensure(1, destination.cellWidth, collectWorldViewGlyphs(composition));
-    const mapviewMarkerWidth = Math.max(2 * devicePixelRatio, destination.cellWidth * 0.7);
-    const mapviewMarkerHeight = Math.max(2 * devicePixelRatio, destination.cellHeight * 0.7);
     const renderJob = renderWorldViewCompositionCooperatively(composition, {
       drawBackground: () => {
         context.globalAlpha = 1;
@@ -716,22 +742,18 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
           glyphCanvas = createGlyphRasterCanvas(raster, litColor, { alphaScale: 1, colorScale: 1, tint: true });
           mapviewGlyphCanvases.set(cacheKey, glyphCanvas);
         }
-        // `glyph` can carry rendering-only facing and palette-offset keys, so
-        // identify the player from the authoritative active player cell.
-        const isPlayerCell = mapviewWorld.realmName === activeRealm
-          && cell.x === playerCell?.x
-          && cell.y === playerCell?.y;
-        const glyphWidth = isPlayerCell ? mapviewMarkerWidth : destination.cellWidth;
-        const glyphHeight = isPlayerCell ? mapviewMarkerHeight : destination.cellHeight;
-        context.drawImage(
-          glyphCanvas,
-          destination.x + localX * destination.cellWidth + (destination.cellWidth - glyphWidth) / 2,
-          destination.y + localY * destination.cellHeight + (destination.cellHeight - glyphHeight) / 2,
-          glyphWidth,
-          glyphHeight,
+        const glyphBounds = getMinimapGlyphBounds(
+          glyph,
+          destination.x + localX * destination.cellWidth,
+          destination.y + localY * destination.cellHeight,
+          destination.cellWidth,
+          destination.cellHeight,
         );
+        context.drawImage(glyphCanvas, glyphBounds.x, glyphBounds.y, glyphBounds.width, glyphBounds.height);
       },
       drawOverlay: () => {
+        const markerWidth = Math.max(2 * devicePixelRatio, destination.cellWidth * 0.7);
+        const markerHeight = Math.max(2 * devicePixelRatio, destination.cellHeight * 0.7);
         const occupancy = getOccupancyForWorld(mapviewWorld);
         const markers = getMapviewMarkers({
           world: mapviewWorld,
@@ -756,10 +778,10 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
             context.stroke();
           }
           context.fillRect(
-            destination.x + marker.cell.x * destination.cellWidth + (destination.cellWidth - mapviewMarkerWidth) / 2,
-            destination.y + marker.cell.y * destination.cellHeight + (destination.cellHeight - mapviewMarkerHeight) / 2,
-            mapviewMarkerWidth,
-            mapviewMarkerHeight,
+            destination.x + marker.cell.x * destination.cellWidth + (destination.cellWidth - markerWidth) / 2,
+            destination.y + marker.cell.y * destination.cellHeight + (destination.cellHeight - markerHeight) / 2,
+            markerWidth,
+            markerHeight,
           );
         }
       },
@@ -864,7 +886,14 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
           glyphCanvas = createGlyphRasterCanvas(raster, litColor, { alphaScale: 1, colorScale: 1, tint: true });
           settingsMapGlyphCanvases.set(cacheKey, glyphCanvas);
         }
-        context.drawImage(glyphCanvas, destination.x + localX * destination.cellWidth, destination.y + localY * destination.cellHeight, destination.cellWidth, destination.cellHeight);
+        const glyphBounds = getMinimapGlyphBounds(
+          glyph,
+          destination.x + localX * destination.cellWidth,
+          destination.y + localY * destination.cellHeight,
+          destination.cellWidth,
+          destination.cellHeight,
+        );
+        context.drawImage(glyphCanvas, glyphBounds.x, glyphBounds.y, glyphBounds.width, glyphBounds.height);
       },
       drawOverlay: (mapDestination, region) => {
         if (revision !== settingsMapPreviewRevision) return;
@@ -1121,6 +1150,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
         setTransitionMask({ phase: TRANSITION_PHASES.IDLE, value: 0 });
         transitionCenter = null;
         reapplyCameraModeAfterTransition();
+        finishStartupPerformance();
       },
     });
     if (!started) {
@@ -1304,8 +1334,13 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     fontId,
     fontFamily: getFontOption(fontId).family,
     glyphLimit: GLYPHS.length + 2,
-    rasterize: (glyph, family, size) => glyphBackgroundEnabled
-      ? rasterizeCompositeGlyph(glyph, family, size, paletteColors.get(getFacingGlyph(glyph)) ?? [1, 1, 1], backgroundDarkness, getGlyphOffsetsFromKey(glyph))
+    // World-view canvases already paint each cell's terrain/background.  A
+    // composite glyph adds a second, full-cell opaque backing behind emoji
+    // such as the player and gold, making that backing larger than markers.
+    // Keep the game-view composite cache separate; minimap-derived views only
+    // need the glyph's transparent raster, with its palette scale and offset.
+    rasterize: (glyph, family, size) => glyph === FOG_BACKING_GLYPH
+      ? rasterizeSolidGlyph(size)
       : rasterizeGlyph(glyph, family, size, "#ffffff", getGlyphOffsetsFromKey(glyph)),
   });
 
@@ -1723,12 +1758,23 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     if (floatingTextSystem.hasActive(performance.now())) scheduleFloatingTextAnimation();
     schedulePresentation();
     metrics.visibleCells = region.count;
-    return {
-      renderMs: performance.now() - started,
+    const renderMs = performance.now() - started;
+    const result = {
+      renderMs,
       warmupMs: visual.warmupMs,
       submittedCells: metrics.submittedCells - submittedBefore,
       skippedCells: metrics.skippedCells - skippedBefore,
     };
+    if (performanceMonitor.isActive()) {
+      performanceMonitor.recordPhase("main-world", renderMs, {
+        visibleCells: region.count,
+        submittedCells: result.submittedCells,
+        skippedCells: result.skippedCells,
+        warmupMs: result.warmupMs,
+        zoom,
+      });
+    }
+    return result;
   };
 
   movementRenderScheduler = createCoalescedFrameScheduler({
@@ -2089,6 +2135,13 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     }
     generating = false;
     metrics.generationMs = performance.now() - generationStarted;
+    if (performanceMonitor.getActiveScenario() === PERFORMANCE_SCENARIOS.STARTUP) {
+      performanceMonitor.recordPhase("generation", metrics.generationMs, {
+        yields: metrics.generationYields,
+        waitMs: metrics.generationWaitMs,
+      });
+      performanceMonitor.mark("generation-complete");
+    }
     playerCell = world.playerStart;
     world.playerCell = playerCell;
     fogOfWar = world.fog;
@@ -2361,7 +2414,11 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     renderMinimap();
     renderMapview();
     metrics.firstVisibleRenderMs = firstRender.renderMs;
+    if (performanceMonitor.getActiveScenario() === PERFORMANCE_SCENARIOS.STARTUP) {
+      performanceMonitor.mark("first-visible-world-render");
+    }
     startInitialReveal();
+    if (!transitionActive) finishStartupPerformance();
     metrics.totalReadyMs = performance.now() - generationStarted;
     console.info("ASCII RPG render readiness", JSON.stringify({
       generationMs: metrics.generationMs,
@@ -2405,6 +2462,21 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   }
 
   return Object.freeze({
+    startPerformanceSession(options = {}) {
+      return performanceMonitor.start({
+        ...options,
+        environment: { ...getPerformanceEnvironment(), ...(options.environment ?? {}) },
+      });
+    },
+    stopPerformanceSession(completion) {
+      return performanceMonitor.stop(completion);
+    },
+    getPerformanceReport() {
+      return performanceMonitor.getReport();
+    },
+    resetPerformanceSession() {
+      performanceMonitor.reset();
+    },
     setPalette(nextPalette) {
       validatePaletteEntries(nextPalette);
       const offsetChanged = collectChangedOffsetGlyphs(palette, nextPalette);
@@ -2457,19 +2529,9 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       if (selected === zoom) return;
       const started = performance.now();
       zoom = selected;
-      let result;
-      if (startupCameraModeReapplyPending) {
-        viewport = createViewportForCanvas(canvas, zoom);
-        if (world && playerCell) {
-          resolveCameraOrigin(CAMERA_RESOLVE_INTENTS.initial);
-        }
-        startupCameraModeReapplyPending = false;
-        result = renderer ? renderWorld() : { renderMs: 0, warmupMs: 0 };
-      } else {
-        // A zoom changes the number of visible cells. Reapply the active
-        // camera mode instead of preserving Lock/Deadzone's old screen cell.
-        result = rebuildViewport({ reapplyCameraMode: true, zoomChanged: true });
-      }
+      // A zoom changes the number of visible cells. Reapply the active
+      // camera mode instead of preserving Lock/Deadzone's old screen cell.
+      const result = rebuildViewport({ reapplyCameraMode: true, zoomChanged: true });
       metrics.lastZoomWarmupMs = result.warmupMs;
       metrics.lastZoomRerenderMs = performance.now() - started - result.warmupMs;
       console.info("ASCII RPG zoom render", JSON.stringify({
@@ -2644,18 +2706,19 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
         mapviewRealm = activeRealm;
       }
     },
-    setAspectMode() {
+    setAspectMode(nextAspect) {
+      const selectedAspect = nextAspect === "portrait" ? "portrait" : "landscape";
+      if (selectedAspect === activeAspectMode) return;
+      activeAspectMode = selectedAspect;
       if (aspectRebuildFrame !== null) window.cancelAnimationFrame(aspectRebuildFrame);
       aspectRebuildFrame = window.requestAnimationFrame(() => {
         // The React aspect update changes the canvas' CSS frame. Wait for the
         // following presentation frame so clientWidth/clientHeight describe the
-        // active layout rather than the outgoing portrait frame.
+        // active layout rather than the outgoing presentation frame.
         aspectRebuildFrame = window.requestAnimationFrame(() => {
           aspectRebuildFrame = null;
-          // The UI can restore Landscape after the game has already begun
-          // painting its initial frame. Reapply rather than preserve that
-          // outgoing frame's camera offset so the player is centered in the
-          // actual selected presentation aspect.
+          // A user-selected aspect change must reapply the active camera so the
+          // player is centered in the newly committed presentation frame.
           rebuildViewport({ reapplyCameraMode: true });
           renderMinimap();
           renderMapview();
@@ -2675,12 +2738,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     },
     setCameraMode(nextMode) {
       const selected = normalizeCameraMode(nextMode);
-      if (selected === cameraMode) {
-        startupCameraModeReapplyPending = true;
-        if (world && playerCell) rebuildViewport({ centerOnPlayer: true });
-        return;
-      }
-      startupCameraModeReapplyPending = false;
+      if (selected === cameraMode) return;
       cameraMode = selected;
       rebuildViewport({ centerOnPlayer: true });
     },

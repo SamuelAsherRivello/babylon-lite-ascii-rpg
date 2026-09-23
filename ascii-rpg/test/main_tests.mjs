@@ -391,8 +391,19 @@ test("documents the plain safe-area template", async () => {
   if (!gameLayer.includes("resolveCameraOrigin(CAMERA_RESOLVE_INTENTS.initial)")
     || !gameLayer.includes("resolveCameraOrigin(sourceScreenCell")
     || !gameLayer.includes("resolveCameraOrigin(CAMERA_RESOLVE_INTENTS.activeMode, { targetCell: nextCell, direction, commit: false })")
-    || !gameLayer.includes("setAspectMode()")
+    || !page.includes('dataset.presentationAspect = localStorage.getItem("babylon-lite-ascii-rpg.aspect") === "portrait"')
+    || !gameLayer.includes("let activeAspectMode = document.documentElement.dataset.presentationAspect === \"portrait\"")
+    || !gameLayer.includes("setAspectMode(nextAspect)")
+    || !gameLayer.includes("if (selectedAspect === activeAspectMode) return;")
+    || !main.includes("getZoomSnapshot")
+    || !main.includes("getGenerationSettings(), getZoomSnapshot()")
+    || !gameBridge.includes("getStoredInitialZoom")
+    || !gameBridge.includes("export function getZoomSnapshot()")
+    || !gameLayer.includes("initialZoom = DEFAULT_ZOOM")
+    || !gameLayer.includes("createViewportForCanvas(canvas, zoom)")
+    || !gameLayer.includes("if (selected === cameraMode) return;")
     || !gameLayer.includes("rebuildViewport({ reapplyCameraMode: true });")
+    || !app.includes("useLayoutEffect(() => {")
     || !app.includes("sendAspectSnapshot(aspectMode)")
     || !gameBridge.includes("sendAspectSnapshot")
     || !gameBridge.includes("setAspectMode?.(aspectSnapshot)")) {
@@ -475,6 +486,10 @@ test("documents the plain safe-area template", async () => {
   if (!app.includes("getRandomSeedSnapshot") || !app.includes("subscribeToRandomSeed")
     || !app.includes("value: (seedValue) => seedValue") || !app.includes("randomSeed={randomSeed}")) {
     throw new Error("The randomSeed URL argument example must use the current session seed.");
+  }
+  if (!app.includes("randomSeed === \"0\" ? \"0\" : \"random\"")
+    || !app.includes("<ProceduralSettingsWindow settings={generationSettings} randomSeed={randomSeed}")) {
+    throw new Error("The Procedural preview must initialize to seed 0 for a seed-0 session.");
   }
   if (!app.includes('getUrlBooleanArgument(window.location.href, "skipTutorial")')) {
     throw new Error("skipTutorial must default to false and skip the tutorial only when its URL value is true.");

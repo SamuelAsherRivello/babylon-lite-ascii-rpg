@@ -42,10 +42,9 @@ import { createGlyphRasterCanvas, rasterizeCompositeGlyph, getGlyphRasterSize } 
 import { colorToLinearRgba } from "../game-layer-babylon-lite/palette-color-cache.js";
 import { DEFAULT_ZOOM } from "../game-layer-babylon-lite/zoom-scale.js";
 import {
-  getPlatformSettingsDefaults,
   getStoredAspectMode,
   getStoredBooleanValue,
-  getMigratedStoredZoomValue,
+  getStoredInitialZoom,
   isMobilePlatform,
 } from "./platform-settings.js";
 import { MAX_ZOOM, MIN_ZOOM, ZOOM_SCALE_STORAGE_VERSION } from "../game-layer-babylon-lite/zoom-scale.js";
@@ -106,6 +105,7 @@ import {
   normalizeCameraMode,
 } from "../bridge-layer/camera.js";
 import { getNextMinimapScale, migrateMinimapScale } from "../game-layer-babylon-lite/systems/minimap-zoom.js";
+import { performanceMonitor } from "../game-layer-babylon-lite/performance-monitor.js";
 import { isLogScrollAtBottom } from "./log-scroll.js";
 import {
   AMBIENT_LIGHT_STEP,
@@ -198,12 +198,7 @@ const settingsHelp = Object.freeze({
 });
 
 function getStoredZoom() {
-  const defaults = getPlatformSettingsDefaults();
-  return getMigratedStoredZoomValue(
-    localStorage.getItem(zoomStorageKey),
-    defaults.zoom,
-    localStorage.getItem(zoomStorageVersionKey),
-  );
+  return getStoredInitialZoom();
 }
 
 function getStoredMinimapZoom() {
@@ -1356,10 +1351,10 @@ export function GameplaySettingsWindow({ quest, defaultQuestId, onSelectQuest, o
   );
 }
 
-export function ProceduralSettingsWindow({ settings, onConfirm, onClose }) {
+export function ProceduralSettingsWindow({ settings, randomSeed, onConfirm, onClose }) {
   const [draft, setDraft] = useState(() => normalizeGenerationSettings(settings));
   const [previewRealm, setPreviewRealm] = useState("Overground");
-  const [previewSeed, setPreviewSeed] = useState("random");
+  const [previewSeed, setPreviewSeed] = useState(() => randomSeed === "0" ? "0" : "random");
   const [previewViewport, setPreviewViewport] = useState({ zoom: 1, x: 0, y: 0 });
   const [error, setError] = useState("");
   const previewCanvasRef = useRef(null);
@@ -1707,6 +1702,7 @@ function AppContent() {
     let frameId = 0;
 
     const updateFps = (timestamp) => {
+      if (performanceMonitor.isActive()) performanceMonitor.recordFrame(timestamp);
       frameCount += 1;
       const elapsed = timestamp - sampleStart;
       if (elapsed >= 1000) {
@@ -1764,11 +1760,10 @@ function AppContent() {
     localStorage.setItem(fullscreenStorageKey, fullscreenPreferred ? "true" : "false");
   }, [fullscreenPreferred]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     localStorage.setItem(aspectStorageKey, aspectMode);
     document.documentElement.dataset.presentationAspect = aspectMode;
     sendAspectSnapshot(aspectMode);
-    return () => delete document.documentElement.dataset.presentationAspect;
   }, [aspectMode]);
 
   useEffect(() => {
@@ -2265,7 +2260,7 @@ function AppContent() {
           onClose={() => setGameplaySettingsOpen(false)}
         />
       ) : null}
-      {proceduralSettingsOpen ? <ProceduralSettingsWindow settings={generationSettings} onConfirm={confirmGenerationSettings} onClose={() => setProceduralSettingsOpen(false)} /> : null}
+      {proceduralSettingsOpen ? <ProceduralSettingsWindow settings={generationSettings} randomSeed={randomSeed} onConfirm={confirmGenerationSettings} onClose={() => setProceduralSettingsOpen(false)} /> : null}
     </>
   );
 }

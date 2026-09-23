@@ -2,17 +2,37 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./client/ui-layer-react/App.jsx";
 import { startGameLayer } from "./client/game-layer-babylon-lite/index.js";
-import { getCameraModeSnapshot, getCombatStatsSnapshot, getExperienceSnapshot, getGoldSnapshot, getHealthSnapshot, getLogSnapshot, getPlayerDeadSnapshot, getQuestSnapshot, getRealmDiscoverySnapshot, getRealmSnapshot, getStaminaSnapshot, sendCombatStatsSnapshot, sendExperienceSnapshot, sendFontSnapshot, sendGoldSnapshot, sendHealthSnapshot, sendLogSnapshot, sendMinimapZoomSnapshot, sendPaletteSnapshot, sendPlayerDeadSnapshot, sendQuestEvent, sendQuestSnapshot, sendRandomSeedSnapshot, sendRealmDiscoverySnapshot, sendRealmSnapshot, sendStaminaSnapshot, sendTimeSnapshot, setGameController } from "./client/bridge-layer/game-bridge.js";
+import { getCameraModeSnapshot, getCombatStatsSnapshot, getExperienceSnapshot, getGoldSnapshot, getHealthSnapshot, getLogSnapshot, getPlayerDeadSnapshot, getQuestSnapshot, getRealmDiscoverySnapshot, getRealmSnapshot, getStaminaSnapshot, getZoomSnapshot, getPerformanceReport, resetPerformanceSession, sendCombatStatsSnapshot, sendExperienceSnapshot, sendFontSnapshot, sendGoldSnapshot, sendHealthSnapshot, sendLogSnapshot, sendMinimapZoomSnapshot, sendPaletteSnapshot, sendPlayerDeadSnapshot, sendQuestEvent, sendQuestSnapshot, sendRandomSeedSnapshot, sendRealmDiscoverySnapshot, sendRealmSnapshot, sendStaminaSnapshot, sendTimeSnapshot, setGameController, startPerformanceSession, stopPerformanceSession } from "./client/bridge-layer/game-bridge.js";
 import { fontReady, getFontId, subscribeToFont } from "./client/ui-layer-react/font-store.js";
 import { getPalette, paletteReady, subscribeToPalette } from "./client/ui-layer-react/palette-store.js";
 import { generationSettingsReady, getGenerationSettings } from "./client/ui-layer-react/generation-settings-store.js";
+import { PERFORMANCE_SCENARIOS, performanceMonitor } from "./client/game-layer-babylon-lite/performance-monitor.js";
 import "./client/ui-layer-react/styles.css";
 
 const gameLayer = document.getElementById("game_layer");
+const performanceMode = new URL(window.location.href).searchParams.get("performance");
+if (performanceMode === "startup" || performanceMode === "all") {
+  performanceMonitor.start({ scenario: PERFORMANCE_SCENARIOS.STARTUP, durationMs: 120000 });
+}
 void Promise.all([paletteReady, fontReady, generationSettingsReady])
-  .then(() => startGameLayer(gameLayer, getPalette(), getFontId(), getRealmSnapshot(), getCameraModeSnapshot(), getGenerationSettings()))
+  .then(() => startGameLayer(gameLayer, getPalette(), getFontId(), getRealmSnapshot(), getCameraModeSnapshot(), getGenerationSettings(), getZoomSnapshot()))
   .then((controller) => {
     setGameController(controller);
+    window.asciiRpgPerformance = Object.freeze({
+      scenarios: PERFORMANCE_SCENARIOS,
+      start: startPerformanceSession,
+      stop: stopPerformanceSession,
+      report: getPerformanceReport,
+      reset: resetPerformanceSession,
+    });
+    if (performanceMode === "idle" || performanceMode === "movement" || performanceMode === "sprint") {
+      startPerformanceSession({
+        scenario: performanceMode,
+        direction: "right",
+        sprint: performanceMode === "sprint",
+        durationMs: 10000,
+      });
+    }
     controller.subscribeToMinimapZoom(sendMinimapZoomSnapshot);
     sendPaletteSnapshot(getPalette());
     sendFontSnapshot(getFontId());

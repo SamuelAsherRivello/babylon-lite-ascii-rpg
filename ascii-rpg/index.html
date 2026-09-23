@@ -7,6 +7,9 @@
     <style>html, body, #game_layer, #game_canvas { background: #000; }</style>
     <script>
       document.documentElement.dataset.letterboxLayout = Math.random() < 0.5 ? "mossy" : "chained";
+      document.documentElement.dataset.presentationAspect = localStorage.getItem("babylon-lite-ascii-rpg.aspect") === "portrait"
+        ? "portrait"
+        : "landscape";
     </script>
   </head>
   <body>

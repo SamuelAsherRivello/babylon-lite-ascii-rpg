@@ -1,4 +1,5 @@
 import { normalizeCameraMode } from "./camera.js";
+import { getStoredInitialZoom } from "../ui-layer-react/platform-settings.js";
 
 let gameController = null;
 let timeSnapshot = 1;
@@ -25,7 +26,7 @@ let aspectSnapshot = typeof localStorage !== "undefined" && localStorage.getItem
   ? "portrait"
   : "landscape";
 let realmDiscoverySnapshot = Object.freeze({ realm: realmPreferenceSnapshot, percent: 0 });
-let zoomSnapshot = null;
+let zoomSnapshot = getStoredInitialZoom();
 let randomSeedSnapshot = null;
 let lightingSnapshot = null;
 let questSnapshot = null;
@@ -93,8 +94,24 @@ export function setGameController(controller) {
   gameController?.setMinimapZoom?.(minimapZoomSnapshot);
   gameController?.setMapviewOpen?.(mapviewOpenSnapshot);
   gameController?.setAspectMode?.(aspectSnapshot);
-  if (zoomSnapshot !== null) gameController?.setZoom?.(zoomSnapshot);
+  gameController?.setZoom?.(zoomSnapshot);
   if (lightingSnapshot !== null) gameController?.setLighting?.(lightingSnapshot);
+}
+
+export function startPerformanceSession(options) {
+  return gameController?.startPerformanceSession?.(options) ?? null;
+}
+
+export function stopPerformanceSession(completion) {
+  return gameController?.stopPerformanceSession?.(completion) ?? null;
+}
+
+export function getPerformanceReport() {
+  return gameController?.getPerformanceReport?.() ?? null;
+}
+
+export function resetPerformanceSession() {
+  gameController?.resetPerformanceSession?.();
 }
 
 export function sendPaletteSnapshot(entries) {
@@ -109,6 +126,8 @@ export function sendZoomSnapshot(zoom) {
   zoomSnapshot = zoom;
   gameController?.setZoom(zoom);
 }
+
+export function getZoomSnapshot() { return zoomSnapshot; }
 
 export function getRandomSeedSnapshot() { return randomSeedSnapshot; }
 export function subscribeToRandomSeed(listener) {

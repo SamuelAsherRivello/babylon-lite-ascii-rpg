@@ -1,10 +1,10 @@
-# Spec Delta
+# minimap-rendering Specification
 
 ## Purpose
 
 Provides an aspect-correct, player-centered minimap that represents world cells without geometric distortion across presentation modes.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Aspect-correct minimap composition
 The minimap MUST preserve the world's cell aspect ratio and spatial proportions regardless of whether the game is rendered in landscape or portrait presentation. The minimap canvas bounds MUST remain unchanged, and unused space MUST be handled with centered letterboxing or a uniformly scaled crop rather than independently stretching horizontal and vertical cells.

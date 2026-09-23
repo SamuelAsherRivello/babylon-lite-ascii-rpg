@@ -1,5 +1,8 @@
 export const MINIMAP_SCALE_LEVELS = [1, 2, 3];
 export const DEFAULT_MINIMAP_SCALE = 2;
+// These are CSS-pixel cell footprints, independent of the game's nonlinear
+// zoom curve. In the usual 320px panel they yield about 80, 40, and 20 cells.
+const MINIMAP_CELL_SIZES = [4, 8, 16];
 
 export function normalizeMinimapScale(value, fallback = DEFAULT_MINIMAP_SCALE) {
   const selected = Number(value);
@@ -15,6 +18,11 @@ export function getNextMinimapScale(currentScale) {
   const currentIndex = MINIMAP_SCALE_LEVELS.indexOf(selected);
   if (currentIndex < 0) return DEFAULT_MINIMAP_SCALE;
   return MINIMAP_SCALE_LEVELS[(currentIndex + 1) % MINIMAP_SCALE_LEVELS.length];
+}
+
+export function getMinimapCellSize(scale) {
+  const selected = normalizeMinimapScale(scale);
+  return MINIMAP_CELL_SIZES[MINIMAP_SCALE_LEVELS.indexOf(selected)];
 }
 
 export function canHandleMinimapScale() {

@@ -20,6 +20,7 @@ import {
   sendTorchLightingSnapshot,
   sendTorchShadowSnapshot,
   sendZoomSnapshot,
+  getZoomSnapshot,
   sendTimeSnapshot,
   sendQuestSnapshot,
   sendQuestEvent,
@@ -58,6 +59,10 @@ import {
   sendKeySnapshot,
   subscribeToKey,
   startQuest,
+  startPerformanceSession,
+  stopPerformanceSession,
+  getPerformanceReport,
+  resetPerformanceSession,
 } from "../../../src/client/bridge-layer/game-bridge.js";
 
 test("publishes the current session random seed", () => {
@@ -264,6 +269,27 @@ test("forwards quest selection without exposing game internals", () => {
   assert.equal(selected, "collect-gold");
 });
 
+test("forwards performance diagnostics without exposing game internals", () => {
+  const calls = [];
+  const report = { scenario: "idle" };
+  setGameController({
+    startPerformanceSession(options) { calls.push(["start", options]); return { started: true }; },
+    stopPerformanceSession(completion) { calls.push(["stop", completion]); return report; },
+    getPerformanceReport() { return report; },
+    resetPerformanceSession() { calls.push(["reset"]); },
+  });
+
+  assert.deepEqual(startPerformanceSession({ scenario: "idle" }), { started: true });
+  assert.deepEqual(stopPerformanceSession("completed"), report);
+  assert.deepEqual(getPerformanceReport(), report);
+  resetPerformanceSession();
+  assert.deepEqual(calls, [
+    ["start", { scenario: "idle" }],
+    ["stop", "completed"],
+    ["reset"],
+  ]);
+});
+
 test("publishes the terminal player-dead snapshot", () => {
   const received = [];
   const unsubscribe = subscribeToPlayerDead(() => received.push(getPlayerDeadSnapshot()));
@@ -311,6 +337,7 @@ test("forwards zoom changes to the game layer", () => {
 
   assert.equal(sendZoomSnapshot(7), undefined);
   assert.equal(received, 7);
+  assert.equal(getZoomSnapshot(), 7);
 });
 
 test("publishes minimap zoom selections without changing game zoom", () => {
@@ -356,15 +383,17 @@ test("forwards camera mode changes and reapplies the latest mode to a new contro
   assert.equal(restored, "deadzone");
 });
 
-test("forwards aspect changes and reapplies the latest mode to a new controller", () => {
-  let received = null;
-  setGameController({ setAspectMode(mode) { received = mode; } });
+test("forwards normalized aspect changes and reapplies the latest mode to a new controller", () => {
+  const received = [];
+  setGameController({ setAspectMode(mode) { received.push(mode); } });
+  received.length = 0;
   sendAspectSnapshot("portrait");
-  assert.equal(received, "portrait");
+  sendAspectSnapshot("unexpected");
+  assert.deepEqual(received, ["portrait", "landscape"]);
 
   let restored = null;
   setGameController({ setAspectMode(mode) { restored = mode; } });
-  assert.equal(restored, "portrait");
+  assert.equal(restored, "landscape");
 });
 
 test("forwards GPU light pass state and reapplies it to a new controller", () => {

@@ -33,6 +33,18 @@ export function getMigratedStoredZoomValue(storedValue, fallback = DEFAULT_ZOOM,
   return migrateLegacyZoom(storedValue);
 }
 
+export function getStoredInitialZoom({
+  storage = typeof localStorage === "undefined" ? null : localStorage,
+  matchMedia,
+} = {}) {
+  const defaults = getPlatformSettingsDefaults(matchMedia);
+  return getMigratedStoredZoomValue(
+    storage?.getItem("babylon-lite-ascii-rpg.zoom") ?? null,
+    defaults.zoom,
+    storage?.getItem("babylon-lite-ascii-rpg.zoom-version") ?? null,
+  );
+}
+
 export { MAX_ZOOM, MIN_ZOOM };
 
 export function getStoredBooleanValue(storedValue, fallback) {

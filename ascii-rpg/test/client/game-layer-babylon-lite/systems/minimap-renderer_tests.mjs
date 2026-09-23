@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createFogOfWar, discoverCell, discoverFromPlayer, getMinimapCoverage } from "../../../../src/client/game-layer-babylon-lite/systems/fog-of-war-system.js";
 import { findNearestNavigationTarget, getMinimapEdgeIndicators, getMinimapIndicatorSafeArea, getMinimapMarkers, getMinimapWorldCellGraphic, getMinimapWorldGraphic, getMinimapWorldPixel, MINIMAP_INDICATOR_MIN_SIZE, MINIMAP_INDICATOR_SAFE_INSET, MINIMAP_MARKER_DEPTHS } from "../../../../src/client/game-layer-babylon-lite/systems/minimap-renderer.js";
-import { canHandleMinimapScale, getMinimapCellLayout, getMinimapViewport, getNextMinimapScale, migrateMinimapScale } from "../../../../src/client/game-layer-babylon-lite/systems/minimap-zoom.js";
+import { canHandleMinimapScale, getMinimapCellLayout, getMinimapCellSize, getMinimapViewport, getNextMinimapScale, migrateMinimapScale } from "../../../../src/client/game-layer-babylon-lite/systems/minimap-zoom.js";
 
 function createWorld() {
   return {
@@ -186,6 +186,13 @@ test("minimap migration preserves its independent scale states", () => {
   assert.equal(migrateMinimapScale(2), 2);
   assert.equal(migrateMinimapScale(3), 3);
   assert.equal(migrateMinimapScale(4), 2);
+});
+
+test("minimap scale choices use explicit renderable terrain footprints", () => {
+  assert.equal(getMinimapCellSize(1), 4);
+  assert.equal(getMinimapCellSize(2), 8);
+  assert.equal(getMinimapCellSize(3), 16);
+  assert.equal(getMinimapCellSize(99), 8);
 });
 
 test("minimap zoom changes the rendered viewport without changing canvas bounds", () => {

@@ -15,9 +15,10 @@
 
 - [ ] 3.1 Expose narrow bridge operations to start, stop, reset, and retrieve/export the current diagnostic report without exposing mutable world state; verify bridge tests cover lifecycle, bounded reports, and safe serialization.
 - [ ] 3.2 Provide the initial developer-facing console or report trigger and document the exact baseline procedure for idle, normal directional movement, sprint directional movement, and startup timing; verify the procedure produces four separately labeled structured reports at the running project URL.
+- [ ] 3.3 Add the canonical append-only project log at `output/performance-analysis/performance-monitoring.md`; after each completed scan, append exactly one dated 10–100-word entry containing scenarios, headline measurements, and an optimization conclusion, and verify entries omit secrets, seeds, and raw samples.
 
 ## 4. Validation and baseline
 
 - [ ] 4.1 Run focused performance collector, bridge, startup, and render tests plus the repository's full Node test suite and production build; verify unrelated dirty files remain unstaged and no Playwright tests are added or run.
 - [ ] 4.2 Manually benchmark the supported browser in a documented fixed environment: app open to playable, idle, one-direction movement, and one-direction sprint, recording average FPS, frame time, worst/high-percentile frame time, generation/readiness timing, main-world timing, and minimap timing; verify the report includes enough context to reproduce the run.
-- [ ] 4.3 Review the baseline for optimization candidates and record them separately from the instrumentation change; verify monitoring is disabled during ordinary play and that the existing HUD and gameplay visuals remain unchanged.
+- [ ] 4.3 Review the baseline for optimization candidates and append the 10–100-word result to `output/performance-analysis/performance-monitoring.md`; verify monitoring is disabled during ordinary play and that the existing HUD and gameplay visuals remain unchanged.
