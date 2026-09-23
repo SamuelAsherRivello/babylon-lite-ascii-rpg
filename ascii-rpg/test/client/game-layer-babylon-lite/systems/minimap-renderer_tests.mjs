@@ -178,21 +178,21 @@ test("minimap scale cycles through the designated levels and wraps", () => {
   assert.equal(getNextMinimapScale(1), 2);
   assert.equal(getNextMinimapScale(2), 3);
   assert.equal(getNextMinimapScale(3), 1);
-  assert.equal(getNextMinimapScale(7), 2);
+  assert.equal(getNextMinimapScale(7), 1);
 });
 
 test("minimap migration preserves its independent scale states", () => {
   assert.equal(migrateMinimapScale(1), 1);
   assert.equal(migrateMinimapScale(2), 2);
   assert.equal(migrateMinimapScale(3), 3);
-  assert.equal(migrateMinimapScale(4), 2);
+  assert.equal(migrateMinimapScale(4), 1);
 });
 
 test("minimap scale choices use explicit renderable terrain footprints", () => {
   assert.equal(getMinimapCellSize(1), 4);
   assert.equal(getMinimapCellSize(2), 8);
   assert.equal(getMinimapCellSize(3), 16);
-  assert.equal(getMinimapCellSize(99), 8);
+  assert.equal(getMinimapCellSize(99), 4);
 });
 
 test("minimap zoom changes the rendered viewport without changing canvas bounds", () => {

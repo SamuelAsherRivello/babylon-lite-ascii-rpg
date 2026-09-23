@@ -20,6 +20,11 @@ continuous profiling overhead or making the HUD noisy for normal play.
 - Measure startup readiness from app/game-layer start through the first playable
   world state and first valid visible world render, while retaining the existing
   generation-phase and first-render timings as component measurements.
+- Establish a startup performance target of at most 1,000 ms from the startup
+  boundary to an active-realm render with movement input enabled on the
+  documented baseline environment.
+- Stage startup work so the active realm becomes playable before secondary realm,
+  minimap-history, mapview, and other non-critical preparation completes.
 - Measure main game-world composition/submission time and minimap composition /
   canvas-render time independently, including enough context to compare visible
   cell counts, submitted/skipped cells, cache warmup, and whether the sample was

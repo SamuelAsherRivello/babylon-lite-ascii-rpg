@@ -73,7 +73,9 @@ import {
 } from "./lighting.js";
 import { buildGpuLightPassSamples, createGpuLightPassFrame, getGpuLightPassAlpha, GPU_LIGHT_PASS_COLOR } from "./gpu-light-pass.js";
 import {
+  createFogOfWar,
   createFogMapsForWorld,
+  ensureFogMetrics,
   discoverCell,
   discoverFromPlayer,
   discoverStartingArea,
@@ -126,8 +128,8 @@ const FOG_BACKING_COLOR = Object.freeze([0.06, 0.06, 0.06, 1]);
 const EMOJI_PRESENTATION_PATTERN = /\p{Emoji_Presentation}/u;
 const EMOJI_VARIATION_SELECTOR = "\uFE0F";
 const MINIMAP_EMOJI_CELL_RATIO = 0.7;
-const WORLD_ROWS = 512;
-const WORLD_COLUMNS = 512;
+const WORLD_ROWS = 256;
+const WORLD_COLUMNS = 256;
 const TORCHES_PER_SCREEN = 3;
 const REALM_TRANSITION_CLOSE_MS = 500;
 const REALM_TRANSITION_COVER_HOLD_MS = 100;
@@ -296,6 +298,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   let activePointerId = null;
   let touchStart = null;
   let transitionActive = false;
+  let initialRevealActive = false;
   let gameplayInputLocked = false;
   let mapviewOpen = false;
   let mapviewRealm = null;
@@ -341,9 +344,10 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   const questEventListeners = new Set();
   const goldListeners = new Set();
   let fogOfWar = null;
-  let minimapZoom = 2;
+  let minimapZoom = 1;
   let viewOrigin = { x: 0, y: 0 };
   let initialWorldRenderComplete = false;
+  let initialPlayableRenderComplete = false;
   let cameraModeReapplyAfterTransition = false;
   let cameraMode = normalizeCameraMode(initialCameraMode);
   const timeSystem = createTimeSystem();
@@ -476,6 +480,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     // generated realm world is being assigned.
     const activeFog = world?.fog ?? fogOfWar;
     if (!activeFog) return;
+    ensureFogMetrics(activeFog, world);
     const started = performance.now();
     if (minimapGlyphCanvases.size > 8192) minimapGlyphCanvases.clear();
     minimapCanvas.hidden = false;
@@ -996,7 +1001,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     direction = { x: 0, y: 0 },
     commit = true,
   } = {}) => {
-    if (transitionActive) {
+    if (transitionActive && !(initialRevealActive && initialPlayableRenderComplete)) {
       if (intent === CAMERA_RESOLVE_INTENTS.initial
         || intent === CAMERA_RESOLVE_INTENTS.reapply) {
         cameraModeReapplyAfterTransition = true;
@@ -1131,6 +1136,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     const { cover } = getTransitionRadii();
     transitionCenter = getTransitionCenter();
     transitionActive = true;
+    initialRevealActive = true;
     const started = transitionSystem.start({
       target: "game_layer",
       // Startup begins at the closed aperture and uses only the opening half
@@ -1147,6 +1153,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       },
       onComplete: () => {
         transitionActive = false;
+        initialRevealActive = false;
         setTransitionMask({ phase: TRANSITION_PHASES.IDLE, value: 0 });
         transitionCenter = null;
         reapplyCameraModeAfterTransition();
@@ -2123,10 +2130,8 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
         });
         if (currentController !== generationController || currentController.signal.aborted) continue;
         worldRealms = candidate;
-        const fogMaps = createFogMapsForWorld(worldRealms);
-        for (const [realmName, realm] of Object.entries(worldRealms.realms)) {
-          realm.fog = fogMaps[realmName];
-        }
+        const activeFog = createFogOfWar(worldRealms.realms[activeRealm], { deferMetrics: true });
+        worldRealms.realms[activeRealm].fog = activeFog;
         world = worldRealms.realms[activeRealm];
       } catch (error) {
         if (error.name === "AbortError" && currentController !== generationController) continue;
@@ -2145,6 +2150,38 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     playerCell = world.playerStart;
     world.playerCell = playerCell;
     fogOfWar = world.fog;
+
+    // Make the active realm playable as soon as its first visible frame can be
+    // submitted. Secondary realm fog, objects, mapview, and enemy preparation
+    // continue after the first browser frame instead of blocking input unlock.
+    world.realmName = activeRealm;
+    world.objects = [];
+    world.pickups = world.objects;
+    world.questPickupIds = new Set();
+    const initialOccupancy = createDynamicOccupancy();
+    world.dynamicOccupancy = initialOccupancy;
+    dynamicOccupancies.set(activeRealm, initialOccupancy);
+    staticOccupancyIndexes.set(activeRealm, new Set());
+    initialOccupancy.claim({
+      id: "player", type: "player", glyph: PLAYER_GLYPH, facing: playerFacing,
+      realm: activeRealm, cell: playerCell,
+    });
+    resolveViewForPlayer({ initial: true });
+    const initialPlayableRender = renderWorld();
+    metrics.firstVisibleRenderMs = initialPlayableRender.renderMs;
+    initialPlayableRenderComplete = true;
+    if (performanceMonitor.getActiveScenario() === PERFORMANCE_SCENARIOS.STARTUP) {
+      performanceMonitor.mark("first-visible-world-render");
+      finishStartupPerformance();
+    }
+    startInitialReveal();
+    metrics.totalReadyMs = performance.now() - generationStarted;
+    await new Promise((resolve) => window.requestAnimationFrame(resolve));
+    const deferredRealms = Object.fromEntries(Object.entries(worldRealms.realms)
+      .filter(([realmName]) => !worldRealms.realms[realmName].fog));
+    const deferredFogMaps = createFogMapsForWorld({ realms: deferredRealms });
+    for (const [realmName, fog] of Object.entries(deferredFogMaps)) worldRealms.realms[realmName].fog = fog;
+
     logSystem.log({ message: `Entered the ${activeRealm} Realm` });
     objectSpawnerSystem = createObjectSpawnerSystem({ catalog: objectData.objects, eventSystem: gameplayEvents });
     const addObjectToRealm = (realm, definition) => {
@@ -2155,7 +2192,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     };
     const randomObjectCount = (type, seed) => Math.max(0, Math.round(getObjectDistributionCount(type, seed) * (objectCountMultipliers[type] ?? 1)));
     for (const [realmName, realm] of Object.entries(worldRealms.realms)) {
-      realm.objects = [];
+      realm.objects = realm.objects ?? [];
       realm.pickups = realm.objects;
       realm.questPickupIds = new Set();
       for (const torch of realm.torches ?? []) addObjectToRealm(realm, {
@@ -2298,7 +2335,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     for (const [realmName, realm] of Object.entries(worldRealms.realms)) {
       realm.realmName = realmName;
       normalizePlayerMarkers(realm);
-      realm.dynamicOccupancy = createDynamicOccupancy();
+      realm.dynamicOccupancy = realm.dynamicOccupancy ?? createDynamicOccupancy();
       dynamicOccupancies.set(realmName, realm.dynamicOccupancy);
       staticOccupancyIndexes.set(realmName, new Set((realm.objects ?? [])
         .filter((object) => object.active !== false && !(object.type === "door" && object.open))
@@ -2409,7 +2446,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     notifyKeys();
     refreshStartingDiscovery();
     refreshDiscovery();
-    resolveViewForPlayer({ initial: true });
+    if (!initialPlayableRenderComplete) resolveViewForPlayer({ initial: true });
     const firstRender = renderWorld();
     renderMinimap();
     renderMapview();
@@ -2417,9 +2454,11 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     if (performanceMonitor.getActiveScenario() === PERFORMANCE_SCENARIOS.STARTUP) {
       performanceMonitor.mark("first-visible-world-render");
     }
-    startInitialReveal();
-    if (!transitionActive) finishStartupPerformance();
-    metrics.totalReadyMs = performance.now() - generationStarted;
+    if (!initialPlayableRenderComplete) {
+      startInitialReveal();
+      if (!transitionActive) finishStartupPerformance();
+      metrics.totalReadyMs = performance.now() - generationStarted;
+    }
     console.info("ASCII RPG render readiness", JSON.stringify({
       generationMs: metrics.generationMs,
       firstVisibleRenderMs: metrics.firstVisibleRenderMs,

@@ -75,6 +75,28 @@ wait time, first visible game-world render, and first playable readiness.
 - **THEN** the readiness report SHALL remain incomplete and SHALL not claim that
   gameplay is playable
 
+### Requirement: Startup readiness has a one-second target
+
+The client SHALL target no more than `1,000 ms` from the startup measurement
+boundary to the first valid active-realm render with movement input enabled on
+the documented baseline environment. Work that is not required to render or
+move within the active realm MAY continue after this readiness boundary, but it
+SHALL not block the first playable state or corrupt later realm transitions.
+
+#### Scenario: Active realm reaches the startup budget
+
+- **WHEN** the app starts on the documented baseline environment
+- **THEN** the startup report SHALL expose whether active-realm playability was
+  reached within `1,000 ms`, including the active-realm and deferred-work timing
+  needed to diagnose misses
+
+#### Scenario: Deferred startup work completes safely
+
+- **WHEN** secondary realm or non-critical preparation continues after input is
+  enabled
+- **THEN** its completion SHALL preserve world, movement, transition, minimap,
+  and gameplay invariants without blocking already-enabled active-realm input
+
 ### Requirement: Main-world and minimap costs are separated
 
 The client SHALL record main game-world rendering and minimap rendering as

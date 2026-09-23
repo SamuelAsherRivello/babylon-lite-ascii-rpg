@@ -1,5 +1,5 @@
 export const MINIMAP_SCALE_LEVELS = [1, 2, 3];
-export const DEFAULT_MINIMAP_SCALE = 2;
+export const DEFAULT_MINIMAP_SCALE = 1;
 // These are CSS-pixel cell footprints, independent of the game's nonlinear
 // zoom curve. In the usual 320px panel they yield about 80, 40, and 20 cells.
 const MINIMAP_CELL_SIZES = [4, 8, 16];

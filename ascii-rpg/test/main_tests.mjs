@@ -615,7 +615,7 @@ test("documents the plain safe-area template", async () => {
     throw new Error("The page must link to the project repository.");
   }
   if (app.includes('id="minimap_toggle"') || app.includes("minimapStorageKey") || app.includes("sendMinimapSnapshot")
-    || !gameLayer.includes("let minimapZoom = 2")) {
+    || !gameLayer.includes("let minimapZoom = 1")) {
     throw new Error("Minimap visibility must remain always on without a settings checkbox or visibility bridge.");
   }
   if (app.includes('id="realm_toggle"') || app.includes('id="send_toast"') || app.includes("Send Toast")) {

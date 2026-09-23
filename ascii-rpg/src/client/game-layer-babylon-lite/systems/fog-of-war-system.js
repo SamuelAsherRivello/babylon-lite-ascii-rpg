@@ -24,34 +24,45 @@ function getMinimapCell(cell) {
   };
 }
 
-export function createFogOfWar(world) {
+export function createFogOfWar(world, { deferMetrics = false } = {}) {
   if (!world?.terrain || !Number.isInteger(world.rows) || !Number.isInteger(world.columns)) {
     throw new TypeError("Fog of war requires a generated world.");
   }
   const minimapColumns = Math.ceil(world.columns / MINIMAP_WORLD_SCALE);
   const minimapRows = Math.ceil(world.rows / MINIMAP_WORLD_SCALE);
   const walkableCounts = new Uint16Array(minimapColumns * minimapRows);
+  const fog = {
+    visibility: new Uint8Array(world.rows * world.columns),
+    discovered: null,
+    visibilityTotals: new Uint32Array(minimapColumns * minimapRows),
+    walkableCounts,
+    walkableCellCount: 0,
+    discoveredWalkableCount: 0,
+    minimapColumns,
+    minimapRows,
+    fogUnclearRadius: Number.isFinite(world.fogUnclearRadius) ? world.fogUnclearRadius : fogUnclearRadius,
+    walkableMetricsReady: false,
+  };
+  fog.discovered = fog.visibility;
+  if (!deferMetrics) ensureFogMetrics(fog, world);
+  return fog;
+}
+
+export function ensureFogMetrics(fog, world) {
+  if (!fog || !world || fog.walkableMetricsReady) return fog;
+  fog.walkableCounts.fill(0);
   let walkableCellCount = 0;
   for (let y = 0; y < world.rows; y += 1) {
     for (let x = 0; x < world.columns; x += 1) {
       const cell = { x, y };
       if (!isWalkable(world, cell)) continue;
       walkableCellCount += 1;
-      walkableCounts[getMinimapIndex(getMinimapCell(cell), minimapColumns)] += 1;
+      fog.walkableCounts[getMinimapIndex(getMinimapCell(cell), fog.minimapColumns)] += 1;
     }
   }
-  const visibility = new Uint8Array(world.rows * world.columns);
-  return {
-    visibility,
-    discovered: visibility,
-    visibilityTotals: new Uint32Array(minimapColumns * minimapRows),
-    walkableCounts,
-    walkableCellCount,
-    discoveredWalkableCount: 0,
-    minimapColumns,
-    minimapRows,
-    fogUnclearRadius: Number.isFinite(world.fogUnclearRadius) ? world.fogUnclearRadius : fogUnclearRadius,
-  };
+  fog.walkableCellCount = walkableCellCount;
+  fog.walkableMetricsReady = true;
+  return fog;
 }
 
 /**

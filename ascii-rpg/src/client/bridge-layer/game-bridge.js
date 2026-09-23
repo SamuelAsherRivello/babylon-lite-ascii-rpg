@@ -20,7 +20,7 @@ let gpuLightPassSnapshot = false;
 let playerGpuShadowBleedRangeSnapshot = 2;
 let glyphBackgroundSnapshot = true;
 let backgroundDarknessSnapshot = 50;
-let minimapZoomSnapshot = 2;
+let minimapZoomSnapshot = 1;
 let mapviewOpenSnapshot = false;
 let aspectSnapshot = typeof localStorage !== "undefined" && localStorage.getItem("babylon-lite-ascii-rpg.aspect") === "portrait"
   ? "portrait"

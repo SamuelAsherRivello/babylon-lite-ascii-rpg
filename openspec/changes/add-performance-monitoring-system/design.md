@@ -69,16 +69,23 @@ paths are not reported as comparable phase samples.
    start, generation complete, first valid visible render, and input unlock. The
    report's primary "time to playable" uses the latest required boundary (input
    unlock after a valid render), while component fields explain where the time
-   went. Existing console readiness logs remain compatible or are emitted from
-   the new report.
+  went. Existing console readiness logs remain compatible or are emitted from
+  the new report.
 
-6. **Test aggregation independently from browser proof.** Pure unit tests cover
+6. **Use a staged startup critical path.** The active realm, its visible world,
+   movement dependencies, and the minimum active-realm fog/discovery state are
+   required before input unlock. Secondary realm preparation, full mapview
+   refresh, and other non-critical work may be scheduled after the first
+   playable frame. The one-second target applies to the active-realm readiness
+   boundary, not to every background initialization task.
+
+7. **Test aggregation independently from browser proof.** Pure unit tests cover
    sample aggregation, percentile/worst-frame calculation, scenario isolation,
    lifecycle, and report redaction. Manual browser verification covers the actual
    four requested runs and records the exact URL and environment. Playwright is
   not introduced under this repository's browser-test policy.
 
-7. **Store scan summaries in one canonical Markdown log.** The implementation
+8. **Store scan summaries in one canonical Markdown log.** The implementation
    writes or prepares one append-only entry at
    `output/performance-analysis/performance-monitoring.md` after a completed scan.
    The entry is deliberately short and human-readable so future scans remain
@@ -99,6 +106,9 @@ paths are not reported as comparable phase samples.
   and avoid treating the first run as a universal budget.
 - [Risk] Existing dirty work overlaps client files → implementation must stage
   only attributable files and preserve unrelated changes.
+- [Risk] Unlocking input before deferred realm setup is complete can expose
+  transition or minimap races → gate only the active-realm movement path and
+  add deferred-completion checks before allowing realm transitions.
 
 ## Migration Plan
 
