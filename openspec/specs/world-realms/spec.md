@@ -198,9 +198,9 @@ realms.
 
 The outermost row and column of the Overground realm SHALL remain non-walkable
 and SHALL not be valid digging targets. Border mountain cells SHALL use the
-existing `▒` wall glyph; diggable interior Overground mountains SHALL retain
-the `△` mountain glyph until destroyed. Underground terrain SHALL not be
-changed by this distinction.
+existing `▒` wall glyph; diggable interior Overground mountains SHALL retain the
+`△` mountain glyph until destroyed. Underground terrain SHALL not be changed by
+this distinction.
 
 #### Scenario: Generated border uses the indestructible glyph
 - **WHEN** an Overground realm is generated
