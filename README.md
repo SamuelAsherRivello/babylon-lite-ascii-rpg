@@ -73,7 +73,7 @@ Here is an [openspec](openspec/) workflow for collaboration with minimal code co
 | -  | (Git Synchronize)  | - | Share progress |
 | 1 | Explore | `$openspec-explore` | (Optional) Brainstorm possibilities. |
 | 2 | Propose | `$openspec-propose` | Creates one focused feature change. |
-| 3 | Explore | `$openspec-grill-me {n}` | (Optional) Clear doubts via {n} multi-choice questions |
+| 3 | Refine | `$openspec-grill-me {n}` | (Optional) Clear doubts via {n} multi-choice questions |
 | -  | (Git Synchronize)  | - | Share progress |
 | 4 | Apply | `$openspec-apply-change` | Implements and completes one change. |
 | 5 | Sync | `$openspec-sync-specs` | Updates main specs without archiving. |
