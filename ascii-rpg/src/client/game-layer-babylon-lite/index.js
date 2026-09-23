@@ -843,6 +843,18 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
         random: createRandom(`${previewWorld.options.seed}:procedural-settings-npc-spawner`),
       }).cells.map((cell) => ({ ...cell, kind: "npc-spawner", glyph: "☺", color: "#48c774" }))
       : [];
+    // Like trap markers, these make Civilization's otherwise subtle door and key
+    // glyphs readable in the low-resolution procedural preview without mutating
+    // the preview world or its live-generation counterpart.
+    const civilizationMarkers = previewRealm === "Underground"
+      ? createCivilizationGroups(previewWorld, {
+        random: createRandom(`${previewWorld.options.seed}:procedural-settings-civilization`),
+        chance: Math.min(0.9, (import.meta.env.DEV ? 0.5 : 0.1) * profile.civilizationChanceMultiplier),
+      }).flatMap((group) => [
+        { ...group.door, kind: "civilization-door", glyph: "█", color: "#d6a55a" },
+        ...group.keys.map((cell) => ({ ...cell, kind: "civilization-key", glyph: "⚿", color: "#ffd166" })),
+      ])
+      : [];
     const heartCount = Math.max(0, Math.round(getObjectDistributionCount("heart", previewWorld.options.seed) * profile.objectCountMultipliers.heart));
     const heartCells = selectObjectCells(previewWorld, previewWorld.playerStart, heartCount, createRandom(`${previewWorld.options.seed}:procedural-settings-heart`), { minimumDistance: 3, reserved: new Set() });
     const trapCount = Math.max(0, Math.round(getObjectDistributionCount("trap", previewWorld.options.seed) * profile.objectCountMultipliers.trap));
@@ -859,6 +871,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     const proceduralSettingsMarkers = [
       ...enemySpawnerMarkers,
       ...npcSpawnerMarkers,
+      ...civilizationMarkers,
       ...heartCells.map((cell) => ({ ...cell, kind: "heart", glyph: "♥", color: "#ff4f6d" })),
       ...trapCells.map((cell) => ({ ...cell, kind: "trap", glyph: "☠", color: "#ffd166" })),
       ...fireplaceCells.map((cell) => ({ ...cell, kind: "fireplace", glyph: FIREPLACE_GLYPH, color: "#ff6b35" })),

@@ -24,9 +24,9 @@ test("creates every visible Code Page 437 entry, the bullet, and civilization te
   const palette = createDefaultPalette();
   const ids = new Set(palette.map(getPaletteEntryId));
 
-  assert.equal(palette.length, 301);
-  assert.equal(ids.size, 301);
-  assert.equal(new Set(palette.map((entry) => entry.glyph)).size, 301);
+  assert.equal(palette.length, 302);
+  assert.equal(ids.size, 302);
+  assert.equal(new Set(palette.map((entry) => entry.glyph)).size, 302);
   assert.ok(ids.has("32"));
   assert.ok(ids.has("254"));
   assert.ok(ids.has("U+2022"));
@@ -41,7 +41,7 @@ test("migrates saved 224-entry palettes while preserving existing colors", () =>
 
   const palette = createPalette({ version: 1, entries: legacyEntries });
 
-  assert.equal(palette.length, 301);
+  assert.equal(palette.length, 302);
   assert.equal(palette.find((entry) => entry.glyph === "•").color, "#4c4c4c");
   assert.equal(palette.find((entry) => entry.glyph === "•").offsetX, DEFAULT_GLYPH_OFFSET_X);
   assert.equal(palette.find((entry) => entry.glyph === "•").offsetY, DEFAULT_GLYPH_OFFSET_Y);
@@ -55,7 +55,7 @@ test("backfills newly supported identities in an otherwise current palette", () 
 
   const palette = createPalette({ version: PALETTE_VERSION, entries: partialEntries });
 
-  assert.equal(palette.length, 301);
+  assert.equal(palette.length, 302);
   assert.equal(palette.find((entry) => entry.glyph === "💰").color, DEFAULT_PALETTE_COLOR);
   assert.equal(palette.find((entry) => entry.glyph === "★").color, "#ffff00");
 });
@@ -107,7 +107,7 @@ test("rejects malformed palette entries", () => {
 test("serializes a complete validated palette", () => {
   const serialized = JSON.parse(serializePalette(createDefaultPalette()));
   assert.equal(serialized.version, PALETTE_VERSION);
-  assert.equal(serialized.entries.length, 301);
+  assert.equal(serialized.entries.length, 302);
   assert.equal(serialized.entries[0].offsetX, 0);
   assert.equal(serialized.entries[0].offsetY, 0);
   assert.equal(serialized.entries[0].offsetScale, 0);

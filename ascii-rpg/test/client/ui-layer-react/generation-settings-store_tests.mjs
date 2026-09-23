@@ -40,12 +40,11 @@ test("applies each Underground Caves density to a distinct cave wall fill", () =
   );
 });
 
-test("keeps the NPC setting separate and applies Fireplace Low, Med, and High density", async () => {
+test("keeps NPC inside Object Distribution and applies Fireplace Low, Med, and High density", async () => {
   const app = await readFile(new URL("../../../src/client/ui-layer-react/App.jsx", import.meta.url), "utf8");
   const gameLayer = await readFile(new URL("../../../src/client/game-layer-babylon-lite/index.js", import.meta.url), "utf8");
-  assert.ok(!app.includes('"npc-spawner"'));
-  assert.ok(app.includes("7. Object Distribution"));
-  assert.ok(!app.includes("Object &amp; NPC Distribution"));
+  assert.ok(app.includes('"npc-spawner"'));
+  assert.ok(app.includes("Object &amp; NPC Distribution"));
   assert.ok(!app.includes("Low 4 · Med 8 · High 12 Overworld NPC spawners"));
   assert.ok(app.includes('"object-fireplace"'));
   assert.ok(gameLayer.includes('getObjectDistributionCount("fireplace", previewWorld.options.seed)'));
@@ -53,6 +52,10 @@ test("keeps the NPC setting separate and applies Fireplace Low, Med, and High de
   assert.ok(gameLayer.includes("const npcSpawnerMarkers = previewRealm === \"Overground\""));
   assert.ok(gameLayer.includes('glyph: "☺", color: "#48c774"'));
   assert.ok(gameLayer.includes("...npcSpawnerMarkers"));
+  assert.ok(gameLayer.includes("const civilizationMarkers = previewRealm === \"Underground\""));
+  assert.ok(gameLayer.includes('glyph: "█", color: "#d6a55a"'));
+  assert.ok(gameLayer.includes('glyph: "⚿", color: "#ffd166"'));
+  assert.ok(gameLayer.includes("...civilizationMarkers"));
   assert.ok(app.includes("const isPassAvailableInPreview"));
   assert.ok(app.includes("disabled={unavailable}"));
   assert.ok(app.includes("procedural_realm_unavailable"));

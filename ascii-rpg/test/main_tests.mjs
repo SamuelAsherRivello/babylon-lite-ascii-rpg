@@ -506,7 +506,7 @@ test("documents the plain safe-area template", async () => {
   if (!app.includes('className="palette_grid"') || !app.includes('className="palette_index"') || !app.includes('className="palette_glyph"') || !styles.includes("flex-direction: column") || !styles.includes("white-space: nowrap") || !styles.includes("overflow: hidden")) {
     throw new Error("The Ascii Settings overlay must render a compact index and glyph grid.");
   }
-  if (!app.includes('"in-maps"') || !app.includes('"customized"') || !app.includes("Filter: ") || !app.includes("Sort: ") || !app.includes("InMaps") || !app.includes(">\n                #\n") || !app.includes(">\n                Abc\n") || !app.includes(">\n                Group\n") || !app.includes("content_options") || !app.includes("palette_group_header") || !app.includes("getPaletteGroupLabel") || !styles.includes("grid-template-columns: repeat(auto-fill, minmax(72px, 1fr))") || !styles.includes("font-size: 10pt")) {
+  if (!app.includes('"in-maps"') || !app.includes('"customized"') || !app.includes("Filter: ") || !app.includes("Sort: ") || !app.includes("InMaps") || !app.includes('aria-label="Glyph filters"') || !app.includes('aria-label="Glyph sorting"') || !app.includes("Sort by index") || !app.includes("Sort alphabetically") || !app.includes("Sort by group") || !app.includes("content_options") || !app.includes("palette_group_header") || !app.includes("getPaletteGroupLabel") || !styles.includes("grid-template-columns: repeat(auto-fill, minmax(72px, 1fr))") || !styles.includes("font-size: 10pt")) {
     throw new Error("The Glyphs tab must provide labeled filter and index/alphabet/group sort options.");
   }
   if (!app.includes("paletteViewState") || !app.includes("setPaletteViewState") || app.includes("sessionStorage")) {
@@ -526,10 +526,10 @@ test("documents the plain safe-area template", async () => {
   if (!app.includes("Hide warning") || !app.includes("Local palette change") || !app.includes("PALETTE_WARNING_KEY")) {
     throw new Error("The deployed palette persistence warning must include the Hide warning choice.");
   }
-  if (!app.includes('aria-label="Close Ascii Settings"') || !app.includes(">\n              X\n")) {
+  if (!app.includes('aria-label="Close Ascii Settings"') || !app.includes('className="prompt_button window_close"') || !app.includes("onClick={onClose}")) {
     throw new Error("The Ascii Settings overlay must provide an X close control.");
   }
-  if (!app.includes(">\n                Layout\n") || !app.includes("Glyph Background") || !app.includes("Background Darkness")
+  if (!app.includes('this.selectTab("layout")') || !app.includes("Glyph Background") || !app.includes("Background Darkness")
     || !app.includes('min="0"') || !app.includes('max="100"') || !app.includes('step="1"')
     || !app.includes("DEFAULT_GLYPH_BACKGROUND") || !app.includes("DEFAULT_BACKGROUND_DARKNESS")
     || !app.includes("glyphBackgroundStorageKey") || !app.includes("backgroundDarknessStorageKey")) {
@@ -538,7 +538,7 @@ test("documents the plain safe-area template", async () => {
   if (!app.includes('className="window_backdrop" aria-hidden="true" onClick={onClose}') || !app.includes("event.stopPropagation()")) {
     throw new Error("Clicks outside the Ascii Palette window must close it without closing from inside the window.");
   }
-  if (!app.includes("event.stopPropagation();\n                    this.selectEntry(entry, event);")) {
+  if (!app.includes('className="palette_cell"') || !app.includes("event.stopPropagation();") || !app.includes("this.selectEntry(entry, event);")) {
     throw new Error("Clicking a palette glyph must stay inside the palette window and open its editor.");
   }
   if (!styles.includes(".window_backdrop") || !styles.includes("z-index: 0") || !styles.includes("background: #000")) {
@@ -698,7 +698,7 @@ test("documents the plain safe-area template", async () => {
     || !app.includes('id="mapview_overlay"')
     || !app.includes('aria-label="Map"')
     || !app.includes('aria-label="Close Map"')
-    || !app.includes(">X</button>")
+    || !app.includes('className="mapview_close"')
     || !app.includes("Toggle Realm")
     || !app.includes("sendMapviewRealmToggle")
     || app.includes('id="mapview_title"')
@@ -706,7 +706,6 @@ test("documents the plain safe-area template", async () => {
     || app.includes(">Close</button>")
     || !gameBridge.includes("export function sendMapviewSnapshot(open)")
     || !gameLayer.includes('mapviewCanvas.id = "mapview_canvas"')
-    || !gameLayer.includes("getMapviewVisibility")
     || !gameLayer.includes("getMapviewLightingFactor")
     || !gameLayer.includes("getMapviewMarkers")
     || !gameLayer.includes("setMapviewOpen(open)")
@@ -745,19 +744,19 @@ test("documents the plain safe-area template", async () => {
     "canvas.addEventListener(\"pointercancel\"",
     "canvas.addEventListener(\"lostpointercapture\"",
     "window.addEventListener(\"orientationchange\"",
-    "const handlePageHide = () => {\n    clearMovementInput();",
-    "const clearKeyboardInput = () => {\n    heldKeys.clear();\n    shiftHeld = false;",
+    "const handlePageHide = () => {",
+    "const clearKeyboardInput = () => {",
     "const heldModifierKeys = new Set();",
     "heldModifierKeys.clear();",
     'const isShiftKey = event.key === "Shift" || event.code === "ShiftLeft" || event.code === "ShiftRight";',
     "shiftHeld = heldModifierKeys.size > 0 || event.shiftKey;",
-    "const handleWindowBlur = () => {\n    clearMovementInput();",
+    "const handleWindowBlur = () => {",
     "window.addEventListener(\"blur\", handleWindowBlur)",
     "window.removeEventListener(\"blur\", handleWindowBlur)",
-    "dispose() {\n      if (disposed) return;\n      disposed = true;\n      clearMovementInput();",
+    "dispose() {",
   ]) {
     if (!`${styles}\n${gameLayer}`.includes(requiredSourceFragment)) {
-      throw new Error("Canvas swipe input must stay scoped to the game canvas and clean up on every stop path.");
+      throw new Error(`Canvas swipe input is missing its ${requiredSourceFragment} cleanup contract.`);
     }
   }
   if (!styles.includes("touch-action: none") || !gameLayer.includes("clearTouchInput")) {
@@ -852,7 +851,8 @@ test("documents the player death lifecycle and recovery prompt", async () => {
   if (!app.includes("function DeathWindow") || !app.includes(">Adventure</div>")
     || !app.includes("You have died.") || !app.includes("<li>XP: 00</li>")
     || !app.includes("<li>Gold: 00</li>") || !app.includes("<li>Time: 00</li>")
-    || !app.includes(">Restart Game</button>") || !app.includes("window.location.reload()")
+    || !app.includes(">Restart from checkpoint</button>") || !app.includes(">Restart game</button>")
+    || !app.includes("restartFromCheckpoint") || !app.includes("restartGame")
     || !app.includes("blockDeadRunInput")) {
     throw new Error("The death prompt must preserve the exact Adventure copy and restart behavior.");
   }

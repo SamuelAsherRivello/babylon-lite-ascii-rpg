@@ -1363,7 +1363,7 @@ export function ProceduralSettingsWindow({ settings, randomSeed, onConfirm, onCl
   const [previewViewport, setPreviewViewport] = useState({ zoom: 1, x: 0, y: 0 });
   const [error, setError] = useState("");
   const previewCanvasRef = useRef(null);
-  const objectPassIds = new Set(["object-heart", "object-trap", "object-torch", "object-fireplace"]);
+  const objectPassIds = new Set(["object-heart", "object-trap", "object-torch", "object-fireplace", "npc-spawner"]);
   const orderedPasses = [...draft.passes].sort((left, right) => left.order - right.order);
   const objectPasses = orderedPasses.filter((pass) => objectPassIds.has(pass.id));
   const previewRealmScope = previewRealm === "Underground" ? "Underworld" : "Overworld";
@@ -1483,10 +1483,10 @@ export function ProceduralSettingsWindow({ settings, randomSeed, onConfirm, onCl
                 <span className="procedural_settings_description">{GENERATION_PASS_DESCRIPTIONS[pass.id]}</span>
               </section>
                 })}
-                <section className="quest_settings_card procedural_object_settings_card" aria-label="Object Distribution, pass 7">
+                <section className="quest_settings_card procedural_object_settings_card" aria-label="Object and NPC Distribution, pass 7">
                   <div className="procedural_object_settings_header">
-                    <h3>7. Object Distribution</h3>
-                    <span className="procedural_settings_description">Controls world object placement</span>
+                    <h3>7. Object &amp; NPC Distribution</h3>
+                    <span className="procedural_settings_description">Controls world object placement and Overworld NPC density</span>
                     <span className="procedural_realm_scope">Realms: All</span>
                   </div>
                   {objectPasses.map((pass) => {

@@ -78,7 +78,6 @@ test("world-view never prepares fogged or off-region NPC and spawner glyphs", ()
   assert.deepEqual(calls, [1]);
   assert.deepEqual([...collectWorldViewGlyphs(composition)], ["☺"]);
 });
-});
 
 test("world-view composition carries numeric fog visibility", () => {
   const composition = createWorldViewComposition({
