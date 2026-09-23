@@ -27,6 +27,23 @@ test("coalesced movement rendering presents only the newest pending state", () =
   assert.equal(scheduler.pending, false);
 });
 
+test("coalesced movement rendering retains a required lighting invalidation", () => {
+  const scheduled = [];
+  const rendered = [];
+  const scheduler = createCoalescedFrameScheduler({
+    scheduleFrame(callback) { scheduled.push(callback); return scheduled.length; },
+    cancelFrame() {},
+    render(state) { rendered.push(state); },
+    merge: (previous, next) => ({ refreshLighting: previous.refreshLighting || next.refreshLighting }),
+  });
+
+  scheduler.schedule({ refreshLighting: true });
+  scheduler.schedule({ refreshLighting: false });
+  scheduled.shift()();
+
+  assert.deepEqual(rendered, [{ refreshLighting: true }]);
+});
+
 test("coalesced movement rendering cancels pending obsolete work", () => {
   const callbacks = [];
   let cancelled = null;
@@ -48,4 +65,17 @@ test("coalesced movement rendering cancels pending obsolete work", () => {
   assert.equal(cancelled, 7);
   assert.equal(scheduler.pending, false);
   assert.equal(callbacks.length, 1);
+});
+
+test("cancelled callbacks cannot render after a lifecycle transition", () => {
+  let callback;
+  const scheduler = createCoalescedFrameScheduler({
+    scheduleFrame(next) { callback = next; return 1; },
+    cancelFrame() {},
+    render() { throw new Error("stale callbacks must not render"); },
+  });
+
+  scheduler.schedule({ playerX: 3, playerY: 3 });
+  scheduler.cancel();
+  callback();
 });

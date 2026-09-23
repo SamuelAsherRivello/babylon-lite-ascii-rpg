@@ -573,10 +573,9 @@ test("documents the plain safe-area template", async () => {
     || main.includes("initializeHudHiddenDataset")) {
     throw new Error("The Dev panel must use scoped 8pt no-scroll styling without the retired HUD-hidden behavior.");
   }
-  if (!app.includes("requestFullscreenOnFirstInteraction")
-    || !app.includes('document.addEventListener("pointerdown", requestFullscreenOnFirstInteraction, { capture: true, once: true })')
-    || !app.includes("if (!fullscreenPreferred || document.fullscreenElement || !document.documentElement.requestFullscreen) return;")) {
-    throw new Error("A saved fullscreen preference must request fullscreen on the first click or tap when needed.");
+  if (app.includes("requestFullscreenOnFirstInteraction")
+    || app.includes('document.addEventListener("pointerdown", requestFullscreenOnFirstInteraction, { capture: true, once: true })')) {
+    throw new Error("Fullscreen must be requested only from its explicit control, never from another menu click.");
   }
   if (!app.includes("zoomStorageKey") || !app.includes("overgroundAmbientStorageKey") || !app.includes("undergroundAmbientStorageKey")
     || !app.includes("localStorage.setItem(zoomStorageKey")

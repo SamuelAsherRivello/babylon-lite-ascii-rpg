@@ -42,6 +42,17 @@ test("world-view composition shares fog eligibility and excludes hidden glyphs",
   assert.equal(composition.cells.find(({ cell }) => cell.x === 1).glyph, null);
 });
 
+test("world-view never prepares fogged or off-region NPC and spawner glyphs", () => {
+  const calls = [];
+  const composition = createWorldViewComposition({
+    world: createWorld(4, 1), fog: {}, source: { x: 1, y: 0, width: 2, height: 1 },
+    getGlyph: (_world, cell) => { calls.push(cell.x); return cell.x === 1 ? "☺" : "N"; },
+    getVisibility: (_fog, _world, cell) => cell.x === 1 ? 100 : 0,
+  });
+  assert.deepEqual(calls, [1]);
+  assert.deepEqual([...collectWorldViewGlyphs(composition)], ["☺"]);
+});
+
 test("world-view composition carries numeric fog visibility", () => {
   const composition = createWorldViewComposition({
     world: createWorld(3, 1),

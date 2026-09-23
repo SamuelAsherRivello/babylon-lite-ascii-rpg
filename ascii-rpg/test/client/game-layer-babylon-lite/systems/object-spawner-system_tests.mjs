@@ -18,10 +18,23 @@ test("the object catalog is palette-backed and declares pickup and level-spawn o
   assert.equal(validateObjectPalette(objectData.objects, paletteData.entries), true);
   assert.deepEqual(objectData.objects.map((object) => [object.type, object.IsPickup, object.IsLevelSpawned]), [
     ["gold", true, false], ["heart", true, true], ["torch", false, true], ["trap", false, true], ["stairs", false, true],
-    ["key", true, false], ["fence", false, false], ["door", false, false],
+    ["key", true, false], ["fence", false, false], ["door", false, false], ["fireplace", false, false],
   ]);
   assert.equal(objectData.objects.find((object) => object.type === "torch").glyph, "🕯️");
   assert.equal(validateObjectPalette([{ type: "door", name: "Door", glyph: "█", openGlyph: "□", IsPickup: false, IsLevelSpawned: false }], paletteData.entries), true);
+});
+
+test("a fireplace remains after collision and saves on every entry", () => {
+  const world = createWorld();
+  const saves = [];
+  const system = createObjectSpawnerSystem({ catalog: [
+    { type: "fireplace", name: "Fireplace", glyph: "🔥", IsPickup: false, IsLevelSpawned: false },
+  ] });
+  system.addObject({ id: "fireplace-1", type: "fireplace", cell: { x: 3, y: 3 }, realm: world, effect: () => saves.push("saved") });
+  system.collideAtCell({ x: 3, y: 3 }, { world });
+  system.collideAtCell({ x: 3, y: 3 }, { world });
+  assert.equal(system.getActiveObjects().some((object) => object.id === "fireplace-1"), true);
+  assert.deepEqual(saves, ["saved", "saved"]);
 });
 
 test("object placement is seeded, spaced, and excludes the player cell", () => {

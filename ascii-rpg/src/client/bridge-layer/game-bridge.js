@@ -53,6 +53,7 @@ let combatStatsSnapshot = Object.freeze({
   defense: Object.freeze({ current: 25, maximum: 25, currentPercent: 25, previousPercent: 25, revision: 0 }),
 });
 let playerDeadSnapshot = false;
+let checkpointSnapshot = Object.freeze({ active: false, revision: 0 });
 let logSnapshot = [];
 const timeListeners = new Set();
 const realmListeners = new Set();
@@ -67,6 +68,7 @@ const staminaListeners = new Set();
 const experienceListeners = new Set();
 const combatStatsListeners = new Set();
 const playerDeadListeners = new Set();
+const checkpointListeners = new Set();
 const logListeners = new Set();
 const playerMovedListeners = new Set();
 const randomSeedListeners = new Set();
@@ -355,6 +357,14 @@ export function sendPlayerDeadSnapshot(dead) {
   playerDeadSnapshot = dead === true;
   for (const listener of playerDeadListeners) listener();
 }
+export function getCheckpointSnapshot() { return checkpointSnapshot; }
+export function subscribeToCheckpoint(listener) { checkpointListeners.add(listener); return () => checkpointListeners.delete(listener); }
+export function sendCheckpointSnapshot(snapshot) {
+  checkpointSnapshot = Object.freeze({ active: Boolean(snapshot?.realm && snapshot?.cell), revision: Number(snapshot?.revision) || 0 });
+  for (const listener of checkpointListeners) listener();
+}
+export function restartFromCheckpoint() { return gameController?.restartFromCheckpoint?.() ?? false; }
+export function restartGame() { return gameController?.restartGame?.() ?? false; }
 
 export function getLogSnapshot() { return logSnapshot; }
 export function subscribeToLog(listener) { logListeners.add(listener); return () => logListeners.delete(listener); }

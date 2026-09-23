@@ -5,6 +5,8 @@ export const MAPVIEW_MARKER_DEPTHS = Object.freeze({
   item: 36,
   enemySpawner: 38,
   enemy: 39,
+  npc: 39,
+  npcSpawner: 38,
   player: 40,
 });
 
@@ -15,6 +17,8 @@ const MAPVIEW_MARKER_COLORS = Object.freeze({
   item: "#00ffff",
   enemySpawner: "#ff00ff",
   enemy: "#ff3b30",
+  npc: "#48c774",
+  npcSpawner: "#48c774",
   player: "#ffff00",
 });
 
@@ -95,8 +99,9 @@ export function getMapviewMarkers({
   }
 
   for (const entity of entities) {
-    if (!entity?.cell || !["enemy", "enemy-spawner"].includes(entity.type)) continue;
-    markers.push(makeMarker(entity.type === "enemy" ? "enemy" : "enemySpawner", entity.cell, { entityId: entity.id }));
+    if (!entity?.cell || !["enemy", "enemy-spawner", "npc", "npc-spawner"].includes(entity.type)) continue;
+    const type = entity.type === "enemy" ? "enemy" : entity.type === "enemy-spawner" ? "enemySpawner" : entity.type === "npc" ? "npc" : "npcSpawner";
+    markers.push(makeMarker(type, entity.cell, { entityId: entity.id }));
   }
 
   if (playerCell) markers.push(makeMarker("player", playerCell, { shape: "ring" }));

@@ -83,6 +83,16 @@
       "consequence": { "id": "door" },
       "logText": null,
       "distribution": {}
+    },
+    {
+      "type": "fireplace",
+      "name": "Fireplace",
+      "glyph": "🔥",
+      "IsPickup": false,
+      "IsLevelSpawned": false,
+      "consequence": { "id": "checkpoint" },
+      "logText": null,
+      "distribution": { "minCount": 10, "maxCount": 14, "minimumDistance": 3 }
     }
   ]
 }

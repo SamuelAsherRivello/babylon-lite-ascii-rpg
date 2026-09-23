@@ -4,7 +4,10 @@ export const UNDERGROUND_FLOOR_GLYPH = "●";
 export const PLAYER_GLYPH = "👤";
 export const ENEMY_GLYPH = "🕷️";
 export const ENEMY_SPAWNER_GLYPH = "S";
+export const NPC_GLYPH = "☺";
+export const NPC_SPAWNER_GLYPH = "N";
 export const TORCH_GLYPH = "🕯️";
+export const FIREPLACE_GLYPH = "🔥";
 export const GOLD_GLYPH = "💰";
 export const HEALTH_GLYPH = "♥";
 export const TRAP_GLYPH = "☠";
@@ -30,7 +33,10 @@ export const PROJECT_MAP_GLYPHS = Object.freeze([
   PLAYER_GLYPH,
   ENEMY_GLYPH,
   ENEMY_SPAWNER_GLYPH,
+  NPC_GLYPH,
+  NPC_SPAWNER_GLYPH,
   TORCH_GLYPH,
+  FIREPLACE_GLYPH,
   STAIR_GLYPH,
   GOLD_GLYPH,
   SHALLOW_WATER_GLYPH,
@@ -1002,14 +1008,15 @@ function addPairedStairs(realms, stairCount, seed) {
   return stairs;
 }
 
-export async function createWorldRealms({ rows, columns, torchCount = 3, seed = createGeneratedSeed(), initialRealm = "Overground", wallFillOffset = 0, waterFillPercent = DEFAULT_WATER_FILL_PERCENT, waterLakeCount, minWalkableMultiplier = 1, playerStartMode = "center" } = {}, scheduling = {}) {
+export async function createWorldRealms({ rows, columns, torchCount = 3, seed = createGeneratedSeed(), initialRealm = "Overground", wallFillPercents, wallFillOffset = 0, smoothingIterationsByRealm, waterFillPercent = DEFAULT_WATER_FILL_PERCENT, waterLakeCount, minWalkableMultiplier = 1, playerStartMode = "center" } = {}, scheduling = {}) {
   const realms = {};
   const realmOrder = initialRealm === "Underground" ? ["Underground", "Overground"] : ["Overground", "Underground"];
   for (const name of realmOrder) {
     const profile = REALM_PROFILES[name];
     const realm = await createWorldCooperative({
       rows, columns, torchCount, seed: `${seed}:${name}`,
-      wallFillPercent: Math.min(100, Math.max(0, profile.wallFillPercent + wallFillOffset)),
+      wallFillPercent: Math.min(100, Math.max(0, (wallFillPercents?.[name] ?? profile.wallFillPercent) + wallFillOffset)),
+      smoothingIterations: smoothingIterationsByRealm?.[name] ?? DEFAULT_SMOOTHING_ITERATIONS,
       minWalkablePercent: Math.min(0.95, Math.max(0.05, profile.minWalkablePercent * minWalkableMultiplier)),
       waterFillPercent,
       waterLakeCount,

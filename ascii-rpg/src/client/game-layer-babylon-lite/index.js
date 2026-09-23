@@ -52,7 +52,10 @@ import {
   GOLD_GLYPH,
   HEALTH_GLYPH,
   TRAP_GLYPH,
+  WALL_GLYPH,
+  MOUNTAIN_GLYPH,
   TORCH_GLYPH,
+  FIREPLACE_GLYPH,
   STAIR_GLYPH,
   getRandomSeedFromSearch,
   getVisibleGlyph,
@@ -101,7 +104,9 @@ import { createCivilizationGroups, isCardinalDirection } from "./systems/civiliz
 import { createDynamicOccupancy, getDynamicVisibleGlyph } from "./systems/dynamic-occupancy.js";
 import { createEnemySystem } from "./systems/enemy-system.js";
 import { createEnemySpawnerSystem, selectEnemySpawnerCells } from "./systems/enemy-spawner-system.js";
-import { getMapviewLayout, getMapviewLightingFactor, getMapviewMarkers, getMapviewVisibility } from "./systems/mapview-renderer.js";
+import { createNpcSystem } from "./systems/npc-system.js";
+import { createNpcSpawnerSystem, selectNpcSpawnerCells } from "./systems/npc-spawner-system.js";
+import { getMapviewLayout, getMapviewLightingFactor, getMapviewMarkers } from "./systems/mapview-renderer.js";
 import { resolvePlayerCombatTurn } from "./systems/combat-system.js";
 import { createHealthBarSystem } from "./systems/health-bar-system.js";
 import { createFloatingTextSystem } from "./systems/floating-text-system.js";
@@ -118,6 +123,7 @@ import {
 import { attachReplacementRendererLayer } from "./systems/renderer-layer-handoff.js";
 import { createCoalescedFrameScheduler } from "./movement-render-scheduler.js";
 import { PERFORMANCE_SCENARIOS, performanceMonitor } from "./performance-monitor.js";
+import { resolveGenerationProfile } from "./generation-profile.js";
 
 const GLYPHS = PROJECT_MAP_GLYPHS;
 const FOG_BACKING_GLYPH = "\u0000fog-backing";
@@ -157,6 +163,22 @@ function getMinimapGlyphBounds(glyph, x, y, cellWidth, cellHeight) {
   const width = cellWidth * MINIMAP_EMOJI_CELL_RATIO;
   const height = cellHeight * MINIMAP_EMOJI_CELL_RATIO;
   return { x: x + (cellWidth - width) / 2, y: y + (cellHeight - height) / 2, width, height };
+}
+
+function getSettingsPreviewGlyphBounds(realm, glyph, x, y, cellWidth, cellHeight, devicePixelRatio) {
+  const normalBounds = getMinimapGlyphBounds(glyph, x, y, cellWidth, cellHeight);
+  const emphasizedGlyph = realm === "Underground" ? WALL_GLYPH : MOUNTAIN_GLYPH;
+  if (getFacingGlyph(glyph) !== emphasizedGlyph) return normalBounds;
+  const size = Math.max(
+    16 * devicePixelRatio,
+    Math.min(48 * devicePixelRatio, Math.min(cellWidth, cellHeight) * 8),
+  );
+  return {
+    x: x + (cellWidth - size) / 2,
+    y: y + (cellHeight - size) / 2,
+    width: size,
+    height: size,
+  };
 }
 
 function getRenderedCellCenter(cell, viewport, world) {
@@ -213,25 +235,6 @@ function getTorchCountForViewport(viewport, seed) {
   return getObjectDistributionCount("torch", seed);
 }
 
-function resolveGenerationProfile(generationSettings = { passes: [] }) {
-  const densityFor = (id) => generationSettings.passes?.find((pass) => pass.id === id)?.density ?? "Med";
-  const densityMultiplier = (id, values) => values[densityFor(id)] ?? values.Med;
-  return Object.freeze({
-    caveWallOffset: densityMultiplier("cave-walls", { Low: -10, Med: 0, High: -30 }) + densityMultiplier("walkability", { Low: 0, Med: 0, High: -50 }),
-    waterFillPercent: densityMultiplier("water", { Low: 5, Med: 30, High: 100 }),
-    waterLakeCount: densityFor("water") === "High" ? 9 : undefined,
-    minWalkableMultiplier: densityMultiplier("ground", { Low: 0.7, Med: 1, High: 1.2 }) * densityMultiplier("walkability", { Low: 0.7, Med: 1, High: 2 }),
-    objectCountMultipliers: Object.freeze({
-      heart: densityMultiplier("object-heart", { Low: 0.25, Med: 1, High: 3 }),
-      trap: densityMultiplier("object-trap", { Low: 0.25, Med: 1, High: 3 }),
-    }),
-    torchCountMultiplier: densityMultiplier("object-torch", { Low: 0.25, Med: 1, High: 3 }),
-    civilizationChanceMultiplier: densityMultiplier("civilization", { Low: 0.25, Med: 1, High: 2 }),
-    maxEnemySpawners: densityMultiplier("enemy-spawner", { Low: 4, Med: 16, High: 32 }),
-    playerStartMode: "center",
-  });
-}
-
 /**
  * Starts the non-React Babylon Lite game client and returns its narrow UI bridge.
  * The bridge deliberately exposes only the UI-facing game state and controls.
@@ -243,7 +246,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
 
   validatePaletteEntries(initialPalette);
   validateFontId(initialFontId);
-  const { caveWallOffset, waterFillPercent, waterLakeCount, minWalkableMultiplier, objectCountMultipliers, torchCountMultiplier, civilizationChanceMultiplier, maxEnemySpawners, playerStartMode } = resolveGenerationProfile(generationSettings);
+  const { caveWallFillPercents, caveSmoothingIterationsByRealm, walkabilityWallOffset, waterFillPercent, waterLakeCount, minWalkableMultiplier, objectCountMultipliers, torchCountMultiplier, fireplaceDensity, civilizationChanceMultiplier, maxEnemySpawners, npcSpawnerCount, playerStartMode } = resolveGenerationProfile(generationSettings);
   const canvas = document.createElement("canvas");
   canvas.id = "game_canvas";
   canvas.setAttribute("aria-label", "Ascii RPG game");
@@ -281,6 +284,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   let disposed = false;
   let repeatTimer = null;
   let minimapRenderFrame = null;
+  let mapviewRenderFrame = null;
   let presentationFrame = null;
   let healthBarAnimationFrame = null;
   let floatingTextAnimationFrame = null;
@@ -332,10 +336,15 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   let characterGold = 0;
   let characterKeys = 0;
   const playerLifecycle = createPlayerLifecycle();
+  let checkpoint = null;
+  let checkpointRevision = 0;
+  const checkpointListeners = new Set();
   let questManager = null;
   let objectSpawnerSystem = null;
   let enemySystem = null;
   let enemySpawnerSystem = null;
+  let npcSystem = null;
+  let npcSpawnerSystem = null;
   const dynamicOccupancies = new Map();
   const staticOccupancyIndexes = new Map();
   const healthBarSystem = createHealthBarSystem();
@@ -576,7 +585,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
         const graphic = getMinimapWorldCellGraphic(world, activeFog, palette, {
           x: sourceX + localX,
           y: sourceY + localY,
-        });
+        }, glyph);
         if (!graphic) return;
         const raster = visual.rasters.get(glyph);
         if (!raster) return;
@@ -653,29 +662,6 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
             markerHeight,
           );
         }
-        for (const indicator of getMinimapEdgeIndicators(world, playerCell, {
-          x: sourceX, y: sourceY, columns: sourceColumns, rows: sourceRows,
-        }, { navigationMarkers })) {
-          const offset = (indicator.offsetIndex % 3 - 1) * Math.min(cellWidth, cellHeight) * 0.55;
-          const edgeX = offsetX + indicator.edge.x * cellWidth + (Math.abs(indicator.direction.x) < Math.abs(indicator.direction.y) ? offset : 0);
-          const edgeY = offsetY + indicator.edge.y * cellHeight + (Math.abs(indicator.direction.x) >= Math.abs(indicator.direction.y) ? offset : 0);
-          const angle = Math.atan2(indicator.direction.y, indicator.direction.x);
-          const size = Math.max(MINIMAP_INDICATOR_MIN_SIZE * devicePixelRatio, Math.min(cellWidth, cellHeight) * 0.8);
-          const arrowExtent = size * 0.6;
-          const safeEdgeX = Math.min(safeArea.right - arrowExtent, Math.max(safeArea.left + arrowExtent, edgeX));
-          const safeEdgeY = Math.min(safeArea.bottom - arrowExtent, Math.max(safeArea.top + arrowExtent, edgeY));
-          context.save();
-          context.translate(safeEdgeX, safeEdgeY);
-          context.rotate(angle);
-          context.fillStyle = indicator.color;
-          context.beginPath();
-          context.moveTo(size * 0.6, 0);
-          context.lineTo(-size * 0.45, -size * 0.45);
-          context.lineTo(-size * 0.45, size * 0.45);
-          context.closePath();
-          context.fill();
-          context.restore();
-        }
       },
     });
     if (performanceMonitor.isActive()) {
@@ -725,7 +711,6 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       source,
       destination,
       getGlyph: getClientVisibleGlyphKey,
-      getVisibility: getMapviewVisibility,
     });
     const visual = minimapGlyphCache.ensure(1, destination.cellWidth, collectWorldViewGlyphs(composition));
     const renderJob = renderWorldViewCompositionCooperatively(composition, {
@@ -767,6 +752,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
           entities: occupancy?.getAll?.().filter((entity) => entity.id !== "player") ?? [],
         });
         for (const marker of markers) {
+          if (!isDiscovered(mapviewWorld.fog ?? fogOfWar, mapviewWorld, marker.cell)) continue;
           context.fillStyle = marker.color;
           if (marker.shape === "ring") {
             const centerX = destination.x + (marker.cell.x + 0.5) * destination.cellWidth;
@@ -825,7 +811,9 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
         torchCount: Math.round(12 * profile.torchCountMultiplier),
         seed: seedMode === "0" ? "settings-map-view:0" : `settings-map-view:${sessionSeed ?? "preview"}`,
         initialRealm: previewRealm === "Underground" ? "Underground" : "Overground",
-        caveWallOffset: profile.caveWallOffset,
+        wallFillPercents: profile.caveWallFillPercents,
+        wallFillOffset: profile.walkabilityWallOffset,
+        smoothingIterationsByRealm: profile.caveSmoothingIterationsByRealm,
         waterFillPercent: profile.waterFillPercent,
         waterLakeCount: profile.waterLakeCount,
         minWalkableMultiplier: profile.minWalkableMultiplier,
@@ -846,14 +834,32 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
         maxSpawners: profile.maxEnemySpawners,
       }).cells.map((cell) => ({ ...cell, kind: "enemy-spawner" }))
       : [];
+    const npcSpawnerMarkers = previewRealm === "Overground"
+      ? selectNpcSpawnerCells(previewWorld, {
+        realm: "Overground",
+        count: profile.npcSpawnerCount,
+        random: createRandom(`${previewWorld.options.seed}:procedural-settings-npc-spawner`),
+      }).cells.map((cell) => ({ ...cell, kind: "npc-spawner", glyph: "☺", color: "#48c774" }))
+      : [];
     const heartCount = Math.max(0, Math.round(getObjectDistributionCount("heart", previewWorld.options.seed) * profile.objectCountMultipliers.heart));
     const heartCells = selectObjectCells(previewWorld, previewWorld.playerStart, heartCount, createRandom(`${previewWorld.options.seed}:procedural-settings-heart`), { minimumDistance: 3, reserved: new Set() });
     const trapCount = Math.max(0, Math.round(getObjectDistributionCount("trap", previewWorld.options.seed) * profile.objectCountMultipliers.trap));
     const trapCells = selectObjectCells(previewWorld, previewWorld.playerStart, trapCount, createRandom(`${previewWorld.options.seed}:procedural-settings-trap`), { minimumDistance: 3, reserved: new Set(heartCells.map((cell) => `${cell.x},${cell.y}`)) });
+    const fireplaceCount = previewRealm === "Underground"
+      ? Math.max(0, Math.round(getObjectDistributionCount("fireplace", previewWorld.options.seed) * profile.objectCountMultipliers.fireplace))
+      : 0;
+    const fireplaceCells = selectObjectCells(previewWorld, previewWorld.playerStart,
+      fireplaceCount,
+      createRandom(`${previewWorld.options.seed}:procedural-settings-fireplace:${profile.fireplaceDensity}`), {
+        minimumDistance: 3,
+        reserved: new Set([...heartCells, ...trapCells].map((cell) => `${cell.x},${cell.y}`)),
+      });
     const proceduralSettingsMarkers = [
       ...enemySpawnerMarkers,
+      ...npcSpawnerMarkers,
       ...heartCells.map((cell) => ({ ...cell, kind: "heart", glyph: "♥", color: "#ff4f6d" })),
       ...trapCells.map((cell) => ({ ...cell, kind: "trap", glyph: "☠", color: "#ffd166" })),
+      ...fireplaceCells.map((cell) => ({ ...cell, kind: "fireplace", glyph: FIREPLACE_GLYPH, color: "#ff6b35" })),
       ...(previewWorld.torches ?? []).map((cell) => ({ ...cell, kind: "torch", glyph: "🕯", color: "#ffe066" })),
     ];
     const devicePixelRatio = window.devicePixelRatio || 1;
@@ -891,7 +897,8 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
           glyphCanvas = createGlyphRasterCanvas(raster, litColor, { alphaScale: 1, colorScale: 1, tint: true });
           settingsMapGlyphCanvases.set(cacheKey, glyphCanvas);
         }
-        const glyphBounds = getMinimapGlyphBounds(
+        const glyphBounds = getSettingsPreviewGlyphBounds(
+          previewRealm,
           glyph,
           destination.x + localX * destination.cellWidth,
           destination.y + localY * destination.cellHeight,
@@ -911,12 +918,14 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
           const centerX = mapDestination.x + (marker.x - region.x + 0.5) * mapDestination.cellWidth;
           const centerY = mapDestination.y + (marker.y - region.y + 0.5) * mapDestination.cellHeight;
           if (marker.kind === "enemy-spawner") {
+            context.fillStyle = "#e63946";
             context.fillRect(centerX - markerSize / 2, centerY - markerSize / 2, markerSize, markerSize);
             context.strokeRect(centerX - markerSize / 2, centerY - markerSize / 2, markerSize, markerSize);
             continue;
           }
           context.fillStyle = marker.color;
-          context.font = `${Math.max(16 * devicePixelRatio, Math.min(48 * devicePixelRatio, Math.min(mapDestination.cellWidth, mapDestination.cellHeight) * 8))}px serif`;
+          const glyphSize = Math.max(16 * devicePixelRatio, Math.min(48 * devicePixelRatio, Math.min(mapDestination.cellWidth, mapDestination.cellHeight) * 8));
+          context.font = `${glyphSize}px serif`;
           context.textAlign = "center";
           context.textBaseline = "middle";
             context["fillText"](marker.glyph, centerX, centerY);
@@ -1784,12 +1793,26 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     return result;
   };
 
+  // Mapview composition is cooperative, but repeatedly starting it cancels and
+  // rebuilds a large canvas job. UI changes therefore share one current-frame
+  // request before they touch any renderer-owned surface.
+  const scheduleMapviewRender = () => {
+    if (mapviewRenderFrame !== null) return;
+    mapviewRenderFrame = window.requestAnimationFrame(() => {
+      mapviewRenderFrame = null;
+      if (!disposed) renderMapview();
+    });
+  };
+
   movementRenderScheduler = createCoalescedFrameScheduler({
     scheduleFrame: (callback) => window.requestAnimationFrame(callback),
     cancelFrame: (handle) => window.cancelAnimationFrame(handle),
     render: ({ refreshLighting = false } = {}) => {
       if (!disposed) renderWorld({ refreshLighting });
     },
+    merge: (previous, next) => ({
+      refreshLighting: previous.refreshLighting || next.refreshLighting,
+    }),
   });
 
   // Full world lighting and sprite submission are synchronous WebGPU work.
@@ -1799,13 +1822,21 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     movementRenderScheduler?.schedule({ refreshLighting });
   };
 
+  const scheduleVisualRefresh = ({ refreshLighting = false, mapview = true } = {}) => {
+    scheduleMovementRender({ refreshLighting });
+    scheduleMinimapRender();
+    if (mapview) scheduleMapviewRender();
+  };
+
   const cancelScheduledRenders = () => {
     movementRenderScheduler?.cancel();
     if (minimapRenderFrame !== null) window.cancelAnimationFrame(minimapRenderFrame);
+    if (mapviewRenderFrame !== null) window.cancelAnimationFrame(mapviewRenderFrame);
     if (presentationFrame !== null) window.cancelAnimationFrame(presentationFrame);
     if (healthBarAnimationFrame !== null) window.cancelAnimationFrame(healthBarAnimationFrame);
     if (floatingTextAnimationFrame !== null) window.cancelAnimationFrame(floatingTextAnimationFrame);
     minimapRenderFrame = null;
+    mapviewRenderFrame = null;
     presentationFrame = null;
     healthBarAnimationFrame = null;
     floatingTextAnimationFrame = null;
@@ -2070,6 +2101,26 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   };
   window.addEventListener("pagehide", handlePageHide);
 
+  const handleVisibilityChange = () => {
+    if (document.visibilityState === "hidden") {
+      clearMovementInput();
+      cancelScheduledRenders();
+      return;
+    }
+    if (!disposed && world) scheduleVisualRefresh({ refreshLighting: true });
+  };
+  document.addEventListener("visibilitychange", handleVisibilityChange);
+
+  const handleDeviceLost = (info) => {
+    if (disposed) return;
+    clearMovementInput();
+    cancelScheduledRenders();
+    gameplayInputLocked = true;
+    canvas.dataset.renderingState = "unavailable";
+    canvas.setAttribute("aria-label", "Ascii RPG game unavailable");
+    console.error("ASCII RPG WebGPU device lost; no fallback renderer is available.", info);
+  };
+
   const handleWindowBlur = () => {
     clearMovementInput();
   };
@@ -2087,6 +2138,9 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     registerSpriteRenderer(renderer);
     await startEngine(engine);
     stopEngine(engine);
+    // Preserve the Babylon Lite-only architecture on device loss: the client
+    // becomes unavailable rather than constructing an alternate renderer.
+    engine._device?.lost?.then(handleDeviceLost);
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
     window.addEventListener("resize", handleResize);
@@ -2117,7 +2171,9 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
           torchCount: Math.round(getTorchCountForViewport(viewport, seed) * torchCountMultiplier),
           seed,
           initialRealm: activeRealm,
-          wallFillOffset: caveWallOffset,
+          wallFillPercents: caveWallFillPercents,
+          wallFillOffset: walkabilityWallOffset,
+          smoothingIterationsByRealm: caveSmoothingIterationsByRealm,
           waterFillPercent,
           waterLakeCount,
           minWalkableMultiplier,
@@ -2189,6 +2245,10 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       realm.objects.push(object);
       realm.characters[object.cell.y][object.cell.x] = object.glyph;
       return object;
+    };
+    const saveCheckpoint = (realmName, cell) => {
+      checkpoint = Object.freeze({ realm: realmName, cell: Object.freeze({ ...cell }), revision: ++checkpointRevision });
+      for (const listener of checkpointListeners) listener(checkpoint);
     };
     const randomObjectCount = (type, seed) => Math.max(0, Math.round(getObjectDistributionCount(type, seed) * (objectCountMultipliers[type] ?? 1)));
     for (const [realmName, realm] of Object.entries(worldRealms.realms)) {
@@ -2270,6 +2330,20 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
             },
           }));
         });
+        const fireplaceCells = selectObjectCells(
+          realm,
+          realm.playerStart,
+          randomObjectCount("fireplace", realm.options.seed),
+          createRandom(`${realm.options.seed}:fireplace:placement:${fireplaceDensity}`),
+          { minimumDistance: 3, reserved: new Set(realm.objects.map((object) => `${object.cell.x},${object.cell.y}`)) },
+        );
+        fireplaceCells.forEach((cell, index) => addObjectToRealm(realm, {
+          id: `${realmName.toLowerCase()}-fireplace-${index + 1}`,
+          type: "fireplace",
+          cell,
+          glyph: FIREPLACE_GLYPH,
+          effect: () => saveCheckpoint(realmName, cell),
+        }));
       } else {
         realm.civilizationGroups = [];
       }
@@ -2441,6 +2515,37 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       cell: spawnerDistribution.bonusCell,
       bornAtTime: timeSystem.getTime(),
     });
+    const overground = worldRealms.realms.Overground;
+    const overgroundOccupancy = dynamicOccupancies.get("Overground");
+    npcSystem = createNpcSystem({
+      timeSystem,
+      occupancy: overgroundOccupancy,
+      worldFor: (realmName) => worldRealms.realms[realmName],
+      isWalkable: (cell, realmName) => Boolean(worldRealms.realms[realmName]?.terrain?.[cell.y]?.[cell.x]?.walkable),
+      isStaticOccupied,
+      randomFor: (npc, tick) => createRandom(`${overground.options.seed}:${npc.id}:${tick}`),
+      onChange: scheduleEntityRender,
+    });
+    npcSpawnerSystem = createNpcSpawnerSystem({
+      timeSystem,
+      occupancy: overgroundOccupancy,
+      spawnNpc: (request) => npcSystem.addNpc(request),
+      worldFor: (realmName) => worldRealms.realms[realmName],
+      isWalkable: (cell, realmName) => Boolean(worldRealms.realms[realmName]?.terrain?.[cell.y]?.[cell.x]?.walkable),
+      isStaticOccupied,
+      randomFor: (spawner, tick) => createRandom(`${overground.options.seed}:${spawner.id}:${tick}`),
+      onChange: scheduleEntityRender,
+    });
+    selectNpcSpawnerCells(overground, {
+      realm: "Overground",
+      count: npcSpawnerCount,
+      random: createRandom(`${overground.options.seed}:npc-spawner:placement`),
+    }).cells.forEach((cell, index) => npcSpawnerSystem.addSpawner({
+      id: `overground-npc-spawner-${index + 1}`,
+      realm: "Overground",
+      cell,
+      bornAtTime: timeSystem.getTime(),
+    }));
     timeSystem.dispatchCurrent("session-start");
     notifyGold();
     notifyKeys();
@@ -2478,6 +2583,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     clearMovementInput();
     cancelScheduledRenders();
     window.removeEventListener("pagehide", handlePageHide);
+    document.removeEventListener("visibilitychange", handleVisibilityChange);
     window.removeEventListener("blur", handleWindowBlur);
     window.removeEventListener("keydown", handleKeyDown);
     window.removeEventListener("keyup", handleKeyUp);
@@ -2526,9 +2632,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       if (glyphBackgroundEnabled || offsetChanged.size > 0) {
         rebuildGameGlyphCache();
         rebuildMinimapGlyphCache();
-        renderWorld();
-        renderMinimap();
-        renderMapview();
+        scheduleVisualRefresh();
         return;
       }
       for (let slot = 0; slot < spriteStates.length; slot += 1) {
@@ -2541,10 +2645,12 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
         state.color = color;
         metrics.submittedCells += 1;
       }
-      renderMinimap();
-      renderMapview();
-      if (gpuLightPassEnabled) renderWorld();
-      else schedulePresentation();
+      if (gpuLightPassEnabled) scheduleVisualRefresh();
+      else {
+        scheduleMinimapRender();
+        scheduleMapviewRender();
+        schedulePresentation();
+      }
     },
     setFont(nextFontId) {
       validateFontId(nextFontId);
@@ -2558,9 +2664,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       rebuildMinimapGlyphCache();
       layer = null;
       atlas = null;
-      renderWorld();
-      renderMinimap();
-      renderMapview();
+      scheduleVisualRefresh();
     },
     setZoom(nextZoom) {
       if (!Number.isFinite(nextZoom)) return;
@@ -2589,16 +2693,12 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     setLighting(nextLighting) {
       const legacyLighting = createLightingConfig(nextLighting);
       lighting = { ...lighting, ambient: legacyLighting.ambient, torchProfile: legacyLighting };
-      renderWorld();
-      renderMinimap();
-      renderMapview();
+      scheduleVisualRefresh({ refreshLighting: true });
     },
     setRealmAmbient(nextAmbient) {
       realmAmbient = { ...realmAmbient, ...nextAmbient };
       lighting = { ...lighting, ambient: realmAmbient[activeRealm] };
-      renderWorld();
-      renderMinimap();
-      renderMapview();
+      scheduleVisualRefresh({ refreshLighting: true });
     },
     setRealmPreference(realm) {
       if (realm !== activeRealm && worldRealms) startRealmTransition(realm);
@@ -2648,6 +2748,31 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     subscribeToPlayerDead(listener) {
       return playerLifecycle.subscribeToDeath(listener);
     },
+    getCheckpointSnapshot() { return checkpoint ?? Object.freeze({ realm: null, cell: null, revision: checkpointRevision }); },
+    subscribeToCheckpoint(listener) { checkpointListeners.add(listener); return () => checkpointListeners.delete(listener); },
+    restartFromCheckpoint() {
+      if (!playerLifecycle.isDead() || !checkpoint) return false;
+      clearMovementInput();
+      if (checkpoint.realm !== activeRealm) activateRealm(checkpoint.realm, checkpoint.cell);
+      else {
+        getOccupancyForWorld()?.move("player", checkpoint.cell);
+        playerCell = { ...checkpoint.cell };
+        world.playerCell = playerCell;
+        resolveCameraOrigin(CAMERA_RESOLVE_INTENTS.activeMode);
+        refreshDiscovery({ immediate: true });
+      }
+      playerLifecycle.revive();
+      scheduleMovementRender({ refreshLighting: true });
+      scheduleMinimapRender();
+      renderMapview();
+      return true;
+    },
+    restartGame() {
+      const url = new URL(window.location.href);
+      url.searchParams.set("randomSeed", sessionSeed);
+      window.location.assign(url);
+      return true;
+    },
     getLogSnapshot() { return logSystem.getSnapshot(); },
     subscribeToLog(listener) {
       return logSystem.subscribe(listener);
@@ -2661,34 +2786,24 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     subscribeToMinimapZoom(listener) { minimapZoomListeners.add(listener); return () => minimapZoomListeners.delete(listener); },
     setTorchLighting(profile) {
       lighting = { ...lighting, torchProfile: getLightingProfile(profile).config };
-      renderWorld();
-      renderMinimap();
-      renderMapview();
+      scheduleVisualRefresh({ refreshLighting: true });
     },
     setPlayerLighting(profile) {
       lighting = { ...lighting, playerProfile: getLightingProfile(profile).config };
       refreshDiscovery();
-      renderWorld();
-      renderMinimap();
-      renderMapview();
+      scheduleVisualRefresh({ refreshLighting: true });
     },
     setTorchShadow(profile) {
       lighting = { ...lighting, torchShadow: getShadowProfile(profile).config };
-      renderWorld();
-      renderMinimap();
-      renderMapview();
+      scheduleVisualRefresh({ refreshLighting: true });
     },
     setPlayerShadow(profile) {
       lighting = { ...lighting, playerShadow: getShadowProfile(profile).config };
-      renderWorld();
-      renderMinimap();
-      renderMapview();
+      scheduleVisualRefresh({ refreshLighting: true });
     },
     setPlayerGpuShadowBleedRange(range) {
       lighting = { ...lighting, playerGpuShadowBleedRange: Number(range) };
-      renderWorld();
-      renderMinimap();
-      renderMapview();
+      scheduleVisualRefresh({ refreshLighting: true });
     },
     setGlyphBackground(enabled) {
       const nextEnabled = enabled === true;
@@ -2696,8 +2811,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       glyphBackgroundEnabled = nextEnabled;
       rebuildGameGlyphCache();
       rebuildMinimapGlyphCache();
-      renderWorld();
-      renderMinimap();
+      scheduleVisualRefresh({ mapview: false });
     },
     setBackgroundDarkness(darkness) {
       if (!Number.isInteger(darkness)) return;
@@ -2707,28 +2821,24 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       if (glyphBackgroundEnabled) {
         rebuildGameGlyphCache();
         rebuildMinimapGlyphCache();
-        renderWorld();
-        renderMinimap();
-        renderMapview();
+        scheduleVisualRefresh();
       }
     },
     setGpuLightPass(enabled) {
       const nextEnabled = enabled === true;
       if (nextEnabled === gpuLightPassEnabled) return;
       gpuLightPassEnabled = nextEnabled;
-      renderWorld({ refreshLighting: true });
-      renderMinimap();
-      renderMapview();
+      scheduleVisualRefresh({ refreshLighting: true });
     },
     setMinimapZoom(nextZoom) {
       if (!MINIMAP_SCALE_LEVELS.includes(nextZoom) || nextZoom === minimapZoom) return;
       minimapZoom = nextZoom;
-      renderMinimap();
+      scheduleMinimapRender();
     },
     setMapviewOpen(open) {
       const nextOpen = open === true;
       if (nextOpen === mapviewOpen) {
-        if (mapviewOpen) renderMapview();
+        if (mapviewOpen) scheduleMapviewRender();
         else releaseMapviewResources();
         return;
       }
@@ -2738,7 +2848,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       mapviewCanvas.hidden = !nextOpen;
       if (nextOpen) {
         mapviewRealm = activeRealm;
-        renderMapview();
+        scheduleMapviewRender();
       }
       else {
         releaseMapviewResources();
@@ -2759,8 +2869,8 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
           // A user-selected aspect change must reapply the active camera so the
           // player is centered in the newly committed presentation frame.
           rebuildViewport({ reapplyCameraMode: true });
-          renderMinimap();
-          renderMapview();
+          scheduleMinimapRender();
+          scheduleMapviewRender();
         });
       });
     },
@@ -2770,7 +2880,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       if (realms.length < 2) return;
       const index = Math.max(0, realms.indexOf(mapviewRealm));
       mapviewRealm = realms[(index + 1) % realms.length];
-      renderMapview();
+      scheduleMapviewRender();
     },
     renderGenerationSettingsPreview(targetCanvas, previewSettings, previewRealm, seedMode) {
       void renderGenerationSettingsPreview(targetCanvas, previewSettings, previewRealm, seedMode);
@@ -2798,6 +2908,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
         aspectRebuildFrame = null;
       }
       window.removeEventListener("pagehide", handlePageHide);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("blur", handleWindowBlur);
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);

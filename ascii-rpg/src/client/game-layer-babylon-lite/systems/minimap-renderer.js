@@ -109,14 +109,14 @@ export function findNearestNavigationTarget(world, playerCell, navigation) {
 export function getMinimapMarkers(world, fog, playerCell, { navigationMarkers = [] } = {}) {
   if (!world || !fog || !playerCell) return [];
   const markers = [];
-  if (world.playerStart) {
+  if (world.playerStart && isDiscovered(fog, world, world.playerStart)) {
     markers.push({
       type: "start", color: MINIMAP_MARKER_COLORS.start,
       depth: MINIMAP_MARKER_DEPTHS.start, cell: getMinimapMarkerCell(world.playerStart),
     });
   }
   for (const pickup of getPickupObjects(world)) {
-    if (!pickup.active) continue;
+    if (!pickup.active || !isDiscovered(fog, world, pickup.cell)) continue;
     markers.push({
       type: "quest", color: MINIMAP_MARKER_COLORS.quest,
       depth: MINIMAP_MARKER_DEPTHS.quest, pickupId: pickup.id,
@@ -124,14 +124,14 @@ export function getMinimapMarkers(world, fog, playerCell, { navigationMarkers = 
     });
   }
   for (const navigationMarker of navigationMarkers) {
-    if (!navigationMarker?.cell) continue;
+    if (!navigationMarker?.cell || !isDiscovered(fog, world, navigationMarker.cell)) continue;
     markers.push({
       type: "navigation", color: navigationMarker.color ?? MINIMAP_MARKER_COLORS.quest,
       depth: MINIMAP_MARKER_DEPTHS.quest, markerId: navigationMarker.id,
       cell: getMinimapMarkerCell(navigationMarker.cell),
     });
   }
-  if (playerCell) {
+  if (playerCell && isDiscovered(fog, world, playerCell)) {
     markers.push({
       type: "player", color: MINIMAP_MARKER_COLORS.player,
       depth: MINIMAP_MARKER_DEPTHS.player, cell: getMinimapMarkerCell(playerCell),
@@ -271,8 +271,8 @@ export function getMinimapWorldGraphic(world, fog, palette, minimapCell) {
   return null;
 }
 
-export function getMinimapWorldCellGraphic(world, fog, palette, cell) {
+export function getMinimapWorldCellGraphic(world, fog, palette, cell, visibleGlyph = null) {
   if (!world?.terrain?.[cell.y]?.[cell.x] || !isDiscovered(fog, world, cell)) return null;
-  const glyph = getVisibleGlyph(world, cell);
+  const glyph = visibleGlyph ?? getVisibleGlyph(world, cell);
   return { glyph, color: getPaletteStyle(palette, glyph).color };
 }

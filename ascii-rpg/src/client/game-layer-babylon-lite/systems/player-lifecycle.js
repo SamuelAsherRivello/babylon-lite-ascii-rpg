@@ -34,6 +34,14 @@ export function createPlayerLifecycle({ initialHealth = INITIAL_PLAYER_HEALTH } 
       }
       return health;
     },
+    revive() {
+      if (!dead) return health;
+      health = MAX_PLAYER_HEALTH;
+      dead = false;
+      notifyHealth();
+      for (const listener of deathListeners) listener(false);
+      return health;
+    },
     subscribeToHealth(listener) {
       healthListeners.add(listener);
       listener(health);

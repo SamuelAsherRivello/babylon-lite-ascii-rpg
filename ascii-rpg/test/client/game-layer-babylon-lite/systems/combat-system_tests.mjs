@@ -37,6 +37,20 @@ test("reports lethal collisions and allows a later empty-cell movement attempt",
 
 test("ignores non-damageable dynamic occupants", () => {
   assert.deepEqual(resolvePlayerDynamicCollision({ id: "player", type: "player" }, {}), { handled: false, killed: false });
+  assert.deepEqual(resolvePlayerDynamicCollision({ id: "npc-1", type: "npc" }, {}), { handled: false, killed: false });
+  const timeSystem = createTimeSystem();
+  const staminaSystem = createStaminaSystem();
+  const awards = [];
+  assert.deepEqual(resolvePlayerCombatTurn({ id: "npc-1", type: "npc" }, {
+    timeSystem,
+    staminaSystem,
+    experienceSystem: { awardAttack: () => awards.push("attack") },
+    enemySystem: { damage: () => { throw new Error("NPC collision must not deal damage."); } },
+    spawnerSystem: { damage: () => { throw new Error("NPC collision must not deal damage."); } },
+  }), { handled: false, killed: false });
+  assert.equal(timeSystem.getTime(), 1);
+  assert.equal(staminaSystem.getCurrent(), 50);
+  assert.deepEqual(awards, []);
 });
 
 test("advances exactly one combat tick for a valid attack and none for a stale target", () => {

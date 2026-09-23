@@ -14,6 +14,8 @@ import {
   PLAYER_GLYPH,
   ENEMY_GLYPH,
   ENEMY_SPAWNER_GLYPH,
+  NPC_GLYPH,
+  NPC_SPAWNER_GLYPH,
   PROJECT_MAP_GLYPHS,
   SHALLOW_WATER_GLYPH,
   TRAP_GLYPH,
@@ -59,6 +61,8 @@ test("publishes every glyph used by the project maps", () => {
     PLAYER_GLYPH,
     ENEMY_GLYPH,
     ENEMY_SPAWNER_GLYPH,
+    NPC_GLYPH,
+    NPC_SPAWNER_GLYPH,
     TORCH_GLYPH,
     STAIR_GLYPH,
     GOLD_GLYPH,
@@ -77,6 +81,7 @@ test("publishes every glyph used by the project maps", () => {
   ]));
   assert.equal(paletteData.entries.find(({ glyph }) => glyph === ENEMY_GLYPH)?.color, "#fa8d8d");
   assert.equal(paletteData.entries.find(({ glyph }) => glyph === ENEMY_SPAWNER_GLYPH)?.color, "#ff3b3b");
+  assert.equal(paletteData.entries.find(({ glyph }) => glyph === NPC_GLYPH)?.color, "#ffffff");
 });
 
 test("creates a repeatable bordered world with layered terrain", () => {

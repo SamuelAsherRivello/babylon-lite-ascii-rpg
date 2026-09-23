@@ -82,10 +82,7 @@ test("minimap markers use the approved depth order without object markers", () =
   const fog = createFogOfWar(world);
   const player = { x: 1, y: 1 };
 
-  assert.deepEqual(getMinimapMarkers(world, fog, player), [
-    { type: "start", color: "#00ff00", depth: MINIMAP_MARKER_DEPTHS.start, cell: { x: 1, y: 1 } },
-    { type: "player", color: "#ffff00", depth: MINIMAP_MARKER_DEPTHS.player, cell: { x: 1, y: 1 } },
-  ]);
+  assert.deepEqual(getMinimapMarkers(world, fog, player), []);
 
   discoverCell(fog, world, player);
   assert.deepEqual(getMinimapMarkers(world, fog, player), [
@@ -99,11 +96,10 @@ test("minimap markers use the approved depth order without object markers", () =
   const markers = getMinimapMarkers(world, fog, world.torches[0]);
   assert.deepEqual(markers, [
     { type: "start", color: "#00ff00", depth: MINIMAP_MARKER_DEPTHS.start, cell: { x: 1, y: 1 } },
-    { type: "player", color: "#ffff00", depth: MINIMAP_MARKER_DEPTHS.player, cell: { x: 8, y: 8 } },
   ]);
 });
 
-test("quest pickup markers ignore fog and project off-screen as directional chevrons", () => {
+test("quest pickup markers require discovery and do not project off-screen chevrons", () => {
   const world = createWorld();
   world.pickups = [
     { id: "gold-1", active: true, cell: { x: 2, y: 2 } },
@@ -111,25 +107,22 @@ test("quest pickup markers ignore fog and project off-screen as directional chev
   ];
   const fog = createFogOfWar(world);
   const markers = getMinimapMarkers(world, fog, { x: 1, y: 1 });
-  assert.equal(markers.some((marker) => marker.type === "quest" && marker.pickupId === "gold-1"), true);
-  const indicators = getMinimapEdgeIndicators(world, { x: 1, y: 1 }, { x: 0, y: 0, columns: 5, rows: 5 });
-  assert.equal(indicators.length, 1);
-  assert.equal(indicators[0].type, "quest-edge");
-  assert.equal(indicators[0].pickupId, "gold-2");
+  assert.equal(markers.some((marker) => marker.type === "quest"), false);
+  discoverCell(fog, world, { x: 2, y: 2 });
+  assert.equal(getMinimapMarkers(world, fog, { x: 1, y: 1 }).some((marker) => marker.pickupId === "gold-1"), true);
 });
 
-test("nearest-stairs navigation marker is rendered in the viewport or at its edge", () => {
+test("nearest-stairs navigation marker requires discovery and stays in its viewport", () => {
   const world = createWorld();
   const fog = createFogOfWar(world);
   const navigationMarkers = [{ id: "nearest-stairs", cell: { x: 8, y: 8 } }];
+  assert.equal(getMinimapMarkers(world, fog, { x: 1, y: 1 }, { navigationMarkers }).some((marker) => marker.type === "navigation"), false);
+  discoverCell(fog, world, { x: 8, y: 8 });
   const markers = getMinimapMarkers(world, fog, { x: 1, y: 1 }, { navigationMarkers });
-  assert.deepEqual(markers.at(-2), {
+  assert.deepEqual(markers.find((marker) => marker.type === "navigation"), {
     type: "navigation", color: "#ffff00", depth: MINIMAP_MARKER_DEPTHS.quest,
     markerId: "nearest-stairs", cell: { x: 8, y: 8 },
   });
-  const indicators = getMinimapEdgeIndicators(world, { x: 1, y: 1 }, { x: 0, y: 0, columns: 5, rows: 5 }, { navigationMarkers });
-  assert.equal(indicators.at(-1).type, "navigation-edge");
-  assert.equal(indicators.at(-1).markerId, "nearest-stairs");
 });
 
 test("active quest navigation resolves the closest one stairs, key, or door", () => {
@@ -148,7 +141,7 @@ test("active quest navigation resolves the closest one stairs, key, or door", ()
   const markers = getMinimapMarkers(world, createFogOfWar(world), { x: 1, y: 1 }, {
     navigationMarkers: [{ id: "nearest-key", cell: { x: 3, y: 1 } }],
   });
-  assert.equal(markers.filter((marker) => marker.type === "navigation").length, 1);
+  assert.equal(markers.filter((marker) => marker.type === "navigation").length, 0);
 });
 
 test("minimap markers come from quest-owned pickup ids, not object pickup types", () => {
@@ -159,6 +152,7 @@ test("minimap markers come from quest-owned pickup ids, not object pickup types"
   ];
   world.questPickupIds = new Set(["gold-1"]);
   const fog = createFogOfWar(world);
+  discoverCell(fog, world, { x: 2, y: 2 });
   const markers = getMinimapMarkers(world, fog, { x: 1, y: 1 });
   assert.deepEqual(markers.filter((marker) => marker.type === "quest").map((marker) => marker.pickupId), ["gold-1"]);
 });

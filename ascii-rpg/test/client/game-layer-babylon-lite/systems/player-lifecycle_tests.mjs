@@ -35,3 +35,14 @@ test("a subscriber added after death receives the terminal state", () => {
   lifecycle.subscribeToDeath((value) => deaths.push(value));
   assert.deepEqual(deaths, [true]);
 });
+
+test("revive restores full health and publishes a living state", () => {
+  const lifecycle = createPlayerLifecycle({ initialHealth: 1 });
+  const deaths = [];
+  lifecycle.subscribeToDeath((value) => deaths.push(value));
+  lifecycle.applyHealthDelta(-1);
+  lifecycle.revive();
+  assert.equal(lifecycle.getHealth(), 100);
+  assert.equal(lifecycle.isDead(), false);
+  assert.deepEqual(deaths, [true, false]);
+});

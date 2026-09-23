@@ -1,16 +1,19 @@
-export function createCoalescedFrameScheduler({ scheduleFrame, cancelFrame, render }) {
+export function createCoalescedFrameScheduler({ scheduleFrame, cancelFrame, render, merge = (_previous, next) => next }) {
   if (typeof scheduleFrame !== "function" || typeof cancelFrame !== "function" || typeof render !== "function") {
     throw new TypeError("A coalesced frame scheduler requires frame, cancel, and render functions.");
   }
 
   let frameHandle = null;
   let pendingState = null;
+  let generation = 0;
 
   return {
     schedule(state) {
-      pendingState = state;
+      pendingState = pendingState === null ? state : merge(pendingState, state);
       if (frameHandle !== null) return;
+      const scheduledGeneration = generation;
       frameHandle = scheduleFrame(() => {
+        if (scheduledGeneration !== generation) return;
         frameHandle = null;
         const nextState = pendingState;
         pendingState = null;
@@ -21,6 +24,7 @@ export function createCoalescedFrameScheduler({ scheduleFrame, cancelFrame, rend
       if (frameHandle !== null) cancelFrame(frameHandle);
       frameHandle = null;
       pendingState = null;
+      generation += 1;
     },
     get pending() {
       return frameHandle !== null;

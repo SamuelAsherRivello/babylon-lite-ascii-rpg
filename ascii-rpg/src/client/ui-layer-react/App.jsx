@@ -58,6 +58,7 @@ import {
   getStaminaSnapshot,
   getLogSnapshot,
   getPlayerDeadSnapshot,
+  getCheckpointSnapshot,
   getRandomSeedSnapshot,
   getQuestSnapshot,
   getRealmDiscoverySnapshot,
@@ -90,12 +91,15 @@ import {
   subscribeToStamina,
   subscribeToLog,
   subscribeToPlayerDead,
+  subscribeToCheckpoint,
   subscribeToRandomSeed,
   subscribeToQuest,
   subscribeToQuestEvent,
   subscribeToRealm,
   subscribeToRealmDiscovery,
   subscribeToMinimapZoom,
+  restartFromCheckpoint,
+  restartGame,
 } from "../bridge-layer/game-bridge.js";
 import {
   CAMERA_MODE_LABELS,
@@ -628,7 +632,7 @@ function TutorialWindow({ complete, onConfirm, onSkip, showCloseButton = false, 
   );
 }
 
-function DeathWindow({ onRestart }) {
+function DeathWindow({ checkpointActive, onRestartFromCheckpoint, onRestartGame }) {
   return (
     <>
       <WindowBackdrop visible closesOnClick={false} />
@@ -652,7 +656,8 @@ function DeathWindow({ onRestart }) {
             <li>Time: 00</li>
           </ul>
           <div className="tutorial_window_actions">
-            <button className="corner_body tutorial_window_primary" type="button" onClick={onRestart}>Restart Game</button>
+            <button className="corner_body tutorial_window_primary" type="button" disabled={!checkpointActive} onClick={onRestartFromCheckpoint}>Restart from checkpoint</button>
+            <button className="corner_body tutorial_window_primary" type="button" onClick={onRestartGame}>Restart game</button>
           </div>
         </div>
       </section>
@@ -1358,9 +1363,14 @@ export function ProceduralSettingsWindow({ settings, randomSeed, onConfirm, onCl
   const [previewViewport, setPreviewViewport] = useState({ zoom: 1, x: 0, y: 0 });
   const [error, setError] = useState("");
   const previewCanvasRef = useRef(null);
-  const objectPassIds = new Set(["object-heart", "object-trap", "object-torch"]);
+  const objectPassIds = new Set(["object-heart", "object-trap", "object-torch", "object-fireplace"]);
   const orderedPasses = [...draft.passes].sort((left, right) => left.order - right.order);
   const objectPasses = orderedPasses.filter((pass) => objectPassIds.has(pass.id));
+  const previewRealmScope = previewRealm === "Underground" ? "Underworld" : "Overworld";
+  const isPassAvailableInPreview = (pass) => {
+    const scope = GENERATION_PASS_REALMS[pass.id] ?? "All";
+    return scope === "All" || scope === previewRealmScope;
+  };
   const previewDragRef = useRef(null);
 
   useEffect(() => {
@@ -1456,55 +1466,58 @@ export function ProceduralSettingsWindow({ settings, randomSeed, onConfirm, onCl
           <div className="procedural_settings_options">
             <div className="procedural_settings_options_scroll">
               <h2>Procedural Level Generation Passes</h2>
-              <p className="gameplay_settings_hint">Set the density &amp; distribution to feed the system.{" "}<span className="procedural_settings_notice">Some of these buttons apparently do nothing yet</span></p>
+              <p className="gameplay_settings_hint">Set the density &amp; distribution to feed the system.<br /><span className="procedural_settings_notice">Some of these buttons apparently do nothing yet</span></p>
               <div className="quest_settings_list">
-                {orderedPasses.filter((pass) => pass.order <= 5).map((pass) => (
-                <section key={pass.id} className="quest_settings_card procedural_settings_card" aria-label={`${pass.title}, pass ${pass.order}`}>
+                {orderedPasses.filter((pass) => pass.order <= 6).map((pass) => {
+                  const unavailable = !isPassAvailableInPreview(pass);
+                  return <section key={pass.id} className={`quest_settings_card procedural_settings_card${unavailable ? " procedural_realm_unavailable" : ""}`} aria-label={`${pass.title}, pass ${pass.order}`} aria-disabled={unavailable}>
                 <h3>{pass.order}. {pass.title}</h3>
                 {pass.configurable === false ? <span className="procedural_realm_scope procedural_realm_scope_static">Realms: {GENERATION_PASS_REALMS[pass.id]}</span> : <div className="procedural_density_controls" role="group" aria-label={`${pass.title} density and distribution`}>
                   <span className="procedural_realm_scope">Realms: {GENERATION_PASS_REALMS[pass.id]}</span>
                   {DENSITY_LEVELS.map((density) => (
-                    <button key={density} className={`prompt_button${pass.density === density ? " procedural_density_selected" : ""}`} type="button" aria-pressed={pass.density === density} title={GENERATION_DENSITY_DETAILS[pass.id][density]} onClick={() => selectDensity(pass.id, density)}>
+                    <button key={density} className={`prompt_button${pass.density === density ? " procedural_density_selected" : ""}`} type="button" aria-pressed={pass.density === density} title={GENERATION_DENSITY_DETAILS[pass.id][density]} disabled={unavailable} onClick={() => selectDensity(pass.id, density)}>
                       {density}
                     </button>
                   ))}
                 </div>}
                 <span className="procedural_settings_description">{GENERATION_PASS_DESCRIPTIONS[pass.id]}</span>
               </section>
-                ))}
-                <section className="quest_settings_card procedural_object_settings_card" aria-label="Object Distribution, pass 6">
+                })}
+                <section className="quest_settings_card procedural_object_settings_card" aria-label="Object Distribution, pass 7">
                   <div className="procedural_object_settings_header">
-                    <h3>6. Object Distribution</h3>
-                    <span className="procedural_settings_description">Controls world object placement density</span>
+                    <h3>7. Object Distribution</h3>
+                    <span className="procedural_settings_description">Controls world object placement</span>
                     <span className="procedural_realm_scope">Realms: All</span>
                   </div>
-                  {objectPasses.map((pass) => (
-                    <div key={pass.id} className="procedural_object_density_row">
+                  {objectPasses.map((pass) => {
+                    const unavailable = !isPassAvailableInPreview(pass);
+                    return <div key={pass.id} className={`procedural_object_density_row${unavailable ? " procedural_realm_unavailable" : ""}`} aria-disabled={unavailable}>
                       <span>{pass.title.replace(" Distribution", "")}</span>
                       <div className="procedural_density_controls procedural_object_density_controls" role="group" aria-label={`${pass.title} density and distribution`}>
                         {DENSITY_LEVELS.map((density) => (
-                          <button key={density} className={`prompt_button${pass.density === density ? " procedural_density_selected" : ""}`} type="button" aria-pressed={pass.density === density} title={GENERATION_DENSITY_DETAILS[pass.id][density]} onClick={() => selectDensity(pass.id, density)}>
+                          <button key={density} className={`prompt_button${pass.density === density ? " procedural_density_selected" : ""}`} type="button" aria-pressed={pass.density === density} title={GENERATION_DENSITY_DETAILS[pass.id][density]} disabled={unavailable} onClick={() => selectDensity(pass.id, density)}>
                             {density}
                           </button>
                         ))}
                       </div>
                     </div>
-                  ))}
+                  })}
                 </section>
-                {orderedPasses.filter((pass) => pass.order > 8).map((pass) => (
-                <section key={pass.id} className="quest_settings_card procedural_settings_card" aria-label={`${pass.title}, pass ${pass.order}`}>
-                <h3>{pass.order - 2}. {pass.title}</h3>
+                {orderedPasses.filter((pass) => pass.order > 6 && !objectPassIds.has(pass.id)).map((pass, index) => {
+                  const unavailable = !isPassAvailableInPreview(pass);
+                  return <section key={pass.id} className={`quest_settings_card procedural_settings_card${unavailable ? " procedural_realm_unavailable" : ""}`} aria-label={`${pass.title}, pass ${pass.order}`} aria-disabled={unavailable}>
+                <h3>{8 + index}. {pass.title}</h3>
                 <div className="procedural_density_controls" role="group" aria-label={`${pass.title} density and distribution`}>
                   <span className="procedural_realm_scope">Realms: {GENERATION_PASS_REALMS[pass.id]}</span>
                   {DENSITY_LEVELS.map((density) => (
-                    <button key={density} className={`prompt_button${pass.density === density ? " procedural_density_selected" : ""}`} type="button" aria-pressed={pass.density === density} title={GENERATION_DENSITY_DETAILS[pass.id][density]} onClick={() => selectDensity(pass.id, density)}>
+                    <button key={density} className={`prompt_button${pass.density === density ? " procedural_density_selected" : ""}`} type="button" aria-pressed={pass.density === density} title={GENERATION_DENSITY_DETAILS[pass.id][density]} disabled={unavailable} onClick={() => selectDensity(pass.id, density)}>
                       {density}
                     </button>
                   ))}
                 </div>
                 <span className="procedural_settings_description">{GENERATION_PASS_DESCRIPTIONS[pass.id]}</span>
               </section>
-                ))}
+                })}
               </div>
             </div>
             <div className="procedural_settings_actions">
@@ -1593,6 +1606,7 @@ function AppContent() {
   const experience = useSyncExternalStore(subscribeToExperience, getExperienceSnapshot, getExperienceSnapshot);
   const log = useSyncExternalStore(subscribeToLog, getLogSnapshot, getLogSnapshot);
   const playerDead = useSyncExternalStore(subscribeToPlayerDead, getPlayerDeadSnapshot, getPlayerDeadSnapshot);
+  const checkpoint = useSyncExternalStore(subscribeToCheckpoint, getCheckpointSnapshot, getCheckpointSnapshot);
   const randomSeed = useSyncExternalStore(subscribeToRandomSeed, getRandomSeedSnapshot, getRandomSeedSnapshot);
   const previousQuestRef = useRef(null);
   const [fps, setFps] = useState(0);
@@ -1744,6 +1758,12 @@ function AppContent() {
     previousQuestRef.current = quest;
   }, [enqueueToast, quest]);
 
+  const checkpointToastRevision = useRef(0);
+  useEffect(() => {
+    if (checkpoint.revision > checkpointToastRevision.current) enqueueToast("You saved a checkpoint.");
+    checkpointToastRevision.current = checkpoint.revision;
+  }, [checkpoint, enqueueToast]);
+
   useEffect(() => {
     const uiLayer = document.getElementById("ui_layer");
     const syncUiMargin = () => {
@@ -1856,23 +1876,6 @@ function AppContent() {
     document.addEventListener("fullscreenchange", syncFullscreenState);
     return () => document.removeEventListener("fullscreenchange", syncFullscreenState);
   }, []);
-
-  useEffect(() => {
-    if (!fullscreenPreferred || document.fullscreenElement || !document.documentElement.requestFullscreen) return;
-
-    const requestFullscreenOnFirstInteraction = () => {
-      if (document.fullscreenElement || fullscreenRequestInProgressRef.current) return;
-      fullscreenRequestInProgressRef.current = true;
-      document.documentElement.requestFullscreen()
-        .catch(() => setFullscreenPreferred(false))
-        .finally(() => {
-          fullscreenRequestInProgressRef.current = false;
-        });
-    };
-
-    document.addEventListener("pointerdown", requestFullscreenOnFirstInteraction, { capture: true, once: true });
-    return () => document.removeEventListener("pointerdown", requestFullscreenOnFirstInteraction, true);
-  }, [fullscreenPreferred]);
 
   const toggleFullscreen = async () => {
     try {
@@ -2221,7 +2224,7 @@ function AppContent() {
           onClose={() => setTutorialPhase("finished")}
         />
       ) : null}
-      {playerDead ? <DeathWindow onRestart={() => window.location.reload()} /> : null}
+      {playerDead ? <DeathWindow checkpointActive={checkpoint.active} onRestartFromCheckpoint={restartFromCheckpoint} onRestartGame={restartGame} /> : null}
       {settingTooltip ? (
         <div
           ref={settingTooltipRef}
