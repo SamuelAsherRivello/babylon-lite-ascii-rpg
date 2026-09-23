@@ -49,13 +49,28 @@ gutters and mirrored rails with visible depth treatment border the frame. The
 letterbox SHALL remain present in desktop fullscreen and when the HUD is
 hidden. In portrait on a mobile platform, the game presentation SHALL fill the
 available browser viewport rather than enforcing the desktop test-frame ratio,
-and SHALL NOT show the letterbox presentation.
+and SHALL NOT show the letterbox presentation. Before the first visible game
+world render, the presentation frame, camera mode, and zoom SHALL reflect their
+saved selections. When a saved selection already matches active game state,
+restoring it SHALL NOT submit a corrective world render or change the player's
+initial screen position.
 
 #### Scenario: Default landscape presentation
 - **WHEN** a user opens the game with no saved aspect selection
 - **THEN** the Settings control displays `Aspect (Landscape)` and the
   viewport-filling presentation is wider than tall without forest-gate
   gutters or rails
+
+#### Scenario: Saved landscape starts with one centered presentation
+- **WHEN** a user opens the game with saved landscape, camera, and zoom selections
+- **THEN** the first visible world render uses the viewport-filling landscape
+  frame with the player's initial camera position and zoom already applied, and
+  no subsequent settings-driven correction is visible
+
+#### Scenario: Saved desktop portrait starts with its test frame
+- **WHEN** a non-mobile user opens the game with saved portrait, camera, and zoom selections
+- **THEN** the first visible world render uses the centered 9:16 test frame and
+  no subsequent settings-driven correction changes its initial camera position
 
 #### Scenario: Desktop user selects portrait testing
 - **WHEN** a non-mobile user activates `Aspect (Landscape)`
@@ -91,7 +106,7 @@ and SHALL NOT show the letterbox presentation.
 
 #### Scenario: Aspect selection persists and resets
 - **WHEN** a user refreshes after changing the aspect setting
-- **THEN** the selected aspect is restored
+- **THEN** the selected aspect is restored before the first visible game world render
 
 #### Scenario: Reset restores landscape
 - **WHEN** a user activates Reset Settings after selecting portrait
