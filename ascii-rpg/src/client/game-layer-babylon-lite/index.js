@@ -851,8 +851,8 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
         random: createRandom(`${previewWorld.options.seed}:procedural-settings-civilization`),
         chance: Math.min(0.9, (import.meta.env.DEV ? 0.5 : 0.1) * profile.civilizationChanceMultiplier),
       }).flatMap((group) => [
-        { ...group.door, kind: "civilization-door", glyph: "█", color: "#d6a55a" },
-        ...group.keys.map((cell) => ({ ...cell, kind: "civilization-key", glyph: "⚿", color: "#ffd166" })),
+        { ...group.door, kind: "civilization-door", primary: true, glyph: "█", color: "#d6a55a" },
+        ...group.keys.map((cell) => ({ ...cell, kind: "civilization-key", primary: false, glyph: "⚿", color: "#ffd166" })),
       ])
       : [];
     const heartCount = Math.max(0, Math.round(getObjectDistributionCount("heart", previewWorld.options.seed) * profile.objectCountMultipliers.heart));

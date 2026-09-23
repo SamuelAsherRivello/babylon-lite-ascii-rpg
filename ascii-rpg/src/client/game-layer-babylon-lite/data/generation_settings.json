@@ -5,6 +5,7 @@
       "id": "ground",
       "title": "Ground",
       "order": 1,
+      "configurable": false,
       "density": "Med"
     },
     {
@@ -69,8 +70,8 @@
       "density": "Med"
     },
     {
-      "id": "civilization",
-      "title": "Civilization",
+      "id": "civilization-doors",
+      "title": "Doors",
       "order": 12,
       "density": "Med"
     },

@@ -4,7 +4,7 @@
 
 ### Requirement: Ordered world-generation passes
 
-The world generator SHALL compose a realm through distinct passes in this canonical order: ground, cave/walls, water, walkability, player position, object distribution, NPC-spawner distribution, Underground civilization distribution, and Underground enemy-spawner distribution. Object Distribution SHALL contain all qualifying object-like features in deterministic catalog order while retaining each feature's own distribution profile. A later pass SHALL be able to inspect prior layers and claim or derive only its own layered result. Civilization and enemy-spawner distribution SHALL run only for Underground and SHALL not rewrite natural terrain. NPC-spawner distribution SHALL run only for Overground. A later prerequisite declared by an individual feature SHALL be honored without renumbering or reordering unrelated passes.
+The world generator SHALL compose a realm through the current ordered catalog: ground, Overground walls, Underground caves, water, walkability, player position, Heart distribution, Trap distribution, Torch distribution, NPC distribution, Fireplace distribution, Underground civilization Doors distribution, and Underground enemy-spawner distribution. The Procedural UI SHALL group Heart through Fireplace as Object Distribution and Doors as Civilization, without changing raw execution order. A later pass SHALL inspect prior layers and claim or derive only its own layered result. Civilization and enemy-spawner distribution SHALL run only for Underground and SHALL not rewrite natural terrain. NPC distribution SHALL run only for Overground. Fireplace distribution SHALL run after civilization because it declares civilization occupancy as a prerequisite.
 
 #### Scenario: Enemy-spawner distribution is last for Underground
 - **WHEN** an Underground world is generated
@@ -28,7 +28,7 @@ The world generator SHALL compose a realm through distinct passes in this canoni
 
 #### Scenario: NPC-spawner distribution is Overground-only
 - **WHEN** an Overground world is generated
-- **THEN** NPC spawners SHALL be distributed after Object Distribution and before the realm is published as playable
+- **THEN** NPC spawners SHALL be distributed at their catalog position, after Torches and before Fireplaces, without adding civilization features
 
 #### Scenario: No civilization distribution for Overground
 - **WHEN** an Overground world is generated

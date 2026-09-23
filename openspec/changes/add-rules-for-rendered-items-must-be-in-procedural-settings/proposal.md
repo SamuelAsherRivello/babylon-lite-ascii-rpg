@@ -2,30 +2,30 @@
 
 ## Why
 
-Adding a rendered world feature currently requires coordinating several independent places: its catalog or system, placement logic, settings, preview markers, and startup setup. That allows a feature to be visible or configured without being part of the authoritative level-generation plan, and makes execution order drift between the menu and the generated world.
+The current Procedural UI already groups the live generation catalog into nine readable stages, but its thirteen underlying entries, object catalog, preview markers, and runtime startup sequence are maintained separately. A rendered feature can therefore be configured or displayed without becoming an automatically generated feature, and runtime order can diverge from the displayed order.
 
 ## What Changes
 
-- Introduce an authoritative world-feature generation registry. Every world-visible feature declares its owner layer, realm scope, generated or on-demand status, placement prerequisites, deterministic distribution data, and generation-order participation.
-- Make every level-generated object catalog entry automatically participate in the Object Distribution phase. Hearts, Traps, Torches, Fireplaces, Stairs, and future object-like props remain independently configurable, but execute through the one ordered object phase rather than requiring separately hard-coded generation paths.
-- Make all generated world features appear in the persisted Procedural settings catalog and its preview. Features that extend an existing layer join that layer's pass; a feature that owns a new layer declares a new ordered pass without changing unrelated ordering.
-- Define one dependency-ordered pipeline: Ground, Cave / Walls, Water, Walkability, Player Position, Object Distribution, NPC Spawner Distribution, Civilization Distribution, and Enemy Spawner Distribution. A feature with a later prerequisite, such as an object that must avoid civilization occupancy, is resolved deterministically within or after its declared prerequisite without overwriting another owner's layer.
-- Preserve deterministic results and layer ownership: later features may inspect earlier output and reserve their own cells, but cannot rewrite terrain, walkability, static objects, civilization, or dynamic occupancy they do not own.
+- Make the current thirteen-entry procedural catalog authoritative: Ground; Overground Walls; Underground Caves; Water; Walkability; Player Position; Heart, Trap, Torch, NPC, and Fireplace distribution; Civilization Doors; and Enemy Spawner Distribution.
+- Preserve the existing nine semantic Procedural cards: the five terrain entries and Player Position, followed by Object Distribution, Civilization, and Enemy Spawner Distribution. Object Distribution retains its current separate Heart, Trap, Torch, NPC, and Fireplace controls; Civilization retains its Doors control.
+- Add generation declarations to level-generated object records so a valid object carries its realm scope, prerequisite, settings identity, and distribution data. Make Fireplace a declared Underground generated object rather than a manual post-civilization exception.
+- Resolve a single execution plan from that catalog for live generation and preview markers. The plan must retain current terrain density semantics, place Fireplace after civilization, and reconcile the current runtime enemy-before-NPC startup order with the displayed feature order.
+- Reject incomplete, unknown, or cyclic feature declarations before the realm is published, while preserving terrain, static-object, civilization, and dynamic-occupancy ownership.
 
 ## Capabilities
 
 ### New Capabilities
 
-- `world-feature-generation-registry`: Defines the authoritative feature declaration, automatic generated-feature registration, realm scope, dependency validation, and stable generation-plan construction.
+- `world-feature-generation-registry`: Defines validated feature declarations and the resolved execution plan shared by the existing generation catalog, runtime setup, and preview.
 
 ### Modified Capabilities
 
-- `world-generation-passes`: Replace divergent per-item pass ordering with the canonical dependency-ordered pipeline and insertion rules for existing versus new layers.
-- `procedural-generation-settings`: Require every generated feature to be represented in the ordered persisted Procedural catalog and preview while retaining per-object density controls within Object Distribution.
-- `object-spawner-system`: Make the catalog the source of level-spawned object participation and require every qualifying object to be distributed by the Object Distribution phase.
-- `procedural-level-generation`: Extend layered and deterministic world requirements to the registry-owned feature plan and generated dynamic feature placement.
+- `world-generation-passes`: Defines the current thirteen-entry execution order and its nine semantic Procedural cards.
+- `procedural-generation-settings`: Makes the current ordered catalog, grouped cards, fixed Ground setting, and current per-row density behavior authoritative and persistent.
+- `object-spawner-system`: Makes valid level-spawned catalog objects—including Fireplace—automatic Object Distribution participants.
+- `procedural-level-generation`: Requires generated NPC/enemy placement to follow the resolved plan without violating dynamic occupancy or static-layer prerequisites.
 
 ## Impact
 
-- Affects generation settings JSON and store validation, object catalog validation and distribution, world-generation orchestration, preview marker derivation, NPC/enemy spawner setup, and their focused Node tests.
-- No new runtime dependency, service, account, network API, or persisted gameplay state is introduced. Existing stored generation-setting values require additive migration or backfill when a new generated feature is registered.
+- Affects the generation settings catalog/store, generation profile, object catalog validation and placement, startup spawner order, preview marker derivation, and focused Node tests.
+- No dependency, service, account, or browser-persisted gameplay state is added. Existing stored generation settings are migrated additively, including the legacy `civilization` selection now represented by `civilization-doors`.

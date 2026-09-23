@@ -1,25 +1,24 @@
 # Tasks
 
-## 1. Registry and plan foundation
+## 1. Current catalog registry
 
-- [ ] 1.1 Inventory every current generated terrain, static object, civilization feature, NPC spawner, and enemy spawner; define validated registry declarations for owner layer, realm scope, generated mode, configuration mode, prerequisites, and deterministic seed namespace; verify focused registry tests reject missing declarations, unknown references, and cycles.
-- [ ] 1.2 Implement a deterministic generation-plan builder with the canonical base order and stable insertion for a newly declared layer; verify the resolved numbered plan preserves unrelated order and records deferred object placements with their Object Distribution ownership.
-- [ ] 1.3 Route realm generation and startup orchestration through the resolved plan while preserving each pass owner's layer writes and occupancy rules; verify identical seed, catalog, and settings produce matching plan entries and placements.
+- [ ] 1.1 Define and validate registry declarations for all thirteen current entries, their nine semantic cards, realm scopes, fixed/configurable behavior, prerequisites, and stable seed namespaces; verify focused registry tests reject unknown entries and dependency cycles.
+- [ ] 1.2 Build the resolved live/preview generation plan from the current catalog without changing Overground Walls, Underground Caves, Water, Walkability, Fireplace, or Doors density behavior; verify the expected raw and semantic orders in focused tests.
+- [ ] 1.3 Route runtime startup through the resolved plan while preserving terrain, static-object, civilization, and dynamic-occupancy owners; verify NPC setup precedes enemy-spawner setup according to the plan without changing tick ownership.
 
-## 2. Automatic object distribution
+## 2. Generated object declarations
 
-- [ ] 2.1 Extend valid object catalog records with realm scope, prerequisite, and Procedural-setting declarations; migrate Hearts, Traps, Torches, Fireplaces, Stairs, and future-compatible defaults; verify catalog validation reports the object identity for an incomplete level-generated declaration.
-- [ ] 2.2 Refactor Object Distribution to enumerate every valid `IsLevelSpawned: true` object from the normalized catalog instead of hard-coded type-specific startup paths; verify a test fixture object is placed deterministically without adding a placement call.
-- [ ] 2.3 Preserve per-object Low/Med/High profiles, paired-realm Stairs, static-cell reservations, and later declared prerequisites; verify focused object/world tests cover no layer overwrites, no placement conflicts, and repeatable results in both realms.
+- [ ] 2.1 Add generation declarations for Heart, Trap, Torch, Stairs, and Fireplace, including realm scope, prerequisite, settings identity, and distribution rules; verify invalid generated objects report their type and missing declaration.
+- [ ] 2.2 Make Object Distribution enumerate valid `IsLevelSpawned` catalog objects in deterministic order instead of manually enumerating feature-specific placement paths; verify a catalog fixture object is placed without a startup call.
+- [ ] 2.3 Preserve paired Stairs, per-object counts, static reservations, and Fireplace-after-Civilization behavior; verify both realms are repeatable and have no overlapping static placements.
 
-## 3. Procedural settings and preview parity
+## 3. Settings and preview parity
 
-- [ ] 3.1 Generate the persisted ordered settings catalog from registry declarations, with Object Distribution rows for configurable objects and fixed-baseline rows without a density selector; verify settings-store tests backfill a newly registered default without removing valid unrelated saved values.
-- [ ] 3.2 Update the Procedural modal to present the canonical nine-card order and individual object-density rows under Object Distribution; verify the existing Node UI/source checks assert the labels, ordering, and control availability.
-- [ ] 3.3 Build preview markers from the same resolved plan and seed namespaces as live generation; verify focused preview tests show each qualifying feature in its allowed realm and match live selected cells for a fixed draft and seed.
+- [ ] 3.1 Derive settings normalization from registered entries, preserving fixed Ground, split terrain controls, grouped Object/Civilization rows, and legacy cave/civilization migration; verify store tests retain valid selections and backfill missing defaults.
+- [ ] 3.2 Make the Procedural UI use registry semantic cards while retaining its current labels, order, realm availability, and per-row density controls; verify existing Node UI/source checks cover all nine cards.
+- [ ] 3.3 Route live and preview marker selection through the same plan and seed namespaces; verify fixed seed parity for allowed features and realm exclusions.
 
-## 4. Dynamic generation integration and verification
+## 4. Verification
 
-- [ ] 4.1 Register NPC and enemy spawner generation with their declared realm scope and prerequisites while keeping dynamic occupancy authority in their existing systems; verify focused spawner tests reject static/dynamic collisions and preserve Overground/Underground restrictions.
-- [ ] 4.2 Add a generation inventory regression test proving every generated rendered feature has a registry declaration, settings representation, preview representation, and resolved-plan entry; verify it fails for each independently removed registration.
-- [ ] 4.3 Run the affected Node tests, `npm.cmd run test:responsive`, and `npm.cmd run build`; manually verify the Procedural modal and both realm previews show the ordered generated-feature catalog without changing unrelated dirty work.
+- [ ] 4.1 Add an inventory regression test proving every generated rendered feature has a raw catalog entry, semantic-card representation, preview marker representation, and resolved-plan entry; verify missing registrations fail.
+- [ ] 4.2 Run focused registry/object/settings/spawner tests, `npm.cmd run test:responsive`, and `npm.cmd run build`; manually verify the current nine-card Procedural window and both realm previews without changing unrelated dirty work.

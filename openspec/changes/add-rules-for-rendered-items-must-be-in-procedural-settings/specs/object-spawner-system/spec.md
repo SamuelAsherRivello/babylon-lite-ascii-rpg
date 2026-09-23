@@ -4,7 +4,7 @@
 
 ### Requirement: Final level-spawn distribution pass
 
-The Object Spawner System SHALL run through Object Distribution after player placement and SHALL distribute every catalog entry with `IsLevelSpawned: true` whose declared realm scope and prerequisites are satisfied, using its JSON distribution rules and selected per-object profile. A qualifying entry SHALL participate automatically without a separate hard-coded placement path. Underground civilization distribution SHALL then select eligible screen regions with a seeded approximately 10% chance and place solvable fence, door, and key groups without replacing terrain or player state.
+The Object Spawner System SHALL run the catalog's Object Distribution entries after player placement and SHALL distribute every catalog entry with `IsLevelSpawned: true` whose declared realm scope and prerequisites are satisfied, using its JSON distribution rules and selected per-object profile. A qualifying entry SHALL participate automatically without a separate hard-coded placement path. Fireplace SHALL declare Underground civilization as its prerequisite and be distributed only after Doors have reserved their cells. Underground civilization SHALL select eligible screen regions with a seeded approximately 10% chance and place solvable fence, door, and key groups without replacing terrain or player state.
 
 #### Scenario: Underground civilization is distributed
 - **WHEN** an Underground realm finishes player placement and Object Distribution

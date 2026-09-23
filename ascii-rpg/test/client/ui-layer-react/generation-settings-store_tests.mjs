@@ -29,6 +29,36 @@ test("defaults the split wall controls to Medium when no prior choice is saved",
   assert.equal(settings.passes.find((pass) => pass.id === "underground-caves").density, "Med");
 });
 
+test("migrates legacy Civilization density to the Doors sublayer", () => {
+  const settings = normalizeGenerationSettings({ passes: [{ id: "civilization", density: "High" }] });
+  assert.equal(settings.passes.find((pass) => pass.id === "civilization-doors").density, "High");
+  assert.equal(settings.passes.some((pass) => pass.id === "civilization"), false);
+});
+
+test("keeps Ground as a fixed baseline and gives Walkability sole ownership of connected-area profiles", async () => {
+  const settings = normalizeGenerationSettings({
+    passes: [
+      { id: "ground", density: "High" },
+      { id: "walkability", density: "Low" },
+    ],
+  });
+  const app = await readFile(new URL("../../../src/client/ui-layer-react/App.jsx", import.meta.url), "utf8");
+
+  assert.equal(settings.passes.find((pass) => pass.id === "ground").configurable, false);
+  assert.equal(settings.passes.find((pass) => pass.id === "ground").density, "Med");
+  assert.ok(app.includes("No Settings"));
+  assert.ok(app.includes("procedural_density_controls_static"));
+  assert.deepEqual(
+    ["Low", "Med", "High"].map((density) => resolveGenerationProfile({
+      passes: [
+        { id: "ground", density: "High" },
+        { id: "walkability", density },
+      ],
+    }).minWalkableMultiplier),
+    [0.7, 1, 2],
+  );
+});
+
 test("applies each Underground Caves density to a distinct cave wall fill", () => {
   const profileFor = (density) => resolveGenerationProfile({
     passes: [{ id: "underground-caves", density }],
@@ -38,6 +68,14 @@ test("applies each Underground Caves density to a distinct cave wall fill", () =
     ["Low", "Med", "High"].map((density) => profileFor(density).caveWallFillPercents.Underground),
     [30, 40, 50],
   );
+});
+
+test("keeps every Water density within the generator's valid range", () => {
+  const waterFillPercents = ["Low", "Med", "High"].map((density) => resolveGenerationProfile({
+    passes: [{ id: "water", density }],
+  }).waterFillPercent);
+
+  assert.deepEqual(waterFillPercents, [5, 60, 100]);
 });
 
 test("keeps NPC inside Object Distribution and applies Fireplace Low, Med, and High density", async () => {
@@ -55,8 +93,24 @@ test("keeps NPC inside Object Distribution and applies Fireplace Low, Med, and H
   assert.ok(gameLayer.includes("const civilizationMarkers = previewRealm === \"Underground\""));
   assert.ok(gameLayer.includes('glyph: "█", color: "#d6a55a"'));
   assert.ok(gameLayer.includes('glyph: "⚿", color: "#ffd166"'));
+  assert.ok(gameLayer.includes('primary: true, glyph: "█"'));
+  assert.ok(gameLayer.includes('primary: false, glyph: "⚿"'));
   assert.ok(gameLayer.includes("...civilizationMarkers"));
   assert.ok(app.includes("const isPassAvailableInPreview"));
   assert.ok(app.includes("disabled={unavailable}"));
   assert.ok(app.includes("procedural_realm_unavailable"));
+  assert.ok(app.includes('aria-label="Civilization, pass 8"'));
+  assert.ok(app.includes('const civilizationPassIds = new Set(["civilization-doors"])'));
+
+  const fireplaceCounts = ["Low", "Med", "High"].map((density) => resolveGenerationProfile({
+    passes: [{ id: "object-fireplace", density }],
+  }).objectCountMultipliers.fireplace);
+  assert.deepEqual(fireplaceCounts, [0.25, 0.5, 1]);
+});
+
+test("applies Doors density to civilization placement", () => {
+  const chanceMultipliers = ["Low", "Med", "High"].map((density) => resolveGenerationProfile({
+    passes: [{ id: "civilization-doors", density }],
+  }).civilizationChanceMultiplier);
+  assert.deepEqual(chanceMultipliers, [0.25, 1, 2]);
 });

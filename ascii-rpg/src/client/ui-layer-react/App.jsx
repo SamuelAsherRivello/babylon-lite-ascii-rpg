@@ -1364,6 +1364,7 @@ export function ProceduralSettingsWindow({ settings, randomSeed, onConfirm, onCl
   const [error, setError] = useState("");
   const previewCanvasRef = useRef(null);
   const objectPassIds = new Set(["object-heart", "object-trap", "object-torch", "object-fireplace", "npc-spawner"]);
+  const civilizationPassIds = new Set(["civilization-doors"]);
   const orderedPasses = [...draft.passes].sort((left, right) => left.order - right.order);
   const objectPasses = orderedPasses.filter((pass) => objectPassIds.has(pass.id));
   const previewRealmScope = previewRealm === "Underground" ? "Underworld" : "Overworld";
@@ -1472,7 +1473,7 @@ export function ProceduralSettingsWindow({ settings, randomSeed, onConfirm, onCl
                   const unavailable = !isPassAvailableInPreview(pass);
                   return <section key={pass.id} className={`quest_settings_card procedural_settings_card${unavailable ? " procedural_realm_unavailable" : ""}`} aria-label={`${pass.title}, pass ${pass.order}`} aria-disabled={unavailable}>
                 <h3>{pass.order}. {pass.title}</h3>
-                {pass.configurable === false ? <span className="procedural_realm_scope procedural_realm_scope_static">Realms: {GENERATION_PASS_REALMS[pass.id]}</span> : <div className="procedural_density_controls" role="group" aria-label={`${pass.title} density and distribution`}>
+                {pass.configurable === false ? <div className="procedural_density_controls procedural_density_controls_static"><span className="procedural_realm_scope procedural_realm_scope_static">Realms: {GENERATION_PASS_REALMS[pass.id]}</span><span className="procedural_no_settings">No Settings</span></div> : <div className="procedural_density_controls" role="group" aria-label={`${pass.title} density and distribution`}>
                   <span className="procedural_realm_scope">Realms: {GENERATION_PASS_REALMS[pass.id]}</span>
                   {DENSITY_LEVELS.map((density) => (
                     <button key={density} className={`prompt_button${pass.density === density ? " procedural_density_selected" : ""}`} type="button" aria-pressed={pass.density === density} title={GENERATION_DENSITY_DETAILS[pass.id][density]} disabled={unavailable} onClick={() => selectDensity(pass.id, density)}>
@@ -1503,10 +1504,30 @@ export function ProceduralSettingsWindow({ settings, randomSeed, onConfirm, onCl
                     </div>
                   })}
                 </section>
-                {orderedPasses.filter((pass) => pass.order > 6 && !objectPassIds.has(pass.id)).map((pass, index) => {
+                <section className="quest_settings_card procedural_object_settings_card" aria-label="Civilization, pass 8">
+                  <div className="procedural_object_settings_header">
+                    <h3>8. Civilization</h3>
+                    <span className="procedural_settings_description">Controls Underground civilization placement</span>
+                    <span className="procedural_realm_scope">Realms: Underworld</span>
+                  </div>
+                  {orderedPasses.filter((pass) => civilizationPassIds.has(pass.id)).map((pass) => {
+                    const unavailable = !isPassAvailableInPreview(pass);
+                    return <div key={pass.id} className={`procedural_object_density_row${unavailable ? " procedural_realm_unavailable" : ""}`} aria-disabled={unavailable}>
+                      <span>{pass.title}</span>
+                      <div className="procedural_density_controls procedural_object_density_controls" role="group" aria-label={`${pass.title} density and distribution`}>
+                        {DENSITY_LEVELS.map((density) => (
+                          <button key={density} className={`prompt_button${pass.density === density ? " procedural_density_selected" : ""}`} type="button" aria-pressed={pass.density === density} title={GENERATION_DENSITY_DETAILS[pass.id][density]} disabled={unavailable} onClick={() => selectDensity(pass.id, density)}>
+                            {density}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  })}
+                </section>
+                {orderedPasses.filter((pass) => pass.order > 6 && !objectPassIds.has(pass.id) && !civilizationPassIds.has(pass.id)).map((pass, index) => {
                   const unavailable = !isPassAvailableInPreview(pass);
                   return <section key={pass.id} className={`quest_settings_card procedural_settings_card${unavailable ? " procedural_realm_unavailable" : ""}`} aria-label={`${pass.title}, pass ${pass.order}`} aria-disabled={unavailable}>
-                <h3>{8 + index}. {pass.title}</h3>
+                <h3>{9 + index}. {pass.title}</h3>
                 <div className="procedural_density_controls" role="group" aria-label={`${pass.title} density and distribution`}>
                   <span className="procedural_realm_scope">Realms: {GENERATION_PASS_REALMS[pass.id]}</span>
                   {DENSITY_LEVELS.map((density) => (
