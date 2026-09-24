@@ -9,12 +9,12 @@
 ## 2. Ordering, overlap, and lifecycle safety
 
 - [x] 2.1 Keep logical tick ordering in the coordinator and ensure systems remain dumb tick consumers with no out-of-order detection or repair logic; verify multi-unit and overlapping-tick fixtures preserve ordered callback delivery.
-- [ ] 2.2 Add session, realm/world, terrain, and entity revision guards to deferred tick results; verify restart, realm replacement, terrain/entity removal, and disposal cancel or ignore stale work without mutating the current session.
+- [x] 2.2 Add session, realm/world, terrain, and entity revision guards to deferred tick results; verify restart, realm replacement, terrain/entity removal, and disposal cancel or ignore stale work without mutating the current session.
 - [x] 2.3 Define hidden-document suspension, resume, and failure settlement behavior for pending ticks; verify no tick is replayed, dropped, or left permanently pending across visibility and error fixtures.
 
 ## 3. Tick-driven system integration
 
-- [ ] 3.1 Adapt stamina and combat/time subscribers to consume the two-argument tick callback while scheduling any expensive dependent work; verify movement and combat advance time exactly once and preserve stamina, damage, delta, and log outcomes.
+- [x] 3.1 Adapt stamina and combat/time subscribers to preserve the two-argument tick contract at the tickable boundary while retaining cause-filtered movement recovery and scheduling expensive dependent work; verify movement and combat advance time exactly once and preserve stamina, damage, delta, and log outcomes.
 - [x] 3.2 Adapt enemy and enemy-spawner tick processing to the asynchronous coordinator while preserving active/inactive-realm simulation, action intervals, occupancy, pathfinding, death, and registration semantics; verify focused enemy and spawner suites pass.
 - [x] 3.3 Adapt NPC and NPC-spawner processing to the coordinator, including pending actions and deferred patrol preparation; verify equivalent routes/actions for fast and slow scheduler fixtures with no duplicate actors or subscriptions.
 - [x] 3.4 Audit quest, object, realm, floating-text, health-bar, fog, and visual-invalidation consumers for tick dependencies; keep simulation authoritative in Babylon Lite and verify React receives only existing immutable snapshots.

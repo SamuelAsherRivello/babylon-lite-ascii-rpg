@@ -1325,6 +1325,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
 
   const activateRealm = (name, arrival = null) => {
     if (!worldRealms?.realms?.[name]) return;
+    timeSystem.invalidatePending();
     const sourceScreenCell = playerCell
       ? { x: playerCell.x - viewOrigin.x, y: playerCell.y - viewOrigin.y }
       : null;
@@ -1464,6 +1465,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
 
   const startRealmTransition = (destination, arrival = null) => {
     if (transitionActive || !transitionSystem || !worldRealms?.realms?.[destination]) return false;
+    timeSystem.invalidatePending();
     const { cover } = getTransitionRadii();
     clearMovementInput();
     // Ensure the source realm's latest player position is submitted before the

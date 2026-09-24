@@ -14,6 +14,23 @@ function createWorld(size = 24) {
   };
 }
 
+test("torch snapshots retain identity until their realm's sources change", () => {
+  const system = createObjectSpawnerSystem({ catalog: objectData.objects });
+  const world = createWorld();
+  const other = createWorld();
+  system.addObject({ type: "torch", cell: { x: 2, y: 2 }, realm: world });
+  const lights = system.getLightingSources(world);
+  assert.equal(system.getLightingSources(world), lights);
+  system.addObject({ type: "heart", cell: { x: 3, y: 3 }, realm: world });
+  system.addObject({ type: "torch", cell: { x: 4, y: 4 }, realm: other });
+  assert.equal(system.getLightingSources(world), lights);
+  system.addObject({ type: "torch", cell: { x: 5, y: 5 }, realm: world });
+  assert.notEqual(system.getLightingSources(world), lights);
+  assert.equal(system.getLightingSources(world).length, 2);
+  assert.equal(lights.length, 1);
+  assert.ok(Object.isFrozen(lights[0]));
+});
+
 test("the object catalog is palette-backed and declares pickup and level-spawn ownership", () => {
   assert.equal(validateObjectPalette(objectData.objects, paletteData.entries), true);
   assert.deepEqual(objectData.objects.map((object) => [object.type, object.IsPickup, object.IsLevelSpawned]), [
