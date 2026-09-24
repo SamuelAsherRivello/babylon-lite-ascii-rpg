@@ -16,7 +16,7 @@
 
 ## 3. Consolidate settings ownership
 
-- [ ] 3.1 Route the settings store's descriptions, realms, configurable flags, defaults, and density details through the generation-layer registry; verify default and legacy settings normalization remains unchanged.
+- [x] 3.1 Route the settings store's descriptions, realms, configurable flags, defaults, and density details through the generation-layer registry; verify default and legacy settings normalization remains unchanged.
 - [ ] 3.2 Convert `generation-profile.js` into a registry-backed compatibility adapter with no duplicated catalog metadata; verify every Low/Med/High runtime parameter matches baseline fixtures.
 - [ ] 3.3 Keep local development file persistence and deployed localStorage serialization unchanged; verify Confirm, Cancel, reload, and legacy-selection behavior through focused tests and manual Procedural-window checks.
 
