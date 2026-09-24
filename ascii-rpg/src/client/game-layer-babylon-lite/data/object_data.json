@@ -24,8 +24,8 @@
     {
       "type": "chest",
       "name": "Treasure Chest",
-      "glyph": "◆",
-      "openGlyph": "◇",
+      "glyph": "📦",
+      "openGlyph": "🗃️",
       "IsPickup": false,
       "IsLevelSpawned": true,
       "consequence": { "id": "chest-reward" },

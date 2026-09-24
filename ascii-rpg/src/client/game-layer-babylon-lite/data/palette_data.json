@@ -2463,8 +2463,8 @@
     },
     {
       "code": null,
-      "unicode": "U+25C7",
-      "glyph": "◇",
+      "unicode": "U+1F5C3 FE0F",
+      "glyph": "🗃️",
       "color": "#ffffff",
       "alpha": 1,
       "offsetX": 0,
@@ -2473,8 +2473,8 @@
     },
     {
       "code": null,
-      "unicode": "U+25C6",
-      "glyph": "◆",
+      "unicode": "U+1F4E6",
+      "glyph": "📦",
       "color": "#ffff00",
       "alpha": 1,
       "offsetX": 0,

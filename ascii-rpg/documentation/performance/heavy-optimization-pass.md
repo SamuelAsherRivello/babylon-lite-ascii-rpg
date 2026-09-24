@@ -204,6 +204,18 @@ the required five warm game-refresh samples, three-fixture matrix, separate
 game/minimap/mapview/preview timings, and High stress-density samples remain
 uncollected.
 
+The Playwright CLI then collected five warm idle game-session samples on the same
+loaded fixed-seed page at 1280 x 720 CSS pixels, DPR 1, zoom 5: each ran for 350 ms
+and produced 20 frames, 57.14 average FPS, 16.8 ms p95 frame time, and 16.8 ms
+worst frame time. These are warm frame samples, not five additional world-start
+samples, so they supplement rather than replace the outstanding warm-refresh
+matrix. A fresh headless startup report on that same viewport measured 1,302.9 ms
+total readiness and missed the 1,000 ms target; it had 164.1 ms generation,
+1,798.4 ms to complete visible placement, 1,878.3 ms to submit the first complete
+view, and 2,102.6 ms to drain deferred work in the report's elapsed timeline.
+This headless result is retained as a target gap, not discarded or blended into
+the earlier headed samples.
+
 ## Verification and outstanding work
 
 ### 2026-09-24 — Fixed-seed browser smoke evidence

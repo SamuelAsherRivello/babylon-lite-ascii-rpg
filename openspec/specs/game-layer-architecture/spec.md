@@ -148,21 +148,26 @@ inspect world cells, light fields, shadow masks, or renderer resources.
   controller becomes available
 
 ### Requirement: No legacy gameplay fallback
-
-The application SHALL NOT retain the legacy React-mounted canvas gameplay path
-as a client fallback. If Babylon Lite or the required browser rendering
-support cannot initialize, the game world SHALL not load.
+The application SHALL run its Babylon Lite game surface without retaining a legacy gameplay fallback. If required browser rendering support cannot initialize or is lost, the game SHALL report unavailable state without loading an alternate gameplay renderer.
 
 #### Scenario: Babylon Lite startup succeeds
-
 - **WHEN** Babylon Lite initializes successfully
-- **THEN** the game world SHALL load in `game_layer`
+- **THEN** the game world SHALL load in `game_layer` and remain responsive to React controls
 
 #### Scenario: Babylon Lite startup fails
+- **WHEN** required rendering support cannot initialize or is lost
+- **THEN** the game world SHALL not load and no legacy gameplay path SHALL run
 
-- **WHEN** Babylon Lite or required browser rendering support cannot initialize
-- **THEN** the game world SHALL not load and the legacy canvas gameplay path
-  SHALL NOT run as a fallback
+### Requirement: Responsive interactive rendering
+
+The game SHALL coalesce rendering work so UI actions remain dispatchable while
+all gameplay, lighting, fog, minimap, palette, font, zoom, camera, and realm
+systems operate.
+
+#### Scenario: Menu interaction during gameplay
+
+- **WHEN** a player opens or uses any left-side menu control while a world is rendered
+- **THEN** the action completes without freezing or crashing the browser
 
 ### Requirement: Narrow realm lifecycle commands
 React SHALL send only deliberate realm-restart and ambient-preference commands

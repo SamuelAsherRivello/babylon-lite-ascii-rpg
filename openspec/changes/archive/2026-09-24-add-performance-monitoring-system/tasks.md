@@ -25,6 +25,6 @@
 - [x] 4.0a Stage startup preparation so secondary realm, full mapview, and other
   non-critical work do not block active-realm playability; add safety checks for
   later realm transitions and minimap refreshes.
-- [ ] 4.1 Run focused performance collector, bridge, startup, and render tests plus the repository's full Node test suite and production build; verify unrelated dirty files remain unstaged and no Playwright tests are added or run.
+- [x] 4.1 Run focused performance collector, bridge, startup, and render tests plus the repository's full Node test suite and production build; verify unrelated dirty files remain unstaged and no Playwright tests are added or run.
 - [x] 4.2 Manually benchmark the supported browser in a documented fixed environment: app open to playable, idle, one-direction movement, and one-direction sprint, recording average FPS, frame time, worst/high-percentile frame time, generation/readiness timing, main-world timing, and minimap timing; verify the report includes enough context to reproduce the run.
 - [x] 4.3 Review the baseline for optimization candidates and append the 10–100-word result to `output/performance-analysis/performance-monitoring.md`; verify monitoring is disabled during ordinary play and that the existing HUD and gameplay visuals remain unchanged.

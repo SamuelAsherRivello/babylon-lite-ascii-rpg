@@ -166,3 +166,10 @@ The rendering implementation SHALL provide focused validation or diagnostics for
 #### Scenario: Readiness and zoom budgets
 - **WHEN** performance validation runs
 - **THEN** world readiness, cold warmup, and cached rerender timings SHALL be reported against the existing budgets
+
+### Requirement: Bounded frame scheduling
+The renderer SHALL not continually submit unchanged world frames and SHALL coalesce pending presentation work without disabling visible systems.
+
+#### Scenario: Static world
+- **WHEN** world state is unchanged
+- **THEN** rendering SHALL remain bounded and browser input SHALL remain responsive
