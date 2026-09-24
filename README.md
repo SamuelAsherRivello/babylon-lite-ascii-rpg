@@ -70,11 +70,9 @@ There are many cool ideas! Here is a partial list.
 
 ### 🛠️ 3. Implement
 
-Use an [openspec](openspec/) workflow for collaboration with minimal code conflicts.
-
-See this 30-second [video short](https://www.youtube.com/shorts/lce1edytViI).
-
-See the command table in the [AI Skills Library](https://github.com/SamuelAsherRivello/ai-skills-library).
+- Use an [openspec](openspec/) workflow for collaboration with minimal code conflicts.
+- See this 30-second [video short](https://www.youtube.com/shorts/lce1edytViI).
+- See the command table in the [AI Skills Library](https://github.com/SamuelAsherRivello/ai-skills-library).
 
 ## Project Details
 
