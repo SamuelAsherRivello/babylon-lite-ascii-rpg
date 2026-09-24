@@ -1,6 +1,31 @@
 {
   "releases": [
     {
+      "version": "0.0.21",
+      "items": [
+        {
+          "label": "Animejs easing support",
+          "featurePath": "openspec/specs/animation-easing/spec.md"
+        },
+        {
+          "label": "Character state driven actions responses",
+          "featurePath": "openspec/specs/character-info/spec.md"
+        },
+        {
+          "label": "Houses varied sizes",
+          "featurePath": "openspec/specs/variable-overworld-houses/spec.md"
+        },
+        {
+          "label": "Overworld buildings",
+          "featurePath": "openspec/specs/object-spawner-system/spec.md"
+        },
+        {
+          "label": "Overworld npc patrols",
+          "featurePath": "openspec/specs/ascii-palette/spec.md"
+        }
+      ]
+    },
+    {
       "version": "0.0.20",
       "items": [
         {
