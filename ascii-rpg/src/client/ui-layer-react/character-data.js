@@ -1,4 +1,10 @@
 export const INITIAL_CHARACTER = Object.freeze({
+  slots: Object.freeze([
+    Object.freeze({ slot: "Slot 01", id: "sword", glyph: "🗡", name: "Sword" }),
+    Object.freeze({ slot: "Slot 02", id: "shield", glyph: "🛡", name: "Shield" }),
+    Object.freeze({ slot: "Slot 03", id: "pickaxe", glyph: "⛏", name: "Pickaxe" }),
+    null,
+  ]),
   health: Object.freeze({ startingPercent: 100, currentPercent: 100, pendingPercent: 100 }),
   stamina: Object.freeze({
     startingValue: 50,

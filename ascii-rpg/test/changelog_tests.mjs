@@ -15,7 +15,9 @@ test("each changelog release has concise human-readable items", () => {
   for (const release of changelog.releases) {
     assert.ok(release.items.length >= 1 && release.items.length <= 5, `v${release.version} item count`);
     for (const item of release.items) {
-      assert.ok(item.trim().split(/\s+/).length >= 2 && item.trim().split(/\s+/).length <= 5, `v${release.version}: ${item}`);
+      const label = typeof item === "string" ? item : item?.label;
+      assert.equal(typeof label, "string", `v${release.version} items must have a human-readable label`);
+      assert.ok(label.trim().split(/\s+/).length >= 2 && label.trim().split(/\s+/).length <= 5, `v${release.version}: ${label}`);
     }
   }
 });

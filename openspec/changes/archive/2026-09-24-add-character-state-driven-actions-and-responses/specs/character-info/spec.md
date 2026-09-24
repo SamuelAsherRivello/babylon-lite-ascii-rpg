@@ -16,6 +16,14 @@ The panel SHALL render Gold as `0` and the player's Key count as `0` initially, 
 - **WHEN** the initial character data is rendered
 - **THEN** Gold and Keys remain resource cells and are not rendered as equipment slots
 
+#### Scenario: Initial resources render
+- **WHEN** the initial character data is rendered
+- **THEN** Gold is `0`, Key count is `0`, and carrying text or values are absent
+
+#### Scenario: Resources have no gameplay state yet
+- **WHEN** the initial character data is rendered
+- **THEN** Gold is `0`, current Key count is `0`, and no carrying state is exposed
+
 #### Scenario: Key count updates after collection
 
 - **WHEN** the player collects a key and the game layer publishes the new count
@@ -34,3 +42,7 @@ The six panel cells SHALL represent Gold, Keys, and equipment using text glyphs 
 
 - **WHEN** the Character panel is rendered without additional assets
 - **THEN** Sword, Shield, Pickaxe, Gold, and Keys each render as text glyphs
+
+#### Scenario: Glyph icons render without asset loading
+- **WHEN** the Character panel is rendered without additional assets
+- **THEN** health, offense, defense, experience, Gold, and Keys each show a distinct text glyph

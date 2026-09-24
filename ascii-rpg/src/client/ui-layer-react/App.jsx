@@ -36,6 +36,8 @@ import { ToastProvider, useToast } from "./ToastProvider.jsx";
 import { BoxLayout, CornerLayout, HudBlockLayout } from "./HudLayouts.jsx";
 import { removeFocusableElementsFromTabOrder } from "./button-tab-order.js";
 import { INITIAL_CHARACTER } from "./character-data.js";
+
+const CHARACTER_SLOT_LABELS = ["Slot 01", "Slot 02", "Slot 03", "Slot 04"];
 import { deriveBarColors } from "./character-colors.js";
 import {
   CHARACTER_BAR_DELTA_DURATION_MS,
@@ -58,6 +60,7 @@ import {
   getCombatStatsSnapshot,
   getExperienceSnapshot,
   getGoldSnapshot,
+  getCharacterStateSnapshot,
   getKeySnapshot,
   getHealthSnapshot,
   getStaminaSnapshot,
@@ -91,6 +94,7 @@ import {
   subscribeToCombatStats,
   subscribeToExperience,
   subscribeToGold,
+  subscribeToCharacterState,
   subscribeToKey,
   subscribeToHealth,
   subscribeToStamina,
@@ -417,6 +421,7 @@ function CharacterDetails({
   stamina = INITIAL_CHARACTER.stamina,
   combatStats = { offense: INITIAL_CHARACTER.offense, defense: INITIAL_CHARACTER.defense },
   experience = INITIAL_CHARACTER.experience,
+  slots = INITIAL_CHARACTER.slots,
   palette,
   onShowTooltip,
   onHideTooltip,
@@ -476,10 +481,10 @@ function CharacterDetails({
               <span className="character_resource_value">{gold}</span>
             </div>
           </SettingTooltipTarget>
-          {["Slot 01", "Slot 02"].map((slot) => (
-            <SettingTooltipTarget description={slot} onShow={onShowTooltip} onHide={onHideTooltip} key={slot}>
-              <div className="character_resource character_slot" aria-label={slot}>
-                <span className="character_slot_text">{slot}</span>
+          {slots.slice(0, 2).map((item, index) => (
+            <SettingTooltipTarget description={item?.name ?? CHARACTER_SLOT_LABELS[index]} onShow={onShowTooltip} onHide={onHideTooltip} key={CHARACTER_SLOT_LABELS[index]}>
+              <div className="character_resource character_slot" aria-label={CHARACTER_SLOT_LABELS[index]}>
+                <span className="character_slot_text">{item?.glyph ?? CHARACTER_SLOT_LABELS[index]}</span>
               </div>
             </SettingTooltipTarget>
           ))}
@@ -489,10 +494,10 @@ function CharacterDetails({
               <span className="character_resource_value">{keys}</span>
             </div>
           </SettingTooltipTarget>
-          {["Slot 03", "Slot 04"].map((slot) => (
-            <SettingTooltipTarget description={slot} onShow={onShowTooltip} onHide={onHideTooltip} key={slot}>
-              <div className="character_resource character_slot" aria-label={slot}>
-                <span className="character_slot_text">{slot}</span>
+          {slots.slice(2, 4).map((item, index) => (
+            <SettingTooltipTarget description={item?.name ?? CHARACTER_SLOT_LABELS[index + 2]} onShow={onShowTooltip} onHide={onHideTooltip} key={CHARACTER_SLOT_LABELS[index + 2]}>
+              <div className="character_resource character_slot" aria-label={CHARACTER_SLOT_LABELS[index + 2]}>
+                <span className="character_slot_text">{item?.glyph ?? CHARACTER_SLOT_LABELS[index + 2]}</span>
               </div>
             </SettingTooltipTarget>
           ))}
@@ -1794,6 +1799,7 @@ function AppContent() {
   const quest = useSyncExternalStore(subscribeToQuest, getQuestSnapshot, getQuestSnapshot);
   const gold = useSyncExternalStore(subscribeToGold, getGoldSnapshot, getGoldSnapshot);
   const keys = useSyncExternalStore(subscribeToKey, getKeySnapshot, getKeySnapshot);
+  const characterState = useSyncExternalStore(subscribeToCharacterState, getCharacterStateSnapshot, getCharacterStateSnapshot);
   const health = useSyncExternalStore(subscribeToHealth, getHealthSnapshot, getHealthSnapshot);
   const stamina = useSyncExternalStore(subscribeToStamina, getStaminaSnapshot, getStaminaSnapshot);
   const combatStats = useSyncExternalStore(subscribeToCombatStats, getCombatStatsSnapshot, getCombatStatsSnapshot);
@@ -2222,6 +2228,7 @@ function AppContent() {
           <CharacterDetails
             gold={gold}
             keys={keys}
+            slots={characterState.slots}
             health={health}
             stamina={stamina}
             combatStats={combatStats}

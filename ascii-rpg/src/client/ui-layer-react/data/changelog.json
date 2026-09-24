@@ -20,7 +20,7 @@
           "featurePath": "openspec/specs/procedural-generation-settings/spec.md"
         },
         {
-          "label": "Changelog",
+          "label": "Changelog updates",
           "featurePath": "openspec/specs/changelog/spec.md"
         }
       ]

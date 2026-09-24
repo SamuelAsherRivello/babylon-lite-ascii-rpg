@@ -49,3 +49,7 @@ When Shield responds to an enemy attack, the applied damage SHALL begin with the
 
 - **WHEN** an enemy attacks a player without a Shield response
 - **THEN** applied damage equals the enemy's configured maximum attack damage
+
+#### Scenario: Zero Defense receives maximum damage
+- **WHEN** the player is attacked with zero current Defense
+- **THEN** applied damage equals the enemy's configured maximum attack damage

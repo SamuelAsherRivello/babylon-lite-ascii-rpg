@@ -16,6 +16,10 @@ The game SHALL accept WASD and arrow keys as equivalent cardinal directions: `W`
 - **WHEN** the player presses a mapped key whose destination cell is a fence
 - **THEN** the player remains in the current cell, world time remains unchanged, and stamina remains unchanged
 
+#### Scenario: Wall collision
+- **WHEN** the player presses a mapped key whose destination cell is a wall
+- **THEN** the player remains in the current cell, world time remains unchanged, and stamina remains unchanged
+
 #### Scenario: Locked door without a key
 
 - **WHEN** the player presses a cardinal mapped key whose destination cell is a closed door and the player has no Key resource

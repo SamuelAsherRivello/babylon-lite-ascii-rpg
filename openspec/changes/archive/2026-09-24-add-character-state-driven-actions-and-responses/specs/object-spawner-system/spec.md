@@ -16,6 +16,10 @@ The system SHALL treat `IsPickup: true` objects as one-time collectible objects 
 - **WHEN** the player enters a Heart or Gold pickup cell
 - **THEN** the pickup disappears, applies its configured consequence once, and emits its configured log text
 
+#### Scenario: Player collects a pickup
+- **WHEN** the player enters a Heart or Gold pickup cell
+- **THEN** the pickup disappears, applies its configured consequence once, and emits its configured log text
+
 #### Scenario: Player enters a fence cell
 
 - **WHEN** movement targets a fence
@@ -30,6 +34,10 @@ The system SHALL treat `IsPickup: true` objects as one-time collectible objects 
 
 - **WHEN** cardinal movement contacts a closed door while the player has no Key
 - **THEN** the player remains in place and the contact consumes one normal movement tick without opening the door
+
+#### Scenario: Player attempts a closed door
+- **WHEN** movement targets a closed door
+- **THEN** the system logs the locked state or spends a Key and opens the door without moving the player
 
 #### Scenario: Player enters an open door
 
@@ -57,6 +65,10 @@ The Object Spawner System SHALL block movement into a closed Treasure Chest. Whe
 
 #### Scenario: Cardinal contact opens a chest
 
+- **WHEN** the player attempts to move left, right, up, or down into a closed Treasure Chest
+- **THEN** the player remains in the adjacent cell and the chest renders its open glyph
+
+#### Scenario: Cardinal movement opens a chest
 - **WHEN** the player attempts to move left, right, up, or down into a closed Treasure Chest
 - **THEN** the player remains in the adjacent cell and the chest renders its open glyph
 

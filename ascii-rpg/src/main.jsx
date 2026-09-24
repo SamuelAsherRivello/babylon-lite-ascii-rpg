@@ -2,7 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./client/ui-layer-react/App.jsx";
 import { startGameLayer } from "./client/game-layer-babylon-lite/index.js";
-import { getCameraModeSnapshot, getCombatStatsSnapshot, getExperienceSnapshot, getGoldSnapshot, getHealthSnapshot, getLogSnapshot, getPlayerDeadSnapshot, getQuestSnapshot, getRealmDiscoverySnapshot, getRealmSnapshot, getStaminaSnapshot, getZoomSnapshot, getPerformanceReport, resetPerformanceSession, sendCheckpointSnapshot, sendCombatStatsSnapshot, sendExperienceSnapshot, sendFontSnapshot, sendGoldSnapshot, sendHealthSnapshot, sendLogSnapshot, sendMinimapZoomSnapshot, sendPaletteSnapshot, sendPlayerDeadSnapshot, sendQuestEvent, sendQuestSnapshot, sendRandomSeedSnapshot, sendRealmDiscoverySnapshot, sendRealmSnapshot, sendStaminaSnapshot, sendTimeSnapshot, setGameController, startPerformanceSession, stopPerformanceSession } from "./client/bridge-layer/game-bridge.js";
+import { getCameraModeSnapshot, getCharacterStateSnapshot, getCombatStatsSnapshot, getExperienceSnapshot, getGoldSnapshot, getHealthSnapshot, getLogSnapshot, getPlayerDeadSnapshot, getQuestSnapshot, getRealmDiscoverySnapshot, getRealmSnapshot, getStaminaSnapshot, getZoomSnapshot, getPerformanceReport, resetPerformanceSession, sendCharacterStateSnapshot, sendCheckpointSnapshot, sendCombatStatsSnapshot, sendExperienceSnapshot, sendFontSnapshot, sendGoldSnapshot, sendHealthSnapshot, sendLogSnapshot, sendMinimapZoomSnapshot, sendPaletteSnapshot, sendPlayerDeadSnapshot, sendQuestEvent, sendQuestSnapshot, sendRandomSeedSnapshot, sendRealmDiscoverySnapshot, sendRealmSnapshot, sendStaminaSnapshot, sendTimeSnapshot, setGameController, startPerformanceSession, stopPerformanceSession } from "./client/bridge-layer/game-bridge.js";
 import { fontReady, getFontId, subscribeToFont } from "./client/ui-layer-react/font-store.js";
 import { getPalette, paletteReady, subscribeToPalette } from "./client/ui-layer-react/palette-store.js";
 import { generationSettingsReady, getGenerationSettings } from "./client/ui-layer-react/generation-settings-store.js";
@@ -43,6 +43,7 @@ void Promise.all([paletteReady, fontReady, generationSettingsReady])
     controller.subscribeToQuest?.((quest) => sendQuestSnapshot(quest));
     controller.subscribeToQuestEvent?.(sendQuestEvent);
     sendGoldSnapshot(controller.getGold?.() ?? getGoldSnapshot());
+    sendCharacterStateSnapshot(controller.getCharacterState?.() ?? getCharacterStateSnapshot());
     controller.subscribeToGold?.((gold) => sendGoldSnapshot(gold));
     sendHealthSnapshot(controller.getHealth?.() ?? getHealthSnapshot());
     controller.subscribeToHealth?.((health) => sendHealthSnapshot(health));

@@ -38,6 +38,7 @@ export function createEnemySystem({
   getPlayerState,
   damagePlayer = () => {},
   combatStatsSystem,
+  resolveIncomingContact = null,
   isWalkable = (cell, realm, world) => defaultWalkable(world, cell),
   isStaticOccupied = () => false,
   isStaticOccupiedIndex = null,
@@ -84,9 +85,10 @@ export function createEnemySystem({
     if (!player?.alive || player.realm !== enemy.realm) return;
     if (manhattanDistance(enemy.cell, player.cell) === 1) {
       const defense = combatStatsSystem?.getDefenseSnapshot?.();
-      const damage = defense
-        ? calculatePlayerDamageTaken(ENEMY_ATTACK_DAMAGE, defense.current, defense.maximum)
-        : ENEMY_ATTACK_DAMAGE;
+      const resolved = resolveIncomingContact?.({ enemy, event, maximumDamage: ENEMY_ATTACK_DAMAGE });
+      const damage = resolved?.handled
+        ? resolved.damage
+        : defense ? calculatePlayerDamageTaken(ENEMY_ATTACK_DAMAGE, defense.current, defense.maximum) : ENEMY_ATTACK_DAMAGE;
       damagePlayer(damage, { enemy, event, maximumDamage: ENEMY_ATTACK_DAMAGE, defense });
       log(`Enemy hit Player for -${damage} Health`);
       onChange();

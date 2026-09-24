@@ -14,5 +14,5 @@
 ## 3. Validation
 
 - [x] 3.1 Add focused client tests for scheduler coalescing and lifecycle cancellation, then run npm.cmd test.
-- [ ] 3.2 Manually click every left-side menu control in a production build and verify no browser crash, freeze, or lost system behavior.
+- [x] 3.2 Manually click every left-side menu control in a production build and verify no browser crash, freeze, or lost system behavior.
 - [x] 3.3 Run npm.cmd run build and OpenSpec validation for this change.

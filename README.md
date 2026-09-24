@@ -36,7 +36,9 @@ preference, version display, and GitHub Pages deployment path.
 
 <!-- AI: Update this getting-started summary when the template is used. -->
 Install Node.js 24, or use the repository Dockerfile, then run these commands
-from the repository root:
+from the repository root. The Docker image explicitly provides
+`/usr/bin/bash`, which is required by Docker Desktop's Codex CLI agent
+environment.
 
 ### 🛠 Build Project
 

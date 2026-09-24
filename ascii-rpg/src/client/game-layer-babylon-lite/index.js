@@ -103,7 +103,7 @@ import { createRealmSystem } from "./systems/realm-system.js";
 import { createPlayerLifecycle } from "./systems/player-lifecycle.js";
 import { createStaminaSystem } from "./systems/stamina-system.js";
 import { createExperienceSystem } from "./systems/experience-system.js";
-import { createCombatStatsSystem } from "./systems/combat-stats-system.js";
+import { calculatePlayerDamageTaken, createCombatStatsSystem } from "./systems/combat-stats-system.js";
 import { createCivilizationGroups, isCardinalDirection } from "./systems/civilization-system.js";
 import { createOverworldBuildings, getIndexedBuildingGlyph, getBuildingPresentationDirtyCells } from "./systems/building-system.js";
 import { createDynamicOccupancy, getDynamicVisibleGlyph } from "./systems/dynamic-occupancy.js";
@@ -114,6 +114,7 @@ import { createNpcSpawnerSystem, selectNpcSpawnerCells } from "./systems/npc-spa
 import { getMapviewLayout, getMapviewLightingFactor, getMapviewMarkers } from "./systems/mapview-renderer.js";
 import { resolvePlayerCombatTurn } from "./systems/combat-system.js";
 import { damageMountainTarget, getDiggableMountainTarget } from "./systems/mountain-system.js";
+import { createCharacterState, createContactTarget, DEFAULT_CHARACTER_STATE, resolveCharacterContact } from "./systems/character-state-contact-system.js";
 import { createHealthBarSystem } from "./systems/health-bar-system.js";
 import { createFloatingTextSystem } from "./systems/floating-text-system.js";
 import { getFloatingTextStyle } from "./systems/floating-text-renderer.js";
@@ -382,6 +383,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   let playerFacing = FACING_LEFT;
   let characterGold = 0;
   let characterKeys = 0;
+  let characterState = createCharacterState(DEFAULT_CHARACTER_STATE);
   const playerLifecycle = createPlayerLifecycle();
   let checkpoint = null;
   let checkpointRevision = 0;
@@ -2213,35 +2215,70 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     const attemptedCell = { x: playerCell.x + direction.x, y: playerCell.y + direction.y };
     const occupant = getOccupancyForWorld()?.getAt(attemptedCell)
       ?? getDiggableMountainTarget(world, activeRealm, attemptedCell);
-    const collision = resolvePlayerCombatTurn(occupant, {
-      timeSystem,
-      staminaSystem,
-      experienceSystem,
-      combatStatsSystem,
-      enemySystem,
-      spawnerSystem: enemySpawnerSystem,
-      mountainSystem,
+    const cardinal = isCardinalDirection(direction);
+    const object = cardinal ? objectSpawnerSystem?.getActiveObjectAtCell(attemptedCell, { world }) : null;
+    const target = cardinal && (occupant || object)
+      ? createContactTarget({ kind: occupant?.type ?? object.type, cell: attemptedCell, occupant, object })
+      : null;
+    const interactWithObject = () => objectSpawnerSystem?.interactAtCell(attemptedCell, {
+      world,
+      keyCount: characterKeys,
+      spendKey: () => {
+        if (characterKeys <= 0) return false;
+        characterKeys -= 1;
+        notifyKeys();
+        return true;
+      },
+      log: (message) => logSystem.log({ message }),
+      playerCell,
+      random: createRandom(`${world.options.seed}:${attemptedCell.x},${attemptedCell.y}:chest-reward`),
+      createChestRewardEffect: (type) => type === "heart" ? applyHeartEffect : () => {},
     });
-    if (collision.handled) {
+    characterState = createCharacterState({ ...characterState, gold: characterGold, keys: characterKeys });
+    const contact = target ? resolveCharacterContact(characterState, target, {
+      sword: {
+        canHandle: (candidate) => ["enemy", "enemy-spawner"].includes(candidate.kind),
+        handle: () => resolvePlayerCombatTurn(occupant, {
+          timeSystem, staminaSystem, experienceSystem, combatStatsSystem, enemySystem,
+          spawnerSystem: enemySpawnerSystem, mountainSystem,
+        }),
+      },
+      pickaxe: {
+        canHandle: (candidate) => candidate.kind === "mountain",
+        handle: () => resolvePlayerCombatTurn(occupant, {
+          timeSystem, staminaSystem, experienceSystem, combatStatsSystem, enemySystem,
+          spawnerSystem: enemySpawnerSystem, mountainSystem,
+        }),
+      },
+      keys: {
+        canHandle: (candidate, state) => candidate.kind === "door" && state.keys > 0,
+        handle: interactWithObject,
+      },
+      body: {
+        canHandle: (candidate) => candidate.kind === "chest",
+        handle: interactWithObject,
+      },
+    }) : null;
+    if (contact?.handled) {
+      if (contact.outcome?.handled) {
+        const doorInteraction = contact.outcome;
+        if (doorInteraction.opened && doorInteraction.object.type === "door") {
+          staticOccupancyIndexes.get(activeRealm)?.delete(attemptedCell.y * world.columns + attemptedCell.x);
+        }
+        const dirtyCells = [attemptedCell];
+        if (doorInteraction.reward?.cell) {
+          dirtyCells.push(doorInteraction.reward.cell);
+          staticOccupancyIndexes.get(activeRealm)?.add(doorInteraction.reward.cell.y * world.columns + doorInteraction.reward.cell.x);
+        }
+        scheduleMovementRender({ player: true, refreshLighting: doorInteraction.opened && doorInteraction.object.type === "chest", dirtyCells, force: true });
+        scheduleMapviewRender({ dirtyCells });
+      }
       scheduleMovementRender({ player: true, dirtyCells: occupant?.cell ? [occupant.cell] : [] });
       scheduleMinimapRender();
       return staminaSystem.getCurrent() === 0;
     }
     if (isCardinalDirection(direction)) {
-      const doorInteraction = objectSpawnerSystem?.interactAtCell(attemptedCell, {
-        world,
-        keyCount: characterKeys,
-        spendKey: () => {
-          if (characterKeys <= 0) return false;
-          characterKeys -= 1;
-          notifyKeys();
-          return true;
-        },
-        log: (message) => logSystem.log({ message }),
-        playerCell,
-        random: createRandom(`${world.options.seed}:${attemptedCell.x},${attemptedCell.y}:chest-reward`),
-        createChestRewardEffect: (type) => type === "heart" ? applyHeartEffect : () => {},
-      });
+      const doorInteraction = interactWithObject();
       if (doorInteraction?.handled) {
         if (doorInteraction.opened && doorInteraction.object.type === "door") {
           staticOccupancyIndexes.get(activeRealm)?.delete(attemptedCell.y * world.columns + attemptedCell.x);
@@ -2265,6 +2302,10 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
          });
         scheduleMapviewRender({ dirtyCells });
         return exhaustedAtAttempt;
+      }
+      if (target && ["enemy", "enemy-spawner", "mountain"].includes(target.kind)) {
+        timeSystem.advance(1, "movement");
+        return staminaSystem.getCurrent() === 0;
       }
     }
     const nextCell = moveWorldCell(playerCell, direction, world);
@@ -2888,6 +2929,28 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
         if (playerLifecycle.isDead()) clearMovementInput();
       },
       combatStatsSystem,
+      resolveIncomingContact: ({ enemy, event, maximumDamage }) => {
+        characterState = createCharacterState({ ...characterState, gold: characterGold, keys: characterKeys });
+        const result = resolveCharacterContact(characterState, createContactTarget({
+          kind: "enemy-attack",
+          cell: playerCell,
+          enemy,
+          event,
+        }), {
+          shield: {
+            canHandle: (target) => target.kind === "enemy-attack",
+            handle: () => {
+              const defense = combatStatsSystem?.getDefenseSnapshot?.();
+              return defense ? calculatePlayerDamageTaken(maximumDamage, defense.current, defense.maximum) : maximumDamage;
+            },
+          },
+          body: {
+            canHandle: (target) => target.kind === "enemy-attack",
+            handle: () => maximumDamage,
+          },
+        });
+        return { handled: result.handled, damage: result.outcome };
+      },
       isStaticOccupied,
       isStaticOccupiedIndex,
       log: (message) => logSystem.log({ message }),
@@ -2931,6 +2994,11 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       timeSystem,
       occupancy: overgroundOccupancy,
       worldFor: (realmName) => worldRealms.realms[realmName],
+      getPlayerState: (realmName) => activeRealm === realmName ? { realm: realmName, cell: playerCell, alive: !playerLifecycle.isDead() } : null,
+      resolvePlayerContact: ({ npc, player, event }) => {
+        characterState = createCharacterState({ ...characterState, gold: characterGold, keys: characterKeys });
+        return resolveCharacterContact(characterState, createContactTarget({ kind: "npc", cell: player.cell, npc, event }), {});
+      },
       isWalkable: (cell, realmName) => Boolean(worldRealms.realms[realmName]?.terrain?.[cell.y]?.[cell.x]?.walkable),
       isStaticOccupied,
       randomFor: (npc, tick) => createRandom(`${overground.options.seed}:${npc.id}:${tick}`),
@@ -3150,6 +3218,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       return () => questEventListeners.delete(listener);
     },
     getGold() { return characterGold; },
+    getCharacterState() { return characterState; },
     subscribeToGold(listener) {
       goldListeners.add(listener);
       listener(characterGold);

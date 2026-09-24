@@ -27,6 +27,16 @@ let lightingSnapshot = null;
 let questSnapshot = null;
 let goldSnapshot = 0;
 let keySnapshot = 0;
+let characterStateSnapshot = Object.freeze({
+  slots: Object.freeze([
+    Object.freeze({ slot: "Slot 01", id: "sword", glyph: "🗡", name: "Sword" }),
+    Object.freeze({ slot: "Slot 02", id: "shield", glyph: "🛡", name: "Shield" }),
+    Object.freeze({ slot: "Slot 03", id: "pickaxe", glyph: "⛏", name: "Pickaxe" }),
+    null,
+  ]),
+  gold: 0,
+  keys: 0,
+});
 let healthSnapshot = 100;
 let staminaSnapshot = Object.freeze({
   current: 50,
@@ -58,6 +68,7 @@ const questListeners = new Set();
 const questEventListeners = new Set();
 const goldListeners = new Set();
 const keyListeners = new Set();
+const characterStateListeners = new Set();
 const healthListeners = new Set();
 const staminaListeners = new Set();
 const experienceListeners = new Set();
@@ -279,6 +290,13 @@ export function subscribeToKey(listener) { keyListeners.add(listener); return ()
 export function sendKeySnapshot(keys) {
   keySnapshot = Math.max(0, Math.floor(Number(keys) || 0));
   for (const listener of keyListeners) listener();
+}
+export function getCharacterStateSnapshot() { return characterStateSnapshot; }
+export function subscribeToCharacterState(listener) { characterStateListeners.add(listener); return () => characterStateListeners.delete(listener); }
+export function sendCharacterStateSnapshot(state) {
+  const slots = Object.freeze((state?.slots ?? []).slice(0, 4).map((item) => item ? Object.freeze({ ...item }) : null));
+  characterStateSnapshot = Object.freeze({ slots, gold: Math.max(0, Number(state?.gold) || 0), keys: Math.max(0, Number(state?.keys) || 0) });
+  for (const listener of characterStateListeners) listener();
 }
 
 export function getHealthSnapshot() { return healthSnapshot; }

@@ -356,30 +356,40 @@ function getInteriorNeighborIndexes(key, rows, columns) {
 
 function assignWaterDepths(waterCells, rows, columns) {
   if (waterCells.length === 0) return new Map();
-  const waterKeys = new Set(waterCells.map((cell) => cellIndex(cell, columns)));
-  const boundary = waterCells.map((cell) => cellIndex(cell, columns))
-    .filter((key) => getInteriorNeighborIndexes(key, rows, columns)
-      .some((neighbor) => !waterKeys.has(neighbor)));
-  const distances = new Map(boundary.map((key) => [key, 0]));
-  const pending = [...boundary];
+  const waterKeys = new Uint8Array(rows * columns);
+  const distances = new Int32Array(rows * columns);
+  distances.fill(-1);
+  const pending = new Uint32Array(waterCells.length);
+  let pendingLength = 0;
+  for (const cell of waterCells) waterKeys[cellIndex(cell, columns)] = 1;
+  for (const cell of waterCells) {
+    const key = cellIndex(cell, columns);
+    if (getInteriorNeighborIndexes(key, rows, columns).some((neighbor) => !waterKeys[neighbor])) {
+      distances[key] = 0;
+      pending[pendingLength] = key;
+      pendingLength += 1;
+    }
+  }
   let pendingIndex = 0;
-  while (pendingIndex < pending.length) {
+  while (pendingIndex < pendingLength) {
     const cellKeyIndex = pending[pendingIndex];
     pendingIndex += 1;
-    const distance = distances.get(cellKeyIndex);
+    const distance = distances[cellKeyIndex];
     for (const key of getInteriorNeighborIndexes(cellKeyIndex, rows, columns)) {
-      if (waterKeys.has(key) && !distances.has(key)) {
-        distances.set(key, distance + 1);
-        pending.push(key);
+      if (waterKeys[key] && distances[key] < 0) {
+        distances[key] = distance + 1;
+        pending[pendingLength] = key;
+        pendingLength += 1;
       }
     }
   }
 
   const center = getCenterMostCell(waterCells, rows, columns);
-  const deepestDistance = Math.max(...distances.values());
+  let deepestDistance = 0;
+  for (const cell of waterCells) deepestDistance = Math.max(deepestDistance, distances[cellIndex(cell, columns)]);
   const ordered = [...waterCells].sort((left, right) => {
-    const leftDepth = distances.get(cellIndex(left, columns)) ?? 0;
-    const rightDepth = distances.get(cellIndex(right, columns)) ?? 0;
+    const leftDepth = distances[cellIndex(left, columns)];
+    const rightDepth = distances[cellIndex(right, columns)];
     const leftCenterDistance = Math.abs(left.x - center.x) + Math.abs(left.y - center.y);
     const rightCenterDistance = Math.abs(right.x - center.x) + Math.abs(right.y - center.y);
     return rightDepth - leftDepth
@@ -389,7 +399,7 @@ function assignWaterDepths(waterCells, rows, columns) {
   const depths = new Map();
   if (deepestDistance >= 2) {
     ordered.forEach((cell) => {
-      const distance = distances.get(cellIndex(cell, columns)) ?? 0;
+      const distance = distances[cellIndex(cell, columns)];
       const depth = distance === deepestDistance
         ? "deep"
         : distance === deepestDistance - 1 ? "medium" : "shallow";
@@ -401,7 +411,7 @@ function assignWaterDepths(waterCells, rows, columns) {
     // middle depth, and leave any remaining boundary cells shallow.
     const deepKeys = new Set([cellIndex(ordered[0], columns)]);
     const mediumKeys = new Set(getInteriorNeighborIndexes(cellIndex(ordered[0], columns), rows, columns)
-      .filter((key) => waterKeys.has(key)));
+      .filter((key) => waterKeys[key]));
     ordered.forEach((cell) => {
       const key = cellIndex(cell, columns);
       const depth = deepKeys.has(key) ? "deep" : mediumKeys.has(key) ? "medium" : "shallow";

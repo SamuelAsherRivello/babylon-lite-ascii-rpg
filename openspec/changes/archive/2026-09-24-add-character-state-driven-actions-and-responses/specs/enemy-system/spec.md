@@ -11,6 +11,10 @@ When an eligible enemy is cardinally adjacent to the living player, its attempte
 - **WHEN** an eligible enemy attempts to enter the cardinally adjacent player cell with the default Shield equipped
 - **THEN** neither entity moves and the player receives the Defense-derived mitigated damage
 
+#### Scenario: Adjacent enemy attacks
+- **WHEN** an eligible enemy attempts to enter the cardinally adjacent player cell
+- **THEN** the player loses the configured damage, neither entity moves, and one enemy-attack log event is submitted
+
 #### Scenario: Adjacent enemy attacks an unshielded player
 
 - **WHEN** an eligible enemy attempts to enter the cardinally adjacent player cell without a Shield response
@@ -29,6 +33,10 @@ An attempted cardinal player movement into an adjacent enemy SHALL offer that en
 
 - **WHEN** the player with Sword attempts cardinal movement into a living enemy cell
 - **THEN** the enemy loses the applicable Sword damage, neither entity moves, and world time advances by one combat unit
+
+#### Scenario: Player damages an enemy
+- **WHEN** the player attempts to move into a living enemy cell
+- **THEN** the enemy loses player attack damage, neither entity moves, and world time advances by one
 
 #### Scenario: Diagonal movement does not attack
 

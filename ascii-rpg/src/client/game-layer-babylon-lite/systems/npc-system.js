@@ -7,7 +7,7 @@ const MAX_PATROL_DISTANCE = 20;
 const MAX_PATROL_DESTINATION_ATTEMPTS = 32;
 const PATROL_SEARCH_NODES_PER_SLICE = 64;
 
-export function createNpcSystem({ timeSystem, occupancy, worldFor, isWalkable, isStaticOccupied = () => false, randomFor = () => Math.random, onChange = () => {}, deferredScheduler = null, isActive = () => true, isRealmActive = () => true } = {}) {
+export function createNpcSystem({ timeSystem, occupancy, worldFor, isWalkable, isStaticOccupied = () => false, randomFor = () => Math.random, getPlayerState = null, resolvePlayerContact = null, onChange = () => {}, deferredScheduler = null, isActive = () => true, isRealmActive = () => true } = {}) {
   const patrolDestinations = (npc, world) => {
     const destinations = [];
     const knownDestinations = new Set();
@@ -69,6 +69,11 @@ export function createNpcSystem({ timeSystem, occupancy, worldFor, isWalkable, i
     if (npc.patrolState === "pending") {
       if (npc.pendingActionAt === null) occupancy.update(id, { pendingActionAt: event.time });
       return;
+    }
+    const player = getPlayerState?.(npc.realm);
+    if (player?.alive && Math.abs(npc.cell.x - player.cell.x) + Math.abs(npc.cell.y - player.cell.y) === 1) {
+      const contact = resolvePlayerContact?.({ npc, player, event });
+      if (contact?.handled) return;
     }
     if (!npc.route?.length) return;
     const target = npc.returning
