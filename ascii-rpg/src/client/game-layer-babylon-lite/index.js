@@ -2834,14 +2834,15 @@ async function createGameSessionImplementation(container, initialPalette, initia
       })));
       if (featureEnabled("civilization-signs")) {
         const signReserved = new Set(realm.objects.map((object) => `${object.cell.x},${object.cell.y}`));
-        (realm.stairs ?? []).forEach((stair, stairIndex) => {
-          const [signCell] = selectObjectCells(realm, stair, 1, createRandom(`${realm.options.seed}:signs:placement:${stairIndex}`), {
+        (realm.stairs ?? []).forEach((stair) => {
+          const stairIdentity = `${stair.x}-${stair.y}`;
+          const [signCell] = selectObjectCells(realm, stair, 1, createRandom(`${realm.options.seed}:signs:placement:${stairIdentity}`), {
             minimumDistance: 1,
             maximumDistance: 50,
             reserved: signReserved,
           });
           if (signCell) addObjectToRealm(realm, {
-            id: `${realmName.toLowerCase()}-welcome-sign-${stairIndex + 1}`,
+            id: `${realmName.toLowerCase()}-welcome-sign-${stairIdentity}`,
             type: "welcome-sign",
             cell: signCell,
             effect: () => {},

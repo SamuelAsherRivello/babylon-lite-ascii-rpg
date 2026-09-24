@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "worldSize": "Low",
+  "worldSize": "Med",
   "passes": [
     {
       "id": "ground",
@@ -244,8 +244,13 @@
       "order": 16,
       "density": "Med",
       "owner": "civilization",
-      "realms": ["Overground", "Underground"],
-      "requires": ["civilization-stairs"],
+      "realms": [
+        "Overground",
+        "Underground"
+      ],
+      "requires": [
+        "civilization-stairs"
+      ],
       "objectType": "welcome-sign",
       "seedNamespace": "signs:placement",
       "enabled": true

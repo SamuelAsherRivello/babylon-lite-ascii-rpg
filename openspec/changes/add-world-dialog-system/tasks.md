@@ -22,5 +22,5 @@
 ## 4. Verification
 
 - [x] 4.1 Add focused Node tests for dialog state transitions, cardinal collision entry, repeatable signs, NPC recruitment, and recruited passability, and verify they pass from the repository root.
-- [ ] 4.2 Run `npm.cmd test` and `npm.cmd run build` from the repository root and verify no unrelated worktree files are modified.
+- [x] 4.2 Run `npm.cmd test` and `npm.cmd run build` from the repository root and verify no unrelated worktree files are modified.
 - [ ] 4.3 Manually verify modal NPC interaction and floating Welcome Sign placement in a browser using an explicit `randomSeed`, and record the exact observed behavior for desktop and mobile-sized layouts.
