@@ -60,6 +60,7 @@ let combatStatsSnapshot = Object.freeze({
 let playerDeadSnapshot = false;
 let checkpointSnapshot = Object.freeze({ active: false, revision: 0 });
 let logSnapshot = [];
+let dialogSnapshot = null;
 const timeListeners = new Set();
 const realmListeners = new Set();
 const realmDiscoveryListeners = new Set();
@@ -78,6 +79,7 @@ const checkpointListeners = new Set();
 const logListeners = new Set();
 const playerMovedListeners = new Set();
 const randomSeedListeners = new Set();
+const dialogListeners = new Set();
 
 export const PLAYER_MOVED_EVENTS = Object.freeze({
   up: "player moved up",
@@ -104,6 +106,24 @@ export function setGameController(controller) {
   gameController?.setAspectMode?.(aspectSnapshot);
   gameController?.setZoom?.(zoomSnapshot);
   if (lightingSnapshot !== null) gameController?.setLighting?.(lightingSnapshot);
+}
+
+export function getDialogSnapshot() { return dialogSnapshot; }
+export function subscribeToDialog(listener) {
+  dialogListeners.add(listener);
+  listener(dialogSnapshot);
+  return () => dialogListeners.delete(listener);
+}
+export function sendDialogSnapshot(snapshot) {
+  dialogSnapshot = snapshot ? Object.freeze({
+    ...snapshot,
+    anchor: snapshot.anchor ? Object.freeze({ ...snapshot.anchor }) : null,
+    choices: Object.freeze((snapshot.choices ?? []).map((choice) => Object.freeze({ ...choice }))),
+  }) : null;
+  for (const listener of dialogListeners) listener(dialogSnapshot);
+}
+export function sendDialogResult(value) {
+  return gameController?.resolveDialog?.(value) ?? false;
 }
 
 export function startPerformanceSession(options) {

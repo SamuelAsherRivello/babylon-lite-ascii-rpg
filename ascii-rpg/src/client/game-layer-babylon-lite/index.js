@@ -45,7 +45,7 @@ import {
 import { normalizeCameraMode } from "../bridge-layer/camera.js";
 import { getFontOption, validateFontId } from "../bridge-layer/font.js";
 import { getPaletteEntryId, getPaletteEntryOffsets, getPaletteStyle, validatePaletteEntries } from "../bridge-layer/palette.js";
-import { PLAYER_MOVED_EVENTS, sendKeySnapshot, sendPlayerMovedEvent } from "../bridge-layer/game-bridge.js";
+import { PLAYER_MOVED_EVENTS, sendDialogSnapshot, sendKeySnapshot, sendPlayerMovedEvent } from "../bridge-layer/game-bridge.js";
 import {
   createGeneratedSeed,
   createRandom,
@@ -363,6 +363,8 @@ async function createGameSessionImplementation(container, initialPalette, initia
   let transitionActive = false;
   let initialRevealActive = false;
   let gameplayInputLocked = true;
+  let dialogSnapshot = null;
+  let dialogResolver = null;
   let mapviewOpen = false;
   let mapviewRealm = null;
   let mapviewRenderJob = null;
@@ -453,6 +455,31 @@ async function createGameSessionImplementation(container, initialPalette, initia
   });
   const logSystem = createLogSystem();
   const gameplayEvents = createGameplayEventSystem();
+  const publishDialog = (next) => {
+    dialogSnapshot = next ? Object.freeze({
+      ...next,
+      anchor: next.anchor ? Object.freeze({ ...next.anchor }) : null,
+      choices: Object.freeze((next.choices ?? []).map((choice) => Object.freeze({ ...choice }))),
+    }) : null;
+    sendDialogSnapshot(dialogSnapshot);
+  };
+  const openDialog = ({ id, isModal, speaker, text, choices, anchor, onResult }) => {
+    if (dialogSnapshot) return false;
+    dialogResolver = onResult;
+    publishDialog({ id, isModal, speaker, text, choices, anchor });
+    if (isModal) gameplayInputLocked = true;
+    return true;
+  };
+  const resolveDialog = (value) => {
+    if (!dialogSnapshot) return false;
+    const resolver = dialogResolver;
+    const snapshot = dialogSnapshot;
+    dialogResolver = null;
+    publishDialog(null);
+    if (snapshot.isModal) gameplayInputLocked = mapviewOpen || transitionActive;
+    resolver?.(value);
+    return true;
+  };
   const realmSystem = createRealmSystem({ eventSystem: gameplayEvents });
   let palette = initialPalette.map((entry) => ({ ...entry }));
   let paletteColors = reconcilePaletteColors(null, palette).colors;
@@ -2294,6 +2321,14 @@ async function createGameSessionImplementation(container, initialPalette, initia
       playerCell,
       random: createRandom(`${world.options.seed}:${attemptedCell.x},${attemptedCell.y}:chest-reward`),
       createChestRewardEffect: (type) => type === "heart" ? applyHeartEffect : () => {},
+      openDialog: ({ object, cell }) => object.type === "welcome-sign" && openDialog({
+        id: "welcome-sign",
+        isModal: false,
+        speaker: "Welcome Sign",
+        text: `Welcome to town ${100 + Math.floor(createRandom(`${world.options.seed}:${object.id}`)() * 900)}`,
+        choices: [{ label: "OK", value: "dismiss" }],
+        anchor: cell,
+      }),
     });
     characterState = createCharacterState({ ...characterState, gold: characterGold, keys: characterKeys });
     const contact = target ? resolveCharacterContact(characterState, target, {
@@ -2316,8 +2351,25 @@ async function createGameSessionImplementation(container, initialPalette, initia
         handle: interactWithObject,
       },
       body: {
-        canHandle: (candidate) => candidate.kind === "chest",
-        handle: interactWithObject,
+        canHandle: (candidate) => candidate.kind === "chest" || candidate.kind === "npc",
+        handle: (candidate) => {
+          if (candidate.kind === "chest") return interactWithObject();
+          const npc = candidate.npc ?? candidate.occupant;
+          if (!npc || npc.recruited) return { handled: true };
+          return openDialog({
+            id: `npc-party-join:${npc.id}`,
+            isModal: true,
+            speaker: "Traveler",
+            text: "Can I join your party?",
+            choices: [{ label: "Yes", value: "accept" }, { label: "No", value: "decline" }],
+            anchor: npc.cell,
+            onResult: (value) => {
+              if (value !== "accept") return;
+              npcSystem.removeNpc(npc.id);
+              scheduleEntityRender();
+            },
+          });
+        },
       },
     }) : null;
     if (contact?.handled) {
@@ -2327,10 +2379,12 @@ async function createGameSessionImplementation(container, initialPalette, initia
         const doorInteraction = contact.outcome;
         if (doorInteraction.opened && doorInteraction.object.type === "door") {
           lightingFieldCache.invalidate();
+          world.navigationRevision = (world.navigationRevision ?? 0) + 1;
           staticOccupancyIndexes.get(activeRealm)?.delete(attemptedCell.y * world.columns + attemptedCell.x);
         }
         const dirtyCells = [attemptedCell];
         if (doorInteraction.reward?.cell) {
+          world.navigationRevision = (world.navigationRevision ?? 0) + 1;
           dirtyCells.push(doorInteraction.reward.cell);
           staticOccupancyIndexes.get(activeRealm)?.add(doorInteraction.reward.cell.y * world.columns + doorInteraction.reward.cell.x);
         }
@@ -2346,6 +2400,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
       if (doorInteraction?.handled) {
         if (doorInteraction.opened && doorInteraction.object.type === "door") {
           lightingFieldCache.invalidate();
+          world.navigationRevision = (world.navigationRevision ?? 0) + 1;
           staticOccupancyIndexes.get(activeRealm)?.delete(attemptedCell.y * world.columns + attemptedCell.x);
         }
         // A chest mutates two static cells at once: its own glyph and the
@@ -2354,6 +2409,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
         // glyph is initialized even when the Heart generation pass is off.
          const dirtyCells = [attemptedCell];
          if (doorInteraction.reward?.cell) {
+           world.navigationRevision = (world.navigationRevision ?? 0) + 1;
            dirtyCells.push(doorInteraction.reward.cell);
            staticOccupancyIndexes.get(activeRealm)?.add(
              doorInteraction.reward.cell.y * world.columns + doorInteraction.reward.cell.x,
@@ -2384,6 +2440,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
     world.playerCell = playerCell;
     const objectCollision = objectSpawnerSystem?.collideAtCell(playerCell, { playerCell: { ...playerCell }, world });
     if (objectCollision?.pickupId) {
+      world.navigationRevision = (world.navigationRevision ?? 0) + 1;
       staticOccupancyIndexes.get(activeRealm)?.delete(playerCell.y * world.columns + playerCell.x);
     }
     if (playerLifecycle.isDead()) {
@@ -2775,6 +2832,22 @@ async function createGameSessionImplementation(container, initialPalette, initia
           logSystem.log({ message: "Lost -25 Health from Trap" });
         } : () => {},
       })));
+      if (featureEnabled("civilization-signs")) {
+        const signReserved = new Set(realm.objects.map((object) => `${object.cell.x},${object.cell.y}`));
+        (realm.stairs ?? []).forEach((stair, stairIndex) => {
+          const [signCell] = selectObjectCells(realm, stair, 1, createRandom(`${realm.options.seed}:signs:placement:${stairIndex}`), {
+            minimumDistance: 1,
+            maximumDistance: 50,
+            reserved: signReserved,
+          });
+          if (signCell) addObjectToRealm(realm, {
+            id: `${realmName.toLowerCase()}-welcome-sign-${stairIndex + 1}`,
+            type: "welcome-sign",
+            cell: signCell,
+            effect: () => {},
+          });
+        });
+      }
       if (realmName === "Overground" && featureEnabled("civilization-homes")) {
         const reserved = new Set(realm.objects.map((object) => `${object.cell.x},${object.cell.y}`));
         const buildings = createOverworldBuildings(realm, {
@@ -2993,6 +3066,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
         logSystem.log({ message: `Player dug Mountain for -${result.appliedDamage} Health` });
         recordEntityDamage(result.target, performance.now());
         if (result.killed) {
+          world.navigationRevision = (world.navigationRevision ?? 0) + 1;
           scheduleMovementRender({ refreshLighting: true });
           scheduleMinimapRender();
           renderMapview();
@@ -3003,6 +3077,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
     const initializeEnemySpawners = () => {
     enemySystem = createEnemySystem({
       timeSystem,
+      getNavigationRevision: (realmName) => worldRealms.realms[realmName].navigationRevision ?? 0,
       occupancy: undergroundOccupancy,
       getPlayerState: (realmName) => activeRealm === realmName ? {
         realm: realmName,
@@ -3191,6 +3266,8 @@ async function createGameSessionImplementation(container, initialPalette, initia
         cell: playerCell, rows: world.rows, columns: world.columns, dead: playerLifecycle.isDead(),
         exhausted: staminaSystem.getCurrent() === 0, ticks: timeSystem.getDiagnostics() }),
       canEnter: (cell) => world.terrain?.[cell.y]?.[cell.x]?.walkable === true
+        && Boolean(getViewOriginForCamera(cameraMode, cell, viewport, world, viewOrigin,
+          { x: cell.x - playerCell.x, y: cell.y - playerCell.y }))
         && !getOccupancyForWorld()?.getAt(cell)
         && !staticOccupancyIndexes.get(activeRealm)?.has(cell.y * world.columns + cell.x)
         && !world.stairs?.some((stair) => stair.x === cell.x && stair.y === cell.y),
@@ -3308,6 +3385,12 @@ async function createGameSessionImplementation(container, initialPalette, initia
       return questManager?.getSnapshot() ?? snapshot;
     },
     getQuestSnapshot() { return questManager?.getSnapshot() ?? null; },
+    getDialogSnapshot() { return dialogSnapshot; },
+    subscribeToDialog(listener) {
+      listener(dialogSnapshot);
+      return () => {};
+    },
+    resolveDialog,
     subscribeToQuest(listener) {
       questListeners.add(listener);
       if (questManager?.getSnapshot()) listener(questManager.getSnapshot());

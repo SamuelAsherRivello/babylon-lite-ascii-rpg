@@ -34,11 +34,12 @@ test("torch snapshots retain identity until their realm's sources change", () =>
 test("the object catalog is palette-backed and declares pickup and level-spawn ownership", () => {
   assert.equal(validateObjectPalette(objectData.objects, paletteData.entries), true);
   assert.deepEqual(objectData.objects.map((object) => [object.type, object.IsPickup, object.IsLevelSpawned]), [
-    ["gold", true, false], ["heart", true, true], ["chest", false, true], ["torch", false, true], ["trap", false, true], ["stairs", false, true],
+    ["welcome-sign", false, true], ["gold", true, false], ["heart", true, true], ["chest", false, true], ["torch", false, true], ["trap", false, true], ["stairs", false, true],
     ["key", true, false], ["fence", false, false], ["door", false, false], ["fireplace", false, true],
   ]);
   assert.equal(objectData.objects.find((object) => object.type === "torch").glyph, "🕯️");
   assert.equal(validateObjectPalette([{ type: "door", name: "Door", glyph: "█", openGlyph: "□", IsPickup: false, IsLevelSpawned: false }], paletteData.entries), true);
+  assert.equal(objectData.objects.find((object) => object.type === "welcome-sign").glyph, "⚑");
 });
 
 test("a fireplace remains after collision and saves on every entry", () => {

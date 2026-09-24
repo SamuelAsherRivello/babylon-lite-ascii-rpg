@@ -185,28 +185,32 @@ export class AStarUtility {
     distances.fill(-1);
     const index = (cell) => (cell.y - minY) * width + cell.x - minX;
     const inBounds = cell => cell.x >= minX && cell.x <= maxX && cell.y >= minY && cell.y <= maxY;
-    const blockers = isBlockedIndex ? new Int8Array(width * height).fill(-1) : null;
-    const blockedAt = (cell) => {
-      if (!isBlockedIndex) return isBlocked(cell);
-      const cellIndex = index(cell);
-      if (blockers[cellIndex] === -1) blockers[cellIndex] = isBlockedIndex(cell.x, cell.y) ? 1 : 0;
-      return blockers[cellIndex] === 1;
-    };
     if (!isWalkable(world, target)) return Object.freeze({ getDistance: () => -1 });
-    const queue = [freezeCell(target)];
-    distances[index(target)] = 0;
-    for (let cursor = 0; cursor < queue.length; cursor += 1) {
-      const cell = queue[cursor]; const distance = distances[index(cell)] + 1;
+    // Store local indexes instead of allocating/freeze-checking four neighbor
+    // objects per visited cell. -2 remembers rejected static blockers.
+    const queue = new Int32Array(width * height);
+    let length = 1;
+    queue[0] = index(target);
+    distances[queue[0]] = 0;
+    for (let cursor = 0; cursor < length; cursor += 1) {
+      const current = queue[cursor];
+      const x = current % width + minX, y = Math.floor(current / width) + minY;
+      const distance = distances[current] + 1;
       if (distance > maxDistance) continue;
       for (const direction of CARDINAL_DIRECTIONS) {
-        const next = { x: cell.x + direction.x, y: cell.y + direction.y };
-        if (!inBounds(next)) continue;
-        const blocked = blockedAt(next);
-        if (!isWalkable(world, next) || distances[index(next)] !== -1 || (blocked && !sameCell(next, target))) continue;
-        distances[index(next)] = distance; queue.push(freezeCell(next));
+        const nx = x + direction.x, ny = y + direction.y;
+        if (nx < minX || nx > maxX || ny < minY || ny > maxY) continue;
+        const next = (ny - minY) * width + nx - minX;
+        if (distances[next] !== -1) continue;
+        if (!world.terrain[ny][nx].walkable || (isBlockedIndex ? isBlockedIndex(nx, ny) : isBlocked({ x: nx, y: ny }))) {
+          distances[next] = -2;
+          continue;
+        }
+        distances[next] = distance;
+        queue[length++] = next;
       }
     }
-    return Object.freeze({ getDistance(cell) { return inBounds(cell) && isWalkable(world, cell) ? distances[index(cell)] : -1; } });
+    return Object.freeze({ getDistance(cell) { return inBounds(cell) && isWalkable(world, cell) ? Math.max(-1, distances[index(cell)]) : -1; } });
   }
 
   static findPath(world, from, to, { isBlocked = () => false, isBlockedIndex = null } = {}) {

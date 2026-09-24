@@ -6,12 +6,12 @@ import { GENERATION_FEATURES, GENERATION_SEMANTIC_CARDS, resolveGenerationPlan, 
 
 test("registry exposes the sixteen ordered features through nine semantic cards", () => {
   assert.equal(validateGenerationRegistry(), true);
-  assert.deepEqual(GENERATION_FEATURES.map((feature) => feature.order), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
+  assert.deepEqual(GENERATION_FEATURES.map((feature) => feature.order), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]);
   assert.equal(GENERATION_SEMANTIC_CARDS.length, 9);
   assert.deepEqual(GENERATION_SEMANTIC_CARDS.find((card) => card.id === "object-distribution").featureIds.includes("npc-spawner"), false);
   assert.deepEqual(GENERATION_SEMANTIC_CARDS.find((card) => card.id === "character-distribution").featureIds, ["enemy-spawner", "npc-spawner"]);
   assert.ok(GENERATION_SEMANTIC_CARDS.find((card) => card.id === "object-distribution").featureIds.includes("object-chest"));
-  assert.deepEqual(GENERATION_SEMANTIC_CARDS.find((card) => card.id === "civilization-placement").featureIds, ["civilization-stairs", "civilization-doors", "civilization-homes"]);
+  assert.deepEqual(GENERATION_SEMANTIC_CARDS.find((card) => card.id === "civilization-placement").featureIds, ["civilization-stairs", "civilization-doors", "civilization-homes", "civilization-signs"]);
   assert.equal(GENERATION_FEATURES.find((feature) => feature.id === "civilization-stairs").pairedRealms, true);
   assert.deepEqual(GENERATION_FEATURES.find((feature) => feature.id === "civilization-doors").realms, ["Underground"]);
   assert.deepEqual(GENERATION_FEATURES.find((feature) => feature.id === "civilization-homes").realms, ["Overground"]);

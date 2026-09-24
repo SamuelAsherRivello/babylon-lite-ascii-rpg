@@ -1,4 +1,5 @@
 import test from "node:test";
+import "./sprint-diagnostic_tests.mjs";
 import assert from "node:assert/strict";
 import { createPerformanceMonitor, PERFORMANCE_SCENARIOS } from "../../../src/client/game-layer-babylon-lite/performance-monitor.js";
 

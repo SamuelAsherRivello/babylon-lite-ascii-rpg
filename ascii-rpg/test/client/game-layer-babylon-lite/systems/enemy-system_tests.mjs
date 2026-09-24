@@ -12,6 +12,7 @@ import { createTimeSystem } from "../../../../src/client/game-layer-babylon-lite
 import { createPlayerLifecycle } from "../../../../src/client/game-layer-babylon-lite/systems/player-lifecycle.js";
 import { createCombatStatsSystem } from "../../../../src/client/game-layer-babylon-lite/systems/combat-stats-system.js";
 import { createStaminaSystem } from "../../../../src/client/game-layer-babylon-lite/systems/stamina-system.js";
+import { AStarUtility } from "../../../../src/client/game-layer-babylon-lite/utilities/a-star-utility.js";
 
 function createWorld(rows = 7, columns = 9) {
   return {
@@ -124,6 +125,84 @@ test("far enemies use a constant-time step toward the player until they enter na
   assert.equal(harness.getDistanceFieldBuilds(), 0);
 });
 
+test("far enemies reuse valid routes, honor realm blockers, and rebuild after navigation changes", () => {
+  const world = createWorld(128, 128);
+  const timeSystem = createTimeSystem();
+  const occupancy = createDynamicOccupancy();
+  let revision = 0;
+  let builds = 0;
+  let blocked = null;
+  const original = AStarUtility.findHierarchicalPath;
+  AStarUtility.findHierarchicalPath = function (...args) { builds += 1; return original.apply(this, args); };
+  try {
+    const system = createEnemySystem({
+      timeSystem, occupancy,
+      getPlayerState: () => ({ world, realm: "Underground", alive: true, cell: { x: 110, y: 110 } }),
+      getNavigationRevision: () => revision,
+      isStaticOccupied: cell => cell.x === blocked?.x && cell.y === blocked?.y,
+      isStaticOccupiedIndex: (x, y, realm) => {
+        assert.equal(realm, "Underground");
+        return x === blocked?.x && y === blocked?.y;
+      },
+    });
+    system.addEnemy({ id: "far", realm: "Underground", cell: { x: 10, y: 10 } });
+    timeSystem.advance(2);
+    assert.equal(builds, 1);
+    assert.deepEqual(occupancy.get("far").cell, { x: 11, y: 10 });
+    timeSystem.advance(2);
+    assert.equal(builds, 1);
+    assert.deepEqual(occupancy.get("far").cell, { x: 12, y: 10 });
+    blocked = { x: 13, y: 10 };
+    revision += 1;
+    timeSystem.advance(2);
+    assert.equal(builds, 2);
+    assert.notDeepEqual(occupancy.get("far").cell, blocked);
+  } finally { AStarUtility.findHierarchicalPath = original; }
+});
+
+test("far enemies request a fresh segment when their cached path ends", () => {
+  const world = createWorld(128, 128);
+  const timeSystem = createTimeSystem();
+  const occupancy = createDynamicOccupancy();
+  let builds = 0;
+  const original = AStarUtility.findHierarchicalPath;
+  AStarUtility.findHierarchicalPath = (_world, from) => {
+    builds += 1;
+    return { path: [from, { x: from.x + 1, y: from.y }, { x: from.x + 2, y: from.y }] };
+  };
+  try {
+    const system = createEnemySystem({ timeSystem, occupancy,
+      getPlayerState: () => ({ world, realm: "Underground", alive: true, cell: { x: 110, y: 110 } }),
+      getNavigationRevision: () => 0 });
+    system.addEnemy({ id: "far", realm: "Underground", cell: { x: 10, y: 10 } });
+    timeSystem.advance(6);
+    assert.equal(builds, 2);
+    assert.deepEqual(occupancy.get("far").cell, { x: 13, y: 10 });
+  } finally { AStarUtility.findHierarchicalPath = original; }
+});
+
+test("far enemies cache a no-step result until its navigation revision changes", () => {
+  const world = createWorld(128, 128);
+  const timeSystem = createTimeSystem();
+  const occupancy = createDynamicOccupancy();
+  let builds = 0;
+  let revision = 0;
+  const original = AStarUtility.findHierarchicalPath;
+  AStarUtility.findHierarchicalPath = (_world, from) => { builds += 1; return { path: [from] }; };
+  try {
+    const system = createEnemySystem({ timeSystem, occupancy,
+      getPlayerState: () => ({ world, realm: "Underground", alive: true, cell: { x: 110, y: 110 } }),
+      getNavigationRevision: () => revision });
+    system.addEnemy({ id: "far", realm: "Underground", cell: { x: 10, y: 10 } });
+    timeSystem.advance(8);
+    assert.equal(builds, 1);
+    revision += 1;
+    timeSystem.advance(2);
+    assert.equal(builds, 2);
+    assert.deepEqual(occupancy.get("far").cell, { x: 10, y: 10 });
+  } finally { AStarUtility.findHierarchicalPath = original; }
+});
+
 test("routes around a closed barrier with deterministic cardinal tie-breaking", () => {
   const world = createWorld(7, 9);
   world.terrain[3][3].walkable = false;
@@ -141,6 +220,28 @@ test("builds one field for multiple enemies in the same realm and tick", () => {
 
   harness.timeSystem.advance(2);
   assert.equal(harness.getDistanceFieldBuilds(), 1);
+});
+
+test("revision-aware fields reuse identical targets across ticks and invalidate changed terrain", () => {
+  const world = createWorld();
+  const timeSystem = createTimeSystem();
+  const occupancy = createDynamicOccupancy();
+  let builds = 0;
+  let revision = 0;
+  let cell = { x: 6, y: 6 };
+  const system = createEnemySystem({ timeSystem, occupancy,
+    getPlayerState: () => ({ world, realm: "Underground", alive: true, cell }),
+    getNavigationRevision: () => revision,
+    onDistanceFieldBuilt: () => { builds += 1; } });
+  system.addEnemy({ id: "near", realm: "Underground", cell: { x: 0, y: 0 } });
+  timeSystem.advance(4);
+  assert.equal(builds, 1);
+  revision += 1;
+  timeSystem.advance(2);
+  assert.equal(builds, 2);
+  cell = { x: 5, y: 6 };
+  timeSystem.advance(2);
+  assert.equal(builds, 3);
 });
 
 test("waits when another actor occupies the chosen step", () => {

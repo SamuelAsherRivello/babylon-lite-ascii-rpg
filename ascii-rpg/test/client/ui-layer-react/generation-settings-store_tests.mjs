@@ -15,7 +15,7 @@ test("generation settings retain the ordered catalog and default malformed densi
     ],
   });
 
-  assert.deepEqual(settings.passes.map((pass) => pass.order), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
+  assert.deepEqual(settings.passes.map((pass) => pass.order), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]);
   assert.equal(settings.passes.find((pass) => pass.id === "water").density, "High");
   assert.equal(settings.passes.find((pass) => pass.id === "overground-walls").density, "High");
   assert.equal(settings.passes.find((pass) => pass.id === "underground-caves").density, "High");

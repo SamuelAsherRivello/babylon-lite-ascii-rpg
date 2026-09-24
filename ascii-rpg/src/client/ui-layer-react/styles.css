@@ -6,6 +6,7 @@
 @import "./windows.css";
 @import "./toasts.css";
 @import "./floating-text.css";
+@import "./dialog.css";
 
 html,
 body {

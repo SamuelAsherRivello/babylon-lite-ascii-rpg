@@ -53,6 +53,7 @@ import {
   getTimeSnapshot,
   getCombatStatsSnapshot,
   getExperienceSnapshot,
+  getDialogSnapshot,
   getGoldSnapshot,
   getCharacterStateSnapshot,
   getKeySnapshot,
@@ -87,6 +88,7 @@ import {
   subscribeToTime,
   subscribeToCombatStats,
   subscribeToExperience,
+  subscribeToDialog,
   subscribeToGold,
   subscribeToCharacterState,
   subscribeToKey,
@@ -122,6 +124,7 @@ import { CharacterDetails as ExtractedCharacterDetails } from "./character-compo
 import { PaletteGlyph } from "./palette-glyph.jsx";
 import { GenerationEnabledCheckbox } from "./generation-enabled-checkbox.jsx";
 import { LightingWindow as ExtractedLightingWindow } from "./lighting-window.jsx";
+import { DialogWindow } from "./dialog-window.jsx";
 
 import {
   fullscreenStorageKey, aspectStorageKey, developerOpenStorageKey, logOpenStorageKey,
@@ -1083,6 +1086,7 @@ function AppContent() {
   const stamina = useSyncExternalStore(subscribeToStamina, getStaminaSnapshot, getStaminaSnapshot);
   const combatStats = useSyncExternalStore(subscribeToCombatStats, getCombatStatsSnapshot, getCombatStatsSnapshot);
   const experience = useSyncExternalStore(subscribeToExperience, getExperienceSnapshot, getExperienceSnapshot);
+  const dialog = useSyncExternalStore(subscribeToDialog, getDialogSnapshot, getDialogSnapshot);
   const log = useSyncExternalStore(subscribeToLog, getLogSnapshot, getLogSnapshot);
   const playerDead = useSyncExternalStore(subscribeToPlayerDead, getPlayerDeadSnapshot, getPlayerDeadSnapshot);
   const checkpoint = useSyncExternalStore(subscribeToCheckpoint, getCheckpointSnapshot, getCheckpointSnapshot);
@@ -1715,6 +1719,7 @@ function AppContent() {
         />
       ) : null}
       {playerDead ? <DeathWindow checkpointActive={checkpoint.active} onRestartFromCheckpoint={restartFromCheckpoint} onRestartGame={restartGame} /> : null}
+      <DialogWindow dialog={dialog} />
       {settingTooltip ? (
         <div
           ref={settingTooltipRef}

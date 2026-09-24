@@ -1,5 +1,26 @@
 // Explicitly opt-in, local diagnostics. Drive the same held-key repeat loop as
 // Shift+movement; never advance logical time or alter terrain/entities here.
+export function createSprintSamples(startedAt) {
+  let sampleStart = startedAt;
+  let frameCount = 0;
+  let previousMoves = 0;
+  const samples = [];
+  return {
+    record(now, moves, ticks) {
+      frameCount += 1;
+      const elapsed = now - sampleStart;
+      if (elapsed < 1000) return;
+      samples.push({ fps: 1000 * frameCount / elapsed, moves: moves - previousMoves,
+        pendingCallbacks: ticks?.pending ?? 0, oldestPendingAgeMs: ticks?.logicalTickAgeMs ?? 0 });
+      sampleStart = now; frameCount = 0; previousMoves = moves;
+    },
+    report(completion) {
+      return { samples, minimumFps: samples.length ? Math.min(...samples.map((s) => s.fps)) : null,
+        sustainedMovement: completion === "completed" && samples.length > 0 && samples.every((s) => s.moves > 0) };
+    },
+  };
+}
+
 export function startSprintDiagnostic({ monitor, read, canEnter, keyDown, keyUp, changeRealm, durationMs = 8000 }) {
   const directions = [
     { key: "ArrowRight", x: 1, y: 0 }, { key: "ArrowDown", x: 0, y: 1 },
@@ -16,6 +37,7 @@ export function startSprintDiagnostic({ monitor, read, canEnter, keyDown, keyUp,
   let moves = 0;
   let exhaustedFrames = 0;
   let frames = 0;
+  let samples = null;
   const visits = new Map();
   const realms = ["Overground", "Underground"];
   const release = () => {
@@ -39,6 +61,7 @@ export function startSprintDiagnostic({ monitor, read, canEnter, keyDown, keyUp,
       if (now - readyAt >= 1500) {
         if (startedAt === null) {
           startedAt = now;
+          samples = createSprintSamples(now);
           monitor.start({ scenario: "sprint", sprint: true, durationMs });
           console.info("ASCII RPG sprint diagnostic started", realm);
         }
@@ -50,10 +73,13 @@ export function startSprintDiagnostic({ monitor, read, canEnter, keyDown, keyUp,
           visits.set(position, (visits.get(position) ?? 0) + 1);
           previous = position;
         }
+        if (now > startedAt) samples.record(now, moves, state.ticks);
         if (now - startedAt >= durationMs || state.dead) {
           release();
-          const report = monitor.stop(state.dead ? "unavailable" : "completed");
+          const completion = state.dead ? "unavailable" : "completed";
+          const report = monitor.stop(completion);
           console.info("ASCII RPG sprint diagnostic", JSON.stringify({
+            completion, durationMs: now - startedAt, ...samples.report(completion),
             realm, rows: state.rows, columns: state.columns, moves, uniqueCells: visits.size,
             exhaustedFrames, frames, averageFps: report.averageFps, p95FrameTimeMs: report.p95FrameTimeMs,
             worstFrameTimeMs: report.worstFrameTimeMs, environment: report.environment,

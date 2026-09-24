@@ -204,9 +204,14 @@ export function createObjectSpawnerSystem({ catalog = [], eventSystem = null } =
     playerCell = null,
     random = Math.random,
     createChestRewardEffect = () => () => {},
+    openDialog = () => false,
   } = {}) => {
     const object = getActiveObjectAtCell(cell, { world });
     if (!object) return null;
+    if (object.type === "welcome-sign") {
+      const opened = openDialog({ object, cell: { ...cell } });
+      return { handled: opened, opened: false, object };
+    }
     if (object.type === "chest" && object.open) return { handled: true, opened: false, object };
     if (object.open) return null;
     if (object.type === "chest") {
