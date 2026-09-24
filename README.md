@@ -43,26 +43,6 @@ from the repository root:
 1. Run `npm install`.
 2. Run `npm run build`.
 
-### Docker/Codex Sandbox
-
-The repository includes a Node.js 24 `Dockerfile`, a pinned local OpenSpec
-CLI, and the selected Codex/OpenSpec skills under `.agents/skills/`. A fresh
-sandbox can run:
-
-1. `docker build -t babylon-lite-ascii-rpg .`
-2. `docker run --rm babylon-lite-ascii-rpg`
-
-The image runs `npm run sandbox:check`, which verifies Node.js 24 and the
-repository-local OpenSpec installation. Run `npm test` and `npm run build` for
-the full headless checks. Browser verification is optional and requires a
-separate browser/display/GPU-capable environment; Playwright test files are
-not part of the default workflow.
-
-The Vite development server may write palette, font, and generation-settings
-JSON under `ascii-rpg/src/client/game-layer-babylon-lite/data/`, so interactive
-development requires a writable checkout. First-time `npm ci` may require npm
-registry access. Builds and tests do not require application credentials.
-
 ### 🛠 Run Project
 
 1. Run `npm run dev` and open the localhost URL Vite prints.
