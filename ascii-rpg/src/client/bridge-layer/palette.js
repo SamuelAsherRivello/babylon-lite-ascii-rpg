@@ -158,8 +158,8 @@ function migrateLegacyPlayerGlyph(entry) {
 }
 
 function isValidGlyphOffset(entry) {
-  return Number.isInteger(entry.offsetX) && entry.offsetX >= -10 && entry.offsetX <= 10
-    && Number.isInteger(entry.offsetY) && entry.offsetY >= -10 && entry.offsetY <= 10
+  return Number.isInteger(entry.offsetX) && entry.offsetX >= -20 && entry.offsetX <= 20
+    && Number.isInteger(entry.offsetY) && entry.offsetY >= -20 && entry.offsetY <= 20
     && Number.isInteger(entry.offsetScale) && entry.offsetScale >= -100 && entry.offsetScale <= 100;
 }
 
@@ -242,7 +242,7 @@ export function validatePaletteEntries(entries) {
       throw new TypeError("Palette entries need a six-digit color and alpha from 0 to 1.");
     }
     if (!isValidGlyphOffset(entry)) {
-      throw new TypeError("Palette entries need integer glyph offsets: offsetX and offsetY from -10 to 10, offsetScale from -100 to 100.");
+      throw new TypeError("Palette entries need integer glyph offsets: offsetX and offsetY from -20 to 20, offsetScale from -100 to 100.");
     }
     seen.add(getPaletteEntryId(entry));
   }

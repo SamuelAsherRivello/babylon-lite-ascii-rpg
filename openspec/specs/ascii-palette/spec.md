@@ -375,7 +375,7 @@ The Ascii Settings palette grid and glyph editor preview SHALL render each glyph
 
 ### Requirement: Per-glyph offset controls
 
-The glyph editor SHALL provide three staged sliders named `Offset X`, `Offset Y`, and `Offset Scale`. `Offset X` and `Offset Y` SHALL accept integer values from `-10` through `10`; `Offset Scale` SHALL accept integer percentage values from `-100%` through `100%`. Missing, uncustomized, or reset offset values SHALL be `0`, `0`, and `0%`.
+The glyph editor SHALL provide three staged sliders named `Offset X`, `Offset Y`, and `Offset Scale`. `Offset X` and `Offset Y` SHALL accept integer values from `-20` through `20`; `Offset Scale` SHALL accept integer percentage values from `-100%` through `100%`. Missing, uncustomized, or reset offset values SHALL be `0`, `0`, and `0%`.
 
 #### Scenario: Open offset controls
 - **WHEN** a developer opens a glyph editor

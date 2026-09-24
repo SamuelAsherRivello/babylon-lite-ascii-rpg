@@ -72,8 +72,8 @@ test("glyph offset keys are stable and reusable for visual cache identity", () =
   assert.notEqual(key, "🤺");
   assert.deepEqual(getGlyphOffsetsFromKey(key), { offsetX: 4, offsetY: -3, offsetScale: 25 });
   assert.deepEqual(getGlyphOffsetsFromKey(getOffsetGlyphKey("🤺", { offsetX: 40, offsetY: -40, offsetScale: 200 })), {
-    offsetX: 10,
-    offsetY: -10,
+    offsetX: 20,
+    offsetY: -20,
     offsetScale: 100,
   });
 });

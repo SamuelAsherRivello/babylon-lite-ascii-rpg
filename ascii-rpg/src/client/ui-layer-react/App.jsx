@@ -116,7 +116,10 @@ import {
 } from "../bridge-layer/camera.js";
 import { getNextMinimapScale } from "../game-layer-babylon-lite/systems/minimap-zoom.js";
 import { performanceMonitor } from "../game-layer-babylon-lite/performance-monitor.js";
-import { isLogScrollAtBottom } from "./log-scroll.js";
+import { QuestLayout, QuestTracker, getQuestPreview } from "./quest-components.jsx";
+import { LogBody } from "./log-components.jsx";
+import { DeathWindow, TutorialWindow, WindowBackdrop } from "./tutorial-windows.jsx";
+import { GameplaySettingsWindow } from "./gameplay-settings-window.jsx";
 import {
   fullscreenStorageKey, aspectStorageKey, developerOpenStorageKey, logOpenStorageKey,
   zoomStorageKey, zoomStorageVersionKey, overgroundAmbientStorageKey, undergroundAmbientStorageKey,
@@ -471,107 +474,6 @@ function ItemHealthBar({ item }) {
   );
 }
 
-function QuestTracker({ quest }) {
-  if (!quest) return null;
-  return <QuestLayout quest={quest} className="quest_tracker" ariaLabel="Current quest" />;
-}
-
-function QuestLayout({ quest, className = "", ariaLabel, onClick, onKeyDown }) {
-  const steps = quest.steps ?? [{
-    id: quest.id,
-    label: quest.objective,
-    state: quest.state,
-    current: quest.current,
-    target: quest.target,
-    complete: quest.complete,
-  }];
-  return (
-    <HudBlockLayout
-      as="div"
-      className={className}
-      aria-label={ariaLabel}
-      titleClassName={`quest_tracker_title${quest.complete ? " quest_tracker_title_complete" : ""}`}
-      bodyClassName="quest_tracker_body"
-      title={`Quest: ${quest.title}`}
-      onClick={onClick}
-      onKeyDown={onKeyDown}
-    >
-      {steps.map((step) => {
-        const isActiveStep = step.active ?? (step.id === quest.activeStepId || steps.length === 1);
-        return (
-        <div key={step.id} className={`quest_tracker_step${step.complete ? " quest_tracker_step_complete" : ""}`}>
-          <span className={`quest_tracker_marker${quest.state === "pending" && !quest.complete && isActiveStep ? "" : " quest_tracker_marker_empty"}`} aria-hidden="true" />
-          <span className="quest_tracker_step_label">{step.label}{!step.hideProgress && step.target > 1 ? ` ${step.current} of ${step.target}` : ""}</span>
-        </div>
-        );
-      })}
-    </HudBlockLayout>
-  );
-}
-
-function getQuestPreview(definition, activeQuest) {
-  if (definition.id === activeQuest?.id) return activeQuest;
-  return {
-    ...definition,
-    state: "unstarted",
-    complete: false,
-    steps: (definition.steps ?? [{ id: definition.id, label: definition.objective, criterion: definition.criterion }]).map((step) => ({
-      id: step.id,
-      label: step.label,
-      current: 0,
-      target: step.criterion?.target ?? 1,
-      complete: false,
-    })),
-  };
-}
-
-const SIGNED_NUMBER_PATTERN = /[+-]\d+(?:\.\d+)?/g;
-
-function renderLogEntry(entry) {
-  const text = String(entry);
-  const parts = text.split(SIGNED_NUMBER_PATTERN);
-  const numbers = text.match(SIGNED_NUMBER_PATTERN) ?? [];
-
-  return parts.reduce((rendered, part, index) => {
-    rendered.push(part);
-    const number = numbers[index];
-    if (number) {
-      rendered.push(<span className={number.startsWith("+") ? "log_number_positive" : "log_number_negative"} key={`${number}-${index}`}>{number}</span>);
-    }
-    return rendered;
-  }, []);
-}
-
-function LogBody({ entries }) {
-  const bodyRef = useRef(null);
-  const followBottomRef = useRef(true);
-
-  useLayoutEffect(() => {
-    if (followBottomRef.current && bodyRef.current) {
-      bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
-    }
-  }, [entries]);
-
-  useEffect(() => {
-    const body = bodyRef.current;
-    if (!body) return undefined;
-
-    const updateScrollState = () => {
-      followBottomRef.current = isLogScrollAtBottom(body);
-    };
-
-    updateScrollState();
-    body.addEventListener("scroll", updateScrollState, { passive: true });
-    return () => body.removeEventListener("scroll", updateScrollState);
-  }, []);
-
-  return (
-    <div ref={bodyRef} className="log_box_body" aria-label="Log entries">
-      {entries?.length ? entries.map((entry, index) => <div className="log_entry" key={`${entry}-${index}`}>{renderLogEntry(entry)}</div>) : null}
-    </div>
-  );
-}
-
 function SettingTooltipTarget({ description, onShow, onHide, children, as: Element = "span", className = "", ...props }) {
   const tooltipDescription = formatTooltipDescription(description);
   return (
@@ -588,104 +490,6 @@ function SettingTooltipTarget({ description, onShow, onHide, children, as: Eleme
     >
       {children}
     </Element>
-  );
-}
-
-function WindowBackdrop({ visible, closesOnClick, onClose }) {
-  if (!visible) return null;
-  return <div className="window_backdrop" aria-hidden="true" onClick={closesOnClick ? onClose : undefined} />;
-}
-
-function TutorialWindow({ complete, onConfirm, onSkip, showCloseButton = false, showBackdrop = true, closeOnBackdropClick = true, onClose }) {
-  const title = "How To Play";
-  const titleId = complete ? "tutorial_complete_title" : "tutorial_title";
-
-  return (
-    <>
-      <WindowBackdrop visible={showBackdrop} closesOnClick={closeOnBackdropClick} onClose={onClose} />
-      <section
-        id={complete ? "tutorial_complete_window" : "tutorial_window"}
-        className="lighting_window tutorial_window"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        data-close-button-visible={showCloseButton}
-        onPointerDown={(event) => event.stopPropagation()}
-        onPointerMove={(event) => event.stopPropagation()}
-        >
-          <div className="lighting_window_titlebar tutorial_window_titlebar">
-            <div id={titleId} className="corner_title">{title}</div>
-            {showCloseButton ? (
-              <button
-                className="corner_body settings_option lighting_window_close"
-                type="button"
-                aria-label="Close Tutorial"
-                tabIndex={-1}
-                onPointerDown={(event) => event.stopPropagation()}
-                onClick={onClose}
-              >
-                X
-              </button>
-            ) : null}
-          </div>
-        <div className="lighting_window_body tutorial_window_body">
-          {complete ? (
-            <p className="corner_body tutorial_window_copy">You completed the tutorial. Enjoy the game!</p>
-          ) : (
-            <div className="corner_body tutorial_window_copy tutorial_window_instructions">
-              <p>Move the player</p>
-              <ul>
-                <li>Use arrow keys (or swipe touch) to move</li>
-                <li>Hold shift (or hold touch) to move faster</li>
-              </ul>
-            </div>
-          )}
-          <div className="tutorial_window_actions">
-            {complete ? (
-              <button className="corner_body tutorial_window_primary tutorial_window_ok" type="button" onClick={onConfirm}>Ok</button>
-            ) : (
-              <>
-                <button className="corner_body tutorial_window_primary" type="button" onClick={onConfirm}>Next</button>
-                <button className="corner_body tutorial_window_secondary" type="button" onClick={onSkip}>Skip Tutorial</button>
-              </>
-            )}
-          </div>
-        </div>
-      </section>
-    </>
-  );
-}
-
-function DeathWindow({ checkpointActive, onRestartFromCheckpoint, onRestartGame }) {
-  return (
-    <>
-      <WindowBackdrop visible closesOnClick={false} />
-      <section
-        id="death_window"
-        className="lighting_window tutorial_window death_window"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="death_title"
-        onPointerDown={(event) => event.stopPropagation()}
-        onPointerMove={(event) => event.stopPropagation()}
-      >
-        <div className="lighting_window_titlebar tutorial_window_titlebar">
-          <div id="death_title" className="corner_title">Adventure</div>
-        </div>
-        <div className="lighting_window_body tutorial_window_body">
-          <p className="corner_body tutorial_window_copy">You have died.</p>
-          <ul className="corner_body death_window_summary">
-            <li>XP: 00</li>
-            <li>Gold: 00</li>
-            <li>Time: 00</li>
-          </ul>
-          <div className="tutorial_window_actions">
-            <button className="corner_body tutorial_window_primary" type="button" disabled={!checkpointActive} onClick={onRestartFromCheckpoint}>Restart from checkpoint</button>
-            <button className="corner_body tutorial_window_primary" type="button" onClick={onRestartGame}>Restart game</button>
-          </div>
-        </div>
-      </section>
-    </>
   );
 }
 
@@ -1151,8 +955,8 @@ export class PromptWindow extends Component {
               <HexColorPicker color={draft.color} onChange={this.updateColor} />
               <div className="palette_offset_controls" aria-label="Glyph offsets">
                 {[
-                  ["offsetX", "Offset X", -10, 10, draft.offsetX],
-                  ["offsetY", "Offset Y", -10, 10, draft.offsetY],
+                  ["offsetX", "Offset X", -20, 20, draft.offsetX],
+                  ["offsetY", "Offset Y", -20, 20, draft.offsetY],
                   ["offsetScale", "Offset Scale", -100, 100, draft.offsetScale],
                 ].map(([name, label, min, max, value]) => (
                   <label className="palette_offset_control" key={name}>
@@ -1327,60 +1131,6 @@ export function ArgumentsWindow({ onClose, randomSeed }) {
             </section>
             );
           })}
-        </div>
-      </section>
-    </div>
-  );
-}
-
-export function GameplaySettingsWindow({ quest, defaultQuestId, onSelectQuest, onClose }) {
-  return (
-    <div className="prompt_window" role="presentation">
-      <div className="window_backdrop" aria-hidden="true" onClick={onClose} />
-      <section
-        className="window gameplay_settings_window"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="gameplay_settings_title"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="window_header">
-          <h1 id="gameplay_settings_title" className="prompt_title">Gameplay Settings</h1>
-          <div className="title_tabs" role="tablist" aria-label="Gameplay settings sections">
-            <button className="prompt_tab" type="button" role="tab" aria-selected="true">
-              Quests
-            </button>
-          </div>
-          <button className="prompt_button window_close" type="button" aria-label="Close Gameplay Settings" onClick={onClose}>X</button>
-        </div>
-        <div className="prompt_body gameplay_settings_body">
-          <h2>Quests</h2>
-          <p className="gameplay_settings_hint">Select a quest to set it as the Default Quest.</p>
-          <div className="quest_settings_list">
-            {questData.quests.map((definition) => {
-              const preview = getQuestPreview(definition, quest);
-              const selected = defaultQuestId === definition.id;
-              return (
-                <div
-                  key={definition.id}
-                  className={`quest_settings_card${selected ? " quest_settings_card_selected" : ""}`}
-                  role="button"
-                  tabIndex={0}
-                  aria-pressed={selected}
-                  onClick={() => onSelectQuest(definition.id)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") {
-                      event.preventDefault();
-                      onSelectQuest(definition.id);
-                    }
-                  }}
-                >
-                  <QuestLayout quest={preview} ariaLabel={`Quest ${definition.title}`} />
-                  {selected ? <span className="quest_settings_default">Default Quest</span> : null}
-                </div>
-              );
-            })}
-          </div>
         </div>
       </section>
     </div>

@@ -888,12 +888,14 @@ test("documents the player death lifecycle and recovery prompt", async () => {
 
 test("documents the quest tracker, live gold bridge, and quest toasts", async () => {
   const app = await readFile(new URL("src/client/ui-layer-react/App.jsx", appRoot), "utf8");
+  const questComponents = await readFile(new URL("src/client/ui-layer-react/quest-components.jsx", appRoot), "utf8");
+  const questUi = `${app}\n${questComponents}`;
   const bridge = await readFile(new URL("src/client/bridge-layer/game-bridge.js", appRoot), "utf8");
   const styles = await readStyles();
-  if (!app.includes("Quest: ${quest.title}") || !app.includes("quest_tracker_step_complete")
-    || !app.includes("quest_tracker_title_complete")
-    || !app.includes("quest_tracker_marker") || !app.includes("isActiveStep") || !app.includes('quest.state === "pending"')
-    || !app.includes("quest.steps") || !app.includes("step.label") || !app.includes("!step.hideProgress && step.target > 1")
+  if (!questUi.includes("Quest: ${quest.title}") || !questUi.includes("quest_tracker_step_complete")
+    || !questUi.includes("quest_tracker_title_complete")
+    || !questUi.includes("quest_tracker_marker") || !questUi.includes("isActiveStep") || !questUi.includes('quest.state === "pending"')
+    || !questUi.includes("quest.steps") || !questUi.includes("step.label") || !questUi.includes("!step.hideProgress && step.target > 1")
     || !app.includes("subscribeToQuestEvent") || !app.includes("Quest Started: ${quest.title}.") || !app.includes("Quest Progress: ${changedStep.label}")
     || !app.includes("Quest Completed: ${quest.title}.")) {
     throw new Error("The React HUD must render live quest text and state-specific quest toasts.");

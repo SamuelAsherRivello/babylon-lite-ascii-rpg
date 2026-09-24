@@ -33,8 +33,8 @@ export function getGlyphRasterSize(zoom, cellWidth = 32 * getZoomScale(zoom)) {
 
 export function normalizeGlyphOffsets(offsets = DEFAULT_GLYPH_OFFSETS) {
   return {
-    offsetX: Number.isInteger(offsets.offsetX) ? Math.min(10, Math.max(-10, offsets.offsetX)) : 0,
-    offsetY: Number.isInteger(offsets.offsetY) ? Math.min(10, Math.max(-10, offsets.offsetY)) : 0,
+    offsetX: Number.isInteger(offsets.offsetX) ? Math.min(20, Math.max(-20, offsets.offsetX)) : 0,
+    offsetY: Number.isInteger(offsets.offsetY) ? Math.min(20, Math.max(-20, offsets.offsetY)) : 0,
     offsetScale: Number.isInteger(offsets.offsetScale) ? Math.min(100, Math.max(-100, offsets.offsetScale)) : 0,
   };
 }

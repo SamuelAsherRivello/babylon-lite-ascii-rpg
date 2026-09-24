@@ -98,8 +98,9 @@ test("rejects malformed palette entries", () => {
   assert.throws(() => validatePaletteEntries(palette.slice(1)), /missing/);
   assert.throws(() => validatePaletteEntries(palette.map((entry) => ({ ...entry, alpha: 2 }))), /alpha/);
   assert.throws(() => validatePaletteEntries(palette.map((entry, index) => index === 0 ? { ...entry, color: "red" } : entry)), /color/);
-  assert.throws(() => validatePaletteEntries(palette.map((entry, index) => index === 0 ? { ...entry, offsetX: 11 } : entry)), /offset/);
-  assert.throws(() => validatePaletteEntries(palette.map((entry, index) => index === 0 ? { ...entry, offsetY: -11 } : entry)), /offset/);
+  assert.doesNotThrow(() => validatePaletteEntries(palette.map((entry, index) => index === 0 ? { ...entry, offsetX: 20, offsetY: -20 } : entry)));
+  assert.throws(() => validatePaletteEntries(palette.map((entry, index) => index === 0 ? { ...entry, offsetX: 21 } : entry)), /offset/);
+  assert.throws(() => validatePaletteEntries(palette.map((entry, index) => index === 0 ? { ...entry, offsetY: -21 } : entry)), /offset/);
   assert.throws(() => validatePaletteEntries(palette.map((entry, index) => index === 0 ? { ...entry, offsetScale: 101 } : entry)), /offset/);
   assert.throws(() => validatePaletteEntries(palette.map((entry, index) => index === 0 ? { ...entry, offsetScale: 1.5 } : entry)), /offset/);
 });
