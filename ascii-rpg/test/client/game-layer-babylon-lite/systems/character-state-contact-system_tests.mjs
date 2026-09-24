@@ -50,6 +50,21 @@ test("checks resources before the body and leaves unsupported contacts unhandled
   assert.equal(resolveCharacterContact(DEFAULT_CHARACTER_STATE, door, {}).handled, false);
 });
 
+test("routes an object-backed chest contact to the body on the first step", () => {
+  const chest = { type: "chest", id: "chest-1" };
+  const target = createContactTarget({ kind: "chest", cell: { x: 2, y: 3 }, object: chest });
+  const calls = [];
+  const result = resolveCharacterContact(DEFAULT_CHARACTER_STATE, target, {
+    body: {
+      canHandle: (candidate) => candidate.object?.type === "chest",
+      handle: () => { calls.push("open"); return { handled: true, opened: true, object: chest }; },
+    },
+  });
+  assert.equal(result.handled, true);
+  assert.equal(result.outcome.opened, true);
+  assert.deepEqual(calls, ["open"]);
+});
+
 test("normalizes cardinal dynamic, object, terrain, and NPC contacts only", () => {
   const cell = { x: 4, y: 5 };
   assert.equal(normalizeContactTarget({ cell, direction: { x: 1, y: 0 }, occupant: { type: "enemy", id: "e1" } }).kind, "enemy");

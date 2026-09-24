@@ -1384,6 +1384,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
     getOccupancyForWorld()?.claim({
       id: "player", type: "player", glyph: PLAYER_GLYPH, facing: playerFacing, realm: activeRealm, cell: playerCell,
     });
+    npcSystem?.transferParty(activeRealm, playerCell);
     lighting = { ...lighting, ambient: realmAmbient[activeRealm] };
     // Preserve the player's current screen-cell offset across the realm swap.
     // This keeps center, deadzone, and locked-camera positions visually stable
@@ -2132,6 +2133,9 @@ async function createGameSessionImplementation(container, initialPalette, initia
     cancelFrame: (handle) => window.cancelAnimationFrame(handle),
     render: ({ refreshLighting = false, dirtyCells = [], revisions = {} } = {}, previous = {}) => {
       if (disposed) return;
+      // Advance recruited companions before composing world cells. Updating
+      // them after renderWorld leaves their old glyph visible for one frame.
+      npcSystem?.updateFollowers();
       if (revisions.world !== previous?.revisions?.world) {
         const region = world ? getVisibleRegion(viewport, world, viewOrigin) : null;
         const cacheDecision = worldViewCache.evaluate("world", {
@@ -2311,7 +2315,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
     const cardinal = isCardinalDirection(direction);
     const object = cardinal ? objectSpawnerSystem?.getActiveObjectAtCell(attemptedCell, { world }) : null;
     const target = cardinal && (occupant || object)
-      ? createContactTarget({ kind: occupant?.type ?? object.type, cell: attemptedCell, occupant, object })
+      ? createContactTarget({ kind: object?.type ?? occupant?.type, cell: attemptedCell, occupant, object })
       : null;
     const interactWithObject = () => objectSpawnerSystem?.interactAtCell(attemptedCell, {
       world,
@@ -2356,9 +2360,9 @@ async function createGameSessionImplementation(container, initialPalette, initia
         handle: interactWithObject,
       },
       body: {
-        canHandle: (candidate) => candidate.kind === "chest" || candidate.kind === "npc",
+        canHandle: (candidate) => candidate.kind === "chest" || candidate.object?.type === "chest" || candidate.kind === "npc",
         handle: (candidate) => {
-          if (candidate.kind === "chest") return interactWithObject();
+          if (candidate.kind === "chest" || candidate.object?.type === "chest") return interactWithObject();
           const npc = candidate.npc ?? candidate.occupant;
           if (!npc || npc.recruited) return { handled: true };
           return openDialog({
@@ -3165,6 +3169,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
     npcSystem = createNpcSystem({
       timeSystem,
       occupancy: overgroundOccupancy,
+      occupancyFor: (realmName = null) => realmName ? dynamicOccupancies.get(realmName) : dynamicOccupancies.values(),
       worldFor: (realmName) => worldRealms.realms[realmName],
       getPlayerState: (realmName) => activeRealm === realmName ? { realm: realmName, cell: playerCell, facing: playerFacing, alive: !playerLifecycle.isDead() } : null,
       resolvePlayerContact: ({ npc, player, event }) => {

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createDynamicOccupancy } from "../../../../src/client/game-layer-babylon-lite/systems/dynamic-occupancy.js";
-import { createNpcSystem, NPC_ACTION_INTERVAL, NPC_DEAD_GLYPH, NPC_FOLLOW_DISTANCE, NPC_GLYPH, NPC_HEALTH } from "../../../../src/client/game-layer-babylon-lite/systems/npc-system.js";
+import { createNpcSystem, NPC_ACTION_INTERVAL, NPC_DEAD_GLYPH, NPC_FOLLOW_DISTANCE, NPC_FOLLOW_MAX_DISTANCE, NPC_GLYPH, NPC_HEALTH } from "../../../../src/client/game-layer-babylon-lite/systems/npc-system.js";
 import { createNpcSpawnerSystem, selectNpcSpawnerCells } from "../../../../src/client/game-layer-babylon-lite/systems/npc-spawner-system.js";
 import { createTimeSystem } from "../../../../src/client/game-layer-babylon-lite/systems/time-system.js";
 import { createDeferredWorkScheduler } from "../../../../src/client/game-layer-babylon-lite/deferred-work-scheduler.js";
@@ -79,13 +79,86 @@ test("recruited NPCs follow three cells behind the player and die as blocking co
   assert.equal(occupancy.get("npc-follow").health, NPC_HEALTH);
   assert.equal(system.recruitNpc("npc-follow"), true);
   for (let step = 0; step < 7; step += 1) timeSystem.advance(NPC_ACTION_INTERVAL);
-  assert.equal(Math.abs(occupancy.get("npc-follow").cell.x - playerCell.x), NPC_FOLLOW_DISTANCE);
+  const followDistance = Math.abs(occupancy.get("npc-follow").cell.x - playerCell.x);
+  assert.ok(followDistance >= NPC_FOLLOW_DISTANCE && followDistance <= NPC_FOLLOW_MAX_DISTANCE);
   assert.equal(system.damageNpc("npc-follow", NPC_HEALTH), occupancy.get("npc-follow"));
   const dead = occupancy.get("npc-follow");
   assert.equal(dead.health, 0);
   assert.equal(dead.glyph, NPC_DEAD_GLYPH);
   assert.equal(dead.dead, true);
   assert.equal(occupancy.isOccupied(dead.cell), true);
+});
+
+test("recruited NPCs catch up one step per frame only while farther than five cells", () => {
+  const map = world(); const timeSystem = createTimeSystem(); const occupancy = createDynamicOccupancy();
+  const playerCell = { x: 30, y: 10 };
+  const system = createNpcSystem({ timeSystem, occupancy, worldFor: () => map, getPlayerState: () => ({ cell: playerCell, facing: "right", alive: true }), isWalkable: (cell) => Boolean(map.terrain[cell.y]?.[cell.x]?.walkable) });
+  system.addNpc({ id: "npc-frame-follow", realm: "Overground", cell: { x: 10, y: 10 } });
+  system.recruitNpc("npc-frame-follow");
+  assert.equal(system.updateFollowers(), true);
+  const first = occupancy.get("npc-frame-follow").cell;
+  assert.equal(Math.abs(first.x - playerCell.x) + Math.abs(first.y - playerCell.y), 19);
+  for (let frame = 0; frame < 14; frame += 1) system.updateFollowers();
+  const close = occupancy.get("npc-frame-follow").cell;
+  const distance = Math.abs(close.x - playerCell.x) + Math.abs(close.y - playerCell.y);
+  assert.ok(distance >= NPC_FOLLOW_DISTANCE && distance <= NPC_FOLLOW_MAX_DISTANCE);
+  const before = close;
+  assert.equal(system.updateFollowers(), false);
+  assert.deepEqual(occupancy.get("npc-frame-follow").cell, before);
+});
+
+test("recruited NPCs transfer across realms with identity and recruited state intact", () => {
+  const map = world(); const timeSystem = createTimeSystem();
+  const overground = createDynamicOccupancy(); const underground = createDynamicOccupancy();
+  const occupancies = new Map([["Overground", overground], ["Underground", underground]]);
+  const system = createNpcSystem({
+    timeSystem,
+    occupancy: overground,
+    occupancyFor: (realm = null) => realm ? occupancies.get(realm) : occupancies.values(),
+    worldFor: () => map,
+    isWalkable: (cell) => Boolean(map.terrain[cell.y]?.[cell.x]?.walkable),
+    isStaticOccupied: () => false,
+    randomFor: () => () => 0,
+  });
+  const npc = system.addNpc({ id: "party-crossing", realm: "Overground", cell: { x: 10, y: 10 } });
+  system.recruitNpc(npc.id);
+  underground.claim({ id: "player", type: "player", cell: { x: 20, y: 20 } });
+  assert.equal(system.transferParty("Underground", { x: 20, y: 20 }), true);
+  assert.equal(overground.get(npc.id), null);
+  assert.equal(underground.get(npc.id)?.id, npc.id);
+  assert.equal(underground.get(npc.id)?.recruited, true);
+  assert.equal(underground.get(npc.id)?.realm, "Underground");
+});
+
+test("realm transfer places multiple party NPCs on distinct nearest valid stair cells and skips blocked candidates", () => {
+  const map = world(); const timeSystem = createTimeSystem();
+  const overground = createDynamicOccupancy(); const underground = createDynamicOccupancy();
+  const occupancies = new Map([["Overground", overground], ["Underground", underground]]);
+  for (const cell of [{ x: 17, y: 20 }, { x: 18, y: 20 }]) map.terrain[cell.y][cell.x].walkable = false;
+  const system = createNpcSystem({
+    timeSystem,
+    occupancy: overground,
+    occupancyFor: (realm = null) => realm ? occupancies.get(realm) : occupancies.values(),
+    worldFor: () => map,
+    isWalkable: (cell) => Boolean(map.terrain[cell.y]?.[cell.x]?.walkable),
+    isStaticOccupied: () => false,
+    randomFor: () => () => 0,
+  });
+  for (const [index, cell] of [[1, { x: 10, y: 10 }], [2, { x: 11, y: 10 }]]) {
+    const npc = system.addNpc({ id: `party-${index}`, realm: "Overground", cell });
+    system.recruitNpc(npc.id);
+  }
+  underground.claim({ id: "player", type: "player", cell: { x: 20, y: 20 } });
+  assert.equal(system.transferParty("Underground", { x: 20, y: 20 }), true);
+  const party = underground.getAll("npc");
+  assert.equal(party.length, 2);
+  assert.equal(new Set(party.map((npc) => `${npc.cell.x},${npc.cell.y}`)).size, 2);
+  for (const npc of party) {
+    const distance = Math.abs(npc.cell.x - 20) + Math.abs(npc.cell.y - 20);
+    assert.equal(distance, NPC_FOLLOW_DISTANCE);
+    assert.equal(map.terrain[npc.cell.y][npc.cell.x].walkable, true);
+  }
+  assert.equal(underground.getAt({ x: 17, y: 20 }), null);
 });
 
 test("spawner remains empty when its setup spawn is blocked", () => {

@@ -183,6 +183,26 @@ test("a cardinal chest bump spawns a Heart even without pre-generated Hearts", (
   assert.equal(system.collideAtCell({ x: 5, y: 5 }, { world }), null);
 });
 
+test("house-owned chests use the same reward and logging lifecycle", () => {
+  const world = createWorld();
+  const system = createObjectSpawnerSystem({ catalog: [
+    { type: "heart", name: "Heart", glyph: "♥", IsPickup: true, IsLevelSpawned: true },
+    { type: "chest", name: "Treasure Chest", glyph: "◆", openGlyph: "◇", IsPickup: false, IsLevelSpawned: true, rewards: [{ type: "heart", weight: 100 }] },
+  ] });
+  const chest = system.addObject({ id: "home-1-chest", type: "chest", cell: { x: 5, y: 5 }, buildingId: "home-1", realm: world });
+  world.characters[5][5] = "◆";
+  const messages = [];
+  const result = system.interactAtCell({ x: 5, y: 5 }, {
+    world,
+    playerCell: { x: 5, y: 6 },
+    random: () => 0,
+    log: (message) => messages.push(message),
+  });
+  assert.equal(result.object, chest);
+  assert.equal(result.reward.type, "heart");
+  assert.deepEqual(messages, ["Chest was opened", "Chest contained heart"]);
+});
+
 test("key collection is applied once and emits its exact collection log", () => {
   const system = createObjectSpawnerSystem({ catalog: [
     { type: "key", name: "Key", glyph: "⚿", IsPickup: true, IsLevelSpawned: false, logText: "The key was collected." },
