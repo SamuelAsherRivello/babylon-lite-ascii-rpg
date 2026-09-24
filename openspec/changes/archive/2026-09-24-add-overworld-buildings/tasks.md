@@ -23,4 +23,4 @@
 
 - [x] 4.1 Run the relevant Node test files for generation settings, Building placement, world generation, object collisions, movement/render composition, preview markers, NPCs, and enemy spawners; verify all pass.
 - [x] 4.2 Run `npm.cmd test` and `npm.cmd run build` from the repository root; verify both succeed.
-- [ ] 4.3 Manually verify the Procedural Overworld preview and a generated Home in the browser: collect its exterior Key, unlock and enter its Door, walk on revealed dots, and exit to restore the roof; verify the Underground Doors flow remains unchanged.
+- [x] 4.3 Manually verify the Procedural Overworld preview and a generated Home in the browser: collect its exterior Key, unlock and enter its Door, walk on revealed dots, and exit to restore the roof; verify the Underground Doors flow remains unchanged.

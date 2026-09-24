@@ -97,55 +97,43 @@ be connected and meet the configured minimum walkable-area requirement.
   area large enough to contain the player start cell
 
 ### Requirement: Layered world data
-
-The Babylon Lite game layer SHALL retain level-spawned objects and
-Underground civilization features in explicit layers associated with the
-terrain and character layers. Object and civilization glyphs SHALL take
-visible precedence over terrain while preserving underlying natural terrain
-identity. Torch, Trap, Heart, and Stair objects SHALL not make their cells
-non-walkable; fences and closed doors SHALL block effective movement, while
-open doors SHALL be walkable.
+The Babylon Lite game layer SHALL retain level-spawned objects, Underground civilization features, and Overworld Buildings in explicit layers associated with the terrain and character layers. Object and static-feature glyphs SHALL take visible precedence over terrain while preserving underlying natural terrain identity. Torch, Trap, Heart, and Stair objects SHALL not make their cells non-walkable; Building perimeter walls, fences, and closed doors SHALL block effective movement, while Building interiors and open doors SHALL be walkable.
 
 #### Scenario: Walkable object occupies natural terrain
 - **WHEN** a Heart, Torch, Trap, or Stair is placed in a valid generated world
-- **THEN** its cell SHALL retain the underlying walkable terrain and expose the
-  object through the object layer
+- **THEN** its cell SHALL retain the underlying walkable terrain and expose the object through the object layer
 
 #### Scenario: Object occupies a walkable terrain cell
 - **WHEN** a level-spawned object is placed
-- **THEN** its cell SHALL retain the underlying walkable terrain and expose the
-  object through the object layer
+- **THEN** its cell SHALL retain the underlying walkable terrain and expose the object through the object layer
 
 #### Scenario: Barrier occupies natural terrain
 - **WHEN** a fence or closed door is placed in an Underground opening
-- **THEN** the underlying natural terrain SHALL remain available while the
-  civilization layer marks the cell as blocked for movement
+- **THEN** the underlying natural terrain SHALL remain available while the civilization layer marks the cell as blocked for movement
+
+#### Scenario: Building wall occupies natural terrain
+- **WHEN** a Building perimeter wall is placed on Overworld terrain
+- **THEN** its cell SHALL retain its natural terrain identity while the Building layer marks it blocked for movement
 
 #### Scenario: Open door preserves walkability
 - **WHEN** a closed door changes to its open state
-- **THEN** the open door SHALL remain rendered above the natural terrain and
-  its cell SHALL become walkable
+- **THEN** the open door SHALL remain rendered above the natural terrain and its cell SHALL become walkable
 
 #### Scenario: Object is rendered above terrain
-- **WHEN** an undiscovered or discovered cell contains a visible object or
-  civilization glyph
-- **THEN** the active topmost glyph SHALL render above the terrain glyph using
-  its palette style
+- **WHEN** an undiscovered or discovered cell contains a visible object or civilization glyph
+- **THEN** the active topmost glyph SHALL render above the terrain glyph using its palette style
 
 #### Scenario: Player occupies a walkable terrain cell
 - **WHEN** the player is placed at a valid start cell
-- **THEN** that cell SHALL retain its walkable terrain in the terrain layer and
-  contain `🤺` in the character layer
+- **THEN** that cell SHALL retain its walkable terrain in the terrain layer and contain `🤺` in the character layer
 
 #### Scenario: Water retains terrain identity under a character
 - **WHEN** a character occupies a shallow-water cell
-- **THEN** the visible character SHALL render while the underlying water glyph,
-  depth, and walkability remain available in the terrain layer
+- **THEN** the visible character SHALL render while the underlying water glyph, depth, and walkability remain available in the terrain layer
 
 #### Scenario: Torch occupies a walkable terrain cell
 - **WHEN** a Torch is placed in a valid generated world
-- **THEN** that cell SHALL retain its underlying walkable terrain and contain
-  the configured Torch glyph in the object/character presentation layer
+- **THEN** that cell SHALL retain its underlying walkable terrain and contain the configured Torch glyph in the object/character presentation layer
 
 ### Requirement: Top-most cell rendering
 
@@ -256,7 +244,11 @@ Given the same world identity, dimensions, realm profile, object catalog, and ge
 
 ### Requirement: Dynamic entity state remains separate from terrain and static objects
 
-The generated world SHALL retain enemies and enemy spawners as explicit dynamic entity state associated with a realm. Their glyphs SHALL take visible precedence over terrain while preserving underlying terrain and static-object identity. No cell SHALL contain more than one player, enemy, or spawner occupant.
+The generated world SHALL retain NPCs, NPC spawners, enemies, and enemy spawners as explicit dynamic entity state associated with a realm. Their glyphs SHALL take visible precedence over terrain while preserving underlying terrain and static-object identity. No cell SHALL contain more than one player, NPC, NPC spawner, enemy, or enemy-spawner occupant.
+
+#### Scenario: NPC moves without rewriting terrain
+- **WHEN** an NPC moves from one walkable cell to another
+- **THEN** both cells SHALL retain their original terrain and static-object data while dynamic occupancy changes
 
 #### Scenario: Enemy moves without rewriting terrain
 - **WHEN** an enemy moves from one walkable cell to another
@@ -310,3 +302,39 @@ The world generator SHALL generate Overworld Buildings after player position and
 #### Scenario: Chest distribution remains additive
 - **WHEN** standalone chest generation is configured for a given density
 - **THEN** that configured standalone chest count remains in addition to the guaranteed house chests
+
+### Requirement: NPC density generation control
+
+The Procedural Level Generation menu SHALL expose an `NPC` pass with visually clear Low, Med, and High choices. Its persisted selection SHALL default to Med and determine the Overground NPC-spawner count as 4, 8, or 12 respectively. The selected setting SHALL be used for a newly generated world and SHALL not affect Underground NPC placement.
+
+#### Scenario: NPC setting is visible and persists
+- **WHEN** a player opens the Procedural Level Generation menu and selects an NPC density
+- **THEN** the `NPC` label, Low/Med/High choices, and selected choice SHALL be clearly visible, and the selection SHALL persist for the next generated world
+
+#### Scenario: NPC density determines spawner count
+- **WHEN** an Overground world is generated with Low, Med, or High NPC density
+- **THEN** it SHALL contain exactly 4, 8, or 12 NPC spawners respectively
+
+#### Scenario: NPC density is visible on the preview map
+- **WHEN** the Procedural map preview shows an Overground draft with an NPC density selected
+- **THEN** it SHALL overlay the matching deterministic NPC-spawner cells using a prominent marker that is at least as visible as the heart, trap, and torch preview symbols
+
+### Requirement: Surface-scoped world graphics
+
+Every world graphic, including terrain, objects, actors, NPCs, spawners, effects, and markers, SHALL be prepared and drawn only when its cell lies in the active surface's source region and has positive fog visibility in that surface's realm. The game view, minimap, and developer map view SHALL each use their own source region and matching fog record.
+
+#### Scenario: Fogged NPC is not submitted
+- **WHEN** an NPC or NPC spawner is outside positive fog visibility for a rendering surface
+- **THEN** that surface SHALL not prepare, submit, or draw its glyph, marker, or overlay
+
+#### Scenario: Off-region actor is not submitted
+- **WHEN** an NPC, spawner, or other actor is outside a rendering surface's source region
+- **THEN** that surface SHALL not prepare, submit, or draw that actor
+
+### Requirement: NPC-spawner generation is seed-stable
+
+Given the same Overground world identity, dimensions, generation parameters, and object positions, normal NPC-spawner positions SHALL be repeatable.
+
+#### Scenario: Normal NPC spawners reproduce
+- **WHEN** the same Overground inputs are generated twice
+- **THEN** normal NPC-spawner counts and positions SHALL match exactly

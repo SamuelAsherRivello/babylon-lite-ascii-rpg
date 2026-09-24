@@ -25,4 +25,4 @@
 
 - [x] 5.1 Run the relevant focused Node tests for NPC systems, dynamic occupancy, player movement/combat, palette, generation settings, time, and rendering culling; verify all pass.
 - [x] 5.2 Run `npm.cmd test` and `npm.cmd run build` from the repository root; the production build passes and the full existing test suite passes (318 tests).
-- [ ] 5.3 Manually verify regenerated Overground worlds in the browser: the `☺` glyph is color-editable in Ascii Settings; the clearly visible NPC Low/Med/High selection creates at most 4/8/12 NPCs; NPCs patrol and return over player-driven ticks; and player/NPC collision is non-combat.
+- [x] 5.3 Manually verify regenerated Overground worlds in the browser: the `☺` glyph is color-editable in Ascii Settings; the clearly visible NPC Low/Med/High selection creates at most 4/8/12 NPCs; NPCs patrol and return over player-driven ticks; and player/NPC collision is non-combat.

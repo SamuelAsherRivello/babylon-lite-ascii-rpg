@@ -5,6 +5,14 @@
 ### Requirement: Ordered pass density catalog
 The Level Generation tab SHALL display cards in this order: Ground (1), Overground Walls (2), Underground Caves (3), Water (4), Walkability (5), Player Position (6), Object & NPC Distribution (7), Civilization (8), and Enemy Spawner Distribution (9). The Object & NPC Distribution card SHALL group separate Heart, Trap, Torch, NPC, and Fireplace rows, each with Low, Med, and High Density & Distribution selections. The Civilization card SHALL use the same grouped-row presentation and contain independent `Doors` and `Homes` rows, each with Low, Med, and High Density & Distribution selections. Doors SHALL remain Underworld-only. Homes SHALL be Overworld-only and use the same quarter/current/double group-chance mapping as Doors. Player Position SHALL display its centered baseline without a density control. Each configurable entry SHALL visibly identify its selected value.
 
+#### Scenario: Render the World Generation catalog
+- **WHEN** the Procedural modal opens
+- **THEN** all ten ordered cards are visible or reachable by scrolling, World Settings is pass 1, Ground is pass 2, and the later cards retain their relative order
+
+#### Scenario: Identify the selected world size
+- **WHEN** World Settings displays a selected World Size
+- **THEN** exactly one of Low, Med, or High is visibly identified as selected
+
 #### Scenario: Render the current catalog
 - **WHEN** the Procedural modal opens
 - **THEN** all nine ordered cards are visible or reachable by scrolling, Layer 7 contains its individual Object & NPC controls, Layer 8 contains independent Doors and Homes controls, and Player Position has no density control
@@ -16,6 +24,10 @@ The Level Generation tab SHALL display cards in this order: Ground (1), Overgrou
 #### Scenario: Select a Homes density
 - **WHEN** a developer selects Low, Med, or High for Civilization's Homes row in the Overworld preview
 - **THEN** that selection becomes the unpersisted draft value for Home-group distribution, redraws the preview, and remains independent of Doors
+
+#### Scenario: Select a Chest density
+- **WHEN** a developer selects Low, Med, or High for the Chest row
+- **THEN** that selection becomes the unpersisted draft value for chest distribution and the selected value is visibly identified
 
 #### Scenario: Preview a Home group
 - **WHEN** the Overworld settings-map preview accepts a Home group

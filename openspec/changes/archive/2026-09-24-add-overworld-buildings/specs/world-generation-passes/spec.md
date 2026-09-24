@@ -5,6 +5,10 @@
 ### Requirement: Ordered world-generation passes
 The world generator SHALL compose terrain through distinct passes in this order: ground, cave/walls, water, walkability, player position, object-spawner distribution, Overworld Building distribution, Underground civilization distribution, and Underground enemy-spawner distribution. A later pass SHALL be able to inspect prior layers and claim or derive only its own layered result. Overworld Buildings, Underground civilization, and enemy-spawner distribution SHALL preserve natural terrain identity and SHALL execute only in their declared realms.
 
+#### Scenario: World Settings precedes Ground
+- **WHEN** a world is generated with any confirmed World Size
+- **THEN** both realm dimensions are resolved before Ground creates either realm's terrain
+
 #### Scenario: Enemy-spawner distribution is last for Underground
 - **WHEN** an Underground world is generated
 - **THEN** enemy spawners SHALL be distributed only after player position, objects, and Underground civilization occupancy are available
@@ -16,6 +20,10 @@ The world generator SHALL compose terrain through distinct passes in this order:
 #### Scenario: Building distribution follows prerequisite static occupancy
 - **WHEN** an Overworld world is generated
 - **THEN** Buildings SHALL be distributed only after player position, paired stairs, and existing static-object reservations are available
+
+#### Scenario: NPC-spawner distribution is last for Overground
+- **WHEN** an Overground world is generated
+- **THEN** NPC spawners SHALL be distributed only after player position, objects, and walkability are available
 
 #### Scenario: Object distribution is last
 - **WHEN** a world is generated
