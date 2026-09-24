@@ -58,7 +58,7 @@ commands from the repository root:
 
 ## Workflows
 
-## 🎨 1. Copy styles from AI Skills Library
+## 🎨 1. Copy Skills from AI Skills Library
 
 Manually copy the desired styles from the
 [AI Skills Library](https://github.com/SamuelAsherRivello/ai-skills-library)
@@ -72,19 +72,12 @@ There are many cool ideas! Here is a partial list.
 
 ### 🕹️ 3. Implement
 
-Here is an [openspec](openspec/) workflow for collaboration with minimal code conflicts. See this 30-second [video short](https://www.youtube.com/shorts/lce1edytViI). 
+Use an [openspec](openspec/) workflow for collaboration with minimal code conflicts. 
 
-| # | Name | Command | Comment |
-| --- | --- | --- | --- |
-| -  | (Git Synchronize)  | - | Share progress |
-| 1 | Explore | `$openspec-explore` | (Optional) Brainstorm possibilities. |
-| 2 | Propose | `$openspec-propose` | Creates one focused feature change. |
-| 3 | Refine | `$openspec-grill-me {n}` | (Optional) Clear doubts via {n} multi-choice questions |
-| -  | (Git Synchronize)  | - | Share progress |
-| 4 | Apply | `$openspec-apply-change` | Implements and completes one change. |
-| 5 | Sync | `$openspec-sync-specs` | Updates main specs without archiving. |
-| 6 | Archive | `$openspec-archive-change` | Finalizes and archives a change. |
-| -  | (Git Synchronize)  | - | Share progress |
+See this 30-second [video short](https://www.youtube.com/shorts/lce1edytViI). 
+
+See table of commands here [Ai Skills Library](https://github.com/SamuelAsherRivello/ai-skills-library).
+
 
 ## Project Details
 
