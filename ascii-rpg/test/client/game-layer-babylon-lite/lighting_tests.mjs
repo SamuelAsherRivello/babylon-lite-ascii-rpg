@@ -22,6 +22,19 @@ test("lighting uses ambient outside the configured radius", () => {
   assert.equal(getLightingFactor({ x: 6, y: 0 }, [{ x: 0, y: 0 }]), DEFAULT_LIGHTING.ambient);
 });
 
+test("explicit terrain invalidation refreshes stationary torch and player shadows", () => {
+  const world = { terrain: Array.from({ length: 5 }, () => Array.from({ length: 5 }, () => ({ walkable: true }))) };
+  const region = { x: 0, y: 0, columns: 5, rows: 5 };
+  const lights = [{ x: 0, y: 2 }];
+  const cache = createSceneLightingFieldCache();
+  const before = cache.get(world, region, lights, lights[0]);
+  const lit = before.getFactor({ x: 3, y: 2 });
+  world.terrain[2][1].walkable = false;
+  cache.invalidate();
+  const after = cache.get(world, region, lights, lights[0]);
+  assert.ok(after.getFactor({ x: 3, y: 2 }) < lit);
+});
+
 test("lighting reaches maximum at the torch and falls off circularly", () => {
   assert.equal(getLightingFactor({ x: 0, y: 0 }, [{ x: 0, y: 0 }]), DEFAULT_LIGHTING.maximum);
   assert.equal(

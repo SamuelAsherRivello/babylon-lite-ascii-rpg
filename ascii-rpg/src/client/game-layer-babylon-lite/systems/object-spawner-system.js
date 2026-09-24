@@ -114,6 +114,7 @@ export function createObjectSpawnerSystem({ catalog = [], eventSystem = null } =
   validateCatalog(catalog);
   const definitions = new Map(catalog.map((entry) => [entry.type, Object.freeze({ ...entry })]));
   const objects = new Map();
+  const lightingSources = new Map();
   const listeners = new Set();
   let nextId = 0;
 
@@ -149,6 +150,7 @@ export function createObjectSpawnerSystem({ catalog = [], eventSystem = null } =
       realm,
     };
     objects.set(objectId, object);
+    if (type === "torch") { lightingSources.delete(realm); lightingSources.delete(null); }
     return object;
   };
 
@@ -271,6 +273,7 @@ export function createObjectSpawnerSystem({ catalog = [], eventSystem = null } =
     if (object.type === "chest" && object.open) return null;
     if (object.IsPickup) {
       object.active = false;
+      if (object.type === "torch") { lightingSources.delete(object.realm); lightingSources.delete(null); }
       if (context.world?.characters?.[object.cell.y]?.[object.cell.x] === object.glyph) {
         context.world.characters[object.cell.y][object.cell.x] = null;
       }
@@ -299,7 +302,12 @@ export function createObjectSpawnerSystem({ catalog = [], eventSystem = null } =
     getCatalog() { return Object.freeze([...definitions.values()]); },
     getObjects() { return Object.freeze([...objects.values()].map(({ effect, definition, realm, ...object }) => freezeObject(object))); },
     getActiveObjects(realm = null) { return Object.freeze([...objects.values()].filter((object) => object.active && (!realm || object.realm === realm)).map(({ effect, definition, realm: objectRealm, ...object }) => freezeObject(object))); },
-    getLightingSources(realm = null) { return Object.freeze([...objects.values()].filter((object) => object.active && object.type === "torch" && (!realm || object.realm === realm)).map((object) => Object.freeze({ ...object.cell }))); },
+    getLightingSources(realm = null) {
+      if (!lightingSources.has(realm)) lightingSources.set(realm, Object.freeze([...objects.values()]
+        .filter((object) => object.active && object.type === "torch" && (!realm || object.realm === realm))
+        .map((object) => Object.freeze({ ...object.cell }))));
+      return lightingSources.get(realm);
+    },
     subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener); },
   });
 }

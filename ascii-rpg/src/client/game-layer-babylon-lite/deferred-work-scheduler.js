@@ -83,9 +83,12 @@ export function createDeferredWorkScheduler({
   return Object.freeze({
     enqueue({ id = `deferred-${++nextId}`, priority = 0, run, metadata = null } = {}) {
       if (typeof id !== "string" || !id || typeof run !== "function" || jobs.has(id)) return null;
-      const job = { id, priority: Number(priority) || 0, run, metadata, sequence: nextId, enqueuedAt: now(), startedAt: null, endedAt: null, state: "pending", cancelled: false, waitSlices: 0 };
+      const wasEmpty = jobs.size === 0;
+      const job = { id, priority: Number(priority) || 0, run, metadata, sequence: ++nextId, enqueuedAt: now(), startedAt: null, endedAt: null, state: "pending", cancelled: false, waitSlices: 0 };
       jobs.set(id, job);
-      presentationRemaining = Math.max(presentationRemaining, Math.max(0, Math.floor(presentationFrames)));
+      // Wait for presentation once per batch. Continuous sprint input must
+      // not postpone older work by another two frames on every enqueue.
+      if (wasEmpty) presentationRemaining = Math.max(0, Math.floor(presentationFrames));
       notify({ type: "enqueued", id, metadata });
       schedule();
       return Object.freeze({ id, cancel: () => this.cancel(id) });

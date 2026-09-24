@@ -745,7 +745,9 @@ async function createGameSessionImplementation(container, initialPalette, initia
         const baseGlyph = getFacingGlyph(graphic.glyph);
         const baseColor = paletteColors.get(baseGlyph) ?? colorToLinearRgba(getPaletteStyle(palette, baseGlyph));
         const litColor = linearRgbaToRendererHex(applyLightingToColor(baseColor, lightingFactor));
-        const cacheKey = `${glyph}:${litColor}:${lightingFactor.toFixed(6)}:${fogOpacity.toFixed(2)}:${raster.width}`;
+        // The raster depends on the final tint and fog alpha, not the
+        // unrounded light factor which produced that same tint.
+        const cacheKey = `${glyph}:${litColor}:${fogOpacity.toFixed(2)}:${raster.width}`;
         let glyphCanvas = minimapGlyphCanvases.get(cacheKey);
         if (!glyphCanvas) {
           glyphCanvas = createGlyphRasterCanvas(raster, litColor, {
@@ -2126,6 +2128,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
   // Coalescing movement-driven renders prevents held input from starving
   // animation frames while preserving the final player position and lighting.
   const scheduleMovementRender = ({ refreshLighting = false, player = false, viewport = false, fog = false, lightingChanged = false, paletteChanged = false, markers = false, gpuEffect = false, dirtyCells = [], force = true } = {}) => {
+    if (refreshLighting) lightingFieldCache.invalidate();
     const revisions = visualInvalidation.invalidate({
       player: player || force, viewport, fog, lighting: refreshLighting || lightingChanged || force, palette: paletteChanged, markers: markers || force, gpuEffect,
     });
@@ -2323,6 +2326,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
         if (contact.capability === "pickaxe") wearCharacterItem("pickaxe", contact.outcome.appliedDamage);
         const doorInteraction = contact.outcome;
         if (doorInteraction.opened && doorInteraction.object.type === "door") {
+          lightingFieldCache.invalidate();
           staticOccupancyIndexes.get(activeRealm)?.delete(attemptedCell.y * world.columns + attemptedCell.x);
         }
         const dirtyCells = [attemptedCell];
@@ -2341,6 +2345,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
       const doorInteraction = interactWithObject();
       if (doorInteraction?.handled) {
         if (doorInteraction.opened && doorInteraction.object.type === "door") {
+          lightingFieldCache.invalidate();
           staticOccupancyIndexes.get(activeRealm)?.delete(attemptedCell.y * world.columns + attemptedCell.x);
         }
         // A chest mutates two static cells at once: its own glyph and the
@@ -3181,6 +3186,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
   if (diagnostics && new URLSearchParams(window.location.search).get("performanceSprint") === "true") {
     stopSprintDiagnostic = startSprintDiagnostic({
       monitor: performanceMonitor,
+      durationMs: Math.min(60000, Math.max(4000, Number(new URLSearchParams(window.location.search).get("performanceDurationMs")) || 8000)),
       read: () => ({ disposed, locked: gameplayInputLocked || transitionActive, realm: activeRealm,
         cell: playerCell, rows: world.rows, columns: world.columns, dead: playerLifecycle.isDead(),
         exhausted: staminaSystem.getCurrent() === 0, ticks: timeSystem.getDiagnostics() }),

@@ -26,7 +26,9 @@ export function startSprintDiagnostic({ monitor, read, canEnter, keyDown, keyUp,
   const step = (now) => {
     if (stopped) return;
     const state = read();
-    if (state.disposed || document.visibilityState !== "visible") { release(); stopped = true; return; }
+    if (state.disposed || document.visibilityState !== "visible") {
+      release(); monitor.stop("interrupted"); stopped = true; return;
+    }
     const realm = realms[realmIndex];
     if (state.realm !== realm) {
       release();
@@ -78,5 +80,5 @@ export function startSprintDiagnostic({ monitor, read, canEnter, keyDown, keyUp,
     frame = requestAnimationFrame(step);
   };
   frame = requestAnimationFrame(step);
-  return () => { stopped = true; cancelAnimationFrame(frame); release(); };
+  return () => { if (!stopped) monitor.stop("interrupted"); stopped = true; cancelAnimationFrame(frame); release(); };
 }

@@ -131,3 +131,21 @@ test("invalidates pending scheduled ticks without allowing stale delivery", () =
   assert.equal(timeSystem.getDiagnostics().stale, 1);
   assert.equal(timeSystem.getDiagnostics().logicalTickAgeMs, 0);
 });
+
+test("pending tick age tracks the final callback and clears across realm invalidation", () => {
+  const jobs = [];
+  let clock = 10;
+  const time = createTimeSystem(1, { now: () => clock, scheduler: { enqueue: job => jobs.push(job) } });
+  time.registerTickable("first", () => {});
+  time.registerTickable("last", () => {});
+  time.advance();
+  clock = 50;
+  jobs[0].run();
+  assert.equal(time.getDiagnostics().logicalTickAgeMs, 40);
+  jobs[1].run();
+  assert.equal(time.getDiagnostics().logicalTickAgeMs, 0);
+  time.advance();
+  clock = 100;
+  time.invalidatePending();
+  assert.equal(time.getDiagnostics().logicalTickAgeMs, 0);
+});

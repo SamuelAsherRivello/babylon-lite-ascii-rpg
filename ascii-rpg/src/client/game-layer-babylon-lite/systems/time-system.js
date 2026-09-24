@@ -27,19 +27,27 @@ export function createTimeSystem(initialTime = INITIAL_WORLD_TIME, { scheduler =
     };
     if (scheduler && typeof scheduler.enqueue === "function") {
       const generation = lifecycleGeneration;
-      if (!pendingSince.has(tickTime)) pendingSince.set(tickTime, now());
+      const pending = { startedAt: now(), remaining: tickableSnapshot.length };
+      if (pending.remaining) pendingSince.set(pending, pending.startedAt);
       tickableSnapshot.forEach(([id, tick], index) => {
         scheduler.enqueue({
           id: `time-tick:${++tickSequence}:${id}`,
           priority: 20,
           metadata: Object.freeze({ type: "time-tick", time: tickTime, cause, id, generation }),
           run: () => {
-            if (generation !== lifecycleGeneration) { diagnostics.stale += 1; return "cancelled"; }
-            if (tickables.get(id) !== tick) { diagnostics.cancelled += 1; return "cancelled"; }
-            deliver(index);
-            diagnostics.completed += 1;
-            pendingSince.delete(tickTime);
-            return "done";
+            try {
+              if (generation !== lifecycleGeneration) { diagnostics.stale += 1; return "cancelled"; }
+              if (tickables.get(id) !== tick) { diagnostics.cancelled += 1; return "cancelled"; }
+              deliver(index);
+              diagnostics.completed += 1;
+              return "done";
+            } catch (error) {
+              diagnostics.failed += 1;
+              throw error;
+            } finally {
+              pending.remaining -= 1;
+              if (pending.remaining === 0) pendingSince.delete(pending);
+            }
           },
         });
       });
@@ -86,6 +94,7 @@ export function createTimeSystem(initialTime = INITIAL_WORLD_TIME, { scheduler =
     invalidatePending() {
       lifecycleGeneration += 1;
       if (scheduler?.cancelWhere) scheduler.cancelWhere((metadata) => metadata?.type === "time-tick");
+      pendingSince.clear();
       return lifecycleGeneration;
     },
     getDiagnostics() {
