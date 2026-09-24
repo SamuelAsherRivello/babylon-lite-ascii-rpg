@@ -1,6 +1,5 @@
 import { Component, Fragment, createRef, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { HexColorPicker } from "react-colorful";
-import { isGenerationDiagnosticsEnabled } from "../generation-mode.js";
 import versionText from "../../../../version.txt?raw";
 import changelog from "./data/changelog.json";
 import {
@@ -44,9 +43,6 @@ import {
   getCharacterBarMaximumPercent,
   getCharacterBarSegments,
 } from "./character-bar-presentation.js";
-import { createGlyphRasterCanvas, rasterizeCompositeGlyph, getGlyphRasterSize } from "../game-layer-babylon-lite/glyph-visual-cache.js";
-import { colorToLinearRgba } from "../game-layer-babylon-lite/palette-color-cache.js";
-import { DEFAULT_ZOOM } from "../game-layer-babylon-lite/zoom-scale.js";
 import {
   getStoredAspectMode,
   getStoredInitialCameraMode,
@@ -123,6 +119,9 @@ import { GameplaySettingsWindow } from "./gameplay-settings-window.jsx";
 import { ChangelogWindow } from "./changelog-window.jsx";
 import { ArgumentsWindow } from "./arguments-window.jsx";
 import { CharacterDetails as ExtractedCharacterDetails } from "./character-components.jsx";
+import { PaletteGlyph } from "./palette-glyph.jsx";
+import { GenerationEnabledCheckbox } from "./generation-enabled-checkbox.jsx";
+import { LightingWindow as ExtractedLightingWindow } from "./lighting-window.jsx";
 import {
   fullscreenStorageKey, aspectStorageKey, developerOpenStorageKey, logOpenStorageKey,
   zoomStorageKey, zoomStorageVersionKey, overgroundAmbientStorageKey, undergroundAmbientStorageKey,
@@ -496,7 +495,7 @@ function SettingTooltipTarget({ description, onShow, onHide, children, as: Eleme
   );
 }
 
-function LightingWindow({
+function LegacyLightingWindow({
   position,
   onPositionChange,
   onClose,
@@ -646,33 +645,6 @@ function LightingWindow({
       </section>
     </>
   );
-}
-
-function PaletteGlyph({ glyph, color, fontFamily, offsets = null, backgroundDarkness = 50 }) {
-  const canvasRef = useRef(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return undefined;
-    const size = getGlyphRasterSize(DEFAULT_ZOOM, 32);
-    const raster = rasterizeCompositeGlyph(
-      glyph,
-      fontFamily,
-      size,
-      colorToLinearRgba({ color, alpha: 1 }),
-      backgroundDarkness,
-      offsets ?? undefined,
-    );
-    canvas.width = raster.width;
-    canvas.height = raster.height;
-    const context = canvas.getContext("2d");
-    if (!context) return undefined;
-    context.clearRect(0, 0, canvas.width, canvas.height);
-    context.drawImage(createGlyphRasterCanvas(raster), 0, 0);
-    return undefined;
-  }, [backgroundDarkness, color, fontFamily, glyph, offsets?.offsetScale, offsets?.offsetX, offsets?.offsetY]);
-
-  return <canvas ref={canvasRef} className="palette_glyph_canvas" aria-label={glyph} />;
 }
 
 export class PromptWindow extends Component {
@@ -1085,16 +1057,6 @@ const argumentBlocks = [
 function applyUrlArgument(name, value) {
   const nextUrl = withUrlArgument(window.location.href, name, value);
   window.location.assign(nextUrl.href);
-}
-
-function GenerationEnabledCheckbox({ title, enabled, disabled = false, mixed = false, onChange }) {
-  const checkboxRef = useRef(null);
-  useEffect(() => { if (checkboxRef.current) checkboxRef.current.indeterminate = mixed; }, [mixed]);
-  if (!isGenerationDiagnosticsEnabled()) return null;
-  const action = enabled ? "Disable" : "Enable";
-  return <input ref={checkboxRef} className="procedural_layer_enabled" type="checkbox" checked={enabled} disabled={disabled}
-    aria-label={disabled ? `${title} must remain enabled` : `${action} ${title}`} title={disabled ? `${title} must remain enabled` : `${action} ${title}`}
-    onChange={onChange} />;
 }
 
 export function ProceduralSettingsWindow({ settings, randomSeed, onConfirm, onClose }) {
@@ -2030,7 +1992,7 @@ function AppContent() {
         )}
       </CornerLayout>
       {true && lightingWindowOpen ? (
-        <LightingWindow
+        <ExtractedLightingWindow
           position={lightingWindowPosition}
           onPositionChange={setLightingWindowPosition}
           onClose={() => setLightingWindowOpen(false)}
@@ -2052,6 +2014,10 @@ function AppContent() {
           onUndergroundAmbientChange={(amount) => changeRealmAmbient(setUndergroundAmbient, amount)}
           onShowTooltip={showSettingTooltip}
           onHideTooltip={hideSettingTooltip}
+          SettingTooltipTarget={SettingTooltipTarget}
+          settingsHelp={settingsHelp}
+          ambientStep={AMBIENT_LIGHT_STEP}
+          getWindowPosition={getLightingWindowPosition}
           showCloseButton
           showBackdrop
           closeOnBackdropClick
