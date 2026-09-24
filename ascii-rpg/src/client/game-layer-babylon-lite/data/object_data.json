@@ -4,6 +4,7 @@
       "type": "welcome-sign",
       "name": "Welcome Sign",
       "glyph": "⚑",
+      "walkable": false,
       "IsPickup": false,
       "IsLevelSpawned": true,
       "consequence": { "id": "welcome-dialog" },

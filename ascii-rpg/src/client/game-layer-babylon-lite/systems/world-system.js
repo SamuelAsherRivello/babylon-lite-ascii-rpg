@@ -474,6 +474,7 @@ export function createWorld({
       : getCenterMostCell(walkableRegion, rows, columns);
     const torchCandidates = torchCount > 0 ? collectObjectCandidatesLayer("torch", terrain, start, rows, columns, CARDINAL_DIRECTIONS) : [];
     const torchCells = distributeObjectOfTypeLayer("torch", torchCandidates, random, torchCount, OBJECT_DISTRIBUTION_RULES);
+    for (const torch of torchCells) terrain[torch.y][torch.x].walkable = false;
 
     return {
       rows,
@@ -725,6 +726,7 @@ export async function createWorldCooperative({
     pause = checkpoint();
     if (pause) await pause;
     const torchCells = distributeObjectOfTypeLayer("torch", torchCandidates, random, torchCount, OBJECT_DISTRIBUTION_RULES);
+    for (const torch of torchCells) terrain[torch.y][torch.x].walkable = false;
     const characters = createCharactersLayer(rows, columns, start, torchCells, PLAYER_GLYPH, TORCH_GLYPH);
     const waterCells = [];
     for (const [key] of waterPass.depths) {

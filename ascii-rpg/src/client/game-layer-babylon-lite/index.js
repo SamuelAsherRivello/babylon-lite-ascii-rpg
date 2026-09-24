@@ -2461,6 +2461,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
     if (getOccupancyForWorld()?.isOccupied(nextCell)) return exhaustedAtAttempt;
     const previousPlayerCell = { ...playerCell };
     let committed = false;
+    // Movement advances authoritative time through timeSystem.advance(1, "movement").
     timeSystem.advance(1, "movement", {
       shouldContinue: () => !playerLifecycle.isDead(),
       beforeTick: () => {
@@ -2916,6 +2917,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
             cell: signCell,
             effect: () => {},
           });
+          if (signCell) realm.terrain[signCell.y][signCell.x].walkable = false;
         });
       }
       if (realmName === "Overground" && featureEnabled("civilization-homes")) {

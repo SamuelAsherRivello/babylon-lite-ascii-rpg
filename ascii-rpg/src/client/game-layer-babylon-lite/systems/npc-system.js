@@ -16,7 +16,9 @@ export function createNpcSystem({ timeSystem, occupancy, occupancyFor = () => oc
     const value = occupancyFor();
     return value && typeof value[Symbol.iterator] === "function" ? [...value] : [value];
   };
-  const getFollowTarget = (npc, player, world) => {
+  const getFollowPeers = (npc) => getOccupancies().flatMap((candidate) => candidate?.getAll?.("npc") ?? [])
+    .filter((peer) => peer.id !== npc.id && peer.recruited && !peer.dead && peer.realm === npc.realm);
+  const getFollowTargets = (npc, player, world) => {
     const behind = player.facing === "left" ? { x: 1, y: 0 } : { x: -1, y: 0 };
     const targets = [];
     for (let distance = NPC_FOLLOW_DISTANCE; distance <= NPC_FOLLOW_MAX_DISTANCE; distance += 1) {
@@ -24,8 +26,12 @@ export function createNpcSystem({ timeSystem, occupancy, occupancyFor = () => oc
       targets.push({ x: player.cell.x, y: player.cell.y - distance });
       targets.push({ x: player.cell.x, y: player.cell.y + distance });
     }
-    return targets.find((target) => world?.terrain?.[target.y]?.[target.x]?.walkable
-      && !isStaticOccupied(target, npc.realm)) ?? null;
+    const peers = getFollowPeers(npc);
+    const legal = targets.filter((target) => world?.terrain?.[target.y]?.[target.x]?.walkable
+      && !isStaticOccupied(target, npc.realm));
+    if (!peers.length) return legal;
+    const separated = legal.filter((target) => peers.every((peer) => Math.abs(target.x - peer.cell.x) + Math.abs(target.y - peer.cell.y) >= 2));
+    return separated.length ? separated : legal;
   };
   const patrolDestinations = (npc, world) => {
     const destinations = [];
@@ -87,11 +93,18 @@ export function createNpcSystem({ timeSystem, occupancy, occupancyFor = () => oc
     const player = getPlayerState?.(npc.realm);
     if (!player?.alive) return false;
     const world = worldFor(npc.realm);
-    const target = getFollowTarget(npc, player, world);
     const distance = Math.abs(npc.cell.x - player.cell.x) + Math.abs(npc.cell.y - player.cell.y);
-    if (!target || distance <= NPC_FOLLOW_MAX_DISTANCE) return false;
-    const path = AStarUtility.findPath(world, npc.cell, target, { isBlocked: (cell) => isStaticOccupied(cell, npc.realm) });
-    const next = path?.[1];
+    if (distance <= NPC_FOLLOW_MAX_DISTANCE) return false;
+    const peers = getFollowPeers(npc);
+    const targets = getFollowTargets(npc, player, world);
+    let next = null;
+    for (const target of targets) {
+      const path = AStarUtility.findPath(world, npc.cell, target, { isBlocked: (cell) => isStaticOccupied(cell, npc.realm) });
+      const candidate = path?.[1];
+      if (!candidate || peers.some((peer) => Math.abs(candidate.x - peer.cell.x) + Math.abs(candidate.y - peer.cell.y) < 2)) continue;
+      next = candidate;
+      break;
+    }
     if (!next || !isWalkable(next, npc.realm) || !currentOccupancy.move(id, next)) return false;
     const current = currentOccupancy.get(id);
     if (current && next.x !== current.cell.x) currentOccupancy.update(id, { facing: next.x > current.cell.x ? "right" : "left" });

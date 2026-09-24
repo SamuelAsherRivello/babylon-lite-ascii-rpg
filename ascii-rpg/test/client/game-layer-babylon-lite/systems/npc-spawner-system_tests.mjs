@@ -121,6 +121,30 @@ test("recruited NPCs catch up one step per frame only while farther than five ce
   assert.deepEqual(occupancy.get("npc-frame-follow").cell, before);
 });
 
+test("recruited NPC followers prefer one empty grid cell between peers", () => {
+  const map = world(); const timeSystem = createTimeSystem(); const occupancy = createDynamicOccupancy();
+  const playerCell = { x: 30, y: 20 };
+  const system = createNpcSystem({ timeSystem, occupancy, worldFor: () => map, getPlayerState: () => ({ cell: playerCell, facing: "right", alive: true }), isWalkable: (cell) => Boolean(map.terrain[cell.y]?.[cell.x]?.walkable) });
+  const first = system.addNpc({ id: "npc-spacing-1", realm: "Overground", cell: { x: 10, y: 20 } });
+  const second = system.addNpc({ id: "npc-spacing-2", realm: "Overground", cell: { x: 10, y: 21 } });
+  system.recruitNpc(first.id); system.recruitNpc(second.id);
+  system.updateFollowers(); system.updateFollowers();
+  const party = [occupancy.get(first.id), occupancy.get(second.id)];
+  assert.ok(Math.abs(party[0].cell.x - party[1].cell.x) + Math.abs(party[0].cell.y - party[1].cell.y) >= 2);
+});
+
+test("recruited NPC followers accept adjacent legal cells when one-space separation is impossible", () => {
+  const map = world(); const timeSystem = createTimeSystem(); const occupancy = createDynamicOccupancy();
+  const playerCell = { x: 20, y: 20 };
+  for (let y = 1; y < map.rows - 1; y += 1) for (let x = 1; x < map.columns - 1; x += 1) map.terrain[y][x].walkable = x === 20;
+  const system = createNpcSystem({ timeSystem, occupancy, worldFor: () => map, getPlayerState: () => ({ cell: playerCell, facing: "right", alive: true }), isWalkable: (cell) => Boolean(map.terrain[cell.y]?.[cell.x]?.walkable) });
+  const first = system.addNpc({ id: "npc-constrained-1", realm: "Overground", cell: { x: 20, y: 10 } });
+  const second = system.addNpc({ id: "npc-constrained-2", realm: "Overground", cell: { x: 20, y: 11 } });
+  system.recruitNpc(first.id); system.recruitNpc(second.id);
+  for (let frame = 0; frame < 12; frame += 1) system.updateFollowers();
+  assert.notDeepEqual(occupancy.get(first.id).cell, occupancy.get(second.id).cell);
+});
+
 test("recruited NPCs transfer across realms with identity and recruited state intact", () => {
   const map = world(); const timeSystem = createTimeSystem();
   const overground = createDynamicOccupancy(); const underground = createDynamicOccupancy();

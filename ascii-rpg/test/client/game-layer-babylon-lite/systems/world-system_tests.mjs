@@ -179,8 +179,10 @@ test("uses independent water coverage and depth walkability settings", () => {
   assert.equal(dry.waterCells.length, 0);
   assert.equal(wet.options.waterFillPercent, 100);
   assert.ok(wet.waterCells.length > 0);
-  for (const cell of wet.terrain.flat()) {
-    if (cell.depth === "shallow") assert.equal(cell.walkable, true);
+  const torchKeys = new Set(wet.torches.map((cell) => `${cell.x},${cell.y}`));
+  for (let y = 0; y < wet.rows; y += 1) for (let x = 0; x < wet.columns; x += 1) {
+    const cell = wet.terrain[y][x];
+    if (cell.depth === "shallow") assert.equal(cell.walkable, !torchKeys.has(`${x},${y}`));
     if (cell.depth === "medium" || cell.depth === "deep") {
       assert.equal(cell.walkable, false);
     }
@@ -209,7 +211,7 @@ test("uses restrained water frequency in default worlds", () => {
   assert.ok(waterWorlds.every((world) => world.waterLakes.length >= 1 && world.waterLakes.length <= 2));
 });
 
-test("distributes deterministic spaced torches on wall-adjacent walkable cells", () => {
+test("distributes deterministic spaced torches on wall-adjacent blocked cells", () => {
   const first = createWorld({ rows: 12, columns: 20, seed: "torches" });
   const second = createWorld({ rows: 12, columns: 20, seed: "torches" });
   const torches = first.torches;
@@ -221,7 +223,7 @@ test("distributes deterministic spaced torches on wall-adjacent walkable cells",
   assertMinimumTorchDistance(torches);
 
   for (const torch of torches) {
-    assert.equal(first.terrain[torch.y][torch.x].walkable, true);
+    assert.equal(first.terrain[torch.y][torch.x].walkable, false);
     assert.notDeepEqual(torch, first.playerStart);
     assert.ok([
       first.terrain[torch.y - 1]?.[torch.x],
@@ -250,7 +252,7 @@ test("restores a torch after the player leaves its cell", () => {
   assert.equal(getVisibleGlyph(world, torch), PLAYER_GLYPH);
   clearCharacter(world, torch);
   assert.equal(getVisibleGlyph(world, torch), TORCH_GLYPH);
-  assert.equal(isWalkableCell(world, torch), true);
+  assert.equal(isWalkableCell(world, torch), false);
 });
 
 test("restores an active pickup after the player leaves its cell", () => {
