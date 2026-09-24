@@ -36,6 +36,8 @@ export function createEnemySystem({
   timeSystem,
   occupancy,
   getPlayerState,
+  getNpcTarget = () => null,
+  damageNpc = () => {},
   damagePlayer = () => {},
   combatStatsSystem,
   resolveIncomingContact = null,
@@ -90,6 +92,13 @@ export function createEnemySystem({
 
     const player = getPlayerState(enemy.realm);
     if (!player?.alive || player.realm !== enemy.realm) return;
+    const npcTarget = getNpcTarget(enemy.realm, enemy.cell);
+    if (npcTarget?.cell && manhattanDistance(enemy.cell, npcTarget.cell) === 1) {
+      damageNpc(npcTarget.id, ENEMY_ATTACK_DAMAGE, { enemy, event });
+      log(`Enemy hit NPC for -${ENEMY_ATTACK_DAMAGE} Health`);
+      onChange();
+      return;
+    }
     if (manhattanDistance(enemy.cell, player.cell) === 1) {
       const defense = combatStatsSystem?.getDefenseSnapshot?.();
       const resolved = resolveIncomingContact?.({ enemy, event, maximumDamage: ENEMY_ATTACK_DAMAGE });

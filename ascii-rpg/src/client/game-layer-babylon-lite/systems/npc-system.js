@@ -1,13 +1,28 @@
 import { AStarUtility } from "../utilities/a-star-utility.js";
 
 export const NPC_GLYPH = "☺";
+export const NPC_DEAD_GLYPH = "☹";
+export const NPC_HEALTH = 100;
 export const NPC_ACTION_INTERVAL = 20;
+export const NPC_FOLLOW_DISTANCE = 3;
 const MIN_PATROL_DISTANCE = 15;
 const MAX_PATROL_DISTANCE = 20;
 const MAX_PATROL_DESTINATION_ATTEMPTS = 32;
 const PATROL_SEARCH_NODES_PER_SLICE = 64;
 
-export function createNpcSystem({ timeSystem, occupancy, worldFor, isWalkable, isStaticOccupied = () => false, randomFor = () => Math.random, getPlayerState = null, resolvePlayerContact = null, onChange = () => {}, deferredScheduler = null, isActive = () => true, isRealmActive = () => true } = {}) {
+export function createNpcSystem({ timeSystem, occupancy, worldFor, isWalkable, isStaticOccupied = () => false, randomFor = () => Math.random, getPlayerState = null, resolvePlayerContact = null, onDamage = () => {}, onChange = () => {}, deferredScheduler = null, isActive = () => true, isRealmActive = () => true } = {}) {
+  const getFollowTarget = (npc, player, world) => {
+    const behind = player.facing === "left" ? { x: 1, y: 0 } : { x: -1, y: 0 };
+    const targets = [
+      { x: player.cell.x + behind.x * NPC_FOLLOW_DISTANCE, y: player.cell.y },
+      { x: player.cell.x, y: player.cell.y - NPC_FOLLOW_DISTANCE },
+      { x: player.cell.x, y: player.cell.y + NPC_FOLLOW_DISTANCE },
+      { x: player.cell.x - behind.x * NPC_FOLLOW_DISTANCE, y: player.cell.y - 2 },
+      { x: player.cell.x - behind.x * NPC_FOLLOW_DISTANCE, y: player.cell.y + 2 },
+    ];
+    return targets.find((target) => world?.terrain?.[target.y]?.[target.x]?.walkable
+      && !isStaticOccupied(target, npc.realm)) ?? null;
+  };
   const patrolDestinations = (npc, world) => {
     const destinations = [];
     const knownDestinations = new Set();
@@ -71,6 +86,22 @@ export function createNpcSystem({ timeSystem, occupancy, worldFor, isWalkable, i
       return;
     }
     const player = getPlayerState?.(npc.realm);
+    if (npc.dead) return;
+    if (npc.recruited && player?.alive) {
+      const world = worldFor(npc.realm);
+      const target = getFollowTarget(npc, player, world);
+      const distance = Math.abs(npc.cell.x - player.cell.x) + Math.abs(npc.cell.y - player.cell.y);
+      if (target && distance > NPC_FOLLOW_DISTANCE) {
+        const path = AStarUtility.findPath(world, npc.cell, target, { isBlocked: (cell) => isStaticOccupied(cell, npc.realm) });
+        const next = path?.[1];
+        if (next && isWalkable(next, npc.realm) && occupancy.move(id, next)) {
+          const current = occupancy.get(id);
+          if (current && next.x !== current.cell.x) occupancy.update(id, { facing: next.x > current.cell.x ? "right" : "left" });
+          onChange();
+        }
+      }
+      return;
+    }
     if (player?.alive && Math.abs(npc.cell.x - player.cell.x) + Math.abs(npc.cell.y - player.cell.y) === 1) {
       const contact = resolvePlayerContact?.({ npc, player, event });
       if (contact?.handled) return;
@@ -92,7 +123,7 @@ export function createNpcSystem({ timeSystem, occupancy, worldFor, isWalkable, i
     const draft = { id, realm, home: Object.freeze({ ...home }) };
     const random = randomFor(draft, bornAtTime);
     const patrol = deferredScheduler || !world ? null : createPatrol(draft, world, random);
-    const npc = occupancy.claim({ id, type: "npc", glyph: NPC_GLYPH, realm, cell, home: Object.freeze({ ...home }), bornAtTime, destination: patrol?.destination ?? null, route: patrol?.route ?? Object.freeze([]), routeIndex: 0, returning: false, recruited: false, ...(deferredScheduler ? { patrolState: "pending", pendingActionAt: null } : {}) });
+    const npc = occupancy.claim({ id, type: "npc", glyph: NPC_GLYPH, realm, cell, home: Object.freeze({ ...home }), bornAtTime, destination: patrol?.destination ?? null, route: patrol?.route ?? Object.freeze([]), routeIndex: 0, returning: false, recruited: false, dead: false, health: NPC_HEALTH, maxHealth: NPC_HEALTH, ...(deferredScheduler ? { patrolState: "pending", pendingActionAt: null } : {}) });
     if (!npc) return null;
     if (!timeSystem.registerTickable(`npc:${id}`, (time, deltaTimeInMilliseconds) => simulate(id, { time, deltaTimeInMilliseconds }))) { occupancy.remove(id); return null; }
     if (deferredScheduler && world) {
@@ -134,6 +165,29 @@ export function createNpcSystem({ timeSystem, occupancy, worldFor, isWalkable, i
     onChange();
     return npc;
   };
+  const recruitNpc = (id) => {
+    const npc = occupancy.get(id);
+    if (!npc || npc.type !== "npc" || npc.dead) return false;
+    occupancy.update(id, { recruited: true, patrolState: "ready", route: Object.freeze([]), routeIndex: 0, returning: false });
+    onChange();
+    return true;
+  };
+  const damageNpc = (id, amount, { at = globalThis.performance?.now?.() ?? Date.now() } = {}) => {
+    const npc = occupancy.get(id);
+    if (!npc || npc.type !== "npc" || npc.dead || amount <= 0) return npc;
+    const applied = Math.min(npc.health, amount);
+    const health = npc.health - applied;
+    onDamage({ ...npc, health, previousHealth: npc.health }, at);
+    if (health <= 0) {
+      timeSystem.unregisterTickable(`npc:${id}`);
+      const dead = occupancy.update(id, { health: 0, dead: true, glyph: NPC_DEAD_GLYPH });
+      onChange();
+      return dead;
+    }
+    const updated = occupancy.update(id, { health });
+    onChange();
+    return updated;
+  };
   const removeNpc = (id) => {
     const removed = occupancy.get(id);
     if (!removed || removed.type !== "npc") return false;
@@ -142,5 +196,5 @@ export function createNpcSystem({ timeSystem, occupancy, worldFor, isWalkable, i
     timeSystem.unregisterTickable(`npc:${id}`);
     return Boolean(occupancy.remove(id));
   };
-  return Object.freeze({ addNpc, removeNpc, dispose() { for (const id of deferredJobs) deferredScheduler?.cancel(id); deferredJobs.clear(); } });
+  return Object.freeze({ addNpc, recruitNpc, damageNpc, removeNpc, dispose() { for (const id of deferredJobs) deferredScheduler?.cancel(id); deferredJobs.clear(); } });
 }

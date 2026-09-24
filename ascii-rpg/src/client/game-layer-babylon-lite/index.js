@@ -31,6 +31,7 @@ import {
   INITIAL_REPEAT_DELAY_MS,
   createViewport,
   getCellCenter,
+  getActionForKey,
   getPixelSnappedCellBounds,
   getCombinedDirection,
   getDirectionForKey,
@@ -45,7 +46,7 @@ import {
 import { normalizeCameraMode } from "../bridge-layer/camera.js";
 import { getFontOption, validateFontId } from "../bridge-layer/font.js";
 import { getPaletteEntryId, getPaletteEntryOffsets, getPaletteStyle, validatePaletteEntries } from "../bridge-layer/palette.js";
-import { PLAYER_MOVED_EVENTS, sendDialogSnapshot, sendKeySnapshot, sendPlayerMovedEvent } from "../bridge-layer/game-bridge.js";
+import { PLAYER_MOVED_EVENTS, sendDialogSnapshot, sendInputAction, sendKeySnapshot, sendPlayerMovedEvent } from "../bridge-layer/game-bridge.js";
 import {
   createGeneratedSeed,
   createRandom,
@@ -107,7 +108,7 @@ import { createStaminaSystem } from "./systems/stamina-system.js";
 import { createExperienceSystem } from "./systems/experience-system.js";
 import { calculatePlayerDamageTaken, createCombatStatsSystem } from "./systems/combat-stats-system.js";
 import { createCivilizationGroups, isCardinalDirection } from "./systems/civilization-system.js";
-import { createOverworldBuildings, getIndexedBuildingGlyph, getBuildingPresentationDirtyCells } from "./systems/building-system.js";
+import { createOverworldBuildings, getIndexedBuildingGlyph, getBuildingPresentationDirtyCells, HOME_ROOF_GLYPH } from "./systems/building-system.js";
 import { createDynamicOccupancy, getDynamicVisibleGlyph } from "./systems/dynamic-occupancy.js";
 import { createEnemySystem } from "./systems/enemy-system.js";
 import { createEnemySpawnerSystem, selectEnemySpawnerCells } from "./systems/enemy-spawner-system.js";
@@ -548,9 +549,13 @@ async function createGameSessionImplementation(container, initialPalette, initia
   const getOccupancyForWorld = (targetWorld = world) => dynamicOccupancies.get(targetWorld?.realmName) ?? null;
   const getClientVisibleRecord = (targetWorld, cell) => getOccupancyForWorld(targetWorld)?.getAt(cell) ?? null;
   const getBuildingOverlayGlyph = (targetWorld, cell) => getIndexedBuildingGlyph(targetWorld?.buildings, cell, targetWorld.playerCell ?? playerCell);
+  const getExteriorBuildingOverlayGlyph = (targetWorld, cell) => {
+    const glyph = getBuildingOverlayGlyph(targetWorld, cell);
+    return glyph === HOME_ROOF_GLYPH ? glyph : null;
+  };
   const getClientVisibleGlyph = (targetWorld, cell) => {
     const dynamicGlyph = getDynamicVisibleGlyph(getOccupancyForWorld(targetWorld), targetWorld, cell, () => null);
-    return dynamicGlyph ?? targetWorld?.characters?.[cell.y]?.[cell.x] ?? getBuildingOverlayGlyph(targetWorld, cell) ?? getVisibleGlyph(targetWorld, cell);
+    return dynamicGlyph ?? getExteriorBuildingOverlayGlyph(targetWorld, cell) ?? targetWorld?.characters?.[cell.y]?.[cell.x] ?? getBuildingOverlayGlyph(targetWorld, cell) ?? getVisibleGlyph(targetWorld, cell);
   };
   const markPlayable = () => {
     playable = true;
@@ -559,7 +564,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
   };
   const getClientVisibleGlyphKey = (targetWorld, cell) => {
     const record = getClientVisibleRecord(targetWorld, cell);
-    const glyph = record?.glyph ?? targetWorld?.characters?.[cell.y]?.[cell.x] ?? getBuildingOverlayGlyph(targetWorld, cell) ?? getVisibleGlyph(targetWorld, cell);
+    const glyph = record?.glyph ?? getExteriorBuildingOverlayGlyph(targetWorld, cell) ?? targetWorld?.characters?.[cell.y]?.[cell.x] ?? getBuildingOverlayGlyph(targetWorld, cell) ?? getVisibleGlyph(targetWorld, cell);
     return getOffsetGlyphKey(getFacingGlyphKey(glyph, record?.facing), paletteOffsets.get(glyph));
   };
   const setPlayerFacingFromDirection = (direction) => {
@@ -2365,8 +2370,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
             anchor: npc.cell,
             onResult: (value) => {
               if (value !== "accept") return;
-              npcSystem.removeNpc(npc.id);
-              scheduleEntityRender();
+              npcSystem.recruitNpc(npc.id);
             },
           });
         },
@@ -2501,9 +2505,12 @@ async function createGameSessionImplementation(container, initialPalette, initia
       return;
     }
     const movementKey = event.key.toLowerCase();
-    if (!getDirectionForKey(movementKey)) return;
+    const action = getActionForKey(movementKey);
+    if (!action || !getDirectionForKey(movementKey)) return;
+    const inputWasLocked = gameplayInputLocked;
+    sendInputAction(action);
     shiftHeld = heldModifierKeys.size > 0 || event.shiftKey;
-    if (gameplayInputLocked) return;
+    if (inputWasLocked) return;
     event.preventDefault();
     const wasHeld = heldKeys.has(movementKey);
     heldKeys.add(movementKey);
@@ -3159,7 +3166,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
       timeSystem,
       occupancy: overgroundOccupancy,
       worldFor: (realmName) => worldRealms.realms[realmName],
-      getPlayerState: (realmName) => activeRealm === realmName ? { realm: realmName, cell: playerCell, alive: !playerLifecycle.isDead() } : null,
+      getPlayerState: (realmName) => activeRealm === realmName ? { realm: realmName, cell: playerCell, facing: playerFacing, alive: !playerLifecycle.isDead() } : null,
       resolvePlayerContact: ({ npc, player, event }) => {
         characterState = createCharacterState({ ...characterState, gold: characterGold, keys: characterKeys });
         return resolveCharacterContact(characterState, createContactTarget({ kind: "npc", cell: player.cell, npc, event }), {});
@@ -3168,6 +3175,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
       isStaticOccupied,
       randomFor: (npc, tick) => createRandom(`${overground.options.seed}:${npc.id}:${tick}`),
       onChange: scheduleEntityRender,
+      onDamage: recordEntityDamage,
       deferredScheduler: deferredWorkScheduler,
       isActive: () => !disposed,
       isRealmActive: (realmName) => activeRealm === realmName,

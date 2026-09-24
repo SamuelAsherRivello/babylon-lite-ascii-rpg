@@ -176,10 +176,10 @@ test("a cardinal chest bump spawns a Heart even without pre-generated Hearts", (
   assert.equal(world.characters[5][5], "◇");
   system.collideAtCell({ x: 5, y: 4 }, { world });
   assert.equal(collectedHearts, 1);
-  assert.deepEqual(messages, ["Opened Chest"]);
+  assert.deepEqual(messages, ["Chest was opened", "Chest contained heart"]);
   assert.deepEqual(system.interactAtCell({ x: 5, y: 5 }, { world }), { handled: true, opened: false, object: chest });
   assert.equal(world.objects.length, 2);
-  assert.deepEqual(messages, ["Opened Chest"]);
+  assert.deepEqual(messages, ["Chest was opened", "Chest contained heart"]);
   assert.equal(system.collideAtCell({ x: 5, y: 5 }, { world }), null);
 });
 

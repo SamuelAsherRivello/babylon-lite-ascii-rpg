@@ -27,6 +27,15 @@ export function getDirectionForKey(key) {
   return keyDirections.get(key.toLowerCase()) ?? null;
 }
 
+export function getActionForKey(key) {
+  const normalizedKey = key.toLowerCase();
+  if (normalizedKey === "w" || normalizedKey === "arrowup") return "up";
+  if (normalizedKey === "a" || normalizedKey === "arrowleft") return "left";
+  if (normalizedKey === "s" || normalizedKey === "arrowdown") return "down";
+  if (normalizedKey === "d" || normalizedKey === "arrowright") return "right";
+  return null;
+}
+
 export function getRepeatInterval(isShiftHeld, isExhausted = false) {
   const interval = isShiftHeld ? SHIFT_REPEAT_INTERVAL_MS : REPEAT_INTERVAL_MS;
   return isExhausted ? interval * EXHAUSTED_REPEAT_MULTIPLIER : interval;

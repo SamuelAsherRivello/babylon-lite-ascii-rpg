@@ -61,6 +61,7 @@ let playerDeadSnapshot = false;
 let checkpointSnapshot = Object.freeze({ active: false, revision: 0 });
 let logSnapshot = [];
 let dialogSnapshot = null;
+const inputActionListeners = new Set();
 const timeListeners = new Set();
 const realmListeners = new Set();
 const realmDiscoveryListeners = new Set();
@@ -310,6 +311,11 @@ export function subscribeToKey(listener) { keyListeners.add(listener); return ()
 export function sendKeySnapshot(keys) {
   keySnapshot = Math.max(0, Math.floor(Number(keys) || 0));
   for (const listener of keyListeners) listener();
+}
+export function subscribeToInputAction(listener) { inputActionListeners.add(listener); return () => inputActionListeners.delete(listener); }
+export function sendInputAction(action) {
+  if (!["up", "down", "left", "right"].includes(action)) return;
+  for (const listener of inputActionListeners) listener(action);
 }
 export function getCharacterStateSnapshot() { return characterStateSnapshot; }
 export function subscribeToCharacterState(listener) { characterStateListeners.add(listener); return () => characterStateListeners.delete(listener); }

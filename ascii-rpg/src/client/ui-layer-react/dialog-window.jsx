@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { sendDialogResult } from "../bridge-layer/game-bridge.js";
+import { sendDialogResult, subscribeToInputAction } from "../bridge-layer/game-bridge.js";
 
 export function DialogWindow({ dialog }) {
   const [selected, setSelected] = useState(0);
@@ -9,25 +9,20 @@ export function DialogWindow({ dialog }) {
 
   useEffect(() => {
     if (!dialog) return undefined;
-    const handleKeyDown = (event) => {
-      if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+    const handleAction = (action) => {
+      if (action === "up" || action === "down") {
         if (choices.length > 1) {
-          event.preventDefault();
-          event.stopPropagation();
-          setSelected((current) => event.key === "ArrowUp"
+          setSelected((current) => action === "up"
             ? (current + choices.length - 1) % choices.length
             : (current + 1) % choices.length);
         }
         return;
       }
-      if (event.key === "ArrowRight" && choices[selected]) {
-        event.preventDefault();
-        event.stopPropagation();
+      if (action === "right" && choices[selected]) {
         sendDialogResult(choices[selected].value);
       }
     };
-    window.addEventListener("keydown", handleKeyDown, true);
-    return () => window.removeEventListener("keydown", handleKeyDown, true);
+    return subscribeToInputAction(handleAction);
   }, [choices, dialog, selected]);
 
   if (!dialog) return null;

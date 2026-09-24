@@ -248,7 +248,8 @@ export function createObjectSpawnerSystem({ catalog = [], eventSystem = null } =
         if (Array.isArray(world.pickups) && world.pickups !== world.objects) world.pickups.push(reward);
         world.characters[rewardCell.y][rewardCell.x] = reward.glyph;
       }
-      log("Opened Chest");
+      log("Chest was opened");
+      log("Chest contained heart");
       emit({ type: "chest-opened", objectId: object.id, objectType: object.type, cell: { ...object.cell }, rewardType: reward?.type ?? null, rewardCell });
       return { handled: true, opened: true, object, reward };
     }

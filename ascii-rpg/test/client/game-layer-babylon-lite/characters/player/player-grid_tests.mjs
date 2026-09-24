@@ -14,6 +14,7 @@ import {
   clampCell,
   createViewport,
   getCellCenter,
+  getActionForKey,
   getPixelSnappedCellBounds,
   getCenterCell,
   getCombinedDirection,
@@ -29,6 +30,18 @@ import {
   moveCell,
   moveWorldCell,
 } from "../../../../../src/client/game-layer-babylon-lite/characters/player/player-grid.js";
+
+test("normalizes WASD and arrows into the same semantic actions", () => {
+  assert.equal(getActionForKey("w"), "up");
+  assert.equal(getActionForKey("ArrowUp"), "up");
+  assert.equal(getActionForKey("a"), "left");
+  assert.equal(getActionForKey("ArrowLeft"), "left");
+  assert.equal(getActionForKey("s"), "down");
+  assert.equal(getActionForKey("ArrowDown"), "down");
+  assert.equal(getActionForKey("d"), "right");
+  assert.equal(getActionForKey("ArrowRight"), "right");
+  assert.equal(getActionForKey("Enter"), null);
+});
 
 test("creates remapped and upscaled logical viewports", () => {
   const oneToOne = createViewport({ screenWidth: 1280, screenHeight: 720 });
