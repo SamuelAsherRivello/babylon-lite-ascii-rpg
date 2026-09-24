@@ -118,6 +118,17 @@ export function resolveGenerationPlan(settings = { passes: [] }, realm = null) {
   })));
 }
 
+export function resolveGenerationFeature(settings = { passes: [] }, id) {
+  const feature = GENERATION_FEATURES.find((candidate) => candidate.id === id);
+  if (!feature) return undefined;
+  const selected = settings.passes?.find((pass) => pass.id === id);
+  return Object.freeze({
+    ...feature,
+    density: feature.configurable === false ? feature.density : selected?.density ?? feature.density,
+    enabled: feature.required === true ? true : selected?.enabled !== false,
+  });
+}
+
 export function getGenerationSemanticCards() { return GENERATION_SEMANTIC_CARDS; }
 
 validateGenerationRegistry();

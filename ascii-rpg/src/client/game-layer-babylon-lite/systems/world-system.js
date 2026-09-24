@@ -384,45 +384,6 @@ function getCenterPreferredStart(region, rows, columns) {
   return getCenterMostCell(region, rows, columns);
 }
 
-function createWaterPass({ region, rows, columns, random, waterFillPercent, waterLakeCount }) {
-  if (region.length === 0 || random() * 100 >= waterFillPercent) return { depths: new Map(), lakes: [] };
-
-  const lakes = [];
-  const scratch = createLakeScratch(rows, columns);
-  for (const cell of region) scratch.regionKeys[cellIndex(cell, columns)] = 1;
-  let selectedCount = 0;
-  let failedLakeAttempts = 0;
-  const lakeCount = waterLakeCount ?? (waterFillPercent >= 75 ? 3 : random() < 0.35 ? 2 : 1);
-  let preferredStart = getCenterPreferredStart(region, rows, columns);
-
-  while (lakes.length < lakeCount && failedLakeAttempts < 5000) {
-    const targetSize = getWaterLakeTargetSize(random, region.length - selectedCount);
-    if (targetSize < MIN_WATER_LAKE_SIZE) break;
-    const lake = selectLakeCells(region, rows, columns, random, targetSize, scratch, preferredStart);
-    if (lake.length < MIN_WATER_LAKE_SIZE) {
-      failedLakeAttempts += 1;
-      continue;
-    }
-    lakes.push(lake);
-    selectedCount += lake.length;
-    reserveLakeCells(lake, scratch.reserved, columns);
-    preferredStart = null;
-  }
-
-  const depths = new Map();
-  for (const lake of lakes) {
-    for (const [key, depth] of assignWaterDepths(lake, rows, columns)) depths.set(key, depth);
-  }
-  return { depths, lakes };
-}
-
-function createWalkabilityPass(terrainKinds, rows, columns) {
-  return createGrid(rows, columns, (x, y) => {
-    if (isBorderCell(x, y, rows, columns)) return false;
-    return terrainKinds[y][x] === "ground" || terrainKinds[y][x] === "shallowWater";
-  });
-}
-
 function createTerrainCells(terrainKinds, walkability) {
   return terrainKinds.map((row, y) => row.map((kind, x) => {
     const glyph = {
@@ -441,107 +402,6 @@ function createTerrainCells(terrainKinds, walkability) {
       alpha: 1,
     };
   }));
-}
-
-function createCharacters(rows, columns, start, torchCells) {
-  const characters = createGrid(rows, columns, () => null);
-  for (const torch of torchCells) characters[torch.y][torch.x] = TORCH_GLYPH;
-  characters[start.y][start.x] = PLAYER_GLYPH;
-  return characters;
-}
-
-function isTorchCandidate(terrain, x, y, rows, columns, start) {
-  if (!terrain[y][x].walkable || (x === start.x && y === start.y)) return false;
-  return CARDINAL_DIRECTIONS.some(({ x: offsetX, y: offsetY }) => {
-    const neighborX = x + offsetX;
-    const neighborY = y + offsetY;
-    return (
-      neighborX >= 0 && neighborX < columns &&
-      neighborY >= 0 && neighborY < rows &&
-      !terrain[neighborY][neighborX].walkable
-    );
-  });
-}
-
-function getObjectDistributionRule(objectType) {
-  const rule = OBJECT_DISTRIBUTION_RULES[objectType];
-  if (!rule) throw new RangeError(`Cannot distribute an unknown object type: ${objectType}.`);
-  return rule;
-}
-
-function collectObjectCandidates(objectType, terrain, start, rows, columns) {
-  if (objectType !== "torch") throw new RangeError(`Cannot collect candidates for object type: ${objectType}.`);
-  const candidates = [];
-  for (let y = 1; y < rows - 1; y += 1) {
-    for (let x = 1; x < columns - 1; x += 1) {
-      if (isTorchCandidate(terrain, x, y, rows, columns, start)) candidates.push({ x, y });
-    }
-  }
-  return candidates;
-}
-
-function isFarEnoughFromDistributedObjects(candidate, objects, minimumDistance) {
-  const minimumDistanceSquared = minimumDistance ** 2;
-  return objects.every((object) => {
-    const distanceX = candidate.x - object.x;
-    const distanceY = candidate.y - object.y;
-    return distanceX ** 2 + distanceY ** 2 >= minimumDistanceSquared;
-  });
-}
-
-function distributeObjectOfType(objectType, candidates, random, requestedCount) {
-  if (requestedCount <= 0) return [];
-  const { minimumDistance } = getObjectDistributionRule(objectType);
-  for (let index = candidates.length - 1; index > 0; index -= 1) {
-    const swapIndex = Math.floor(random() * (index + 1));
-    [candidates[index], candidates[swapIndex]] = [candidates[swapIndex], candidates[index]];
-  }
-  const distributedObjects = [];
-  for (const candidate of candidates) {
-    if (!isFarEnoughFromDistributedObjects(candidate, distributedObjects, minimumDistance)) continue;
-    distributedObjects.push(candidate);
-    if (distributedObjects.length === requestedCount) break;
-  }
-  return distributedObjects;
-}
-
-async function collectObjectCandidatesCooperative(objectType, terrain, start, rows, columns, checkpoint) {
-  if (objectType !== "torch") throw new RangeError(`Cannot collect candidates for object type: ${objectType}.`);
-  const candidates = [];
-  for (let y = 1; y < rows - 1; y += 1) {
-    for (let x = 1; x < columns - 1; x += 1) {
-      if (isTorchCandidate(terrain, x, y, rows, columns, start)) candidates.push({ x, y });
-    }
-    const pause = checkpoint();
-    if (pause) await pause;
-  }
-  return candidates;
-}
-
-async function distributeObjectOfTypeCooperative(objectType, candidates, random, requestedCount, checkpoint) {
-  if (requestedCount <= 0) return [];
-  const { minimumDistance } = getObjectDistributionRule(objectType);
-  for (let index = candidates.length - 1; index > 0; index -= 1) {
-    const swapIndex = Math.floor(random() * (index + 1));
-    [candidates[index], candidates[swapIndex]] = [candidates[swapIndex], candidates[index]];
-    if ((index & 1023) === 0) {
-      const pause = checkpoint();
-      if (pause) await pause;
-    }
-  }
-  const distributedObjects = [];
-  for (let index = 0; index < candidates.length; index += 1) {
-    const candidate = candidates[index];
-    if (isFarEnoughFromDistributedObjects(candidate, distributedObjects, minimumDistance)) {
-      distributedObjects.push(candidate);
-      if (distributedObjects.length === requestedCount) break;
-    }
-    if ((index & 1023) === 0) {
-      const pause = checkpoint();
-      if (pause) await pause;
-    }
-  }
-  return distributedObjects;
 }
 
 function isSameCell(first, second) {
@@ -587,7 +447,7 @@ export function createWorld({
     )));
     const region = caveRegion.filter((cell) => terrainKinds[cell.y][cell.x] !== "wall");
     const waterPass = waterEnabled
-      ? createWaterPass({ region, rows, columns, random, waterFillPercent, waterLakeCount })
+      ? createWaterPassLayer({ region, rows, columns, random, waterFillPercent, waterLakeCount })
       : { depths: new Map(), lakes: [] };
     for (const [key, depth] of waterPass.depths) {
       const [x, y] = key.split(",").map(Number);
@@ -612,14 +472,14 @@ export function createWorld({
     const start = playerStartMode === "broad"
       ? walkableRegion[Math.floor(random() * walkableRegion.length)]
       : getCenterMostCell(walkableRegion, rows, columns);
-    const torchCandidates = torchCount > 0 ? collectObjectCandidates("torch", terrain, start, rows, columns) : [];
-    const torchCells = distributeObjectOfType("torch", torchCandidates, random, torchCount);
+    const torchCandidates = torchCount > 0 ? collectObjectCandidatesLayer("torch", terrain, start, rows, columns, CARDINAL_DIRECTIONS) : [];
+    const torchCells = distributeObjectOfTypeLayer("torch", torchCandidates, random, torchCount, OBJECT_DISTRIBUTION_RULES);
 
     return {
       rows,
       columns,
       terrain,
-      characters: createCharacters(rows, columns, start, torchCells),
+      characters: createCharactersLayer(rows, columns, start, torchCells, PLAYER_GLYPH, TORCH_GLYPH),
       torches: torchCells,
       playerStart: start,
       generationPasses: [...GENERATION_PASSES],
@@ -732,40 +592,11 @@ async function getLargestRegionCooperative(grid, rows, columns, isBlocked, check
 }
 
 async function createWaterPassCooperative({ region, rows, columns, random, waterFillPercent, waterLakeCount, checkpoint, markPhase }) {
-  if (region.length === 0 || random() * 100 >= waterFillPercent) {
-    markPhase("water-lakes");
-    return { depths: new Map(), lakes: [] };
-  }
-
-  const lakes = [];
-  const scratch = createLakeScratch(rows, columns);
-  for (const cell of region) scratch.regionKeys[cellIndex(cell, columns)] = 1;
-  let selectedCount = 0;
-  let failedLakeAttempts = 0;
-  const lakeCount = waterLakeCount ?? (waterFillPercent >= 75 ? 3 : random() < 0.35 ? 2 : 1);
-  let preferredStart = getCenterPreferredStart(region, rows, columns);
-  while (lakes.length < lakeCount && failedLakeAttempts < 5000) {
-    const targetSize = getWaterLakeTargetSize(random, region.length - selectedCount);
-    if (targetSize < MIN_WATER_LAKE_SIZE) break;
-    const lake = selectLakeCells(region, rows, columns, random, targetSize, scratch, preferredStart);
-    if (lake.length < MIN_WATER_LAKE_SIZE) failedLakeAttempts += 1;
-    else {
-      lakes.push(lake);
-      selectedCount += lake.length;
-      reserveLakeCells(lake, scratch.reserved, columns);
-      preferredStart = null;
-    }
-    const pause = checkpoint();
-    if (pause) await pause;
-  }
+  const waterPass = createWaterPassLayer({ region, rows, columns, random, waterFillPercent, waterLakeCount });
   markPhase("water-lakes");
-  const depths = new Map();
-  for (const lake of lakes) {
-    for (const [key, depth] of assignWaterDepths(lake, rows, columns)) depths.set(key, depth);
-    const pause = checkpoint();
-    if (pause) await pause;
-  }
-  return { depths, lakes };
+  const pause = checkpoint();
+  if (pause) await pause;
+  return waterPass;
 }
 
 /** Complete-world client generator. Its checkpoints yield between bounded pieces
@@ -890,11 +721,11 @@ export async function createWorldCooperative({
     }, checkpoint);
     markPhase("terrain");
     const start = getCenterMostCell(walkableRegion, rows, columns);
-    const torchCandidates = torchCount > 0 ? await collectObjectCandidatesCooperative("torch", terrain, start, rows, columns, checkpoint) : [];
-    const torchCells = await distributeObjectOfTypeCooperative("torch", torchCandidates, random, torchCount, checkpoint);
-    const characters = await createGridCooperative(rows, columns, () => null, checkpoint);
-    for (const torch of torchCells) characters[torch.y][torch.x] = TORCH_GLYPH;
-    characters[start.y][start.x] = PLAYER_GLYPH;
+    const torchCandidates = torchCount > 0 ? collectObjectCandidatesLayer("torch", terrain, start, rows, columns, CARDINAL_DIRECTIONS) : [];
+    pause = checkpoint();
+    if (pause) await pause;
+    const torchCells = distributeObjectOfTypeLayer("torch", torchCandidates, random, torchCount, OBJECT_DISTRIBUTION_RULES);
+    const characters = createCharactersLayer(rows, columns, start, torchCells, PLAYER_GLYPH, TORCH_GLYPH);
     const waterCells = [];
     for (const [key] of waterPass.depths) {
       const [x, y] = key.split(",").map(Number);
@@ -981,30 +812,6 @@ function applyRealmProfile(realm, name) {
   return realm;
 }
 
-function addPairedStairs(realms, stairCount, seed) {
-  const [overground, underground] = [realms.Overground, realms.Underground];
-  if (stairCount === 0) {
-    for (const realm of Object.values(realms)) realm.stairs = [];
-    return [];
-  }
-  const candidates = [];
-  const torchKeys = new Set([...overground.torches, ...underground.torches].map(cell => cell.y * overground.columns + cell.x));
-  for (let y = 1; y < overground.rows - 1; y += 1) for (let x = 1; x < overground.columns - 1; x += 1) {
-    const cell = { x, y };
-    if (!overground.terrain[y][x].walkable || !underground.terrain[y][x].walkable ||
-      isSameCell(cell, overground.playerStart) || isSameCell(cell, underground.playerStart)) continue;
-    if (torchKeys.has(y * overground.columns + x)) continue;
-    candidates.push(cell);
-  }
-  const random = createRandom(`${seed}:stairs`);
-  const stairs = distributeObjectOfType("torch", candidates, random, stairCount);
-  for (const realm of Object.values(realms)) {
-    realm.stairs = stairs.map((cell) => ({ ...cell }));
-    for (const stair of realm.stairs) realm.characters[stair.y][stair.x] = STAIR_GLYPH;
-  }
-  return stairs;
-}
-
 export async function createWorldRealms({ rows, columns, torchCount = 3, stairCount = torchCount, seed = createGeneratedSeed(), initialRealm = "Overground", wallFillPercents, wallFillOffset = 0, smoothingIterationsByRealm, waterFillPercent = DEFAULT_WATER_FILL_PERCENT, waterLakeCount, minWalkableMultiplier = 1, playerStartMode = "center", caveEnabledByRealm, waterEnabled = true } = {}, scheduling = {}) {
   if (!Number.isInteger(stairCount) || stairCount < 0) throw new RangeError("stairCount must be a non-negative integer.");
   const realms = {};
@@ -1030,7 +837,7 @@ export async function createWorldRealms({ rows, columns, torchCount = 3, stairCo
     }, realmScheduling);
     realms[name] = applyRealmProfile(realm, name);
   }
-  const stairs = addPairedStairs(realms, stairCount, seed);
+  const stairs = addPairedStairsLayer(realms, stairCount, seed, createRandom, distributeObjectOfTypeLayer, OBJECT_DISTRIBUTION_RULES, STAIR_GLYPH);
   return { seed, realms, stairs };
 }
 
@@ -1048,3 +855,8 @@ import {
   isBorderCell,
   smoothGrid,
 } from "../generation-layers/grid-generation-layer.js";
+import { createWalkabilityPass } from "../generation-layers/walkability-generation-layer.js";
+import { createWaterPass as createWaterPassLayer } from "../generation-layers/water-generation-layer.js";
+import { createCharacters as createCharactersLayer } from "../generation-layers/player-start-generation-layer.js";
+import { collectObjectCandidates as collectObjectCandidatesLayer, distributeObjectOfType as distributeObjectOfTypeLayer } from "../generation-layers/object-generation-layer.js";
+import { addPairedStairs as addPairedStairsLayer } from "../generation-layers/civilization-generation-layer.js";

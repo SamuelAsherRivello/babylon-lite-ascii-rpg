@@ -1,14 +1,21 @@
+export const ITEM_HEALTH_MAXIMUM = 1000;
+
 const DEFAULT_SLOTS = [
-  Object.freeze({ slot: "Slot 01", id: "sword", glyph: "🗡", name: "Sword" }),
-  Object.freeze({ slot: "Slot 02", id: "shield", glyph: "🛡", name: "Shield" }),
-  Object.freeze({ slot: "Slot 03", id: "pickaxe", glyph: "⛏", name: "Pickaxe" }),
+  Object.freeze({ slot: "Slot 01", id: "sword", glyph: "🗡", name: "Sword", health: ITEM_HEALTH_MAXIMUM, maxHealth: ITEM_HEALTH_MAXIMUM }),
+  Object.freeze({ slot: "Slot 02", id: "shield", glyph: "🛡", name: "Shield", health: ITEM_HEALTH_MAXIMUM, maxHealth: ITEM_HEALTH_MAXIMUM }),
+  Object.freeze({ slot: "Slot 03", id: "pickaxe", glyph: "⛏", name: "Pickaxe", health: ITEM_HEALTH_MAXIMUM, maxHealth: ITEM_HEALTH_MAXIMUM }),
   null,
 ];
 
 export function createCharacterState({ slots = DEFAULT_SLOTS, gold = 0, keys = 0 } = {}) {
   const normalizedSlots = Object.freeze(Array.from({ length: 4 }, (_, index) => {
     const item = slots[index];
-    return item ? Object.freeze({ ...item, slot: `Slot 0${index + 1}` }) : null;
+    if (!item) return null;
+    const maxHealth = item.id === "sword" || item.id === "shield" || item.id === "pickaxe"
+      ? Math.max(1, Number(item.maxHealth) || ITEM_HEALTH_MAXIMUM)
+      : item.maxHealth;
+    const health = maxHealth ? Math.min(maxHealth, Math.max(0, Number.isFinite(Number(item.health)) ? Number(item.health) : maxHealth)) : item.health;
+    return Object.freeze({ ...item, slot: `Slot 0${index + 1}`, ...(maxHealth ? { health, maxHealth } : {}) });
   }));
   return Object.freeze({
     slots: normalizedSlots,
@@ -18,6 +25,16 @@ export function createCharacterState({ slots = DEFAULT_SLOTS, gold = 0, keys = 0
 }
 
 export const DEFAULT_CHARACTER_STATE = createCharacterState();
+
+export function damageCharacterItem(state, itemId, amount) {
+  const character = state ?? DEFAULT_CHARACTER_STATE;
+  const slots = character.slots.map((item) => {
+    if (!item || item.id !== itemId) return item;
+    const health = Math.max(0, item.health - Math.max(0, Number(amount) || 0));
+    return health === 0 ? null : { ...item, health };
+  });
+  return createCharacterState({ ...character, slots });
+}
 
 export function createContactTarget({ kind, cell, ...target }) {
   return Object.freeze({ kind, cell: Object.freeze({ x: cell.x, y: cell.y }), ...target });

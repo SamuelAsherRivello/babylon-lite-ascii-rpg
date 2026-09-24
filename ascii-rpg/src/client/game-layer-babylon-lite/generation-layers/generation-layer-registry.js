@@ -8,5 +8,6 @@ export {
   GENERATION_SEMANTIC_CARDS,
   getGenerationSemanticCards,
   resolveGenerationPlan,
+  resolveGenerationFeature,
   validateGenerationRegistry,
 } from "../world-feature-generation-registry.js";

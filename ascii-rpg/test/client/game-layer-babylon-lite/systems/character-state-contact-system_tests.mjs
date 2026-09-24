@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   createCharacterState,
   createContactTarget,
+  damageCharacterItem,
   DEFAULT_CHARACTER_STATE,
   normalizeContactTarget,
   resolveCharacterContact,
@@ -10,8 +11,17 @@ import {
 
 test("creates the default immutable ordered loadout", () => {
   assert.deepEqual(DEFAULT_CHARACTER_STATE.slots.map((item) => item?.id ?? null), ["sword", "shield", "pickaxe", null]);
+  assert.deepEqual(DEFAULT_CHARACTER_STATE.slots.slice(0, 3).map((item) => [item.health, item.maxHealth]), [[1000, 1000], [1000, 1000], [1000, 1000]]);
   assert.equal(Object.isFrozen(DEFAULT_CHARACTER_STATE), true);
   assert.equal(Object.isFrozen(DEFAULT_CHARACTER_STATE.slots), true);
+});
+
+test("wears durable items and removes them at zero health", () => {
+  const worn = damageCharacterItem(DEFAULT_CHARACTER_STATE, "sword", 125);
+  assert.equal(worn.slots[0].health, 875);
+  const broken = damageCharacterItem(worn, "sword", 875);
+  assert.equal(broken.slots[0], null);
+  assert.equal(broken.slots[1].health, 1000);
 });
 
 test("resolves the first capable slot and exactly one outcome", () => {

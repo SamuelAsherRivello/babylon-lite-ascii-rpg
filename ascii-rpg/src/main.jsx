@@ -44,6 +44,7 @@ void Promise.all([paletteReady, fontReady, generationSettingsReady])
     controller.subscribeToQuestEvent?.(sendQuestEvent);
     sendGoldSnapshot(controller.getGold?.() ?? getGoldSnapshot());
     sendCharacterStateSnapshot(controller.getCharacterState?.() ?? getCharacterStateSnapshot());
+    controller.subscribeToCharacterState?.(sendCharacterStateSnapshot);
     controller.subscribeToGold?.((gold) => sendGoldSnapshot(gold));
     sendHealthSnapshot(controller.getHealth?.() ?? getHealthSnapshot());
     controller.subscribeToHealth?.((health) => sendHealthSnapshot(health));

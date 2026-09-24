@@ -17,8 +17,8 @@ const LEGACY_PALETTE_SIZE = 224;
 const TEXT_SYMBOL_GLYPHS = [
   "↑", "↓", "←", "→", "↖", "↗", "↘", "↙", "↔", "↕", "⇧", "⇩", "↩", "↪",
   "♥", "♡", "♦", "♢", "♣", "♧", "♠", "♤",
-  "◇", "◆", "▲", "▼", "△", "▽", "○", "●", "◉", "◎", "⊙", "⌖", "⌑", "☆", "★", "✦", "✧", "✶",
-  "🪙", "💰", "🕯️", "🔥", "👤", "🕷️", "▤", "□", "▬", "▭", "▮", "▯", "⚿",
+  "▲", "▼", "△", "▽", "○", "●", "◉", "◎", "⊙", "⌖", "⌑", "☆", "★", "✦", "✧", "✶",
+  "🪙", "💰", "🕯️", "🔥", "👤", "🕷️", "🗃️", "📦", "▤", "□", "▬", "▭", "▮", "▯", "⚿",
   "♪", "♫", "☼", "☀", "☾", "☽", "☁", "☂", "☃", "❄", "♨",
   "⚔", "⚒", "⚙", "⚑", "⚐", "⚠", "☠", "☘", "⚖", "⚗", "⚕", "✝", "☯", "☺",
 ];
@@ -152,6 +152,7 @@ function normalizePaletteEntry(entry) {
 }
 
 function migrateLegacyPlayerGlyph(entry) {
+  if (entry?.unicode === "U+1F5C3 FE0F") return { ...entry, unicode: "U+1F5C3" };
   if (entry?.unicode !== LEGACY_PLAYER_GLYPH_ID) return entry;
   return { ...entry, unicode: PLAYER_GLYPH_ID, glyph: PLAYER_GLYPH };
 }

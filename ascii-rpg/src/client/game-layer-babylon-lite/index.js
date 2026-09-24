@@ -63,7 +63,7 @@ import {
   getWorldGenerationLayersEnabledFromSearch,
   getVisibleGlyph,
   normalizePlayerMarkers,
-} from "./systems/world-system.js";
+} from "./world-state-facade.js";
 import { createTimeSystem } from "./systems/time-system.js";
 import { FACING_LEFT, FACING_RIGHT, createGlyphRasterCanvas, createGlyphVisualCache, getFacingGlyph, getFacingGlyphKey, getGlyphOffsetsFromKey, getGlyphOffsetKey, getOffsetGlyphKey, rasterizeCompositeGlyph, rasterizeGlyph, rasterizeSolidGlyph } from "./glyph-visual-cache.js";
 import { getVisibleRegion, getVisibleSlot, shouldUpdateVisibleSprite } from "./visible-region.js";
@@ -114,7 +114,7 @@ import { createNpcSpawnerSystem, selectNpcSpawnerCells } from "./systems/npc-spa
 import { getMapviewLayout, getMapviewLightingFactor, getMapviewMarkers } from "./systems/mapview-renderer.js";
 import { resolvePlayerCombatTurn } from "./systems/combat-system.js";
 import { damageMountainTarget, getDiggableMountainTarget } from "./systems/mountain-system.js";
-import { createCharacterState, createContactTarget, DEFAULT_CHARACTER_STATE, resolveCharacterContact } from "./systems/character-state-contact-system.js";
+import { createCharacterState, createContactTarget, damageCharacterItem, DEFAULT_CHARACTER_STATE, resolveCharacterContact } from "./systems/character-state-contact-system.js";
 import { createHealthBarSystem } from "./systems/health-bar-system.js";
 import { createFloatingTextSystem } from "./systems/floating-text-system.js";
 import { getFloatingTextStyle } from "./systems/floating-text-renderer.js";
@@ -135,6 +135,9 @@ import { createRendererLifecycle } from "./renderer-lifecycle.js";
 import { createVisualInvalidation } from "./visual-invalidation.js";
 import { createWorldViewCache } from "./world-view-cache.js";
 import { resolveGenerationProfile } from "./generation-profile.js";
+import { createGameSession } from "./game-session.js";
+import { initializeDynamicGenerationFeatures } from "./generation-layers/dynamic-entity-generation-layer.js";
+import { createRenderSchedulingController } from "./game-session/render-scheduling-controller.js";
 import { resolveGenerationPlan } from "./world-feature-generation-registry.js";
 import { getWorldSizeDimensions } from "../world-size-settings.js";
 
@@ -169,6 +172,10 @@ const CAMERA_RESOLVE_INTENTS = Object.freeze({
 
 function getInitialSpriteLayerCapacity(viewport) {
   return Math.max(1, Math.min(INITIAL_SPRITE_LAYER_CAPACITY, viewport.rows * viewport.columns));
+}
+
+export function startGameLayer(...args) {
+  return createGameSession(createGameSessionImplementation, ...args);
 }
 
 function getMinimapGlyphBounds(glyph, x, y, cellWidth, cellHeight) {
@@ -255,7 +262,7 @@ function getTorchCountForViewport(viewport, seed) {
  * Starts the non-React Babylon Lite game client and returns its narrow UI bridge.
  * The bridge deliberately exposes only the UI-facing game state and controls.
  */
-export async function startGameLayer(container, initialPalette, initialFontId = "monospace", initialRealm = "Overground", initialCameraMode = "lock", generationSettings = { passes: [] }, initialZoom = DEFAULT_ZOOM) {
+async function createGameSessionImplementation(container, initialPalette, initialFontId = "monospace", initialRealm = "Overground", initialCameraMode = "lock", generationSettings = { passes: [] }, initialZoom = DEFAULT_ZOOM) {
   if (!container || !navigator.gpu) {
     throw new Error("Babylon Lite requires WebGPU; the game world was not started.");
   }
@@ -402,6 +409,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
   const questListeners = new Set();
   const questEventListeners = new Set();
   const goldListeners = new Set();
+  const characterStateListeners = new Set();
   let fogOfWar = null;
   let minimapZoom = 1;
   let viewOrigin = { x: 0, y: 0 };
@@ -512,6 +520,18 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
 
   const notifyGold = () => {
     for (const listener of goldListeners) listener(characterGold);
+  };
+
+  const notifyCharacterState = () => {
+    for (const listener of characterStateListeners) listener(characterState);
+  };
+
+  const wearCharacterItem = (itemId, amount) => {
+    if (!(Number(amount) > 0)) return;
+    const nextState = damageCharacterItem(characterState, itemId, amount);
+    if (nextState === characterState) return;
+    characterState = nextState;
+    notifyCharacterState();
   };
 
   const notifyKeys = () => {
@@ -2082,7 +2102,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     if (mapview) scheduleMapviewRender();
   };
 
-  const cancelScheduledRenders = () => {
+  const cancelScheduledRendersImplementation = () => {
     movementRenderScheduler?.cancel();
     if (minimapRenderFrame !== null) window.cancelAnimationFrame(minimapRenderFrame);
     if (mapviewRenderFrame !== null) window.cancelAnimationFrame(mapviewRenderFrame);
@@ -2095,6 +2115,8 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     healthBarAnimationFrame = null;
     floatingTextAnimationFrame = null;
   };
+  const renderSchedulingController = createRenderSchedulingController({ cancelAll: cancelScheduledRendersImplementation });
+  const cancelScheduledRenders = () => renderSchedulingController.cancel();
 
   const renderChangedWorldCells = (cells) => {
     if (!world || !renderer) return;
@@ -2261,6 +2283,8 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     }) : null;
     if (contact?.handled) {
       if (contact.outcome?.handled) {
+        if (contact.capability === "sword") wearCharacterItem("sword", contact.outcome.appliedDamage);
+        if (contact.capability === "pickaxe") wearCharacterItem("pickaxe", contact.outcome.appliedDamage);
         const doorInteraction = contact.outcome;
         if (doorInteraction.opened && doorInteraction.object.type === "door") {
           staticOccupancyIndexes.get(activeRealm)?.delete(attemptedCell.y * world.columns + attemptedCell.x);
@@ -2938,10 +2962,12 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
           event,
         }), {
           shield: {
-            canHandle: (target) => target.kind === "enemy-attack",
+            canHandle: (target, character) => target.kind === "enemy-attack" && character.slots.some((item) => item?.id === "shield"),
             handle: () => {
               const defense = combatStatsSystem?.getDefenseSnapshot?.();
-              return defense ? calculatePlayerDamageTaken(maximumDamage, defense.current, defense.maximum) : maximumDamage;
+              const damage = defense ? calculatePlayerDamageTaken(maximumDamage, defense.current, defense.maximum) : maximumDamage;
+              wearCharacterItem("shield", damage);
+              return damage;
             },
           },
           body: {
@@ -3032,10 +3058,10 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       "npc-spawner": initializeNpcSpawners,
       "enemy-spawner": initializeEnemySpawners,
     });
-    generationPlan
-      .filter((feature) => feature.owner === "dynamic" && feature.enabled)
-      .sort((left, right) => left.order - right.order)
-      .forEach((feature) => initializeDynamicFeature[feature.id]?.());
+    initializeDynamicGenerationFeatures(
+      generationPlan.filter((feature) => feature.owner === "dynamic" && feature.enabled),
+      initializeDynamicFeature,
+    );
     performanceMonitor.markMilestone("complete-visible-placement");
     timeSystem.dispatchCurrent("session-start");
     notifyGold();
@@ -3219,6 +3245,11 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     },
     getGold() { return characterGold; },
     getCharacterState() { return characterState; },
+    subscribeToCharacterState(listener) {
+      characterStateListeners.add(listener);
+      listener(characterState);
+      return () => characterStateListeners.delete(listener);
+    },
     subscribeToGold(listener) {
       goldListeners.add(listener);
       listener(characterGold);

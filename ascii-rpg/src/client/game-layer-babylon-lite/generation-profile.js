@@ -1,6 +1,9 @@
+import { resolveGenerationFeature } from "./generation-layers/generation-layer-registry.js";
+
 export function resolveGenerationProfile(generationSettings = { passes: [] }) {
-  const densityFor = (id) => generationSettings.passes?.find((pass) => pass.id === id)?.density ?? "Med";
-  const enabledFor = (id) => generationSettings.passes?.find((pass) => pass.id === id)?.enabled !== false;
+  const featureFor = (id) => resolveGenerationFeature(generationSettings, id);
+  const densityFor = (id) => featureFor(id)?.density ?? "Med";
+  const enabledFor = (id) => featureFor(id)?.enabled !== false;
   const densityMultiplier = (id, values) => values[densityFor(id)] ?? values.Med;
   return Object.freeze({
     caveWallFillPercents: Object.freeze({

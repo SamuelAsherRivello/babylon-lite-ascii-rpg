@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { normalizeGenerationSettings } from "../../../src/client/ui-layer-react/generation-settings-store.js";
+import { createDefaultGenerationSettings, isV2GenerationSettingsEnvironment, normalizeGenerationSettings } from "../../../src/client/ui-layer-react/generation-settings-store.js";
 import { isGenerationDiagnosticsEnabled } from "../../../src/client/generation-mode.js";
 import { resolveGenerationProfile } from "../../../src/client/game-layer-babylon-lite/generation-profile.js";
 import { getWorldSizeDimensions, WORLD_SIZE_DETAILS } from "../../../src/client/world-size-settings.js";
@@ -26,6 +26,24 @@ test("generation settings retain the ordered catalog and default malformed densi
   assert.equal(settings.passes.find((pass) => pass.id === "civilization-stairs").density, "Med");
   assert.equal(settings.passes.find((pass) => pass.id === "civilization-homes").density, "Med");
   assert.equal(settings.passes.find((pass) => pass.id === "player-position").configurable, false);
+});
+
+test("uses the V2 file-persistence environment contract", () => {
+  assert.equal(isV2GenerationSettingsEnvironment({ development: true }), true);
+  assert.equal(isV2GenerationSettingsEnvironment({ development: false }), false);
+});
+
+test("creates the World Generation Reset defaults without inheriting bundled tuning", () => {
+  const defaults = createDefaultGenerationSettings({ diagnostics: true });
+  assert.equal(defaults.worldSize, "Med");
+  assert.ok(defaults.passes.every((pass) => pass.enabled));
+  assert.ok(defaults.passes.filter((pass) => pass.configurable !== false).every((pass) => pass.density === "Med"));
+});
+
+test("V2 persistence validates and serializes the complete profile", async () => {
+  const viteConfig = await readFile(new URL("../../../../vite.config.js", import.meta.url), "utf8");
+  assert.ok(viteConfig.includes("typeof pass?.enabled !== \"boolean\""));
+  assert.ok(viteConfig.includes("worldSize: payload.worldSize"));
 });
 
 test("defaults the split wall controls to Medium when no prior choice is saved", () => {

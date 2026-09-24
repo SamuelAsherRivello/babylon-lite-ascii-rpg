@@ -13,7 +13,7 @@ import {
 } from "./font-store.js";
 import { DEFAULT_FONT_ID, FONT_OPTIONS, getFontOption } from "../bridge-layer/font.js";
 import { commitPalette, getPalette, subscribeToPalette } from "./palette-store.js";
-import { commitGenerationSettings, DENSITY_LEVELS, GENERATION_DENSITY_DETAILS, GENERATION_PASS_DESCRIPTIONS, GENERATION_PASS_REALMS, getGenerationSettings, normalizeGenerationSettings, subscribeToGenerationSettings } from "./generation-settings-store.js";
+import { commitGenerationSettings, createDefaultGenerationSettings, DENSITY_LEVELS, GENERATION_DENSITY_DETAILS, GENERATION_PASS_DESCRIPTIONS, GENERATION_PASS_REALMS, getGenerationSettings, normalizeGenerationSettings, subscribeToGenerationSettings } from "./generation-settings-store.js";
 import { WORLD_SIZE_DETAILS, WORLD_SIZE_LEVELS } from "../world-size-settings.js";
 import { getGenerationSemanticCards } from "../game-layer-babylon-lite/world-feature-generation-registry.js";
 import { sendGenerationSettingsPreview } from "../bridge-layer/game-bridge.js";
@@ -484,7 +484,8 @@ function CharacterDetails({
           {slots.slice(0, 2).map((item, index) => (
             <SettingTooltipTarget description={item?.name ?? CHARACTER_SLOT_LABELS[index]} onShow={onShowTooltip} onHide={onHideTooltip} key={CHARACTER_SLOT_LABELS[index]}>
               <div className="character_resource character_slot" aria-label={CHARACTER_SLOT_LABELS[index]}>
-                <span className="character_slot_text">{item?.glyph ?? CHARACTER_SLOT_LABELS[index]}</span>
+                <span className={`character_slot_text${item ? " character_item_icon" : ""}`}>{item?.glyph ?? CHARACTER_SLOT_LABELS[index]}</span>
+                {item ? <ItemHealthBar item={item} /> : null}
               </div>
             </SettingTooltipTarget>
           ))}
@@ -497,12 +498,32 @@ function CharacterDetails({
           {slots.slice(2, 4).map((item, index) => (
             <SettingTooltipTarget description={item?.name ?? CHARACTER_SLOT_LABELS[index + 2]} onShow={onShowTooltip} onHide={onHideTooltip} key={CHARACTER_SLOT_LABELS[index + 2]}>
               <div className="character_resource character_slot" aria-label={CHARACTER_SLOT_LABELS[index + 2]}>
-                <span className="character_slot_text">{item?.glyph ?? CHARACTER_SLOT_LABELS[index + 2]}</span>
+                <span className={`character_slot_text${item ? " character_item_icon" : ""}`}>{item?.glyph ?? CHARACTER_SLOT_LABELS[index + 2]}</span>
+                {item ? <ItemHealthBar item={item} /> : null}
               </div>
             </SettingTooltipTarget>
           ))}
         </div>
       </div>
+    </div>
+  );
+}
+
+function ItemHealthBar({ item }) {
+  const maximum = Math.max(1, Number(item.maxHealth) || 1000);
+  const current = Math.min(maximum, Math.max(0, Number(item.health) || 0));
+  const percent = (current / maximum) * 100;
+  return (
+    <div
+      className="character_item_health_bar"
+      role="meter"
+      aria-label={`${item.name} health`}
+      aria-valuemin="0"
+      aria-valuemax={maximum}
+      aria-valuenow={current}
+      style={{ "--character-item-health": `${percent}%` }}
+    >
+      <span className="character_item_health_current" />
     </div>
   );
 }
@@ -1529,7 +1550,7 @@ export function ProceduralSettingsWindow({ settings, randomSeed, onConfirm, onCl
 
   const resetDraft = () => {
     setError("");
-    startPreviewRedraw(() => setDraft(normalizeGenerationSettings({ passes: [] })));
+    startPreviewRedraw(() => setDraft(createDefaultGenerationSettings()));
   };
 
   const constrainPreviewViewport = (viewport, bounds) => {

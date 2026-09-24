@@ -30,7 +30,7 @@ test("creates every visible Code Page 437 entry, the bullet, and civilization te
   assert.ok(ids.has("32"));
   assert.ok(ids.has("254"));
   assert.ok(ids.has("U+2022"));
-  for (const id of ["U+2191", "U+2665", "U+25C7", "U+266A", "U+2694", "U+1F464", "U+1F577", "U+25AC", "U+25AD", "U+25AE", "U+25AF", "U+26BF", "U+263A"]) {
+  for (const id of ["U+2191", "U+2665", "U+1F5C3", "U+266A", "U+2694", "U+1F464", "U+1F577", "U+25AC", "U+25AD", "U+25AE", "U+25AF", "U+26BF", "U+263A"]) {
     assert.ok(ids.has(id));
   }
 });

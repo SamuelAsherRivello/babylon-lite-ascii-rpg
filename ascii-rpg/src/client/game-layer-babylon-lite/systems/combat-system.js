@@ -2,13 +2,19 @@ import { calculatePlayerAttackDamage } from "./combat-stats-system.js";
 
 export const PLAYER_BASE_DAMAGE = 20;
 
+function createCombatResult({ handled, killed, appliedDamage = 0 }) {
+  const result = { handled, killed };
+  Object.defineProperty(result, "appliedDamage", { value: appliedDamage, enumerable: false });
+  return Object.freeze(result);
+}
+
 export function resolvePlayerDynamicCollision(occupant, {
   enemySystem,
   spawnerSystem,
   mountainSystem,
   combatStatsSystem,
 } = {}) {
-  if (!occupant) return Object.freeze({ handled: false, killed: false });
+  if (!occupant) return createCombatResult({ handled: false, killed: false });
   const offense = combatStatsSystem?.getOffenseSnapshot?.();
   const damage = offense
     ? calculatePlayerAttackDamage(PLAYER_BASE_DAMAGE, offense.current, offense.maximum)
@@ -20,12 +26,16 @@ export function resolvePlayerDynamicCollision(occupant, {
     result = spawnerSystem?.damage(occupant.id, damage, { attacker: "player" });
   } else if (occupant.type === "mountain") {
     result = mountainSystem?.damage(occupant, damage, { attacker: "player" });
-    if (!result?.handled) return Object.freeze({ handled: false, killed: false });
-    return Object.freeze({ handled: true, killed: result.killed });
+    if (!result?.handled) return createCombatResult({ handled: false, killed: false });
+    return createCombatResult({ handled: true, killed: result.killed, appliedDamage: result.appliedDamage ?? 0 });
   } else {
-    return Object.freeze({ handled: false, killed: false });
+    return createCombatResult({ handled: false, killed: false });
   }
-  return Object.freeze({ handled: true, killed: result === null });
+  return createCombatResult({
+    handled: true,
+    killed: result === null,
+    appliedDamage: Math.max(0, (Number(occupant.health) || 0) - (Number(result?.health) || 0)),
+  });
 }
 
 export function resolvePlayerCombatTurn(occupant, {

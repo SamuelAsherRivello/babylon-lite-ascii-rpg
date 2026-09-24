@@ -15,7 +15,11 @@ const bundledSettings = Object.freeze({ version: 1, worldSize: DEFAULT_WORLD_SIZ
 export const GENERATION_SETTINGS_STORAGE_KEY = "babylon-lite-ascii-rpg.generation-settings";
 export const DENSITY_LEVELS = Object.freeze(["Low", "Med", "High"]);
 
-const isDevelopment = import.meta.env?.DEV === true;
+export function isV2GenerationSettingsEnvironment({ development = import.meta.env?.DEV === true } = {}) {
+  return development === true;
+}
+
+const isV2Environment = isV2GenerationSettingsEnvironment();
 
 export function normalizeGenerationSettings(value, { diagnostics = isGenerationDiagnosticsEnabled() } = {}) {
   const bundledById = new Map(bundledSettings.passes.map((pass) => [pass.id, pass]));
@@ -43,8 +47,15 @@ export function normalizeGenerationSettings(value, { diagnostics = isGenerationD
   });
 }
 
+export function createDefaultGenerationSettings({ diagnostics = isGenerationDiagnosticsEnabled() } = {}) {
+  return normalizeGenerationSettings({
+    worldSize: DEFAULT_WORLD_SIZE,
+    passes: GENERATION_FEATURES.map((pass) => ({ ...pass, density: "Med", enabled: true })),
+  }, { diagnostics });
+}
+
 function readLocalSettings() {
-  if (isDevelopment || typeof window === "undefined") return null;
+  if (isV2Environment || typeof window === "undefined") return null;
   try {
     const stored = window.localStorage.getItem(GENERATION_SETTINGS_STORAGE_KEY);
     return stored ? JSON.parse(stored) : null;
@@ -53,8 +64,8 @@ function readLocalSettings() {
   }
 }
 
-let settings = normalizeGenerationSettings(readLocalSettings() ?? (isDevelopment ? bundledSettings : undefined));
-if (!isDevelopment && typeof window !== "undefined" && !isGenerationDiagnosticsEnabled()) {
+let settings = normalizeGenerationSettings(readLocalSettings() ?? (isV2Environment ? bundledSettings : undefined));
+if (!isV2Environment && typeof window !== "undefined" && !isGenerationDiagnosticsEnabled()) {
   try { window.localStorage.setItem(GENERATION_SETTINGS_STORAGE_KEY, JSON.stringify(settings)); } catch { /* Read-only storage still permits play. */ }
 }
 const listeners = new Set();
@@ -73,13 +84,13 @@ async function loadRemoteSettings() {
   return response.json();
 }
 
-export const generationSettingsReady = isDevelopment && typeof window !== "undefined"
+export const generationSettingsReady = isV2Environment && typeof window !== "undefined"
   ? loadRemoteSettings().then(replaceSettings).catch(() => {})
   : Promise.resolve();
 
 export async function commitGenerationSettings(nextSettings) {
   const next = normalizeGenerationSettings(nextSettings);
-  if (isDevelopment) {
+  if (isV2Environment) {
     const response = await fetch("/__ascii_generation_settings", {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(next),
     });

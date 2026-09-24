@@ -29,9 +29,9 @@ let goldSnapshot = 0;
 let keySnapshot = 0;
 let characterStateSnapshot = Object.freeze({
   slots: Object.freeze([
-    Object.freeze({ slot: "Slot 01", id: "sword", glyph: "🗡", name: "Sword" }),
-    Object.freeze({ slot: "Slot 02", id: "shield", glyph: "🛡", name: "Shield" }),
-    Object.freeze({ slot: "Slot 03", id: "pickaxe", glyph: "⛏", name: "Pickaxe" }),
+    Object.freeze({ slot: "Slot 01", id: "sword", glyph: "🗡", name: "Sword", health: 1000, maxHealth: 1000 }),
+    Object.freeze({ slot: "Slot 02", id: "shield", glyph: "🛡", name: "Shield", health: 1000, maxHealth: 1000 }),
+    Object.freeze({ slot: "Slot 03", id: "pickaxe", glyph: "⛏", name: "Pickaxe", health: 1000, maxHealth: 1000 }),
     null,
   ]),
   gold: 0,
