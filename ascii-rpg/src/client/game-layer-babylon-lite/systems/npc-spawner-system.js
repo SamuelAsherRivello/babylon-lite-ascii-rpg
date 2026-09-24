@@ -1,5 +1,5 @@
 import { NPC_GLYPH } from "./npc-system.js";
-import { createCardinalDistanceField } from "./enemy-system.js";
+import { AStarUtility } from "../utilities/a-star-utility.js";
 
 export const NPC_SPAWNER_GLYPH = "N";
 export const NPC_SPAWNER_COUNTS = Object.freeze({ Low: 4, Med: 8, High: 12 });
@@ -11,6 +11,7 @@ function candidates(world) {
   const blocked = new Set([key(world.playerStart)]);
   for (const object of world.objects ?? []) if (object.active !== false && object.cell) blocked.add(key(object.cell));
   for (const group of world.civilizationGroups ?? []) for (const cell of [...(group.cells ?? []), ...(group.keys ?? []), group.door].filter(Boolean)) blocked.add(key(cell));
+  for (const building of world.buildings ?? []) for (const cell of [...(building.cells ?? []), building.key].filter(Boolean)) blocked.add(key(cell));
   for (let y = 0; y < (world.characters?.length ?? 0); y += 1) for (let x = 0; x < world.characters[y].length; x += 1) if (world.characters[y][x] !== null) blocked.add(`${x},${y}`);
   return [...Array(world.rows).keys()].flatMap((y) => [...Array(world.columns).keys()].map((x) => ({ x, y }))).filter((cell) => cell.x > 0 && cell.y > 0 && cell.x < world.columns - 1 && cell.y < world.rows - 1 && world.terrain[cell.y][cell.x].walkable && !blocked.has(key(cell)));
 }
@@ -18,7 +19,7 @@ function candidates(world) {
 export function selectNpcSpawnerCells(world, { realm, count = NPC_SPAWNER_COUNT, random = Math.random } = {}) {
   if (realm !== "Overground" || !world?.terrain) return Object.freeze({ cells: Object.freeze([]) });
   const validCells = candidates(world);
-  const distanceField = createCardinalDistanceField(world, world.playerStart);
+  const distanceField = AStarUtility.createDistanceField(world, world.playerStart);
   const nearbyCells = validCells.filter((cell) => distanceField.getDistance(cell) > 0 && distanceField.getDistance(cell) <= 50);
   if (nearbyCells.length === 0) return Object.freeze({ cells: Object.freeze([]) });
   const first = nearbyCells[Math.min(nearbyCells.length - 1, Math.floor(random() * nearbyCells.length))];
@@ -41,7 +42,7 @@ export function createNpcSpawnerSystem({ timeSystem, occupancy, spawnNpc, worldF
   const hasPatrolRoute = (cell, realm) => {
     const world = worldFor(realm);
     if (!world) return true;
-    const field = createCardinalDistanceField(world, cell, { isBlocked: (candidate) => isStaticOccupied(candidate, realm), maxDistance: 20 });
+    const field = AStarUtility.createDistanceField(world, cell, { isBlocked: (candidate) => isStaticOccupied(candidate, realm), maxDistance: 20 });
     for (let y = Math.max(0, cell.y - 20); y <= Math.min(world.rows - 1, cell.y + 20); y += 1) for (let x = Math.max(0, cell.x - 20); x <= Math.min(world.columns - 1, cell.x + 20); x += 1) {
       if ([15, 20].includes(field.getDistance({ x, y }))) return true;
     }

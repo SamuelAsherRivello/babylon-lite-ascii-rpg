@@ -43,6 +43,9 @@ function collectStaticCellKeys(world) {
     for (const cell of [...(group.cells ?? []), ...(group.keys ?? [])]) keys.add(cellKey(cell));
     if (group.door) keys.add(cellKey(group.door));
   }
+  for (const building of world?.buildings ?? []) {
+    for (const cell of [...(building.cells ?? []), building.key].filter(Boolean)) keys.add(cellKey(cell));
+  }
   for (let y = 0; y < (world?.characters?.length ?? 0); y += 1) {
     for (let x = 0; x < world.characters[y].length; x += 1) {
       if (world.characters[y][x] !== null) keys.add(cellKey({ x, y }));

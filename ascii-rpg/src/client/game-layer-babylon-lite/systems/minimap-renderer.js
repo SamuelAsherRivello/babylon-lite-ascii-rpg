@@ -1,6 +1,7 @@
 import { getPaletteStyle } from "../../bridge-layer/palette.js";
 import { MINIMAP_WORLD_SCALE, getMinimapCoverage, isDiscovered } from "./fog-of-war-system.js";
 import { getVisibleGlyph } from "./world-system.js";
+import { AStarUtility, CARDINAL_DIRECTIONS as ROUTE_DIRECTIONS } from "../utilities/a-star-utility.js";
 
 export const MINIMAP_MARKER_DEPTHS = Object.freeze({
   base: 0,
@@ -47,59 +48,28 @@ function getMinimapMarkerCell(cell) {
   };
 }
 
-const NAVIGATION_DIRECTIONS = Object.freeze([
-  Object.freeze({ x: 0, y: -1 }),
-  Object.freeze({ x: 1, y: 0 }),
-  Object.freeze({ x: 0, y: 1 }),
-  Object.freeze({ x: -1, y: 0 }),
-]);
-
-function navigationCellKey(cell) {
-  return `${cell.x},${cell.y}`;
-}
-
-function getPath(parents, cell) {
-  const path = [];
-  for (let key = navigationCellKey(cell); key !== null; key = parents.get(key)) {
-    const [x, y] = key.split(",").map(Number);
-    path.push({ x, y });
-  }
-  return path.reverse();
-}
-
 /** Finds the closest reachable quest navigation target by grid distance. */
 export function findNearestNavigationTarget(world, playerCell, navigation) {
   if (!world || !playerCell || !["nearest-stairs", "nearest-key", "nearest-door"].includes(navigation)) return null;
+  const field = AStarUtility.createDistanceField(world, playerCell);
   const objects = (world.objects ?? []).filter((object) => object.active && (
     navigation === "nearest-key" ? object.type === "key" : object.type === "door" && !object.open
   ));
-  const objectByCell = new Map(objects.map((object) => [navigationCellKey(object.cell), object]));
-  const stairsByCell = new Map((world.stairs ?? []).map((stair) => [navigationCellKey(stair), stair]));
-  const parents = new Map([[navigationCellKey(playerCell), null]]);
-  const queue = [{ ...playerCell }];
+  const candidates = navigation === "nearest-stairs"
+    ? (world.stairs ?? []).map((cell) => ({ cell, pathCell: cell }))
+    : navigation === "nearest-key"
+      ? objects.map((object) => ({ cell: object.cell, pathCell: object.cell }))
+      : objects.flatMap((door) => ROUTE_DIRECTIONS.map((direction) => ({
+        cell: door.cell, pathCell: { x: door.cell.x + direction.x, y: door.cell.y + direction.y },
+      })));
+  const target = candidates
+    .map((candidate) => ({ ...candidate, distance: field.getDistance(candidate.pathCell) }))
+    .filter((candidate) => candidate.distance >= 0)
+    .sort((left, right) => left.distance - right.distance || left.pathCell.y - right.pathCell.y || left.pathCell.x - right.pathCell.x)[0];
+  if (!target) return null;
+  const path = AStarUtility.findPath(world, playerCell, target.pathCell);
+  return path ? { cell: { ...target.cell }, path } : null;
 
-  for (let cursor = 0; cursor < queue.length; cursor += 1) {
-    const cell = queue[cursor];
-    const cellKey = navigationCellKey(cell);
-    const directTarget = navigation === "nearest-stairs"
-      ? stairsByCell.get(cellKey)
-      : navigation === "nearest-key" ? objectByCell.get(cellKey) : null;
-    if (directTarget) return { cell: { ...directTarget.cell ?? directTarget }, path: getPath(parents, cell) };
-    if (navigation === "nearest-door") {
-      for (const direction of NAVIGATION_DIRECTIONS) {
-        const door = objectByCell.get(navigationCellKey({ x: cell.x + direction.x, y: cell.y + direction.y }));
-        if (door) return { cell: { ...door.cell }, path: getPath(parents, cell) };
-      }
-    }
-    for (const direction of NAVIGATION_DIRECTIONS) {
-      const next = { x: cell.x + direction.x, y: cell.y + direction.y };
-      const nextKey = navigationCellKey(next);
-      if (parents.has(nextKey) || !world.terrain?.[next.y]?.[next.x]?.walkable) continue;
-      parents.set(nextKey, cellKey);
-      queue.push(next);
-    }
-  }
-  return null;
 }
 
 /**

@@ -18,7 +18,21 @@
       "IsLevelSpawned": true,
       "consequence": { "id": "health", "amount": 2 },
       "logText": "Collected +2 Health from Heart",
-      "distribution": { "minCount": 10, "maxCount": 14, "minimumDistance": 3 }
+      "distribution": { "minCount": 10, "maxCount": 14, "minimumDistance": 3 },
+      "generation": { "passId": "object-heart", "realms": ["Overground", "Underground"], "seedNamespace": "heart:placement" }
+    },
+    {
+      "type": "chest",
+      "name": "Treasure Chest",
+      "glyph": "◆",
+      "openGlyph": "◇",
+      "IsPickup": false,
+      "IsLevelSpawned": true,
+      "consequence": { "id": "chest-reward" },
+      "logText": null,
+      "distribution": { "minimumDistance": 3, "maximumDistance": 50 },
+      "rewards": [{ "type": "heart", "weight": 100 }],
+      "generation": { "passId": "object-chest", "realms": ["Overground", "Underground"], "seedNamespace": "chest:placement" }
     },
     {
       "type": "torch",
@@ -28,7 +42,8 @@
       "IsLevelSpawned": true,
       "consequence": { "id": "torch-light" },
       "logText": null,
-      "distribution": { "minCount": 10, "maxCount": 14, "minimumDistance": 25, "rule": "wall-adjacent" }
+      "distribution": { "minCount": 10, "maxCount": 14, "minimumDistance": 25, "rule": "wall-adjacent" },
+      "generation": { "passId": "object-torch", "realms": ["Overground", "Underground"], "seedNamespace": "torch:placement" }
     },
     {
       "type": "trap",
@@ -38,7 +53,8 @@
       "IsLevelSpawned": true,
       "consequence": { "id": "health", "amount": -25 },
       "logText": "Lost -25 Health from Trap",
-      "distribution": { "minCount": 10, "maxCount": 14, "minimumDistance": 3 }
+      "distribution": { "minCount": 10, "maxCount": 14, "minimumDistance": 3 },
+      "generation": { "passId": "object-trap", "realms": ["Overground", "Underground"], "seedNamespace": "trap:placement" }
     },
     {
       "type": "stairs",
@@ -48,7 +64,8 @@
       "IsLevelSpawned": true,
       "consequence": { "id": "realm-transition" },
       "logText": null,
-      "distribution": { "minCount": 10, "maxCount": 14, "pairedRealms": true }
+      "distribution": { "minCount": 10, "maxCount": 14, "pairedRealms": true },
+      "generation": { "passId": "civilization-stairs", "realms": ["Overground", "Underground"], "seedNamespace": "stairs", "pairedRealms": true }
     },
     {
       "type": "key",
@@ -89,10 +106,11 @@
       "name": "Fireplace",
       "glyph": "🔥",
       "IsPickup": false,
-      "IsLevelSpawned": false,
+      "IsLevelSpawned": true,
       "consequence": { "id": "checkpoint" },
       "logText": null,
-      "distribution": { "minCount": 10, "maxCount": 14, "minimumDistance": 3 }
+      "distribution": { "minCount": 10, "maxCount": 14, "minimumDistance": 3 },
+      "generation": { "passId": "object-fireplace", "realms": ["Underground"], "requires": ["civilization-doors"], "seedNamespace": "fireplace:placement" }
     }
   ]
 }

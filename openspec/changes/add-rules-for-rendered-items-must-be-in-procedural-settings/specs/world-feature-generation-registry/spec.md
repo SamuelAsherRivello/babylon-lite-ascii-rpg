@@ -32,6 +32,10 @@ Every generated world feature SHALL have a corresponding persisted Procedural se
 - **WHEN** a fixed-baseline generated feature is registered
 - **THEN** the Procedural catalog SHALL show its ordered pass identity without offering an unsupported density selection
 
+#### Scenario: Copied defaults do not couple feature settings
+- **WHEN** a generated feature's initial density values are copied from another feature
+- **THEN** each feature SHALL retain a distinct settings identity and distribution profile, and a later change to either feature SHALL NOT change the other
+
 ### Requirement: Feature-plan validation
 Before a realm is published as playable, the generation plan SHALL reject a generated feature that lacks its required declaration, references an unknown owner layer or prerequisite, has a cyclic dependency, or lacks a required Procedural settings registration. On failure, the system SHALL report the feature identity and missing or invalid declaration.
 

@@ -1,0 +1,138 @@
+{
+  "releases": [
+    {
+      "version": "0.0.19",
+      "items": [
+        "Procedural generation controls",
+        "Developer map tools",
+        "Tutorial flow polish",
+        "Floating combat text",
+        "Responsive UI resilience"
+      ]
+    },
+    {
+      "version": "0.0.18",
+      "items": [
+        "Developer mapview",
+        "Camera recalculation"
+      ]
+    },
+    {
+      "version": "0.0.17",
+      "items": [
+        "Glyph offset controls",
+        "Realm discovery"
+      ]
+    },
+    {
+      "version": "0.0.16",
+      "items": [
+        "Performance monitoring",
+        "Enemy spawn system"
+      ]
+    },
+    {
+      "version": "0.0.15",
+      "items": [
+        "Enemy spawning",
+        "Stamina combat stats",
+        "Single player lifecycle",
+        "Movement performance"
+      ]
+    },
+    {
+      "version": "0.0.14",
+      "items": [
+        "Gameplay settings",
+        "Object spawning",
+        "Underground civilization",
+        "Quest progression",
+        "Persistent fog"
+      ]
+    },
+    {
+      "version": "0.0.13",
+      "items": [
+        "Draggable lighting window",
+        "Fogged minimap",
+        "GPU lighting",
+        "World view rendering",
+        "HUD layout"
+      ]
+    },
+    {
+      "version": "0.0.12",
+      "items": [
+        "UI stylesheet organization"
+      ]
+    },
+    {
+      "version": "0.0.11",
+      "items": [
+        "Movement tutorial",
+        "Quest system",
+        "Character information",
+        "Minimap rendering",
+        "UI layout components"
+      ]
+    },
+    {
+      "version": "0.0.10",
+      "items": [
+        "Aspect testing",
+        "Minimap markers",
+        "Minimap zoom",
+        "Toast notifications",
+        "Platform defaults"
+      ]
+    },
+    {
+      "version": "0.0.9",
+      "items": [
+        "Release maintenance"
+      ]
+    },
+    {
+      "version": "0.0.8",
+      "items": [
+        "World realms",
+        "Fogged minimap",
+        "GPU light pass",
+        "Lighting window",
+        "Mobile support"
+      ]
+    },
+    {
+      "version": "0.0.7",
+      "items": [
+        "Palette font choices",
+        "Game time system"
+      ]
+    },
+    {
+      "version": "0.0.6",
+      "items": [
+        "ASCII palette",
+        "Babylon Lite runtime"
+      ]
+    },
+    {
+      "version": "0.0.5",
+      "items": [
+        "Procedural level generation"
+      ]
+    },
+    {
+      "version": "0.0.4",
+      "items": [
+        "Player grid movement"
+      ]
+    },
+    {
+      "version": "0.0.3",
+      "items": [
+        "Initial project release"
+      ]
+    }
+  ]
+}

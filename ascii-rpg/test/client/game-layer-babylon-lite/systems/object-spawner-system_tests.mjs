@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import objectData from "../../../../src/client/game-layer-babylon-lite/data/object_data.json" with { type: "json" };
 import paletteData from "../../../../src/client/game-layer-babylon-lite/data/palette_data.json" with { type: "json" };
-import { createObjectSpawnerSystem, selectObjectCells, validateObjectPalette } from "../../../../src/client/game-layer-babylon-lite/systems/object-spawner-system.js";
+import { createObjectSpawnerSystem, placeDeclaredLevelObjects, selectObjectCells, validateObjectPalette } from "../../../../src/client/game-layer-babylon-lite/systems/object-spawner-system.js";
 import { createGameplayEventSystem } from "../../../../src/client/game-layer-babylon-lite/systems/gameplay-event-system.js";
 
 function createWorld(size = 24) {
@@ -17,8 +17,8 @@ function createWorld(size = 24) {
 test("the object catalog is palette-backed and declares pickup and level-spawn ownership", () => {
   assert.equal(validateObjectPalette(objectData.objects, paletteData.entries), true);
   assert.deepEqual(objectData.objects.map((object) => [object.type, object.IsPickup, object.IsLevelSpawned]), [
-    ["gold", true, false], ["heart", true, true], ["torch", false, true], ["trap", false, true], ["stairs", false, true],
-    ["key", true, false], ["fence", false, false], ["door", false, false], ["fireplace", false, false],
+    ["gold", true, false], ["heart", true, true], ["chest", false, true], ["torch", false, true], ["trap", false, true], ["stairs", false, true],
+    ["key", true, false], ["fence", false, false], ["door", false, false], ["fireplace", false, true],
   ]);
   assert.equal(objectData.objects.find((object) => object.type === "torch").glyph, "🕯️");
   assert.equal(validateObjectPalette([{ type: "door", name: "Door", glyph: "█", openGlyph: "□", IsPickup: false, IsLevelSpawned: false }], paletteData.entries), true);
@@ -44,6 +44,14 @@ test("object placement is seeded, spaced, and excludes the player cell", () => {
   assert.deepEqual(first, second);
   assert.equal(first.some((cell) => cell.x === 12 && cell.y === 12), false);
   assert.ok(first.every((cell, index) => first.slice(index + 1).every((other) => Math.hypot(cell.x - other.x, cell.y - other.y) >= 3)));
+});
+
+test("chest placement stays within its configured player-start radius", () => {
+  const world = createWorld(128);
+  const start = { x: 64, y: 64 };
+  const cells = selectObjectCells(world, start, 3, () => 0.25, { maximumDistance: 50 });
+  assert.equal(cells.length, 3);
+  assert.ok(cells.every((cell) => Math.hypot(cell.x - start.x, cell.y - start.y) <= 50));
 });
 
 test("pickups disappear after collision while persistent objects remain", () => {
@@ -99,6 +107,33 @@ test("closed doors require a key and open without moving the player", () => {
   ]);
 });
 
+test("a cardinal chest bump opens once and can choose a Heart on a diagonal surrounding cell", () => {
+  const world = createWorld();
+  const system = createObjectSpawnerSystem({ catalog: [
+    { type: "heart", name: "Heart", glyph: "♥", IsPickup: true, IsLevelSpawned: true },
+    { type: "chest", name: "Treasure Chest", glyph: "◆", openGlyph: "◇", IsPickup: false, IsLevelSpawned: true, rewards: [{ type: "heart", weight: 100 }] },
+  ] });
+  const chest = system.addObject({ id: "chest-1", type: "chest", cell: { x: 5, y: 5 }, realm: world });
+  world.characters[5][5] = "◆";
+  world.characters[4][4] = "█";
+  const rewards = [];
+  const opened = system.interactAtCell({ x: 5, y: 5 }, {
+    world,
+    playerCell: { x: 4, y: 5 },
+    random: () => 0,
+    spawnChestReward: (reward) => { rewards.push(reward); return { type: reward.type, glyph: "♥" }; },
+  });
+  assert.equal(opened.handled, true);
+  assert.equal(opened.opened, true);
+  assert.equal(chest.open, true);
+  assert.equal(world.characters[5][5], "◇");
+  assert.deepEqual(rewards, [{ type: "heart", cell: { x: 5, y: 4 }, chest }]);
+  assert.equal(world.characters[4][5], "♥");
+  assert.deepEqual(system.interactAtCell({ x: 5, y: 5 }, { world }), { handled: true, opened: false, object: chest });
+  assert.deepEqual(rewards, [{ type: "heart", cell: { x: 5, y: 4 }, chest }]);
+  assert.equal(system.collideAtCell({ x: 5, y: 5 }, { world }), null);
+});
+
 test("key collection is applied once and emits its exact collection log", () => {
   const system = createObjectSpawnerSystem({ catalog: [
     { type: "key", name: "Key", glyph: "⚿", IsPickup: true, IsLevelSpawned: false, logText: "The key was collected." },
@@ -110,6 +145,21 @@ test("key collection is applied once and emits its exact collection log", () => 
   system.collideAtCell({ x: 4, y: 4 });
   assert.equal(keys, 1);
   assert.deepEqual(logs, ["The key was collected."]);
+});
+
+test("a Building Key and Door retain their shared identity through the normal lifecycle", () => {
+  const world = createWorld();
+  const system = createObjectSpawnerSystem({ catalog: [
+    { type: "key", name: "Key", glyph: "⚿", IsPickup: true, IsLevelSpawned: false },
+    { type: "door", name: "Door", glyph: "█", openGlyph: "□", IsPickup: false, IsLevelSpawned: false },
+  ] });
+  const key = system.addObject({ id: "home-1-key", type: "key", cell: { x: 4, y: 4 }, buildingId: "home-1" });
+  const door = system.addObject({ id: "home-1-door", type: "door", cell: { x: 5, y: 4 }, buildingId: "home-1", realm: world });
+  world.characters[4][5] = "█";
+  assert.equal(key.buildingId, "home-1");
+  assert.equal(door.buildingId, "home-1");
+  assert.equal(system.interactAtCell({ x: 5, y: 4 }, { world, keyCount: 1, spendKey: () => true }).opened, true);
+  assert.equal(world.terrain[4][5].walkable, true);
 });
 
 test("Object Spawner publishes generic pickup events without quest ownership", () => {
@@ -125,4 +175,13 @@ test("Object Spawner publishes generic pickup events without quest ownership", (
   assert.deepEqual(events.map(({ type, pickupType }) => ({ type, pickupType })), [
     { type: "pickup-collected", pickupType: "gold" },
   ]);
+});
+
+test("declared level-spawned catalog objects join distribution without a startup call", () => {
+  const world = createWorld(); world.playerStart = { x: 12, y: 12 };
+  const catalog = [{ type: "fixture", name: "Fixture", glyph: "F", IsPickup: false, IsLevelSpawned: true, distribution: { minimumDistance: 1 }, generation: { realms: ["Overground"] } }];
+  const placements = placeDeclaredLevelObjects({ world, start: world.playerStart, catalog, features: [{ id: "object-fixture", objectType: "fixture" }], realm: "Overground", countFor: () => 1, randomFor: () => () => 0 });
+  assert.equal(placements.length, 1);
+  assert.equal(placements[0].definition.type, "fixture");
+  assert.equal(placements[0].cells.length, 1);
 });

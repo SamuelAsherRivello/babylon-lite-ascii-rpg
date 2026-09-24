@@ -24,12 +24,13 @@ function validateCatalog(catalog) {
   return catalog;
 }
 
-function collectCandidates(world, start, reserved = new Set(), rule = null) {
+function collectCandidates(world, start, reserved = new Set(), rule = null, maximumDistance = Infinity) {
   const candidates = [];
   for (let y = 1; y < world.rows - 1; y += 1) {
     for (let x = 1; x < world.columns - 1; x += 1) {
       const cell = { x, y };
       if (!world.terrain?.[y]?.[x]?.walkable || sameCell(cell, start) || reserved.has(key(cell))) continue;
+      if (Math.hypot(cell.x - start.x, cell.y - start.y) > maximumDistance) continue;
       if (world.characters?.[y]?.[x] !== null && world.characters?.[y]?.[x] !== undefined) continue;
       if (rule === "wall-adjacent" && ![
         { x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 },
@@ -48,8 +49,8 @@ function shuffle(values, random) {
   return values;
 }
 
-export function selectObjectCells(world, start, count, random = Math.random, { minimumDistance = 3, rule = null, reserved = new Set() } = {}) {
-  const candidates = shuffle(collectCandidates(world, start, reserved, rule), random);
+export function selectObjectCells(world, start, count, random = Math.random, { minimumDistance = 3, rule = null, reserved = new Set(), maximumDistance = Infinity } = {}) {
+  const candidates = shuffle(collectCandidates(world, start, reserved, rule, maximumDistance), random);
   const selected = [];
   const minimumDistanceSquared = minimumDistance ** 2;
   for (const candidate of candidates) {
@@ -59,6 +60,24 @@ export function selectObjectCells(world, start, count, random = Math.random, { m
     if (selected.length >= count) break;
   }
   return selected;
+}
+
+export function placeDeclaredLevelObjects({ world, start, catalog = [], features = [], realm, countFor = () => 0, randomFor = () => Math.random, reserved = new Set() } = {}) {
+  const definitions = new Map(catalog.map((object) => [object.type, object]));
+  const placements = [];
+  for (const feature of features) {
+    const definition = definitions.get(feature.objectType);
+    if (!definition?.IsLevelSpawned || !definition.generation || !feature.objectType) continue;
+    if (realm && !definition.generation.realms?.includes(realm)) continue;
+    const cells = selectObjectCells(world, start, countFor(feature, definition), randomFor(feature, definition), {
+      minimumDistance: definition.distribution?.minimumDistance ?? 3,
+      rule: definition.distribution?.rule ?? null,
+      maximumDistance: definition.distribution?.maximumDistance ?? Infinity,
+      reserved,
+    });
+    placements.push(Object.freeze({ feature, definition, cells: Object.freeze(cells) }));
+  }
+  return Object.freeze(placements);
 }
 
 export function selectPickupCells(world, start, distances, random = Math.random, tolerance = 8) {
@@ -88,7 +107,7 @@ export function createObjectSpawnerSystem({ catalog = [], eventSystem = null } =
     eventSystem?.publish?.(frozen);
   };
 
-  const addObject = ({ id, type, cell, glyph = null, openGlyph = null, orientation = null, effect = () => {}, realm = null } = {}) => {
+  const addObject = ({ id, type, cell, glyph = null, openGlyph = null, orientation = null, buildingId = null, effect = () => {}, realm = null } = {}) => {
     const definition = definitions.get(type);
     if (!definition) throw new RangeError(`Unknown object type: ${type}.`);
     if (!cell || !Number.isInteger(cell.x) || !Number.isInteger(cell.y)) throw new TypeError("An object needs an integer cell.");
@@ -103,6 +122,7 @@ export function createObjectSpawnerSystem({ catalog = [], eventSystem = null } =
       alternateGlyph: definition.alternateGlyph ?? null,
       alternateOpenGlyph: definition.alternateOpenGlyph ?? null,
       orientation,
+      buildingId,
       open: false,
       IsPickup: definition.IsPickup,
       IsLevelSpawned: definition.IsLevelSpawned,
@@ -124,6 +144,7 @@ export function createObjectSpawnerSystem({ catalog = [], eventSystem = null } =
       minimumDistance: distribution.minimumDistance ?? 3,
       rule: distribution.rule,
       reserved,
+      maximumDistance: distribution.maximumDistance,
     });
     return cells.map((cell, index) => addObject({
       id: `${idPrefix}-${index + 1}`,
@@ -160,9 +181,45 @@ export function createObjectSpawnerSystem({ catalog = [], eventSystem = null } =
     keyCount = 0,
     spendKey = () => false,
     log = () => {},
+    playerCell = null,
+    random = Math.random,
+    spawnChestReward = () => null,
   } = {}) => {
     const object = getActiveObjectAtCell(cell, { world });
-    if (!object || object.type !== "door" || object.open) return null;
+    if (!object) return null;
+    if (object.type === "chest" && object.open) return { handled: true, opened: false, object };
+    if (object.open) return null;
+    if (object.type === "chest") {
+      object.open = true;
+      object.glyph = object.openGlyph ?? object.glyph;
+      if (world?.characters?.[cell.y]) world.characters[cell.y][cell.x] = object.glyph;
+      const neighbors = [
+        { x: cell.x - 1, y: cell.y - 1 }, { x: cell.x, y: cell.y - 1 }, { x: cell.x + 1, y: cell.y - 1 },
+        { x: cell.x - 1, y: cell.y }, { x: cell.x + 1, y: cell.y },
+        { x: cell.x - 1, y: cell.y + 1 }, { x: cell.x, y: cell.y + 1 }, { x: cell.x + 1, y: cell.y + 1 },
+      ].filter((candidate) => world?.terrain?.[candidate.y]?.[candidate.x]?.walkable
+        && !sameCell(candidate, playerCell)
+        && (world.characters?.[candidate.y]?.[candidate.x] === null
+          || world.characters?.[candidate.y]?.[candidate.x] === undefined));
+      const rewards = object.definition.rewards ?? [];
+      const totalWeight = rewards.reduce((total, reward) => total + (reward.weight ?? 0), 0);
+      let rewardType = null;
+      if (totalWeight > 0) {
+        let roll = random() * totalWeight;
+        for (const reward of rewards) {
+          roll -= reward.weight ?? 0;
+          if (roll < 0) { rewardType = reward.type; break; }
+        }
+      }
+      const rewardCell = neighbors.length > 0 ? neighbors[Math.floor(random() * neighbors.length)] : null;
+      const reward = rewardType && rewardCell ? spawnChestReward({ type: rewardType, cell: rewardCell, chest: object }) : null;
+      if (reward && rewardCell && world?.characters?.[rewardCell.y]) {
+        world.characters[rewardCell.y][rewardCell.x] = reward.glyph ?? definitions.get(rewardType)?.glyph ?? null;
+      }
+      emit({ type: "chest-opened", objectId: object.id, objectType: object.type, cell: { ...object.cell }, rewardType: reward?.type ?? null, rewardCell });
+      return { handled: true, opened: true, object, reward };
+    }
+    if (object.type !== "door") return null;
     if (keyCount <= 0 || !spendKey()) {
       log("The door is locked.");
       return { handled: true, opened: false, object };
@@ -185,6 +242,7 @@ export function createObjectSpawnerSystem({ catalog = [], eventSystem = null } =
   const collideAtCell = (cell, context = {}) => {
     const object = getActiveObjectAtCell(cell, context);
     if (!object) return null;
+    if (object.type === "chest" && object.open) return null;
     if (object.IsPickup) {
       object.active = false;
       if (context.world?.characters?.[object.cell.y]?.[object.cell.x] === object.glyph) {

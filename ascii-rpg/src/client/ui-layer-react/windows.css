@@ -236,6 +236,32 @@ html[data-presentation-aspect="portrait"] .tutorial_window {
   max-width: 720px;
 }
 
+.changelog_window {
+  overflow: hidden;
+}
+
+.changelog_body {
+  height: calc(100% - 58px);
+  overflow: auto;
+}
+
+.changelog_release + .changelog_release {
+  margin-top: 1rem;
+}
+
+.changelog_release h2,
+.changelog_release ul {
+  margin: 0;
+}
+
+.changelog_release h2 {
+  font-size: 12pt;
+}
+
+.changelog_release ul {
+  padding-left: 1.25rem;
+}
+
 .gameplay_settings_hint {
   margin: 0 0 1rem;
   color: #bdbdbd;

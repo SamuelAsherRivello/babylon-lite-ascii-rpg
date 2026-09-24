@@ -52,6 +52,7 @@ import {
   GOLD_GLYPH,
   HEALTH_GLYPH,
   TRAP_GLYPH,
+  CLOSED_CHEST_GLYPH,
   WALL_GLYPH,
   MOUNTAIN_GLYPH,
   TORCH_GLYPH,
@@ -87,11 +88,12 @@ import {
   isDiscovered,
 } from "./systems/fog-of-war-system.js";
 import { findNearestNavigationTarget, getMinimapEdgeIndicators, getMinimapIndicatorSafeArea, getMinimapMarkers, getMinimapWorldCellGraphic, MINIMAP_INDICATOR_MIN_SIZE, MINIMAP_INDICATOR_SAFE_INSET } from "./systems/minimap-renderer.js";
+import { AStarUtility } from "./utilities/a-star-utility.js";
 import { canHandleMinimapScale, getMinimapCellLayout, getMinimapCellSize, getNextMinimapScale, MINIMAP_SCALE_LEVELS } from "./systems/minimap-zoom.js";
 import { createTransitionSystem, TRANSITION_PHASES } from "./systems/transition-system.js";
 import questData from "./data/quest_data.json";
 import objectData from "./data/object_data.json";
-import { createObjectSpawnerSystem, selectObjectCells } from "./systems/object-spawner-system.js";
+import { createObjectSpawnerSystem, placeDeclaredLevelObjects, selectObjectCells } from "./systems/object-spawner-system.js";
 import { createQuestManager } from "./systems/quest-system.js";
 import { createLogSystem } from "./systems/log-system.js";
 import { createGameplayEventSystem } from "./systems/gameplay-event-system.js";
@@ -101,6 +103,7 @@ import { createStaminaSystem } from "./systems/stamina-system.js";
 import { createExperienceSystem } from "./systems/experience-system.js";
 import { createCombatStatsSystem } from "./systems/combat-stats-system.js";
 import { createCivilizationGroups, isCardinalDirection } from "./systems/civilization-system.js";
+import { createOverworldBuildings, getBuildingGlyph } from "./systems/building-system.js";
 import { createDynamicOccupancy, getDynamicVisibleGlyph } from "./systems/dynamic-occupancy.js";
 import { createEnemySystem } from "./systems/enemy-system.js";
 import { createEnemySpawnerSystem, selectEnemySpawnerCells } from "./systems/enemy-spawner-system.js";
@@ -125,6 +128,7 @@ import { attachReplacementRendererLayer } from "./systems/renderer-layer-handoff
 import { createCoalescedFrameScheduler } from "./movement-render-scheduler.js";
 import { PERFORMANCE_SCENARIOS, performanceMonitor } from "./performance-monitor.js";
 import { resolveGenerationProfile } from "./generation-profile.js";
+import { resolveGenerationPlan } from "./world-feature-generation-registry.js";
 
 const GLYPHS = PROJECT_MAP_GLYPHS;
 const FOG_BACKING_GLYPH = "\u0000fog-backing";
@@ -144,6 +148,11 @@ const REALM_TRANSITION_OPEN_MS = 500;
 const INITIAL_TRANSITION_OPEN_MS = 1000;
 const INITIAL_SPRITE_LAYER_CAPACITY = 4096;
 const STARTING_FOG_CLEAR_ZOOM = 5;
+const PROCEDURAL_PREVIEW_OBJECT_ICON_SIZE = Object.freeze({
+  minimumPixels: 12,
+  maximumPixels: 36,
+  cellMultiplier: 6,
+});
 const CAMERA_RESOLVE_INTENTS = Object.freeze({
   initial: "initial",
   activeMode: "active-mode",
@@ -247,7 +256,8 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
 
   validatePaletteEntries(initialPalette);
   validateFontId(initialFontId);
-  const { caveWallFillPercents, caveSmoothingIterationsByRealm, walkabilityWallOffset, waterFillPercent, waterLakeCount, minWalkableMultiplier, objectCountMultipliers, torchCountMultiplier, fireplaceDensity, civilizationChanceMultiplier, maxEnemySpawners, npcSpawnerCount, playerStartMode } = resolveGenerationProfile(generationSettings);
+  const { caveWallFillPercents, caveSmoothingIterationsByRealm, walkabilityWallOffset, waterFillPercent, waterLakeCount, minWalkableMultiplier, objectCountMultipliers, chestCount, torchCountMultiplier, stairsCountMultiplier, fireplaceDensity, civilizationChanceMultiplier, homeChanceMultiplier, maxEnemySpawners, npcSpawnerCount, playerStartMode } = resolveGenerationProfile(generationSettings);
+  const generationPlan = resolveGenerationPlan(generationSettings);
   const canvas = document.createElement("canvas");
   canvas.id = "game_canvas";
   canvas.setAttribute("aria-label", "Ascii RPG game");
@@ -422,12 +432,16 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
 
   const getOccupancyForWorld = (targetWorld = world) => dynamicOccupancies.get(targetWorld?.realmName) ?? null;
   const getClientVisibleRecord = (targetWorld, cell) => getOccupancyForWorld(targetWorld)?.getAt(cell) ?? null;
-  const getClientVisibleGlyph = (targetWorld, cell) => getDynamicVisibleGlyph(
-    getOccupancyForWorld(targetWorld), targetWorld, cell, getVisibleGlyph,
-  );
+  const getBuildingOverlayGlyph = (targetWorld, cell) => (targetWorld?.buildings ?? [])
+    .map((building) => getBuildingGlyph(building, cell, targetWorld.playerCell ?? playerCell))
+    .find((glyph) => glyph !== null) ?? null;
+  const getClientVisibleGlyph = (targetWorld, cell) => {
+    const dynamicGlyph = getDynamicVisibleGlyph(getOccupancyForWorld(targetWorld), targetWorld, cell, () => null);
+    return dynamicGlyph ?? targetWorld?.characters?.[cell.y]?.[cell.x] ?? getBuildingOverlayGlyph(targetWorld, cell) ?? getVisibleGlyph(targetWorld, cell);
+  };
   const getClientVisibleGlyphKey = (targetWorld, cell) => {
     const record = getClientVisibleRecord(targetWorld, cell);
-    const glyph = record?.glyph ?? getVisibleGlyph(targetWorld, cell);
+    const glyph = record?.glyph ?? targetWorld?.characters?.[cell.y]?.[cell.x] ?? getBuildingOverlayGlyph(targetWorld, cell) ?? getVisibleGlyph(targetWorld, cell);
     return getOffsetGlyphKey(getFacingGlyphKey(glyph, record?.facing), paletteOffsets.get(glyph));
   };
   const setPlayerFacingFromDirection = (direction) => {
@@ -805,12 +819,15 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     const controller = new AbortController();
     settingsMapGenerationController = controller;
     const profile = resolveGenerationProfile(previewSettings);
+    const previewPlan = resolveGenerationPlan(previewSettings, previewRealm === "Underground" ? "Underground" : "Overground");
+    const previewSeedNamespace = (id) => previewPlan.find((feature) => feature.id === id)?.seedNamespace ?? id;
     let previewRealms;
     try {
       previewRealms = await createWorldRealms({
         rows: 192,
         columns: 192,
         torchCount: Math.round(12 * profile.torchCountMultiplier),
+        stairCount: Math.max(0, Math.round(getObjectDistributionCount("stairs", seedMode === "0" ? "settings-map-view:0" : `settings-map-view:${sessionSeed ?? "preview"}`) * profile.stairsCountMultiplier)),
         seed: seedMode === "0" ? "settings-map-view:0" : `settings-map-view:${sessionSeed ?? "preview"}`,
         initialRealm: previewRealm === "Underground" ? "Underground" : "Overground",
         wallFillPercents: profile.caveWallFillPercents,
@@ -832,7 +849,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     const enemySpawnerMarkers = previewRealm === "Underground"
       ? selectEnemySpawnerCells(previewWorld, {
         realm: "Underground",
-        random: createRandom(`${previewWorld.options.seed}:procedural-settings-marker`),
+        random: createRandom(`${previewWorld.options.seed}:${previewSeedNamespace("enemy-spawner")}`),
         maxSpawners: profile.maxEnemySpawners,
       }).cells.map((cell) => ({ ...cell, kind: "enemy-spawner" }))
       : [];
@@ -840,7 +857,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       ? selectNpcSpawnerCells(previewWorld, {
         realm: "Overground",
         count: profile.npcSpawnerCount,
-        random: createRandom(`${previewWorld.options.seed}:procedural-settings-npc-spawner`),
+        random: createRandom(`${previewWorld.options.seed}:${previewSeedNamespace("npc-spawner")}`),
       }).cells.map((cell) => ({ ...cell, kind: "npc-spawner", glyph: "☺", color: "#48c774" }))
       : [];
     // Like trap markers, these make Civilization's otherwise subtle door and key
@@ -848,23 +865,34 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     // the preview world or its live-generation counterpart.
     const civilizationMarkers = previewRealm === "Underground"
       ? createCivilizationGroups(previewWorld, {
-        random: createRandom(`${previewWorld.options.seed}:procedural-settings-civilization`),
+        random: createRandom(`${previewWorld.options.seed}:${previewSeedNamespace("civilization-doors")}`),
         chance: Math.min(0.9, (import.meta.env.DEV ? 0.5 : 0.1) * profile.civilizationChanceMultiplier),
       }).flatMap((group) => [
         { ...group.door, kind: "civilization-door", primary: true, glyph: "█", color: "#d6a55a" },
         ...group.keys.map((cell) => ({ ...cell, kind: "civilization-key", primary: false, glyph: "⚿", color: "#ffd166" })),
       ])
       : [];
+    const homeMarkers = previewRealm === "Overground"
+      ? createOverworldBuildings(previewWorld, {
+        random: createRandom(`${previewWorld.options.seed}:${previewSeedNamespace("civilization-homes")}`),
+        chance: Math.min(0.9, (import.meta.env.DEV ? 0.5 : 0.1) * profile.homeChanceMultiplier),
+      }).map((building) => ({ ...building.origin, kind: "home", glyph: "^", color: "#d6a55a" }))
+      : [];
     const heartCount = Math.max(0, Math.round(getObjectDistributionCount("heart", previewWorld.options.seed) * profile.objectCountMultipliers.heart));
-    const heartCells = selectObjectCells(previewWorld, previewWorld.playerStart, heartCount, createRandom(`${previewWorld.options.seed}:procedural-settings-heart`), { minimumDistance: 3, reserved: new Set() });
+    const heartCells = selectObjectCells(previewWorld, previewWorld.playerStart, heartCount, createRandom(`${previewWorld.options.seed}:${previewSeedNamespace("object-heart")}`), { minimumDistance: 3, reserved: new Set() });
     const trapCount = Math.max(0, Math.round(getObjectDistributionCount("trap", previewWorld.options.seed) * profile.objectCountMultipliers.trap));
-    const trapCells = selectObjectCells(previewWorld, previewWorld.playerStart, trapCount, createRandom(`${previewWorld.options.seed}:procedural-settings-trap`), { minimumDistance: 3, reserved: new Set(heartCells.map((cell) => `${cell.x},${cell.y}`)) });
+    const trapCells = selectObjectCells(previewWorld, previewWorld.playerStart, trapCount, createRandom(`${previewWorld.options.seed}:${previewSeedNamespace("object-trap")}`), { minimumDistance: 3, reserved: new Set(heartCells.map((cell) => `${cell.x},${cell.y}`)) });
+    const chestCells = selectObjectCells(previewWorld, previewWorld.playerStart, profile.chestCount, createRandom(`${previewWorld.options.seed}:${previewSeedNamespace("object-chest")}`), {
+      minimumDistance: 3,
+      maximumDistance: 50,
+      reserved: new Set([...heartCells, ...trapCells].map((cell) => `${cell.x},${cell.y}`)),
+    });
     const fireplaceCount = previewRealm === "Underground"
       ? Math.max(0, Math.round(getObjectDistributionCount("fireplace", previewWorld.options.seed) * profile.objectCountMultipliers.fireplace))
       : 0;
     const fireplaceCells = selectObjectCells(previewWorld, previewWorld.playerStart,
       fireplaceCount,
-      createRandom(`${previewWorld.options.seed}:procedural-settings-fireplace:${profile.fireplaceDensity}`), {
+      createRandom(`${previewWorld.options.seed}:${previewSeedNamespace("object-fireplace")}`), {
         minimumDistance: 3,
         reserved: new Set([...heartCells, ...trapCells].map((cell) => `${cell.x},${cell.y}`)),
       });
@@ -872,7 +900,10 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       ...enemySpawnerMarkers,
       ...npcSpawnerMarkers,
       ...civilizationMarkers,
+      ...homeMarkers,
+      ...(previewWorld.stairs ?? []).map((cell) => ({ ...cell, kind: "stairs", glyph: STAIR_GLYPH, color: "#f5f5f5" })),
       ...heartCells.map((cell) => ({ ...cell, kind: "heart", glyph: "♥", color: "#ff4f6d" })),
+      ...chestCells.map((cell) => ({ ...cell, kind: "chest", glyph: CLOSED_CHEST_GLYPH, color: "#ffff00" })),
       ...trapCells.map((cell) => ({ ...cell, kind: "trap", glyph: "☠", color: "#ffd166" })),
       ...fireplaceCells.map((cell) => ({ ...cell, kind: "fireplace", glyph: FIREPLACE_GLYPH, color: "#ff6b35" })),
       ...(previewWorld.torches ?? []).map((cell) => ({ ...cell, kind: "torch", glyph: "🕯", color: "#ffe066" })),
@@ -929,6 +960,14 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
         context.strokeStyle = "#ffffff";
         context.lineWidth = Math.max(1, devicePixelRatio);
         const markerSize = Math.max(5 * devicePixelRatio, Math.min(mapDestination.cellWidth, mapDestination.cellHeight) * 2);
+        const objectGlyphSize = Math.max(
+          PROCEDURAL_PREVIEW_OBJECT_ICON_SIZE.minimumPixels * devicePixelRatio,
+          Math.min(
+            PROCEDURAL_PREVIEW_OBJECT_ICON_SIZE.maximumPixels * devicePixelRatio,
+            Math.min(mapDestination.cellWidth, mapDestination.cellHeight)
+              * PROCEDURAL_PREVIEW_OBJECT_ICON_SIZE.cellMultiplier,
+          ),
+        );
         for (const marker of proceduralSettingsMarkers) {
           const centerX = mapDestination.x + (marker.x - region.x + 0.5) * mapDestination.cellWidth;
           const centerY = mapDestination.y + (marker.y - region.y + 0.5) * mapDestination.cellHeight;
@@ -939,8 +978,10 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
             continue;
           }
           context.fillStyle = marker.color;
-          const glyphSize = Math.max(16 * devicePixelRatio, Math.min(48 * devicePixelRatio, Math.min(mapDestination.cellWidth, mapDestination.cellHeight) * 8));
-          context.font = `${glyphSize}px serif`;
+          // Procedural preview objects must remain legible above the dense map
+          // background. This applies to every glyph marker, including Chest,
+          // paired Stairs, and Civilization Doors.
+          context.font = `${objectGlyphSize}px serif`;
           context.textAlign = "center";
           context.textBaseline = "middle";
             context["fillText"](marker.glyph, centerX, centerY);
@@ -1249,29 +1290,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
 
   const findNearestStairPath = () => {
     if (!world || !playerCell || !world.stairs?.length) return null;
-    const startKey = `${playerCell.x},${playerCell.y}`;
-    const parents = new Map([[startKey, null]]);
-    const queue = [{ ...playerCell }];
-    const directions = [{ x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }];
-    for (let cursor = 0; cursor < queue.length; cursor += 1) {
-      const cell = queue[cursor];
-      if (world.stairs.some((stair) => stair.x === cell.x && stair.y === cell.y)) {
-        const path = [];
-        for (let key = `${cell.x},${cell.y}`; key !== null; key = parents.get(key)) {
-          const [x, y] = key.split(",").map(Number);
-          path.push({ x, y });
-        }
-        return path.reverse();
-      }
-      for (const direction of directions) {
-        const next = { x: cell.x + direction.x, y: cell.y + direction.y };
-        const key = `${next.x},${next.y}`;
-        if (parents.has(key) || !world.terrain[next.y]?.[next.x]?.walkable) continue;
-        parents.set(key, `${cell.x},${cell.y}`);
-        queue.push(next);
-      }
-    }
-    return null;
+    return AStarUtility.findNearest(world, playerCell, world.stairs)?.path ?? null;
   };
 
   const travelToNearestStairs = () => {
@@ -1949,9 +1968,12 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
           return true;
         },
         log: (message) => logSystem.log({ message }),
+        playerCell,
+        random: createRandom(`${world.options.seed}:${attemptedCell.x},${attemptedCell.y}:chest-reward`),
+        spawnChestReward: ({ type, cell, chest }) => addChestRewardToRealm(world, { type, cell, chest }),
       });
       if (doorInteraction?.handled) {
-        if (doorInteraction.opened) {
+        if (doorInteraction.opened && doorInteraction.object.type === "door") {
           staticOccupancyIndexes.get(activeRealm)?.delete(attemptedCell.y * world.columns + attemptedCell.x);
           scheduleMinimapRender();
         }
@@ -1993,10 +2015,11 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       return exhaustedAtAttempt;
     }
     refreshDiscovery();
-    // Player lighting is a moving source. Re-render the complete visible
-    // region after every move so cells behind the player lose its former light
-    // contribution instead of retaining a trail.
-    scheduleMovementRender({ refreshLighting: true });
+    // Player lighting is a moving source. The lighting field is recomputed for
+    // the new position and renderCell compares its factor with each submitted
+    // sprite, so only visibly changed on-screen cells are uploaded. Forcing
+    // every visible slot dirty here made sprint resubmit the whole region.
+    scheduleMovementRender();
     return exhaustedAtAttempt;
   };
 
@@ -2187,6 +2210,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
           rows: WORLD_ROWS,
           columns: WORLD_COLUMNS,
           torchCount: Math.round(getTorchCountForViewport(viewport, seed) * torchCountMultiplier),
+          stairCount: Math.max(0, Math.round(getObjectDistributionCount("stairs", seed) * stairsCountMultiplier)),
           seed,
           initialRealm: activeRealm,
           wallFillPercents: caveWallFillPercents,
@@ -2264,11 +2288,30 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       realm.characters[object.cell.y][object.cell.x] = object.glyph;
       return object;
     };
+    const applyHeartEffect = () => {
+      if (playerLifecycle.isDead()) return;
+      applyPlayerHealthDelta(2);
+      logSystem.log({ message: "Collected +2 Health from Heart" });
+    };
+    const addChestRewardToRealm = (realm, { type, cell, chest }) => {
+      if (type !== "heart") return null;
+      return addObjectToRealm(realm, {
+        id: `${realm.realm.toLowerCase()}-chest-reward-${chest.id}`,
+        type,
+        cell,
+        effect: applyHeartEffect,
+      });
+    };
     const saveCheckpoint = (realmName, cell) => {
       checkpoint = Object.freeze({ realm: realmName, cell: Object.freeze({ ...cell }), revision: ++checkpointRevision });
       for (const listener of checkpointListeners) listener(checkpoint);
     };
-    const randomObjectCount = (type, seed) => Math.max(0, Math.round(getObjectDistributionCount(type, seed) * (objectCountMultipliers[type] ?? 1)));
+    const generatedObjectFeature = (type) => generationPlan.find((feature) => feature.objectType === type);
+    const randomObjectCount = (type, seed) => {
+      const feature = generatedObjectFeature(type);
+      if (!feature) throw new RangeError(`Missing generation feature for object: ${type}.`);
+      return Math.max(0, Math.round(getObjectDistributionCount(type, seed) * (objectCountMultipliers[type] ?? 1)));
+    };
     for (const [realmName, realm] of Object.entries(worldRealms.realms)) {
       realm.objects = realm.objects ?? [];
       realm.pickups = realm.objects;
@@ -2281,28 +2324,53 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
         id: `${realmName.toLowerCase()}-stairs-${stair.x}-${stair.y}`,
         type: "stairs", cell: stair, effect: () => {},
       });
-      const heartCells = selectObjectCells(realm, realm.playerStart, randomObjectCount("heart", realm.options.seed), createRandom(`${realm.options.seed}:heart:placement`), { minimumDistance: 3, reserved: new Set() });
-      heartCells.forEach((cell, index) => addObjectToRealm(realm, {
-        id: `${realmName.toLowerCase()}-heart-${index + 1}`,
-        type: "heart", cell,
-        effect: () => {
+      const realmPlan = generationPlan.filter((feature) => feature.realms.includes(realmName));
+      const objectPlacements = placeDeclaredLevelObjects({
+        world: realm,
+        start: realm.playerStart,
+        catalog: objectData.objects,
+        features: realmPlan.filter((feature) => ["heart", "chest", "trap"].includes(feature.objectType)),
+        realm: realmName,
+        countFor: (feature) => feature.objectType === "chest" ? chestCount : randomObjectCount(feature.objectType, realm.options.seed),
+        randomFor: (feature) => createRandom(`${realm.options.seed}:${feature.seedNamespace}`),
+      });
+      objectPlacements.forEach(({ definition, cells }) => cells.forEach((cell, index) => addObjectToRealm(realm, {
+        id: `${realmName.toLowerCase()}-${definition.type}-${index + 1}`,
+        type: definition.type,
+        cell,
+        effect: definition.type === "heart" ? applyHeartEffect : definition.type === "trap" ? () => {
           if (playerLifecycle.isDead()) return;
-          applyPlayerHealthDelta(2);
-          logSystem.log({ message: "Collected +2 Health from Heart" });
-        },
-      }));
-      const trapCells = selectObjectCells(realm, realm.playerStart, randomObjectCount("trap", realm.options.seed), createRandom(`${realm.options.seed}:trap:placement`), { minimumDistance: 3, reserved: new Set(heartCells.map((cell) => `${cell.x},${cell.y}`)) });
-      trapCells.forEach((cell, index) => addObjectToRealm(realm, {
-        id: `${realmName.toLowerCase()}-trap-${index + 1}`,
-        type: "trap", cell,
-        effect: () => {
-          if (playerLifecycle.isDead()) return;
-          // Preserves the lethal trap boundary: applyPlayerHealthDelta(-25) calls playerLifecycle.applyHealthDelta(-25).
+          // The game-layer Trap consequence delegates to playerLifecycle.applyHealthDelta(-25).
           applyPlayerHealthDelta(-25);
           logSystem.log({ message: "Lost -25 Health from Trap" });
-        },
-      }));
-      if (realmName === "Underground") {
+        } : () => {},
+      })));
+      if (realmName === "Overground") {
+        const reserved = new Set(realm.objects.map((object) => `${object.cell.x},${object.cell.y}`));
+        const buildings = createOverworldBuildings(realm, {
+          random: createRandom(`${realm.options.seed}:buildings:placement`),
+          chance: Math.min(0.9, (import.meta.env.DEV ? 0.5 : 0.1) * homeChanceMultiplier),
+          reserved,
+        });
+        realm.buildings = buildings;
+        realm.civilizationGroups = [];
+        buildings.forEach((building, buildingIndex) => {
+          const prefix = `${realmName.toLowerCase()}-building-${buildingIndex + 1}`;
+          for (const cell of building.walls) {
+            realm.terrain[cell.y][cell.x].naturalWalkable = realm.terrain[cell.y][cell.x].walkable;
+            realm.terrain[cell.y][cell.x].walkable = false;
+          }
+          realm.terrain[building.door.y][building.door.x].naturalWalkable = realm.terrain[building.door.y][building.door.x].walkable;
+          realm.terrain[building.door.y][building.door.x].walkable = false;
+          addObjectToRealm(realm, {
+            id: `${prefix}-door`, type: "door", cell: building.door, glyph: "█", openGlyph: "□", buildingId: prefix, effect: () => {},
+          });
+          addObjectToRealm(realm, {
+            id: `${prefix}-key`, type: "key", cell: building.key, buildingId: prefix,
+            effect: () => { characterKeys += 1; notifyKeys(); logSystem.log({ message: "The key was collected." }); },
+          });
+        });
+      } else if (realmName === "Underground") {
         const civilizationGroups = createCivilizationGroups(realm, {
           random: createRandom(`${realm.options.seed}:civilization:placement`),
           chance: Math.min(0.9, (import.meta.env.DEV ? 0.5 : 0.1) * civilizationChanceMultiplier),
@@ -2364,6 +2432,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
         }));
       } else {
         realm.civilizationGroups = [];
+        realm.buildings = [];
       }
     }
     questManager = createQuestManager(questData.quests, getQuestValues(), {
@@ -2429,9 +2498,12 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       normalizePlayerMarkers(realm);
       realm.dynamicOccupancy = realm.dynamicOccupancy ?? createDynamicOccupancy();
       dynamicOccupancies.set(realmName, realm.dynamicOccupancy);
-      staticOccupancyIndexes.set(realmName, new Set((realm.objects ?? [])
-        .filter((object) => object.active !== false && !(object.type === "door" && object.open))
-        .map((object) => object.cell.y * realm.columns + object.cell.x)));
+      staticOccupancyIndexes.set(realmName, new Set([
+        ...(realm.objects ?? []).filter((object) => object.active !== false && !(object.type === "door" && object.open))
+          .map((object) => object.cell.y * realm.columns + object.cell.x),
+        ...(realm.buildings ?? []).flatMap((building) => [...building.cells, building.key]
+          .map((cell) => cell.y * realm.columns + cell.x)),
+      ]));
     }
     getOccupancyForWorld()?.claim({
       id: "player", type: "player", glyph: PLAYER_GLYPH, facing: playerFacing, realm: activeRealm, cell: playerCell,
@@ -2450,7 +2522,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
     const scheduleEntityRender = () => {
       scheduleMovementRender();
       scheduleMinimapRender();
-      renderMapview();
+      scheduleMapviewRender();
     };
     const applyPlayerHealthDelta = (delta, at = performance.now()) => {
       if (playerLifecycle.isDead()) return 0;
@@ -2497,6 +2569,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
         return result;
       },
     };
+    const initializeEnemySpawners = () => {
     enemySystem = createEnemySystem({
       timeSystem,
       occupancy: undergroundOccupancy,
@@ -2547,6 +2620,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       cell: spawnerDistribution.bonusCell,
       bornAtTime: timeSystem.getTime(),
     });
+    };
     const overground = worldRealms.realms.Overground;
     const overgroundOccupancy = dynamicOccupancies.get("Overground");
     npcSystem = createNpcSystem({
@@ -2578,6 +2652,7 @@ export async function startGameLayer(container, initialPalette, initialFontId = 
       cell,
       bornAtTime: timeSystem.getTime(),
     }));
+    initializeEnemySpawners();
     timeSystem.dispatchCurrent("session-start");
     notifyGold();
     notifyKeys();

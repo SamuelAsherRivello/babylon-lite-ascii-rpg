@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createDynamicOccupancy } from "../../../../src/client/game-layer-babylon-lite/systems/dynamic-occupancy.js";
-import { createNpcSystem, NPC_GLYPH } from "../../../../src/client/game-layer-babylon-lite/systems/npc-system.js";
+import { createNpcSystem, NPC_ACTION_INTERVAL, NPC_GLYPH } from "../../../../src/client/game-layer-babylon-lite/systems/npc-system.js";
 import { createNpcSpawnerSystem, selectNpcSpawnerCells } from "../../../../src/client/game-layer-babylon-lite/systems/npc-spawner-system.js";
 import { createTimeSystem } from "../../../../src/client/game-layer-babylon-lite/systems/time-system.js";
 
@@ -20,12 +20,13 @@ test("selects deterministic Low, Med, and High Overground spawner counts includi
   assert.deepEqual(selectNpcSpawnerCells(map, { realm: "Underground" }).cells, []);
 });
 
-test("excludes player, object, character, and civilization cells", () => {
+test("excludes player, object, character, civilization, and Building cells", () => {
   const map = world(9); map.playerStart = { x: 1, y: 1 }; map.characters = Array.from({ length: 9 }, () => Array(9).fill(null));
   map.objects.push({ active: true, cell: { x: 2, y: 1 } }); map.characters[1][3] = "X";
   map.civilizationGroups = [{ cells: [{ x: 4, y: 1 }], keys: [{ x: 5, y: 1 }], door: { x: 6, y: 1 } }];
+  map.buildings = [{ cells: [{ x: 7, y: 1 }], key: { x: 1, y: 2 } }];
   const keys = new Set(selectNpcSpawnerCells(map, { realm: "Overground", random: () => 0 }).cells.map((cell) => `${cell.x},${cell.y}`));
-  for (const blocked of ["1,1", "2,1", "3,1", "4,1", "5,1", "6,1"]) assert.equal(keys.has(blocked), false);
+  for (const blocked of ["1,1", "2,1", "3,1", "4,1", "5,1", "6,1", "7,1", "1,2"]) assert.equal(keys.has(blocked), false);
 });
 
 test("spawners create exactly once during setup and never repeat on later ticks", () => {
@@ -62,6 +63,8 @@ test("NPC chooses either requested patrol distance and returns home without re-r
   system.addNpc({ id: "npc-1", realm: "Overground", cell: { x: 20, y: 20 } });
   assert.equal(randomCalls, 2);
   assert.equal(occupancy.get("npc-1").route.length, 15);
+  timeSystem.advance(NPC_ACTION_INTERVAL - 1);
+  assert.deepEqual(occupancy.get("npc-1").cell, { x: 20, y: 20 });
   timeSystem.advance();
   const npc = occupancy.get("npc-1");
   assert.equal(npc.glyph, NPC_GLYPH);
@@ -69,10 +72,10 @@ test("NPC chooses either requested patrol distance and returns home without re-r
   const distance = Math.abs(npc.destination.x - npc.home.x) + Math.abs(npc.destination.y - npc.home.y);
   assert.equal(distance, 15);
   const destination = npc.destination;
-  timeSystem.advance(14);
+  timeSystem.advance(NPC_ACTION_INTERVAL * 14);
   assert.deepEqual(occupancy.get("npc-1").cell, destination);
   assert.equal(occupancy.get("npc-1").returning, true);
-  timeSystem.advance(15);
+  timeSystem.advance(NPC_ACTION_INTERVAL * 15);
   assert.deepEqual(occupancy.get("npc-1").cell, { x: 20, y: 20 });
   assert.deepEqual(occupancy.get("npc-1").destination, destination);
   assert.equal(randomCalls, 2);
@@ -84,9 +87,9 @@ test("NPC waits for a temporary occupant and does not walk through static terrai
   const system = createNpcSystem({ timeSystem, occupancy, worldFor: () => map, isWalkable: (cell) => Boolean(map.terrain[cell.y]?.[cell.x]?.walkable), randomFor: () => () => 0 });
   system.addNpc({ id: "npc-1", realm: "Overground", cell: { x: 20, y: 20 } });
   occupancy.claim({ id: "player", type: "player", cell: { x: 20, y: 19 } });
-  timeSystem.advance();
+  timeSystem.advance(NPC_ACTION_INTERVAL);
   assert.deepEqual(occupancy.get("npc-1").cell, { x: 20, y: 20 });
   occupancy.remove("player");
-  timeSystem.advance();
+  timeSystem.advance(NPC_ACTION_INTERVAL);
   assert.deepEqual(occupancy.get("npc-1").cell, { x: 20, y: 19 });
 });

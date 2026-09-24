@@ -1,6 +1,7 @@
 import { Component, Fragment, createRef, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { HexColorPicker } from "react-colorful";
 import versionText from "../../../../version.txt?raw";
+import changelog from "./data/changelog.json";
 import {
   commitFont,
   getFontId,
@@ -12,6 +13,7 @@ import {
 import { DEFAULT_FONT_ID, FONT_OPTIONS, getFontOption } from "../bridge-layer/font.js";
 import { commitPalette, getPalette, subscribeToPalette } from "./palette-store.js";
 import { commitGenerationSettings, DENSITY_LEVELS, GENERATION_DENSITY_DETAILS, GENERATION_PASS_DESCRIPTIONS, GENERATION_PASS_REALMS, getGenerationSettings, normalizeGenerationSettings, subscribeToGenerationSettings } from "./generation-settings-store.js";
+import { getGenerationSemanticCards } from "../game-layer-babylon-lite/world-feature-generation-registry.js";
 import { sendGenerationSettingsPreview } from "../bridge-layer/game-bridge.js";
 import {
   filterPaletteEntries,
@@ -44,6 +46,7 @@ import { DEFAULT_ZOOM } from "../game-layer-babylon-lite/zoom-scale.js";
 import {
   getStoredAspectMode,
   getStoredBooleanValue,
+  getStoredInitialCameraMode,
   getStoredInitialZoom,
   isMobilePlatform,
 } from "./platform-settings.js";
@@ -106,7 +109,6 @@ import {
   CAMERA_STORAGE_KEY,
   DEFAULT_CAMERA_MODE,
   getNextCameraMode,
-  normalizeCameraMode,
 } from "../bridge-layer/camera.js";
 import { getNextMinimapScale, migrateMinimapScale } from "../game-layer-babylon-lite/systems/minimap-zoom.js";
 import { performanceMonitor } from "../game-layer-babylon-lite/performance-monitor.js";
@@ -147,6 +149,56 @@ const defaultQuestStorageKey = "babylon-lite-ascii-rpg.default-quest";
 const minZoom = MIN_ZOOM;
 const maxZoom = MAX_ZOOM;
 const repositoryUrl = "https://github.com/SamuelAsherRivello/babylon-lite-ascii-rpg";
+const changelogFeaturePaths = Object.freeze({
+  "Procedural generation controls": "openspec/specs/procedural-generation-settings/spec.md",
+  "Developer map tools": "openspec/specs/developer-mapview/spec.md",
+  "Tutorial flow polish": "openspec/specs/movement-tutorial/spec.md",
+  "Floating combat text": "openspec/specs/floating-text/spec.md",
+  "Responsive UI resilience": "openspec/specs/responsive-ui-layout/spec.md",
+  "Developer mapview": "openspec/specs/developer-mapview/spec.md",
+  "Camera recalculation": "openspec/specs/camera-modes/spec.md",
+  "Glyph offset controls": "openspec/specs/glyph-background-layout/spec.md",
+  "Realm discovery": "openspec/specs/fog-of-war-minimap/spec.md",
+  "Performance monitoring": "openspec/specs/performance-monitoring/spec.md",
+  "Enemy spawn system": "openspec/specs/enemy-spawner-system/spec.md",
+  "Enemy spawning": "openspec/specs/enemy-system/spec.md",
+  "Stamina combat stats": "openspec/specs/combat-stats/spec.md",
+  "Single player lifecycle": "openspec/specs/player-lifecycle/spec.md",
+  "Movement performance": "openspec/specs/movement-render-performance/spec.md",
+  "Gameplay settings": "openspec/specs/gameplay-settings/spec.md",
+  "Object spawning": "openspec/specs/object-spawner-system/spec.md",
+  "Underground civilization": "openspec/specs/underground-civilization/spec.md",
+  "Quest progression": "openspec/specs/questing-system/spec.md",
+  "Persistent fog": "openspec/specs/fog-of-war-minimap/spec.md",
+  "Draggable lighting window": "openspec/specs/draggable-lighting-window/spec.md",
+  "Fogged minimap": "openspec/specs/minimap-rendering/spec.md",
+  "GPU lighting": "openspec/specs/palette-grid-lighting/spec.md",
+  "World view rendering": "openspec/specs/world-view-rendering/spec.md",
+  "HUD layout": "openspec/specs/responsive-ui-layout/spec.md",
+  "UI stylesheet organization": "openspec/specs/responsive-ui-layout/spec.md",
+  "Movement tutorial": "openspec/specs/movement-tutorial/spec.md",
+  "Quest system": "openspec/specs/questing-system/spec.md",
+  "Character information": "openspec/specs/character-info/spec.md",
+  "Minimap rendering": "openspec/specs/minimap-rendering/spec.md",
+  "UI layout components": "openspec/specs/responsive-ui-layout/spec.md",
+  "Aspect testing": "openspec/specs/responsive-ui-layout/spec.md",
+  "Minimap markers": "openspec/specs/minimap-markers/spec.md",
+  "Minimap zoom": "openspec/specs/minimap-zoom-interaction/spec.md",
+  "Toast notifications": "openspec/specs/toast-notifications/spec.md",
+  "Platform defaults": "openspec/specs/platform-default-settings/spec.md",
+  "Release maintenance": "README.md",
+  "World realms": "openspec/specs/world-realms/spec.md",
+  "GPU light pass": "openspec/specs/palette-grid-lighting/spec.md",
+  "Lighting window": "openspec/specs/draggable-lighting-window/spec.md",
+  "Mobile support": "openspec/specs/responsive-ui-layout/spec.md",
+  "Palette font choices": "openspec/specs/ascii-palette/spec.md",
+  "Game time system": "openspec/specs/time-system/spec.md",
+  "ASCII palette": "openspec/specs/ascii-palette/spec.md",
+  "Babylon Lite runtime": "openspec/specs/game-layer-architecture/spec.md",
+  "Procedural level generation": "openspec/specs/procedural-level-generation/spec.md",
+  "Player grid movement": "openspec/specs/player-grid-movement/spec.md",
+  "Initial project release": "README.md",
+});
 const uiMarginPixels = 10;
 const mapGlyphs = new Set(PROJECT_MAP_GLYPHS);
 const glyphDetailsWindowWidth = 220;
@@ -178,6 +230,7 @@ const settingsHelp = Object.freeze({
   asciiPalette: "Open ASCII palette controls.",
   gameplaySettings: "Open gameplay controls.",
   proceduralSettings: "Open procedural level-generation controls.",
+  changelog: "Open released version history.",
   mapview: "Open the developer map.",
   arguments: "Open client argument details.",
   statsSection: "View live performance and version information.",
@@ -1356,6 +1409,32 @@ export function GameplaySettingsWindow({ quest, defaultQuestId, onSelectQuest, o
   );
 }
 
+export function ChangelogWindow({ onClose }) {
+  return (
+    <div className="prompt_window" role="presentation">
+      <div className="window_backdrop" aria-hidden="true" onClick={onClose} />
+      <section className="window gameplay_settings_window changelog_window" role="dialog" aria-modal="true" aria-labelledby="changelog_title" onClick={(event) => event.stopPropagation()}>
+        <div className="window_header">
+          <h1 id="changelog_title" className="prompt_title">Changelog</h1>
+          <button className="prompt_button window_close" type="button" aria-label="Close Changelog" onClick={onClose}>X</button>
+        </div>
+        <div className="prompt_body changelog_body">
+          {changelog.releases.map((release) => (
+            <section key={release.version} className="changelog_release" aria-labelledby={`changelog_${release.version}`}>
+              <h2 id={`changelog_${release.version}`}>v{release.version}</h2>
+              <ul>{release.items.map((item) => {
+                const label = typeof item === "string" ? item : item.label;
+                const featurePath = typeof item === "string" ? changelogFeaturePaths[item] : item.featurePath;
+                return <li key={label}><a href={`${repositoryUrl}/blob/v${release.version}/${featurePath}`} target="_blank" rel="noopener noreferrer">{label}</a></li>;
+              })}</ul>
+            </section>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
 export function ProceduralSettingsWindow({ settings, randomSeed, onConfirm, onClose }) {
   const [draft, setDraft] = useState(() => normalizeGenerationSettings(settings));
   const [previewRealm, setPreviewRealm] = useState("Overground");
@@ -1363,8 +1442,13 @@ export function ProceduralSettingsWindow({ settings, randomSeed, onConfirm, onCl
   const [previewViewport, setPreviewViewport] = useState({ zoom: 1, x: 0, y: 0 });
   const [error, setError] = useState("");
   const previewCanvasRef = useRef(null);
-  const objectPassIds = new Set(["object-heart", "object-trap", "object-torch", "object-fireplace", "npc-spawner"]);
-  const civilizationPassIds = new Set(["civilization-doors"]);
+  const semanticCards = getGenerationSemanticCards();
+  const objectCard = semanticCards.find((card) => card.id === "object-distribution");
+  const civilizationCard = semanticCards.find((card) => card.id === "civilization-placement");
+  const characterCard = semanticCards.find((card) => card.id === "character-distribution");
+  const objectPassIds = new Set(objectCard.featureIds);
+  const civilizationPassIds = new Set(civilizationCard.featureIds);
+  const characterPassIds = new Set(characterCard.featureIds);
   const orderedPasses = [...draft.passes].sort((left, right) => left.order - right.order);
   const objectPasses = orderedPasses.filter((pass) => objectPassIds.has(pass.id));
   const previewRealmScope = previewRealm === "Underground" ? "Underworld" : "Overworld";
@@ -1484,10 +1568,10 @@ export function ProceduralSettingsWindow({ settings, randomSeed, onConfirm, onCl
                 <span className="procedural_settings_description">{GENERATION_PASS_DESCRIPTIONS[pass.id]}</span>
               </section>
                 })}
-                <section className="quest_settings_card procedural_object_settings_card" aria-label="Object and NPC Distribution, pass 7">
+                <section className="quest_settings_card procedural_object_settings_card" aria-label="Object Distribution, pass 7">
                   <div className="procedural_object_settings_header">
-                    <h3>7. Object &amp; NPC Distribution</h3>
-                    <span className="procedural_settings_description">Controls world object placement and Overworld NPC density</span>
+                    <h3>7. {objectCard.title}</h3>
+                    <span className="procedural_settings_description">Controls objects</span>
                     <span className="procedural_realm_scope">Realms: All</span>
                   </div>
                   {objectPasses.map((pass) => {
@@ -1504,16 +1588,15 @@ export function ProceduralSettingsWindow({ settings, randomSeed, onConfirm, onCl
                     </div>
                   })}
                 </section>
-                <section className="quest_settings_card procedural_object_settings_card" aria-label="Civilization, pass 8">
+                <section className="quest_settings_card procedural_object_settings_card" aria-label="Civilization Placement, pass 8">
                   <div className="procedural_object_settings_header">
-                    <h3>8. Civilization</h3>
-                    <span className="procedural_settings_description">Controls Underground civilization placement</span>
-                    <span className="procedural_realm_scope">Realms: Underworld</span>
+                    <h3>8. {civilizationCard.title}</h3>
+                    <span className="procedural_settings_description">Controls Stairs, Doors, and Homes placement</span>
                   </div>
                   {orderedPasses.filter((pass) => civilizationPassIds.has(pass.id)).map((pass) => {
                     const unavailable = !isPassAvailableInPreview(pass);
                     return <div key={pass.id} className={`procedural_object_density_row${unavailable ? " procedural_realm_unavailable" : ""}`} aria-disabled={unavailable}>
-                      <span>{pass.title}</span>
+                      <span>{pass.title}{["civilization-doors", "civilization-homes"].includes(pass.id) ? ` · Realm: ${GENERATION_PASS_REALMS[pass.id]}` : ""}</span>
                       <div className="procedural_density_controls procedural_object_density_controls" role="group" aria-label={`${pass.title} density and distribution`}>
                         {DENSITY_LEVELS.map((density) => (
                           <button key={density} className={`prompt_button${pass.density === density ? " procedural_density_selected" : ""}`} type="button" aria-pressed={pass.density === density} title={GENERATION_DENSITY_DETAILS[pass.id][density]} disabled={unavailable} onClick={() => selectDensity(pass.id, density)}>
@@ -1524,7 +1607,26 @@ export function ProceduralSettingsWindow({ settings, randomSeed, onConfirm, onCl
                     </div>
                   })}
                 </section>
-                {orderedPasses.filter((pass) => pass.order > 6 && !objectPassIds.has(pass.id) && !civilizationPassIds.has(pass.id)).map((pass, index) => {
+                <section className="quest_settings_card procedural_object_settings_card" aria-label="Character Distribution, pass 9">
+                  <div className="procedural_object_settings_header">
+                    <h3>9. {characterCard.title}</h3>
+                    <span className="procedural_settings_description">Controls character placement</span>
+                  </div>
+                  {characterCard.featureIds.map((id) => orderedPasses.find((pass) => pass.id === id)).filter(Boolean).map((pass) => {
+                    const unavailable = !isPassAvailableInPreview(pass);
+                    return <div key={pass.id} className={`procedural_object_density_row${unavailable ? " procedural_realm_unavailable" : ""}`} aria-disabled={unavailable}>
+                      <span>{pass.title.replace(" Spawner Distribution", "").replace(" Spawner", "")} · Realm: {GENERATION_PASS_REALMS[pass.id]}</span>
+                      <div className="procedural_density_controls procedural_object_density_controls" role="group" aria-label={`${pass.title} density and distribution`}>
+                        {DENSITY_LEVELS.map((density) => (
+                          <button key={density} className={`prompt_button${pass.density === density ? " procedural_density_selected" : ""}`} type="button" aria-pressed={pass.density === density} title={GENERATION_DENSITY_DETAILS[pass.id][density]} disabled={unavailable} onClick={() => selectDensity(pass.id, density)}>
+                            {density}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  })}
+                </section>
+                {orderedPasses.filter((pass) => pass.order > 6 && !objectPassIds.has(pass.id) && !civilizationPassIds.has(pass.id) && !characterPassIds.has(pass.id)).map((pass, index) => {
                   const unavailable = !isPassAvailableInPreview(pass);
                   return <section key={pass.id} className={`quest_settings_card procedural_settings_card${unavailable ? " procedural_realm_unavailable" : ""}`} aria-label={`${pass.title}, pass ${pass.order}`} aria-disabled={unavailable}>
                 <h3>{9 + index}. {pass.title}</h3>
@@ -1574,7 +1676,7 @@ function AppContent() {
   });
   const fullscreenRequestInProgressRef = useRef(false);
   const [aspectMode, setAspectMode] = useState(() => getStoredAspectMode(localStorage.getItem(aspectStorageKey)));
-  const [cameraMode, setCameraMode] = useState(() => normalizeCameraMode(localStorage.getItem(CAMERA_STORAGE_KEY)));
+  const [cameraMode, setCameraMode] = useState(getStoredInitialCameraMode);
   const [zoom, setZoom] = useState(getStoredZoom);
   const [minimapZoom, setMinimapZoom] = useState(getStoredMinimapZoom);
   const [overgroundAmbient, setOvergroundAmbient] = useState(() => getStoredAmbientLight(overgroundAmbientStorageKey, 0.9));
@@ -1601,6 +1703,7 @@ function AppContent() {
   const [asciiPaletteOpen, setAsciiPaletteOpen] = useState(false);
   const [gameplaySettingsOpen, setGameplaySettingsOpen] = useState(false);
   const [proceduralSettingsOpen, setProceduralSettingsOpen] = useState(false);
+  const [changelogOpen, setChangelogOpen] = useState(false);
   const generationSettings = useSyncExternalStore(subscribeToGenerationSettings, getGenerationSettings, getGenerationSettings);
   const [defaultQuestId, setDefaultQuestId] = useState(() => {
     const stored = localStorage.getItem(defaultQuestStorageKey);
@@ -2134,6 +2237,13 @@ function AppContent() {
               </button>
             </SettingTooltipTarget>
           </div>
+          <div className="windows_control_row">
+            <SettingTooltipTarget description={settingsHelp.changelog} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
+              <button id="changelog_toggle" className="corner_body settings_option" type="button" aria-description={settingsHelp.changelog} tabIndex={-1} onClick={() => setChangelogOpen(true)}>
+                Changelog
+              </button>
+            </SettingTooltipTarget>
+          </div>
         </HudBlockLayout>
         <HudBlockLayout className="hud_section" id="stats" aria-labelledby="stats_title" titleId="stats_title" titleClassName="developer-title" bodyClassName="developer-body-text" title="Info">
           <SettingTooltipTarget description={`${settingsHelp.fps} Current value: ${fps}.`} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
@@ -2284,6 +2394,7 @@ function AppContent() {
           onClose={() => setGameplaySettingsOpen(false)}
         />
       ) : null}
+      {changelogOpen ? <ChangelogWindow onClose={() => setChangelogOpen(false)} /> : null}
       {proceduralSettingsOpen ? <ProceduralSettingsWindow settings={generationSettings} randomSeed={randomSeed} onConfirm={confirmGenerationSettings} onClose={() => setProceduralSettingsOpen(false)} /> : null}
     </>
   );

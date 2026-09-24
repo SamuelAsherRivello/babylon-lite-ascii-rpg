@@ -11,6 +11,8 @@ export const FIREPLACE_GLYPH = "🔥";
 export const GOLD_GLYPH = "💰";
 export const HEALTH_GLYPH = "♥";
 export const TRAP_GLYPH = "☠";
+export const CLOSED_CHEST_GLYPH = "◆";
+export const OPEN_CHEST_GLYPH = "◇";
 export const STAIR_GLYPH = "▤";
 export const KEY_GLYPH = "⚿";
 export const HORIZONTAL_FENCE_GLYPH = "─";
@@ -44,6 +46,8 @@ export const PROJECT_MAP_GLYPHS = Object.freeze([
   DEEP_WATER_GLYPH,
   HEALTH_GLYPH,
   TRAP_GLYPH,
+  CLOSED_CHEST_GLYPH,
+  OPEN_CHEST_GLYPH,
   KEY_GLYPH,
   HORIZONTAL_FENCE_GLYPH,
   VERTICAL_FENCE_GLYPH,
@@ -64,18 +68,7 @@ export const MAX_GENERATION_ATTEMPTS = 64;
 export const OBJECT_DISTRIBUTION_RULES = Object.freeze({
   torch: Object.freeze({ minimumDistance: 25 }),
 });
-export const GENERATION_PASSES = Object.freeze([
-  "ground",
-  "cave/walls",
-  "water",
-  "walkability",
-  "player-position",
-  "object-heart",
-  "object-trap",
-  "object-torch",
-  "civilization",
-  "enemy-spawner",
-]);
+export const GENERATION_PASSES = Object.freeze(GENERATION_FEATURES.map((feature) => feature.id));
 export const REALM_PROFILES = Object.freeze({
   Overground: Object.freeze({ wallFillPercent: 25, minWalkablePercent: 0.55, fogUnclearRadius: 11, startingFogClearCoverage: Object.freeze({ x: 0.95, y: 0.95 }), groundKind: "grass", groundGlyph: FLOOR_GLYPH, groundColor: "#55aa55", blockedKind: "mountain", blockedGlyph: MOUNTAIN_GLYPH }),
   Underground: Object.freeze({ wallFillPercent: 50, minWalkablePercent: 0.3, fogUnclearRadius: 6, startingFogClearCoverage: Object.freeze({ x: 0.6, y: 0.6 }), groundKind: "dirt", groundGlyph: UNDERGROUND_FLOOR_GLYPH, groundColor: "#8b5a2b", blockedKind: "wall", blockedGlyph: WALL_GLYPH }),
@@ -1018,7 +1011,8 @@ function addPairedStairs(realms, stairCount, seed) {
   return stairs;
 }
 
-export async function createWorldRealms({ rows, columns, torchCount = 3, seed = createGeneratedSeed(), initialRealm = "Overground", wallFillPercents, wallFillOffset = 0, smoothingIterationsByRealm, waterFillPercent = DEFAULT_WATER_FILL_PERCENT, waterLakeCount, minWalkableMultiplier = 1, playerStartMode = "center" } = {}, scheduling = {}) {
+export async function createWorldRealms({ rows, columns, torchCount = 3, stairCount = torchCount, seed = createGeneratedSeed(), initialRealm = "Overground", wallFillPercents, wallFillOffset = 0, smoothingIterationsByRealm, waterFillPercent = DEFAULT_WATER_FILL_PERCENT, waterLakeCount, minWalkableMultiplier = 1, playerStartMode = "center" } = {}, scheduling = {}) {
+  if (!Number.isInteger(stairCount) || stairCount < 0) throw new RangeError("stairCount must be a non-negative integer.");
   const realms = {};
   const realmOrder = initialRealm === "Underground" ? ["Underground", "Overground"] : ["Overground", "Underground"];
   for (const name of realmOrder) {
@@ -1034,7 +1028,7 @@ export async function createWorldRealms({ rows, columns, torchCount = 3, seed = 
     }, scheduling);
     realms[name] = applyRealmProfile(realm, name);
   }
-  const stairs = addPairedStairs(realms, torchCount, seed);
+  const stairs = addPairedStairs(realms, stairCount, seed);
   return { seed, realms, stairs };
 }
 
@@ -1042,3 +1036,4 @@ export function getVisibleGlyph(world, cell) {
   if (!world || cell.x < 0 || cell.y < 0 || cell.x >= world.columns || cell.y >= world.rows) return null;
   return world.characters[cell.y][cell.x] ?? world.terrain[cell.y][cell.x].glyph;
 }
+import { GENERATION_FEATURES } from "../world-feature-generation-registry.js";

@@ -34,7 +34,7 @@ test("distributes at most one normal Underground spawner per 4x4 coarse region",
   assert.deepEqual(selectEnemySpawnerCells(world, { realm: "Overground", random: () => 0.25 }).cells, []);
 });
 
-test("excludes the player, object, character, and civilization cells", () => {
+test("excludes the player, object, character, civilization, and Building cells", () => {
   const world = createWorld(7, 7);
   world.playerStart = { x: 1, y: 1 };
   world.objects.push({ active: true, cell: { x: 2, y: 1 } });
@@ -44,10 +44,11 @@ test("excludes the player, object, character, and civilization cells", () => {
     door: { x: 4, y: 1 },
     keys: [{ x: 5, y: 1 }],
   });
+  world.buildings = [{ cells: [{ x: 1, y: 2 }], key: { x: 2, y: 2 } }];
 
   const { cells } = selectEnemySpawnerCells(world, { realm: "Underground", random: () => 0 });
   const keys = new Set(cells.map(({ x, y }) => `${x},${y}`));
-  for (const blocked of ["1,1", "2,1", "3,1", "4,1", "5,1"]) assert.equal(keys.has(blocked), false);
+  for (const blocked of ["1,1", "2,1", "3,1", "4,1", "5,1", "1,2", "2,2"]) assert.equal(keys.has(blocked), false);
 });
 
 test("adds one optional development spawner within Euclidean distance five", () => {

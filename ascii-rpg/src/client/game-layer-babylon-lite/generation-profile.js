@@ -19,9 +19,14 @@ export function resolveGenerationProfile(generationSettings = { passes: [] }) {
       trap: densityMultiplier("object-trap", { Low: 0.25, Med: 1, High: 3 }),
       fireplace: densityMultiplier("object-fireplace", { Low: 0.25, Med: 0.5, High: 1 }),
     }),
+    chestCount: densityMultiplier("object-chest", { Low: 1, Med: 2, High: 3 }),
     torchCountMultiplier: densityMultiplier("object-torch", { Low: 0.25, Med: 1, High: 3 }),
+    // These values intentionally start as a one-time copy of Heart's current
+    // profile. Stairs use their own setting id and never read Heart settings.
+    stairsCountMultiplier: densityMultiplier("civilization-stairs", { Low: 0.25, Med: 1, High: 3 }),
     fireplaceDensity: densityFor("object-fireplace"),
     civilizationChanceMultiplier: densityMultiplier("civilization-doors", { Low: 0.25, Med: 1, High: 2 }),
+    homeChanceMultiplier: densityMultiplier("civilization-homes", { Low: 0.25, Med: 1, High: 2 }),
     maxEnemySpawners: densityMultiplier("enemy-spawner", { Low: 4, Med: 16, High: 32 }),
     npcSpawnerCount: densityMultiplier("npc-spawner", { Low: 4, Med: 8, High: 12 }),
     playerStartMode: "center",

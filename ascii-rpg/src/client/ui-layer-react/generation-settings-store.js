@@ -1,4 +1,6 @@
-import bundledSettings from "../game-layer-babylon-lite/data/generation_settings.json" with { type: "json" };
+import { GENERATION_FEATURES } from "../game-layer-babylon-lite/world-feature-generation-registry.js";
+
+const bundledSettings = Object.freeze({ version: 1, passes: GENERATION_FEATURES });
 
 export const GENERATION_SETTINGS_STORAGE_KEY = "babylon-lite-ascii-rpg.generation-settings";
 export const DENSITY_LEVELS = Object.freeze(["Low", "Med", "High"]);
@@ -8,11 +10,14 @@ export const GENERATION_DENSITY_DETAILS = Object.freeze({
   water: Object.freeze({ Low: "5% lake chance", Med: "60% lake chance", High: "100% lake chance, nine lakes" }),
   walkability: Object.freeze({ Low: "70% connected-area target", Med: "Current connected-area target", High: "200% connected-area target, fewer walls" }),
   "object-heart": Object.freeze({ Low: "Quarter heart count", Med: "Current heart count", High: "Triple heart count" }),
+  "object-chest": Object.freeze({ Low: "1 chest per realm", Med: "2 chests per realm", High: "3 chests per realm" }),
   "object-trap": Object.freeze({ Low: "Quarter trap count", Med: "Current trap count", High: "Triple trap count" }),
   "object-torch": Object.freeze({ Low: "Quarter torch count", Med: "Current torch count", High: "Triple torch count" }),
   "object-fireplace": Object.freeze({ Low: "Quarter fireplace count", Med: "Half fireplace count", High: "Current fireplace count" }),
   "npc-spawner": Object.freeze({ Low: "4 Overworld NPC spawners", Med: "8 Overworld NPC spawners", High: "12 Overworld NPC spawners" }),
+  "civilization-stairs": Object.freeze({ Low: "Quarter stair count", Med: "Current stair count", High: "Triple stair count" }),
   "civilization-doors": Object.freeze({ Low: "Quarter current door chance", Med: "Current door chance", High: "Double current door chance" }),
+  "civilization-homes": Object.freeze({ Low: "Quarter current home chance", Med: "Current home chance", High: "Double current home chance" }),
   "enemy-spawner": Object.freeze({ Low: "4 maximum spawners", Med: "16 maximum spawners", High: "32 maximum spawners" }),
 });
 
@@ -24,11 +29,14 @@ export const GENERATION_PASS_DESCRIPTIONS = Object.freeze({
   walkability: "Controls the minimum connected playable area and open pathways",
   "player-position": "Uses the centered player start",
   "object-heart": "Controls health pickup placement density",
+  "object-chest": "Controls treasure chest placement within 50 cells of each realm start",
   "object-trap": "Controls trap placement density",
   "object-torch": "Controls torch placement density",
   "object-fireplace": "Controls fireplace placement density",
   "npc-spawner": "Controls Overworld NPC spawner count",
+  "civilization-stairs": "Controls paired stair placement density",
   "civilization-doors": "Controls underground door placement chance",
+  "civilization-homes": "Controls Overworld home placement chance",
   "enemy-spawner": "Controls enemy spawner placement density",
 });
 
@@ -40,11 +48,14 @@ export const GENERATION_PASS_REALMS = Object.freeze({
   walkability: "All",
   "player-position": "All",
   "object-heart": "All",
+  "object-chest": "All",
   "object-trap": "All",
   "object-torch": "All",
   "object-fireplace": "Underworld",
   "npc-spawner": "Overworld",
+  "civilization-stairs": "All",
   "civilization-doors": "Underworld",
+  "civilization-homes": "Overworld",
   "enemy-spawner": "Underworld",
 });
 

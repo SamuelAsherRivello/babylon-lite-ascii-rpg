@@ -4,7 +4,7 @@
 
 ### Requirement: Ordered world-generation passes
 
-The world generator SHALL compose a realm through the current ordered catalog: ground, Overground walls, Underground caves, water, walkability, player position, Heart distribution, Trap distribution, Torch distribution, NPC distribution, Fireplace distribution, Underground civilization Doors distribution, and Underground enemy-spawner distribution. The Procedural UI SHALL group Heart through Fireplace as Object Distribution and Doors as Civilization, without changing raw execution order. A later pass SHALL inspect prior layers and claim or derive only its own layered result. Civilization and enemy-spawner distribution SHALL run only for Underground and SHALL not rewrite natural terrain. NPC distribution SHALL run only for Overground. Fireplace distribution SHALL run after civilization because it declares civilization occupancy as a prerequisite.
+The world generator SHALL compose a realm through the current ordered catalog: ground, Overground walls, Underground caves, water, walkability, player position, Heart distribution, Chest distribution, Trap distribution, Torch distribution, NPC distribution, Fireplace distribution, paired Civilization Placement Stairs distribution, Underground Civilization Placement Doors distribution, and Underground enemy-spawner distribution. The Procedural UI SHALL group Heart, Chest, Trap, Torch, and Fireplace as Object Distribution; Stairs plus Doors as Civilization Placement; and Enemy plus NPC as Character Distribution, without changing raw execution order. Character Distribution SHALL list Enemy before NPC and visibly identify their Underworld and Overworld realms. The Civilization Placement card SHALL not display a realm; its Doors sublayer SHALL identify `Realm: Underground`. A later pass SHALL inspect prior layers and claim or derive only its own layered result. Doors and enemy-spawner distribution SHALL run only for Underground and SHALL not rewrite natural terrain. NPC distribution SHALL run only for Overground. Paired Civilization Placement Stairs SHALL run before Doors and use an independent profile whose initial Low, Med, and High values are one-time copies of the current Heart values; later Heart changes SHALL NOT change Stair distribution. Fireplace distribution SHALL run after Doors because it declares Doors occupancy as a prerequisite.
 
 #### Scenario: Enemy-spawner distribution is last for Underground
 - **WHEN** an Underground world is generated
@@ -30,9 +30,13 @@ The world generator SHALL compose a realm through the current ordered catalog: g
 - **WHEN** an Overground world is generated
 - **THEN** NPC spawners SHALL be distributed at their catalog position, after Torches and before Fireplaces, without adding civilization features
 
+#### Scenario: Only paired Stairs are placed for Overground Civilization Placement
+- **WHEN** an Overground world is generated
+- **THEN** the Civilization Placement pass SHALL add paired Stairs but no fences, Doors, or keys
+
 #### Scenario: No civilization distribution for Overground
 - **WHEN** an Overground world is generated
-- **THEN** the civilization pass SHALL add no fences, doors, or keys
+- **THEN** the Civilization Placement pass SHALL add no fences, Doors, or keys
 
 #### Scenario: Civilization pass does not rewrite terrain
 - **WHEN** the civilization pass places a barrier

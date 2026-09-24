@@ -13,13 +13,16 @@ test("generation settings retain the ordered catalog and default malformed densi
     ],
   });
 
-  assert.deepEqual(settings.passes.map((pass) => pass.order), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]);
+  assert.deepEqual(settings.passes.map((pass) => pass.order), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
   assert.equal(settings.passes.find((pass) => pass.id === "water").density, "High");
   assert.equal(settings.passes.find((pass) => pass.id === "overground-walls").density, "High");
   assert.equal(settings.passes.find((pass) => pass.id === "underground-caves").density, "High");
   assert.equal(settings.passes.find((pass) => pass.id === "enemy-spawner").density, "Med");
   assert.equal(settings.passes.find((pass) => pass.id === "npc-spawner").density, "Med");
   assert.equal(settings.passes.find((pass) => pass.id === "object-fireplace").density, "Med");
+  assert.equal(settings.passes.find((pass) => pass.id === "object-chest").density, "High");
+  assert.equal(settings.passes.find((pass) => pass.id === "civilization-stairs").density, "Med");
+  assert.equal(settings.passes.find((pass) => pass.id === "civilization-homes").density, "Med");
   assert.equal(settings.passes.find((pass) => pass.id === "player-position").configurable, false);
 });
 
@@ -78,13 +81,16 @@ test("keeps every Water density within the generator's valid range", () => {
   assert.deepEqual(waterFillPercents, [5, 60, 100]);
 });
 
-test("keeps NPC inside Object Distribution and applies Fireplace Low, Med, and High density", async () => {
+test("keeps Object and Character Distribution in their separate procedural cards", async () => {
   const app = await readFile(new URL("../../../src/client/ui-layer-react/App.jsx", import.meta.url), "utf8");
   const gameLayer = await readFile(new URL("../../../src/client/game-layer-babylon-lite/index.js", import.meta.url), "utf8");
-  assert.ok(app.includes('"npc-spawner"'));
-  assert.ok(app.includes("Object &amp; NPC Distribution"));
+  assert.ok(app.includes("getGenerationSemanticCards"));
+  assert.ok(app.includes('aria-label="Object Distribution, pass 7"'));
+  assert.ok(app.includes("Controls objects"));
+  assert.ok(app.includes('aria-label="Character Distribution, pass 9"'));
+  assert.ok(app.includes("9. {characterCard.title}"));
+  assert.ok(app.includes("Realm: {GENERATION_PASS_REALMS[pass.id]}"));
   assert.ok(!app.includes("Low 4 · Med 8 · High 12 Overworld NPC spawners"));
-  assert.ok(app.includes('"object-fireplace"'));
   assert.ok(gameLayer.includes('getObjectDistributionCount("fireplace", previewWorld.options.seed)'));
   assert.ok(gameLayer.includes('randomObjectCount("fireplace", realm.options.seed)'));
   assert.ok(gameLayer.includes("const npcSpawnerMarkers = previewRealm === \"Overground\""));
@@ -96,11 +102,26 @@ test("keeps NPC inside Object Distribution and applies Fireplace Low, Med, and H
   assert.ok(gameLayer.includes('primary: true, glyph: "█"'));
   assert.ok(gameLayer.includes('primary: false, glyph: "⚿"'));
   assert.ok(gameLayer.includes("...civilizationMarkers"));
+  assert.ok(gameLayer.includes("const homeMarkers = previewRealm === \"Overground\""));
+  assert.ok(gameLayer.includes("const previewPlan = resolveGenerationPlan(previewSettings"));
+  assert.ok(gameLayer.includes("const previewSeedNamespace"));
+  assert.ok(gameLayer.includes('previewSeedNamespace("civilization-homes")'));
+  assert.ok(gameLayer.includes('kind: "home", glyph: "^", color: "#d6a55a"'));
+  assert.ok(gameLayer.includes("...homeMarkers"));
+  assert.ok(gameLayer.includes('...(previewWorld.stairs ?? []).map'));
+  assert.ok(gameLayer.includes("const PROCEDURAL_PREVIEW_OBJECT_ICON_SIZE = Object.freeze({"));
+  assert.ok(gameLayer.includes("minimumPixels: 12,"));
+  assert.ok(gameLayer.includes("maximumPixels: 36,"));
+  assert.ok(gameLayer.includes("cellMultiplier: 6,"));
+  assert.ok(gameLayer.includes("const objectGlyphSize = Math.max("));
+  assert.ok(gameLayer.includes("* PROCEDURAL_PREVIEW_OBJECT_ICON_SIZE.cellMultiplier"));
   assert.ok(app.includes("const isPassAvailableInPreview"));
   assert.ok(app.includes("disabled={unavailable}"));
   assert.ok(app.includes("procedural_realm_unavailable"));
-  assert.ok(app.includes('aria-label="Civilization, pass 8"'));
-  assert.ok(app.includes('const civilizationPassIds = new Set(["civilization-doors"])'));
+  assert.ok(app.includes('aria-label="Civilization Placement, pass 8"'));
+  assert.ok(app.includes("8. {civilizationCard.title}"));
+  assert.ok(app.includes("Controls Stairs, Doors, and Homes placement"));
+  assert.ok(app.includes('["civilization-doors", "civilization-homes"].includes(pass.id)'));
 
   const fireplaceCounts = ["Low", "Med", "High"].map((density) => resolveGenerationProfile({
     passes: [{ id: "object-fireplace", density }],
@@ -113,4 +134,29 @@ test("applies Doors density to civilization placement", () => {
     passes: [{ id: "civilization-doors", density }],
   }).civilizationChanceMultiplier);
   assert.deepEqual(chanceMultipliers, [0.25, 1, 2]);
+});
+
+test("applies Homes density independently to Overworld building placement", () => {
+  const multipliers = ["Low", "Med", "High"].map((density) => resolveGenerationProfile({
+    passes: [{ id: "civilization-homes", density }],
+  }).homeChanceMultiplier);
+  assert.deepEqual(multipliers, [0.25, 1, 2]);
+  const settings = normalizeGenerationSettings({ passes: [{ id: "civilization-doors", density: "High" }] });
+  assert.equal(settings.passes.find((pass) => pass.id === "civilization-homes").density, "Med");
+});
+
+test("maps Chest Low, Med, and High settings to one, two, and three chests", () => {
+  const chestCounts = ["Low", "Med", "High"].map((density) => resolveGenerationProfile({
+    passes: [{ id: "object-chest", density }],
+  }).chestCount);
+  assert.deepEqual(chestCounts, [1, 2, 3]);
+});
+
+test("keeps the paired Stairs profile independent from Hearts", () => {
+  const profile = (heart, stairs) => resolveGenerationProfile({
+    passes: [{ id: "object-heart", density: heart }, { id: "civilization-stairs", density: stairs }],
+  });
+  assert.deepEqual(["Low", "Med", "High"].map((density) => profile("High", density).stairsCountMultiplier), [0.25, 1, 3]);
+  assert.equal(profile("Low", "High").stairsCountMultiplier, 3);
+  assert.equal(profile("Low", "High").objectCountMultipliers.heart, 0.25);
 });

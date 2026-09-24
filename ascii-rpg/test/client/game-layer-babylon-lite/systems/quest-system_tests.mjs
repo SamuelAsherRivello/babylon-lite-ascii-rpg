@@ -31,6 +31,13 @@ const discoverTheWorld = {
   ],
 };
 
+const allOfTheTreasure = {
+  id: "all-of-the-treasure", title: "All of the Treasure", objective: "Open treasure chest",
+  steps: [
+    { id: "open-treasure-chest", label: "Open treasure chest", criterion: { mode: "event", eventType: "chest-opened", target: 1 } },
+  ],
+};
+
 test("quest data defines the Overground prerequisite and relative Collect Gold step", () => {
   const definition = questData.quests.find((quest) => quest.id === "collect-gold");
   assert.deepEqual(definition.steps.map(({ id, label }) => ({ id, label })), [
@@ -66,6 +73,26 @@ test("quest data defines Discover the World with per-realm discovery goals", () 
   assert.deepEqual(definition.steps.map(({ hideProgress }) => hideProgress), [true, true]);
   assert.equal(definition.completionOrder, "any");
   assert.deepEqual(definition.steps.map(({ criterion }) => criterion), discoverTheWorld.steps.map(({ criterion }) => criterion));
+});
+
+test("quest data defines All of the Treasure with one chest-opening task", () => {
+  const definition = questData.quests.find((quest) => quest.id === "all-of-the-treasure");
+  assert.ok(definition);
+  assert.equal(definition.title, "All of the Treasure");
+  assert.equal(definition.objective, "Open treasure chest");
+  assert.deepEqual(definition.steps.map(({ id, label, criterion }) => ({ id, label, criterion })), allOfTheTreasure.steps);
+});
+
+test("All of the Treasure completes once from the generic chest-opened event", () => {
+  const manager = createQuestManager([allOfTheTreasure]);
+  const events = [];
+  manager.subscribe((event) => events.push(event.type));
+  manager.startQuest("all-of-the-treasure");
+  manager.observe({ type: "pickup-collected", pickupType: "heart" });
+  assert.equal(manager.getSnapshot().complete, false);
+  manager.observe({ type: "chest-opened" });
+  assert.equal(manager.getSnapshot().complete, true);
+  assert.deepEqual(events, ["started", "step-completed", "completed"]);
 });
 
 test("Discover the World tracks both realm discovery percentages in any order before completing", () => {
@@ -131,6 +158,7 @@ test("all quest definitions are available to the quest selector catalog", () => 
   assert.ok(questData.quests.some((quest) => quest.id === "collect-gold"));
   assert.ok(questData.quests.some((quest) => quest.id === "unlock-a-door"));
   assert.ok(questData.quests.some((quest) => quest.id === "discover-the-world"));
+  assert.ok(questData.quests.some((quest) => quest.id === "all-of-the-treasure"));
   assert.equal(new Set(questData.quests.map((quest) => quest.id)).size, questData.quests.length);
 });
 

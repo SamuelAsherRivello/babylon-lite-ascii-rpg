@@ -104,6 +104,22 @@
           }
         }
       ]
+    },
+    {
+      "id": "all-of-the-treasure",
+      "title": "All of the Treasure",
+      "objective": "Open treasure chest",
+      "steps": [
+        {
+          "id": "open-treasure-chest",
+          "label": "Open treasure chest",
+          "criterion": {
+            "mode": "event",
+            "eventType": "chest-opened",
+            "target": 1
+          }
+        }
+      ]
     }
   ],
   "criterionExamples": [

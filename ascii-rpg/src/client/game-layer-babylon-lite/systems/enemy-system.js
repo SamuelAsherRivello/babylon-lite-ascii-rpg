@@ -1,5 +1,6 @@
 import { ENEMY_GLYPH } from "./world-system.js";
 import { calculatePlayerDamageTaken } from "./combat-stats-system.js";
+import { AStarUtility } from "../utilities/a-star-utility.js";
 
 export { ENEMY_GLYPH };
 export const ENEMY_HEALTH = 40;
@@ -28,60 +29,7 @@ export function createCardinalDistanceField(world, target, {
   isBlockedIndex = null,
   maxDistance = Number.POSITIVE_INFINITY,
 } = {}) {
-  const rows = world?.rows ?? world?.terrain?.length ?? 0;
-  const columns = world?.columns ?? world?.terrain?.[0]?.length ?? 0;
-  const finiteRadius = Number.isFinite(maxDistance) ? Math.max(0, Math.floor(maxDistance)) : null;
-  const minimumX = finiteRadius === null ? 0 : Math.max(0, target.x - finiteRadius);
-  const maximumX = finiteRadius === null ? columns - 1 : Math.min(columns - 1, target.x + finiteRadius);
-  const minimumY = finiteRadius === null ? 0 : Math.max(0, target.y - finiteRadius);
-  const maximumY = finiteRadius === null ? rows - 1 : Math.min(rows - 1, target.y + finiteRadius);
-  const fieldColumns = Math.max(0, maximumX - minimumX + 1);
-  const fieldRows = Math.max(0, maximumY - minimumY + 1);
-  const fieldSize = fieldRows * fieldColumns;
-  const distances = new Int32Array(fieldSize);
-  distances.fill(-1);
-
-  const inBounds = (x, y) => x >= minimumX && y >= minimumY && x <= maximumX && y <= maximumY;
-  const getIndex = (x, y) => (y - minimumY) * fieldColumns + x - minimumX;
-  const blockedAt = isBlockedIndex ?? ((x, y) => isBlocked({ x, y }));
-  if (inBounds(target.x, target.y) && world.terrain?.[target.y]?.[target.x]?.walkable) {
-    const queueX = new Int32Array(fieldSize);
-    const queueY = new Int32Array(fieldSize);
-    let head = 0;
-    let tail = 1;
-    queueX[0] = target.x;
-    queueY[0] = target.y;
-    distances[getIndex(target.x, target.y)] = 0;
-
-    const visit = (x, y, distance) => {
-      if (!inBounds(x, y)) return;
-      const index = getIndex(x, y);
-      if (distances[index] !== -1 || !world.terrain[y][x].walkable
-        || (blockedAt(x, y) && (x !== target.x || y !== target.y))) return;
-      distances[index] = distance;
-      queueX[tail] = x;
-      queueY[tail] = y;
-      tail += 1;
-    };
-
-    while (head < tail) {
-      const x = queueX[head];
-      const y = queueY[head];
-      head += 1;
-      const distance = distances[getIndex(x, y)] + 1;
-      if (distance > maxDistance) continue;
-      visit(x, y - 1, distance);
-      visit(x + 1, y, distance);
-      visit(x, y + 1, distance);
-      visit(x - 1, y, distance);
-    }
-  }
-
-  return Object.freeze({
-    getDistance(cell) {
-      return inBounds(cell.x, cell.y) ? distances[getIndex(cell.x, cell.y)] : -1;
-    },
-  });
+  return AStarUtility.createDistanceField(world, target, { isBlocked, isBlockedIndex, maxDistance });
 }
 
 export function createEnemySystem({
@@ -161,7 +109,14 @@ export function createEnemySystem({
     };
 
     if (manhattanDistance(enemy.cell, player.cell) > navigationRadius) {
-      takeGreedyStep();
+      const route = AStarUtility.findHierarchicalPath(player.world, enemy.cell, player.cell, {
+        isBlocked: (cell) => isStaticOccupied(cell, enemy.realm),
+      });
+      const cell = route?.nextCell;
+      if (cell && occupancy.move(id, cell)) {
+        if (cell.x !== enemy.cell.x) occupancy.update(id, { facing: cell.x > enemy.cell.x ? "right" : "left" });
+        onChange();
+      }
       return;
     }
 

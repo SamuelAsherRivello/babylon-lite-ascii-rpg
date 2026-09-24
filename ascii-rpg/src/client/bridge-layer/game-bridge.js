@@ -1,13 +1,8 @@
-import { normalizeCameraMode } from "./camera.js";
-import { getStoredInitialZoom } from "../ui-layer-react/platform-settings.js";
+import { getStoredInitialCameraMode, getStoredInitialZoom } from "../ui-layer-react/platform-settings.js";
 
 let gameController = null;
 let timeSnapshot = 1;
-let cameraModeSnapshot = normalizeCameraMode(
-  typeof localStorage !== "undefined"
-    ? localStorage.getItem("babylon-lite-ascii-rpg.camera-mode")
-    : null,
-);
+let cameraModeSnapshot = getStoredInitialCameraMode();
 let realmAmbientSnapshot = { Overground: 0.9, Underground: 0.1 };
 let realmPreferenceSnapshot = typeof localStorage !== "undefined" && localStorage.getItem("babylon-lite-ascii-rpg.active-realm") === "Underground"
   ? "Underground"

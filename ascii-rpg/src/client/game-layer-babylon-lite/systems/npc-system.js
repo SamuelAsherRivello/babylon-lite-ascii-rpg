@@ -1,4 +1,4 @@
-import { createCardinalDistanceField } from "./enemy-system.js";
+import { AStarUtility } from "../utilities/a-star-utility.js";
 
 export const NPC_GLYPH = "☺";
 export const NPC_ACTION_INTERVAL = 20;
@@ -14,7 +14,7 @@ function pick(values, random) {
 
 export function createNpcSystem({ timeSystem, occupancy, worldFor, isWalkable, isStaticOccupied = () => false, randomFor = () => Math.random, onChange = () => {} } = {}) {
   const createPatrol = (npc, world, random) => {
-    const field = createCardinalDistanceField(world, npc.home, { isBlocked: (cell) => isStaticOccupied(cell, npc.realm) });
+    const field = AStarUtility.createDistanceField(world, npc.home, { isBlocked: (cell) => isStaticOccupied(cell, npc.realm) });
     const preferredDistance = random() < 0.5 ? 15 : 20;
     const candidates = [];
     for (let y = 0; y < world.rows; y += 1) for (let x = 0; x < world.columns; x += 1) {
@@ -47,6 +47,8 @@ export function createNpcSystem({ timeSystem, occupancy, worldFor, isWalkable, i
   const simulate = (id, event) => {
     const npc = occupancy.get(id);
     if (!npc) return;
+    const age = event.time - npc.bornAtTime;
+    if (age < NPC_ACTION_INTERVAL || age % NPC_ACTION_INTERVAL !== 0) return;
     if (!npc.route?.length) return;
     const target = npc.returning
       ? (npc.routeIndex < 0 ? npc.home : npc.route[npc.routeIndex])

@@ -36,13 +36,15 @@ jobs:
           next="$major.$minor.$((patch + 1))"
           printf 'version=%s\n' "$next" > version.txt
           echo "value=$next" >> "$GITHUB_OUTPUT"
+      - name: Update Changelog
+        run: node scripts/update-changelog.mjs "${{ steps.version.outputs.value }}"
       - name: Commit and tag release
         env:
           VERSION: ${{ steps.version.outputs.value }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add version.txt
+          git add version.txt ascii-rpg/src/client/ui-layer-react/data/changelog.json
           git commit -m "chore: release v$VERSION"
           git tag "v$VERSION"
           git push origin HEAD:main --tags

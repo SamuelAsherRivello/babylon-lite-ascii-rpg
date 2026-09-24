@@ -6,80 +6,232 @@
       "title": "Ground",
       "order": 1,
       "configurable": false,
-      "density": "Med"
+      "density": "Med",
+      "owner": "terrain",
+      "realms": [
+        "Overground",
+        "Underground"
+      ],
+      "seedNamespace": "ground",
+      "requires": []
     },
     {
       "id": "overground-walls",
       "title": "Overground Walls",
       "order": 2,
-      "density": "Med"
+      "density": "Med",
+      "owner": "terrain",
+      "realms": [
+        "Overground"
+      ],
+      "seedNamespace": "overground-walls",
+      "requires": []
     },
     {
       "id": "underground-caves",
       "title": "Underground Caves",
       "order": 3,
-      "density": "Med"
+      "density": "Med",
+      "owner": "terrain",
+      "realms": [
+        "Underground"
+      ],
+      "seedNamespace": "underground-caves",
+      "requires": []
     },
     {
       "id": "water",
       "title": "Water",
       "order": 4,
-      "density": "High"
+      "density": "High",
+      "owner": "terrain",
+      "realms": [
+        "Overground",
+        "Underground"
+      ],
+      "seedNamespace": "water",
+      "requires": []
     },
     {
       "id": "walkability",
       "title": "Walkability",
       "order": 5,
-      "density": "Med"
+      "density": "Med",
+      "owner": "terrain",
+      "realms": [
+        "Overground",
+        "Underground"
+      ],
+      "seedNamespace": "walkability",
+      "requires": []
     },
     {
       "id": "player-position",
       "title": "Player Position",
       "order": 6,
       "configurable": false,
-      "density": "Med"
+      "density": "Med",
+      "owner": "player",
+      "realms": [
+        "Overground",
+        "Underground"
+      ],
+      "requires": [
+        "walkability"
+      ],
+      "seedNamespace": "player-position"
     },
     {
       "id": "object-heart",
       "title": "Heart Distribution",
       "order": 7,
-      "density": "Med"
+      "density": "Med",
+      "owner": "objects",
+      "realms": [
+        "Overground",
+        "Underground"
+      ],
+      "requires": [
+        "player-position"
+      ],
+      "objectType": "heart",
+      "seedNamespace": "heart:placement"
+    },
+    {
+      "id": "object-chest",
+      "title": "Chest Distribution",
+      "order": 8,
+      "density": "High",
+      "owner": "objects",
+      "realms": [
+        "Overground",
+        "Underground"
+      ],
+      "requires": [
+        "player-position"
+      ],
+      "objectType": "chest",
+      "seedNamespace": "chest:placement"
     },
     {
       "id": "object-trap",
       "title": "Trap Distribution",
-      "order": 8,
-      "density": "Med"
+      "order": 9,
+      "density": "Med",
+      "owner": "objects",
+      "realms": [
+        "Overground",
+        "Underground"
+      ],
+      "requires": [
+        "player-position"
+      ],
+      "objectType": "trap",
+      "seedNamespace": "trap:placement"
     },
     {
       "id": "object-torch",
       "title": "Torch Distribution",
-      "order": 9,
-      "density": "Med"
+      "order": 10,
+      "density": "Med",
+      "owner": "objects",
+      "realms": [
+        "Overground",
+        "Underground"
+      ],
+      "requires": [
+        "player-position"
+      ],
+      "objectType": "torch",
+      "seedNamespace": "torch:placement"
     },
     {
       "id": "npc-spawner",
       "title": "NPC",
-      "order": 10,
-      "density": "Med"
+      "order": 11,
+      "density": "Med",
+      "owner": "dynamic",
+      "realms": [
+        "Overground"
+      ],
+      "requires": [
+        "player-position"
+      ],
+      "seedNamespace": "npc-spawner:placement"
     },
     {
       "id": "object-fireplace",
       "title": "Fireplace Distribution",
-      "order": 11,
-      "density": "Med"
+      "order": 12,
+      "density": "Med",
+      "owner": "objects",
+      "realms": [
+        "Underground"
+      ],
+      "requires": [
+        "civilization-doors"
+      ],
+      "objectType": "fireplace",
+      "seedNamespace": "fireplace:placement"
+    },
+    {
+      "id": "civilization-stairs",
+      "title": "Stairs",
+      "order": 13,
+      "density": "Med",
+      "owner": "civilization",
+      "realms": [
+        "Overground",
+        "Underground"
+      ],
+      "requires": [
+        "player-position"
+      ],
+      "objectType": "stairs",
+      "seedNamespace": "stairs",
+      "pairedRealms": true
     },
     {
       "id": "civilization-doors",
       "title": "Doors",
-      "order": 12,
-      "density": "Med"
+      "order": 14,
+      "density": "Med",
+      "owner": "civilization",
+      "realms": [
+        "Underground"
+      ],
+      "requires": [
+        "civilization-stairs"
+      ],
+      "seedNamespace": "civilization:placement"
+    },
+    {
+      "id": "civilization-homes",
+      "title": "Homes",
+      "order": 15,
+      "density": "Med",
+      "owner": "civilization",
+      "realms": [
+        "Overground"
+      ],
+      "requires": [
+        "civilization-stairs"
+      ],
+      "seedNamespace": "buildings:placement"
     },
     {
       "id": "enemy-spawner",
       "title": "Enemy Spawner Distribution",
-      "order": 13,
-      "density": "Med"
+      "order": 16,
+      "density": "Med",
+      "owner": "dynamic",
+      "realms": [
+        "Underground"
+      ],
+      "requires": [
+        "civilization-doors"
+      ],
+      "seedNamespace": "enemy-spawner:placement"
     }
   ]
 }

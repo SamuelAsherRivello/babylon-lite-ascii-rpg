@@ -15,6 +15,6 @@
 
 ## 3. Integrate and verify the renderer change
 
-- [ ] 3.1 Run the affected Node test groups for monitoring, lifecycle, scheduling, and world/minimap rendering; verify all added and related checks pass.
-- [ ] 3.2 Run the repository's full Node test command and production build; verify both complete successfully or document any unrelated pre-existing failure.
+- [x] 3.1 Run the affected Node test groups for monitoring, lifecycle, scheduling, and world/minimap rendering; verify all added and related checks pass.
+- [x] 3.2 Run the repository's full Node test command and production build; verify both complete successfully or document any unrelated pre-existing failure.
 - [ ] 3.3 Manually validate the production fixed-environment profile with real held movement and sprint; verify no intentional cleanup is reported as device loss and the report records valid scenario durations, frame pacing, and phase timings.

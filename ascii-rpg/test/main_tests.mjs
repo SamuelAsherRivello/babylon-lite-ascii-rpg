@@ -181,6 +181,7 @@ test("documents the plain safe-area template", async () => {
     "settingsHelp.camera",
     "settingsHelp.zoom",
     "settingsHelp.reset",
+    "settingsHelp.changelog",
   ]) {
     if (!lowerLeftMarkup.includes(requiredTooltip)) {
       throw new Error(`The lower-left HUD line for ${requiredTooltip} must have a full-line tooltip.`);
@@ -486,6 +487,9 @@ test("documents the plain safe-area template", async () => {
   if (!app.includes("getRandomSeedSnapshot") || !app.includes("subscribeToRandomSeed")
     || !app.includes("value: (seedValue) => seedValue") || !app.includes("randomSeed={randomSeed}")) {
     throw new Error("The randomSeed URL argument example must use the current session seed.");
+  }
+  if (!app.includes('id="changelog_toggle"') || !app.includes("ChangelogWindow") || !app.includes("Changelog")) {
+    throw new Error("The developer panel must expose the Changelog window.");
   }
   if (!app.includes("randomSeed === \"0\" ? \"0\" : \"random\"")
     || !app.includes("<ProceduralSettingsWindow settings={generationSettings} randomSeed={randomSeed}")) {

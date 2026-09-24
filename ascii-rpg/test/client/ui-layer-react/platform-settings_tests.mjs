@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   getPlatformSettingsDefaults,
+  getStoredInitialCameraMode,
   getStoredAspectMode,
   getStoredInitialZoom,
   getMigratedStoredZoomValue,
@@ -26,6 +27,17 @@ test("uses mobile defaults only when zoom values are absent", () => {
   assert.equal(getStoredZoomValue("4", MOBILE_SETTINGS_DEFAULTS.zoom, 1, 10), 4);
   assert.equal(getMigratedStoredZoomValue("5", MOBILE_SETTINGS_DEFAULTS.zoom), 5);
   assert.equal(getMigratedStoredZoomValue("9", MOBILE_SETTINGS_DEFAULTS.zoom, "2"), 9);
+});
+
+test("uses platform camera defaults only when the preference is absent or invalid", () => {
+  const emptyStorage = { getItem: () => null };
+  const persistedStorage = { getItem: () => "lock" };
+  const invalidStorage = { getItem: () => "unexpected" };
+
+  assert.equal(getStoredInitialCameraMode({ storage: emptyStorage, matchMedia: coarsePointer }), "center");
+  assert.equal(getStoredInitialCameraMode({ storage: emptyStorage, matchMedia: finePointer }), "deadzone");
+  assert.equal(getStoredInitialCameraMode({ storage: persistedStorage, matchMedia: coarsePointer }), "lock");
+  assert.equal(getStoredInitialCameraMode({ storage: invalidStorage, matchMedia: coarsePointer }), "center");
 });
 
 test("reads the persisted zoom for the initial game construction", () => {

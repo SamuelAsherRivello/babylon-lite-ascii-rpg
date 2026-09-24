@@ -2,13 +2,13 @@
 
 ## Context
 
-See [proposal.md](proposal.md). The live catalog currently has thirteen entries but the Procedural window renders nine semantic cards: entries 7-11 are Object Distribution rows and entry 12 is a Civilization/Doors row. Ground is fixed; Overground Walls and Underground Caves retain independent realm-specific density settings. Object and civilization placement currently occurs in startup code, Fireplace is placed manually after civilization, and enemy spawners initialize before NPC spawners.
+See [proposal.md](proposal.md). The target catalog has fifteen entries but the Procedural window retains nine semantic cards: Object Distribution contains Heart, Chest, Trap, Torch, and Fireplace; Civilization Placement contains paired Stairs before Doors; and Character Distribution contains Underground Enemy before Overworld NPC. The Civilization Placement card itself does not display a realm; Doors visibly identifies `Realm: Underground`. Ground is fixed; Overground Walls and Underground Caves retain independent realm-specific density settings. Object and civilization placement currently occurs in startup code, Fireplace is placed manually after civilization, and enemy spawners initialize before NPC spawners.
 
 ## Goals / Non-Goals
 
 **Goals:**
 
-- Make the existing thirteen entries and nine-card presentation one validated source for settings, preview, and runtime generation.
+- Make the existing fifteen entries and nine-card presentation one validated source for settings, preview, and runtime generation.
 - Preserve the current density mappings, realm scopes, static-object ownership, civilization ownership, and dynamic occupancy boundaries.
 - Turn valid generated catalog objects into automatic placement inputs, including Fireplace after its civilization prerequisite.
 
@@ -22,11 +22,11 @@ See [proposal.md](proposal.md). The live catalog currently has thirteen entries 
 
 ### Normalize the existing catalog instead of replacing it
 
-The registry consumes the existing thirteen catalog entries, their order, realm scope, configurable/fixed status, and settings identities. It exposes the current nine semantic cards as a presentation grouping: raw entries 7-11 belong to Object Distribution and raw entry 12 belongs to Civilization. This is preferred to a replacement nine-entry data file because it preserves the active split terrain controls and current density semantics.
+The registry consumes the existing fifteen catalog entries, their order, realm scope, configurable/fixed status, and settings identities. It exposes the current nine semantic cards as a presentation grouping: generated objects belong to Object Distribution, Stairs and Doors belong to Civilization Placement, and Enemy plus NPC belong to Character Distribution. This is preferred to a replacement nine-entry data file because it preserves the active split terrain controls and current density semantics.
 
 ### Extend object declarations and retain owner-specific placement
 
-Level-spawned objects declare realm scope, an owning Object Distribution entry, a settings id when configurable, and prerequisite entries. The Object Spawner System enumerates those declarations in deterministic catalog order. Stairs retain paired-realm placement; Fireplace declares the Underground civilization prerequisite. Object effects remain in the game layer, while the registry coordinates timing and reservations only.
+Level-spawned objects declare realm scope, an owning Object Distribution or Civilization Placement entry, a settings id when configurable, and prerequisite entries. The Object Spawner System enumerates those declarations in deterministic catalog order. Stairs remain paired across both realms as the first Civilization Placement sublayer, before the Underground-only Doors sublayer, and use their own `civilization-stairs` count profile; its initial Low, Med, and High values are one-time copies of the current Heart values, and neither profile reads or updates the other afterward. Fireplace declares the Doors prerequisite. Object effects remain in the game layer, while the registry coordinates timing and reservations only.
 
 ### Share plan resolution between preview and live startup
 
@@ -45,7 +45,7 @@ Settings normalization derives required entries from the registry, keeps valid s
 
 ## Migration Plan
 
-1. Define and test the registry against the current thirteen entries and nine semantic cards.
+1. Define and test the registry against the current fifteen entries and nine semantic cards.
 2. Add object generation declarations and route Object Distribution, including Fireplace, through the registry.
 3. Route preview and dynamic spawner setup through the same resolved plan.
 4. Run focused Node tests, responsive tests, build, and manual Procedural preview checks.

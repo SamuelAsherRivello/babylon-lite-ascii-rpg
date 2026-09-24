@@ -171,7 +171,7 @@ test("dirty sprites update only for changed visible glyph, frame, tint, or visib
   assert.equal(shouldUpdateVisibleSprite({ ...state, visible: false }, "W", 3, color, 1), true);
 });
 
-test("visible light refresh clears old player light and glyph changes keep terrain intact", () => {
+test("visible light diffs update changed cells and preserve unchanged sprites and terrain", () => {
   const terrain = Array.from({ length: 5 }, () =>
     Array.from({ length: 7 }, () => ({ walkable: true, glyph: "•" })));
   terrain[2][3] = { walkable: false, glyph: "W" };
@@ -199,6 +199,19 @@ test("visible light refresh clears old player light and glyph changes keep terra
     glyph: "•", frame: 0, baseColor, lightingFactor: oldShadowedFactor, visible: true,
   };
   assert.equal(shouldUpdateVisibleSprite(previous, "•", 0, baseColor, nextField.getFactor(shadowed)), true);
+  const unchangedCell = Array.from({ length: region.rows * region.columns }, (_, index) => ({
+    x: index % region.columns,
+    y: Math.floor(index / region.columns),
+  })).find((cell) => oldField.getFactor(cell) === nextField.getFactor(cell));
+  assert.ok(unchangedCell, "a player move leaves some visible lighting factors unchanged");
+  const unchangedFactor = nextField.getFactor(unchangedCell);
+  assert.equal(shouldUpdateVisibleSprite(
+    { ...previous, lightingFactor: unchangedFactor },
+    "•",
+    0,
+    baseColor,
+    unchangedFactor,
+  ), false);
   const changedCell = { x: 2, y: 1 };
   const factor = nextField.getFactor(changedCell);
   characters[1][2] = "T";

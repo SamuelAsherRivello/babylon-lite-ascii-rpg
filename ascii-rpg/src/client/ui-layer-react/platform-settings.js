@@ -5,13 +5,16 @@ import {
   migrateLegacyZoom,
   normalizeZoom,
 } from "../game-layer-babylon-lite/zoom-scale.js";
+import { CAMERA_MODES, CAMERA_STORAGE_KEY } from "../bridge-layer/camera.js";
 
 export const PC_SETTINGS_DEFAULTS = Object.freeze({
+  cameraMode: "deadzone",
   zoom: 5,
 });
 
 export const MOBILE_SETTINGS_DEFAULTS = Object.freeze({
   ...PC_SETTINGS_DEFAULTS,
+  cameraMode: "center",
 });
 
 export function isMobilePlatform(matchMedia = globalThis.window?.matchMedia) {
@@ -43,6 +46,16 @@ export function getStoredInitialZoom({
     defaults.zoom,
     storage?.getItem("babylon-lite-ascii-rpg.zoom-version") ?? null,
   );
+}
+
+export function getStoredInitialCameraMode({
+  storage = typeof localStorage === "undefined" ? null : localStorage,
+  matchMedia,
+} = {}) {
+  const storedMode = storage?.getItem(CAMERA_STORAGE_KEY) ?? null;
+  return CAMERA_MODES.includes(storedMode)
+    ? storedMode
+    : getPlatformSettingsDefaults(matchMedia).cameraMode;
 }
 
 export { MAX_ZOOM, MIN_ZOOM };
