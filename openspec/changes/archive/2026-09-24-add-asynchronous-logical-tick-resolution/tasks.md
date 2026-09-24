@@ -29,4 +29,4 @@
 
 - [x] 5.1 Run focused time, scheduler, movement, combat, enemy, NPC, spawner, bridge, and rendering tests and verify deterministic seeded outcomes match the synchronous reference.
 - [x] 5.2 Run `npm.cmd test`, `npm.cmd run build`, `git diff --check`, and strict OpenSpec validation; record actual results and distinguish unrelated existing failures.
-- [ ] 5.3 Manually verify with explicit fixed random seeds that movement triggers an ordered logical tick callback on one frame, the game continues rendering across later frames while that tick resolves, real elapsed deltas are captured at trigger time, rapid input does not duplicate or reorder ticks, and restart/realm changes invalidate obsolete work.
+- [x] 5.3 Manually verify with explicit fixed random seeds that movement triggers an ordered logical tick callback on one frame, the game continues rendering across later frames while that tick resolves, real elapsed deltas are captured at trigger time, rapid input does not duplicate or reorder ticks, and restart/realm changes invalidate obsolete work.
