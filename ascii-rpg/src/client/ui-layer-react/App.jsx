@@ -120,6 +120,9 @@ import { QuestLayout, QuestTracker, getQuestPreview } from "./quest-components.j
 import { LogBody } from "./log-components.jsx";
 import { DeathWindow, TutorialWindow, WindowBackdrop } from "./tutorial-windows.jsx";
 import { GameplaySettingsWindow } from "./gameplay-settings-window.jsx";
+import { ChangelogWindow } from "./changelog-window.jsx";
+import { ArgumentsWindow } from "./arguments-window.jsx";
+import { CharacterDetails as ExtractedCharacterDetails } from "./character-components.jsx";
 import {
   fullscreenStorageKey, aspectStorageKey, developerOpenStorageKey, logOpenStorageKey,
   zoomStorageKey, zoomStorageVersionKey, overgroundAmbientStorageKey, undergroundAmbientStorageKey,
@@ -360,7 +363,7 @@ function CharacterBarRow({ row, data, color, onShowTooltip, onHideTooltip }) {
   );
 }
 
-function CharacterDetails({
+function LegacyCharacterDetails({
   gold = INITIAL_CHARACTER.gold.currentAmount,
   keys = INITIAL_CHARACTER.keys.currentAmount,
   health = INITIAL_CHARACTER.health.currentPercent,
@@ -1082,85 +1085,6 @@ const argumentBlocks = [
 function applyUrlArgument(name, value) {
   const nextUrl = withUrlArgument(window.location.href, name, value);
   window.location.assign(nextUrl.href);
-}
-
-export function ArgumentsWindow({ onClose, randomSeed }) {
-  const seedValue = randomSeed ?? "";
-  return (
-    <div className="prompt_window" role="presentation">
-      <div className="window_backdrop" aria-hidden="true" onClick={onClose} />
-      <section
-        className="window"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="arguments_title"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="window_header">
-          <h1 id="arguments_title" className="prompt_title">Arguments</h1>
-          <button
-            className="prompt_button window_close"
-            type="button"
-            aria-label="Close Arguments"
-            onClick={onClose}
-          >
-            X
-          </button>
-        </div>
-        <div className="prompt_body window_body">
-          {argumentBlocks.map((argument) => {
-            const value = argument.value(seedValue);
-            const example = `?${argument.parameter}=${encodeURIComponent(value)}`;
-            return (
-            <section className="argument_block" key={argument.parameter}>
-              <h2>{argument.name}</h2>
-              <ul className="window_list">
-                <li>
-                  <button
-                    className="argument_code"
-                    type="button"
-                    disabled={!value}
-                    onClick={() => applyUrlArgument(argument.parameter, value)}
-                  >
-                    <code>{example}</code>
-                  </button>{" "}
-                  {argument.description}
-                </li>
-                <li>{argument.fallback}</li>
-              </ul>
-            </section>
-            );
-          })}
-        </div>
-      </section>
-    </div>
-  );
-}
-
-export function ChangelogWindow({ onClose }) {
-  return (
-    <div className="prompt_window" role="presentation">
-      <div className="window_backdrop" aria-hidden="true" onClick={onClose} />
-      <section className="window gameplay_settings_window changelog_window" role="dialog" aria-modal="true" aria-labelledby="changelog_title" onClick={(event) => event.stopPropagation()}>
-        <div className="window_header">
-          <h1 id="changelog_title" className="prompt_title">Changelog</h1>
-          <button className="prompt_button window_close" type="button" aria-label="Close Changelog" onClick={onClose}>X</button>
-        </div>
-        <div className="prompt_body changelog_body">
-          {changelog.releases.map((release) => (
-            <section key={release.version} className="changelog_release" aria-labelledby={`changelog_${release.version}`}>
-              <h2 id={`changelog_${release.version}`}>v{release.version}</h2>
-              <ul>{release.items.map((item) => {
-                const label = typeof item === "string" ? item : item.label;
-                const featurePath = typeof item === "string" ? changelogFeaturePaths[item] : item.featurePath;
-                return <li key={label}><a href={`${repositoryUrl}/blob/v${release.version}/${featurePath}`} target="_blank" rel="noopener noreferrer">{label}</a></li>;
-              })}</ul>
-            </section>
-          ))}
-        </div>
-      </section>
-    </div>
-  );
 }
 
 function GenerationEnabledCheckbox({ title, enabled, disabled = false, mixed = false, onChange }) {
@@ -1946,7 +1870,7 @@ function AppContent() {
         onKeyDown={(event) => handleTopPanelKeyDown(event, activateDetails)}
       >
         <BoxLayout action="Character">
-          <CharacterDetails
+          <ExtractedCharacterDetails
             gold={gold}
             keys={keys}
             slots={characterState.slots}
@@ -2182,7 +2106,7 @@ function AppContent() {
           onClose={() => setAsciiPaletteOpen(false)}
         />
       ) : null}
-      {argumentsOpen ? <ArgumentsWindow onClose={() => setArgumentsOpen(false)} randomSeed={randomSeed} /> : null}
+      {argumentsOpen ? <ArgumentsWindow onClose={() => setArgumentsOpen(false)} randomSeed={randomSeed} argumentBlocks={argumentBlocks} onApplyArgument={applyUrlArgument} /> : null}
       {gameplaySettingsOpen ? (
         <GameplaySettingsWindow
           quest={quest}
@@ -2191,7 +2115,7 @@ function AppContent() {
           onClose={() => setGameplaySettingsOpen(false)}
         />
       ) : null}
-      {changelogOpen ? <ChangelogWindow onClose={() => setChangelogOpen(false)} /> : null}
+      {changelogOpen ? <ChangelogWindow onClose={() => setChangelogOpen(false)} repositoryUrl={repositoryUrl} featurePaths={changelogFeaturePaths} /> : null}
       {proceduralSettingsOpen ? <ProceduralSettingsWindow settings={generationSettings} randomSeed={randomSeed} onConfirm={confirmGenerationSettings} onClose={() => setProceduralSettingsOpen(false)} /> : null}
     </>
   );
