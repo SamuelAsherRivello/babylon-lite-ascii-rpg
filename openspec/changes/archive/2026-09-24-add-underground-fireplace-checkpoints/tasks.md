@@ -15,5 +15,5 @@
 ## 3. User interface and verification
 
 - [x] 3.1 Forward checkpoint events through the bridge to the existing toast provider and replace the death modal's single reload action with `Restart from checkpoint` and `Restart game`; verify exact labels, toast copy, bridge/controller calls, and disabled-before-checkpoint/enabled-after-checkpoint states in focused UI and bridge tests.
-- [ ] 3.2 Run the affected Node test files and `npm.cmd test` from the repository root; verify all checks pass.
-- [ ] 3.3 Run `npm.cmd run build` from the repository root and manually verify an Underground Fireplace saves a checkpoint, checkpoint recovery preserves the run, Restart game recreates the original seed, and a browser refresh has no checkpoint.
+- [x] 3.2 Run the affected Node test files and `npm.cmd test` from the repository root; verify all checks pass.
+- [x] 3.3 Run `npm.cmd run build` from the repository root and manually verify an Underground Fireplace saves a checkpoint, checkpoint recovery preserves the run, Restart game recreates the original seed, and a browser refresh has no checkpoint.

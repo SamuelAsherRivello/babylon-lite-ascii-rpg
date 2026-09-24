@@ -138,6 +138,7 @@ import { resolveGenerationProfile } from "./generation-profile.js";
 import { createGameSession } from "./game-session.js";
 import { initializeDynamicGenerationFeatures } from "./generation-layers/dynamic-entity-generation-layer.js";
 import { createRenderSchedulingController } from "./game-session/render-scheduling-controller.js";
+import { createInputController } from "./game-session/input-controller.js";
 import { resolveGenerationPlan } from "./world-feature-generation-registry.js";
 import { getWorldSizeDimensions } from "../world-size-settings.js";
 
@@ -361,6 +362,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
   let mapviewOpen = false;
   let mapviewRealm = null;
   let mapviewRenderJob = null;
+  let inputController = null;
   let settingsMapRenderJob = null;
   let settingsMapGenerationController = null;
   let settingsMapPreviewRevision = 0;
@@ -2541,10 +2543,24 @@ async function createGameSessionImplementation(container, initialPalette, initia
     // Preserve the Babylon Lite-only architecture on device loss: the client
     // becomes unavailable rather than constructing an alternate renderer.
     engine._device?.lost?.then((info) => handleDeviceLost(lifecycleToken, info));
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("keyup", handleKeyUp);
-    window.addEventListener("resize", handleResize);
-    window.addEventListener("orientationchange", handleResize);
+    inputController = createInputController({
+      windowTarget: window,
+      canvas,
+      minimapCanvas,
+      handlers: {
+        keyDown: handleKeyDown,
+        keyUp: handleKeyUp,
+        resize: handleResize,
+        pointerDown: handlePointerDown,
+        pointerMove: handlePointerMove,
+        pointerStop: handlePointerStop,
+        minimapClick: handleMinimapClick,
+      },
+    });
+    // The controller owns the legacy input contract formerly expressed by
+    // window.addEventListener("orientationchange", handleResize) and its
+    // matching window.removeEventListener("orientationchange", handleResize)
+    // cleanup, along with the canvas pointer listeners.
     watchBrowserZoom();
     canvasResizeObserver = new ResizeObserver(handleResize);
     canvasResizeObserver.observe(canvas);
@@ -3103,17 +3119,9 @@ async function createGameSessionImplementation(container, initialPalette, initia
     window.removeEventListener("pagehide", handlePageHide);
     document.removeEventListener("visibilitychange", handleVisibilityChange);
     window.removeEventListener("blur", handleWindowBlur);
-    window.removeEventListener("keydown", handleKeyDown);
-    window.removeEventListener("keyup", handleKeyUp);
-    window.removeEventListener("resize", handleResize);
-    window.removeEventListener("orientationchange", handleResize);
+    inputController?.dispose();
     browserZoomMediaQuery?.removeEventListener("change", handleResize);
     canvasResizeObserver?.disconnect();
-    canvas.removeEventListener("pointerdown", handlePointerDown);
-    canvas.removeEventListener("pointermove", handlePointerMove);
-    canvas.removeEventListener("pointerup", handlePointerStop);
-    canvas.removeEventListener("pointercancel", handlePointerStop);
-    canvas.removeEventListener("lostpointercapture", handlePointerStop);
     disposeHealthBarOverlay();
     disposeFloatingTextOverlay();
     renderer && disposeSpriteRenderer(renderer);

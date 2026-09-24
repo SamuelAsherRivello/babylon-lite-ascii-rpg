@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createGameSession } from "../../../src/client/game-layer-babylon-lite/game-session.js";
+import { createInputController } from "../../../src/client/game-layer-babylon-lite/game-session/input-controller.js";
 import { createWalkabilityPass } from "../../../src/client/game-layer-babylon-lite/generation-layers/walkability-generation-layer.js";
 import { createCharacters } from "../../../src/client/game-layer-babylon-lite/generation-layers/player-start-generation-layer.js";
 import { initializeDynamicGenerationFeatures } from "../../../src/client/game-layer-babylon-lite/generation-layers/dynamic-entity-generation-layer.js";
@@ -27,4 +28,22 @@ test("dynamic generation layer honors registry enablement", () => {
   const calls = [];
   initializeDynamicGenerationFeatures([{ id: "enemy-spawner", owner: "dynamic", enabled: true, order: 2 }, { id: "npc-spawner", owner: "dynamic", enabled: false, order: 1 }], { "enemy-spawner": () => calls.push("enemy"), "npc-spawner": () => calls.push("npc") });
   assert.deepEqual(calls, ["enemy"]);
+});
+
+test("input controller binds and disposes the session input boundary", () => {
+  const targets = ["window", "canvas", "minimap"].map((name) => ({
+    name,
+    added: [],
+    removed: [],
+    addEventListener(type, handler) { this.added.push([type, handler]); },
+    removeEventListener(type, handler) { this.removed.push([type, handler]); },
+  }));
+  const handlers = {
+    keyDown() {}, keyUp() {}, resize() {}, pointerDown() {}, pointerMove() {}, pointerStop() {}, minimapClick() {},
+  };
+  const controller = createInputController({ windowTarget: targets[0], canvas: targets[1], minimapCanvas: targets[2], handlers });
+  assert.equal(targets.reduce((count, target) => count + target.added.length, 0), 10);
+  controller.dispose();
+  controller.dispose();
+  assert.equal(targets.reduce((count, target) => count + target.removed.length, 0), 10);
 });

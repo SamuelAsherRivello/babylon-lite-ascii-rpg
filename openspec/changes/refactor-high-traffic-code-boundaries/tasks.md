@@ -34,6 +34,6 @@
 
 ## 6. Validate the refactor
 
-- [ ] 6.1 Run focused generation, settings, world, rendering, bridge, and UI tests plus `npm.cmd test`; verify no deterministic, persistence, or public-contract regression.
+- [x] 6.1 Run focused generation, settings, world, rendering, bridge, and UI tests plus `npm.cmd test`; verify no deterministic, persistence, or public-contract regression.
 - [x] 6.2 Run `npm.cmd run build`; verify the GitHub Pages production bundle completes without new dependencies.
 - [ ] 6.3 Manually verify Procedural preview/Confirm/Cancel, normal generation in both realms, movement, minimap/mapview, and key windows at supported responsive layouts; verify no visible behavior changes.
