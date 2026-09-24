@@ -243,5 +243,16 @@ export function createNpcSystem({ timeSystem, occupancy, occupancyFor = () => oc
     if (moved) onChange();
     return moved;
   };
-  return Object.freeze({ addNpc, recruitNpc, transferParty, updateFollowers, damageNpc, removeNpc, dispose() { for (const id of deferredJobs) deferredScheduler?.cancel(id); deferredJobs.clear(); } });
+  const damage = (id, amount, { at = globalThis.performance?.now?.() ?? Date.now() } = {}) => {
+    const npc = occupancy.get(id);
+    if (!npc || npc.type !== "npc" || amount <= 0) return npc;
+    const appliedDamage = Math.min(npc.health, Math.max(0, Number(amount) || 0));
+    const health = npc.health - appliedDamage;
+    onDamage({ ...npc, health, previousHealth: npc.health }, at);
+    if (health === 0) { removeNpc(id); onChange(); return null; }
+    const updated = occupancy.update(id, { health });
+    onChange();
+    return updated;
+  };
+  return Object.freeze({ addNpc, recruitNpc, transferParty, updateFollowers, damage, damageNpc, removeNpc, dispose() { for (const id of deferredJobs) deferredScheduler?.cancel(id); deferredJobs.clear(); } });
 }

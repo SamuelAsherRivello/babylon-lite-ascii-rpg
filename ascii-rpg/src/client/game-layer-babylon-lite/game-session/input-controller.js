@@ -3,6 +3,11 @@ function addListener(target, type, handler) {
   return () => target?.removeEventListener?.(type, handler);
 }
 
+export function shouldPlaceBombForKeydown(event, { locked = false, held = false } = {}) {
+  if (event?.code !== "Space" && event?.key !== " ") return false;
+  return !locked && !held && !event.repeat;
+}
+
 export function createInputController({
   windowTarget,
   canvas,

@@ -216,5 +216,5 @@ export function createEnemySystem({
     return updated;
   };
 
-  return Object.freeze({ addEnemy, damage, getAge });
+  return Object.freeze({ addEnemy, damage, getAge, get(id) { return occupancy.get(id); } });
 }

@@ -45,4 +45,6 @@ test("reduces incoming damage with bounded defense mitigation", () => {
   assert.equal(calculatePlayerDamageTaken(5, 25, 25), 3);
   assert.equal(calculatePlayerDamageTaken(5, 13, 25), 4);
   assert.equal(calculatePlayerDamageTaken(5, 0, 25), 5);
+  assert.equal(calculatePlayerDamageTaken(100, 25, 25), 50);
+  assert.equal(calculatePlayerDamageTaken(100, 12.5, 25), 75);
 });

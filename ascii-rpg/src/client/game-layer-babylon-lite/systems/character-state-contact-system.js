@@ -4,7 +4,7 @@ const DEFAULT_SLOTS = [
   Object.freeze({ slot: "Slot 01", id: "sword", glyph: "🗡", name: "Sword", health: ITEM_HEALTH_MAXIMUM, maxHealth: ITEM_HEALTH_MAXIMUM }),
   Object.freeze({ slot: "Slot 02", id: "shield", glyph: "🛡", name: "Shield", health: ITEM_HEALTH_MAXIMUM, maxHealth: ITEM_HEALTH_MAXIMUM }),
   Object.freeze({ slot: "Slot 03", id: "pickaxe", glyph: "⛏", name: "Pickaxe", health: ITEM_HEALTH_MAXIMUM, maxHealth: ITEM_HEALTH_MAXIMUM }),
-  null,
+  Object.freeze({ slot: "Slot 04", id: "bomb", glyph: "●", name: "Bomb", count: 50 }),
 ];
 
 export function createCharacterState({ slots = DEFAULT_SLOTS, gold = 0, keys = 0 } = {}) {
@@ -33,6 +33,14 @@ export function damageCharacterItem(state, itemId, amount) {
     const health = Math.max(0, item.health - Math.max(0, Number(amount) || 0));
     return health === 0 ? null : { ...item, health };
   });
+  return createCharacterState({ ...character, slots });
+}
+
+export function changeCharacterItemCount(state, itemId, delta) {
+  const character = state ?? DEFAULT_CHARACTER_STATE;
+  const slots = character.slots.map((item) => item?.id === itemId
+    ? { ...item, count: Math.max(0, Math.floor((Number(item.count) || 0) + Number(delta || 0))) }
+    : item);
   return createCharacterState({ ...character, slots });
 }
 
@@ -67,4 +75,14 @@ export function resolveCharacterContact(state, target, responders = {}) {
     return Object.freeze({ handled: true, capability, outcome: responder.handle(target, character) });
   }
   return Object.freeze({ handled: false, capability: null, outcome: null });
+}
+
+export function resolveCharacterAction(state, capability, target, responders = {}) {
+  const character = state ?? DEFAULT_CHARACTER_STATE;
+  if (!character.slots.some((item) => item?.id === capability && (item.id !== "bomb" || item.count > 0))) {
+    return Object.freeze({ handled: false, capability: null, outcome: null });
+  }
+  const responder = responders[capability];
+  if (!responder?.canHandle?.(target, character)) return Object.freeze({ handled: false, capability: null, outcome: null });
+  return Object.freeze({ handled: true, capability, outcome: responder.handle(target, character) });
 }

@@ -103,7 +103,7 @@ import { createQuestManager } from "./systems/quest-system.js";
 import { createLogSystem } from "./systems/log-system.js";
 import { createGameplayEventSystem } from "./systems/gameplay-event-system.js";
 import { createRealmSystem } from "./systems/realm-system.js";
-import { createPlayerLifecycle } from "./systems/player-lifecycle.js";
+import { createPlayerLifecycle, MAX_PLAYER_HEALTH } from "./systems/player-lifecycle.js";
 import { createStaminaSystem } from "./systems/stamina-system.js";
 import { createExperienceSystem } from "./systems/experience-system.js";
 import { calculatePlayerDamageTaken, createCombatStatsSystem } from "./systems/combat-stats-system.js";
@@ -117,7 +117,8 @@ import { createNpcSpawnerSystem, selectNpcSpawnerCells } from "./systems/npc-spa
 import { getMapviewLayout, getMapviewLightingFactor, getMapviewMarkers } from "./systems/mapview-renderer.js";
 import { resolvePlayerCombatTurn } from "./systems/combat-system.js";
 import { damageMountainTarget, getDiggableMountainTarget } from "./systems/mountain-system.js";
-import { createCharacterState, createContactTarget, damageCharacterItem, DEFAULT_CHARACTER_STATE, resolveCharacterContact } from "./systems/character-state-contact-system.js";
+import { changeCharacterItemCount, createCharacterState, createContactTarget, damageCharacterItem, DEFAULT_CHARACTER_STATE, resolveCharacterAction, resolveCharacterContact } from "./systems/character-state-contact-system.js";
+import { createBombSystem } from "./systems/bomb-system.js";
 import { createHealthBarSystem } from "./systems/health-bar-system.js";
 import { createFloatingTextSystem } from "./systems/floating-text-system.js";
 import { getFloatingTextStyle } from "./systems/floating-text-renderer.js";
@@ -141,7 +142,7 @@ import { resolveGenerationProfile } from "./generation-profile.js";
 import { createGameSession } from "./game-session.js";
 import { initializeDynamicGenerationFeatures } from "./generation-layers/dynamic-entity-generation-layer.js";
 import { createRenderSchedulingController } from "./game-session/render-scheduling-controller.js";
-import { createInputController } from "./game-session/input-controller.js";
+import { createInputController, shouldPlaceBombForKeydown } from "./game-session/input-controller.js";
 import { createRenderControllers } from "./game-session/render-controller.js";
 import { resolveGenerationPlan } from "./world-feature-generation-registry.js";
 import { getWorldSizeDimensions } from "../world-size-settings.js";
@@ -354,6 +355,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
   let generating = false;
   const heldKeys = new Set();
   const heldModifierKeys = new Set();
+  let bombKeyHeld = false;
   let shiftHeld = false;
   const realmListeners = new Set();
   const realmDiscoveryListeners = new Set();
@@ -431,6 +433,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
   let enemySpawnerSystem = null;
   let npcSystem = null;
   let npcSpawnerSystem = null;
+  let bombSystem = null;
   let mountainSystem = null;
   const dynamicOccupancies = new Map();
   const staticOccupancyIndexes = new Map();
@@ -555,7 +558,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
   };
   const getClientVisibleGlyph = (targetWorld, cell) => {
     const dynamicGlyph = getDynamicVisibleGlyph(getOccupancyForWorld(targetWorld), targetWorld, cell, () => null);
-    return dynamicGlyph ?? getExteriorBuildingOverlayGlyph(targetWorld, cell) ?? targetWorld?.characters?.[cell.y]?.[cell.x] ?? getBuildingOverlayGlyph(targetWorld, cell) ?? getVisibleGlyph(targetWorld, cell);
+    return dynamicGlyph ?? bombSystem?.getGlyphAt(targetWorld?.realmName, cell) ?? getExteriorBuildingOverlayGlyph(targetWorld, cell) ?? targetWorld?.characters?.[cell.y]?.[cell.x] ?? getBuildingOverlayGlyph(targetWorld, cell) ?? getVisibleGlyph(targetWorld, cell);
   };
   const markPlayable = () => {
     playable = true;
@@ -564,7 +567,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
   };
   const getClientVisibleGlyphKey = (targetWorld, cell) => {
     const record = getClientVisibleRecord(targetWorld, cell);
-    const glyph = record?.glyph ?? getExteriorBuildingOverlayGlyph(targetWorld, cell) ?? targetWorld?.characters?.[cell.y]?.[cell.x] ?? getBuildingOverlayGlyph(targetWorld, cell) ?? getVisibleGlyph(targetWorld, cell);
+    const glyph = record?.glyph ?? bombSystem?.getGlyphAt(targetWorld?.realmName, cell) ?? getExteriorBuildingOverlayGlyph(targetWorld, cell) ?? targetWorld?.characters?.[cell.y]?.[cell.x] ?? getBuildingOverlayGlyph(targetWorld, cell) ?? getVisibleGlyph(targetWorld, cell);
     return getOffsetGlyphKey(getFacingGlyphKey(glyph, record?.facing), paletteOffsets.get(glyph));
   };
   const setPlayerFacingFromDirection = (direction) => {
@@ -1568,16 +1571,29 @@ async function createGameSessionImplementation(container, initialPalette, initia
   const travelToNearestStairs = () => {
     const path = findNearestStairPath();
     if (!path?.length) return;
-    const stair = path.at(-1);
-    if (!getOccupancyForWorld()?.move("player", stair)) return;
     for (let index = 1; index < path.length; index += 1) {
-      setPlayerFacingFromDirection({ x: path[index].x - path[index - 1].x, y: path[index].y - path[index - 1].y });
+      const nextCell = path[index];
+      if (playerLifecycle.isDead() || getOccupancyForWorld()?.isOccupied(nextCell)) break;
+      let moved = false;
+      const direction = { x: nextCell.x - playerCell.x, y: nextCell.y - playerCell.y };
+      timeSystem.advance(1, "movement", {
+        shouldContinue: () => !playerLifecycle.isDead(),
+        beforeTick: () => {
+          if (playerLifecycle.isDead() || !getOccupancyForWorld()?.move("player", nextCell)) return;
+          moved = true;
+          setPlayerFacingFromDirection(direction);
+          playerCell = { ...nextCell };
+          world.playerCell = playerCell;
+        },
+      });
+      if (!moved || playerLifecycle.isDead()) break;
+      discoverCell(fogOfWar, world, nextCell);
     }
-    playerCell = { ...stair };
-    world.playerCell = playerCell;
-    for (const cell of path) discoverCell(fogOfWar, world, cell);
+    if (playerLifecycle.isDead() || !world.stairs?.some(({ x, y }) => x === playerCell.x && y === playerCell.y)) {
+      scheduleMovementRender({ refreshLighting: true });
+      return;
+    }
     notifyRealmDiscovery();
-    timeSystem.advance(path.length, "movement");
     resolveViewForPlayer();
     renderMinimap();
     const destination = activeRealm === "Overground" ? "Underground" : "Overground";
@@ -1626,6 +1642,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
 
   const clearKeyboardInput = () => {
     heldKeys.clear();
+    bombKeyHeld = false;
     shiftHeld = false;
     heldModifierKeys.clear();
     if (!hasHeldMovement()) clearRepeat();
@@ -2341,18 +2358,22 @@ async function createGameSessionImplementation(container, initialPalette, initia
     });
     characterState = createCharacterState({ ...characterState, gold: characterGold, keys: characterKeys });
     const contact = target ? resolveCharacterContact(characterState, target, {
-      sword: {
+          sword: {
         canHandle: (candidate) => ["enemy", "enemy-spawner"].includes(candidate.kind),
-        handle: () => resolvePlayerCombatTurn(occupant, {
-          timeSystem, staminaSystem, experienceSystem, combatStatsSystem, enemySystem,
+          handle: () => resolvePlayerCombatTurn(occupant, {
+            timeSystem, staminaSystem, experienceSystem, combatStatsSystem, enemySystem,
           spawnerSystem: enemySpawnerSystem, mountainSystem,
-        }),
+          advanceBeforeAction: true,
+          shouldContinue: () => !playerLifecycle.isDead(),
+          }),
       },
       pickaxe: {
         canHandle: (candidate) => candidate.kind === "mountain",
         handle: () => resolvePlayerCombatTurn(occupant, {
           timeSystem, staminaSystem, experienceSystem, combatStatsSystem, enemySystem,
           spawnerSystem: enemySpawnerSystem, mountainSystem,
+          advanceBeforeAction: true,
+          shouldContinue: () => !playerLifecycle.isDead(),
         }),
       },
       keys: {
@@ -2432,34 +2453,37 @@ async function createGameSessionImplementation(container, initialPalette, initia
         scheduleMapviewRender({ dirtyCells });
         return exhaustedAtAttempt;
       }
-      if (target && ["enemy", "enemy-spawner", "mountain"].includes(target.kind)) {
-        timeSystem.advance(1, "movement");
-        return staminaSystem.getCurrent() === 0;
-      }
     }
     const nextCell = moveWorldCell(playerCell, direction, world);
     if (nextCell.x === playerCell.x && nextCell.y === playerCell.y) return exhaustedAtAttempt;
     const nextOrigin = resolveCameraOrigin(CAMERA_RESOLVE_INTENTS.activeMode, { targetCell: nextCell, direction, commit: false });
     if (!nextOrigin) return exhaustedAtAttempt;
-    if (!getOccupancyForWorld()?.move("player", nextCell)) return exhaustedAtAttempt;
-    const previousPlayerCell = playerCell;
-    setPlayerFacingFromDirection(direction);
-    playerCell = { ...nextCell };
-    world.playerCell = playerCell;
-    const objectCollision = objectSpawnerSystem?.collideAtCell(playerCell, { playerCell: { ...playerCell }, world });
-    if (objectCollision?.pickupId) {
-      world.navigationRevision = (world.navigationRevision ?? 0) + 1;
-      staticOccupancyIndexes.get(activeRealm)?.delete(playerCell.y * world.columns + playerCell.x);
-    }
-    if (playerLifecycle.isDead()) {
-      clearMovementInput();
+    if (getOccupancyForWorld()?.isOccupied(nextCell)) return exhaustedAtAttempt;
+    const previousPlayerCell = { ...playerCell };
+    let committed = false;
+    timeSystem.advance(1, "movement", {
+      shouldContinue: () => !playerLifecycle.isDead(),
+      beforeTick: () => {
+        if (playerLifecycle.isDead() || !getOccupancyForWorld()?.move("player", nextCell)) return;
+        committed = true;
+        setPlayerFacingFromDirection(direction);
+        playerCell = { ...nextCell };
+        world.playerCell = playerCell;
+      },
+    });
+    if (!committed) {
+      if (playerLifecycle.isDead()) clearMovementInput();
       return exhaustedAtAttempt;
     }
-    timeSystem.advance(1, "movement");
     if (playerLifecycle.isDead()) {
       clearMovementInput();
       scheduleMovementRender({ refreshLighting: true });
       return exhaustedAtAttempt;
+    }
+    const objectCollision = objectSpawnerSystem?.collideAtCell(playerCell, { playerCell: { ...playerCell }, world });
+    if (objectCollision?.pickupId) {
+      world.navigationRevision = (world.navigationRevision ?? 0) + 1;
+      staticOccupancyIndexes.get(activeRealm)?.delete(playerCell.y * world.columns + playerCell.x);
     }
     if (direction.x === 0 && direction.y === -1) sendPlayerMovedEvent(PLAYER_MOVED_EVENTS.up);
     else if (direction.x === 0 && direction.y === 1) sendPlayerMovedEvent(PLAYER_MOVED_EVENTS.down);
@@ -2500,12 +2524,41 @@ async function createGameSessionImplementation(container, initialPalette, initia
     }, delay);
   };
 
+  const placeBomb = () => {
+    if (playerLifecycle.isDead() || gameplayInputLocked || !bombSystem || !world || !playerCell) return false;
+    characterState = createCharacterState({ ...characterState, gold: characterGold, keys: characterKeys });
+    let planted = null;
+    const action = resolveCharacterAction(characterState, "bomb", { kind: "bomb", realm: activeRealm, cell: playerCell }, {
+      bomb: {
+        canHandle: (target) => target.kind === "bomb" && !bombSystem.hasBombAt(target.realm, target.cell),
+        handle: (target) => {
+          timeSystem.advance(1, "bomb", {
+            shouldContinue: () => !playerLifecycle.isDead(),
+            beforeTick: () => { planted = bombSystem.place(target.realm, target.cell); },
+          });
+          if (!planted) return false;
+          characterState = changeCharacterItemCount(characterState, "bomb", -1);
+          notifyCharacterState();
+          return true;
+        },
+      },
+    });
+    return Boolean(action.handled && action.outcome);
+  };
+
   const handleKeyDown = (event) => {
     if (playerLifecycle.isDead()) return;
     const isShiftKey = event.key === "Shift" || event.code === "ShiftLeft" || event.code === "ShiftRight";
     if (isShiftKey) {
       heldModifierKeys.add(event.code || event.key);
       shiftHeld = true;
+      return;
+    }
+    if (event.code === "Space" || event.key === " ") {
+      event.preventDefault();
+      if (!shouldPlaceBombForKeydown(event, { locked: gameplayInputLocked, held: bombKeyHeld })) return;
+      bombKeyHeld = true;
+      placeBomb();
       return;
     }
     const movementKey = event.key.toLowerCase();
@@ -2530,6 +2583,11 @@ async function createGameSessionImplementation(container, initialPalette, initia
     if (isShiftKey) {
       heldModifierKeys.delete(event.code || event.key);
       shiftHeld = heldModifierKeys.size > 0;
+      return;
+    }
+    if (event.code === "Space" || event.key === " ") {
+      event.preventDefault();
+      bombKeyHeld = false;
       return;
     }
     const movementKey = event.key.toLowerCase();
@@ -3179,6 +3237,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
       isWalkable: (cell, realmName) => Boolean(worldRealms.realms[realmName]?.terrain?.[cell.y]?.[cell.x]?.walkable),
       isStaticOccupied,
       randomFor: (npc, tick) => createRandom(`${overground.options.seed}:${npc.id}:${tick}`),
+      onDamage: recordEntityDamage,
       onChange: scheduleEntityRender,
       onDamage: recordEntityDamage,
       deferredScheduler: deferredWorkScheduler,
@@ -3214,6 +3273,45 @@ async function createGameSessionImplementation(container, initialPalette, initia
       generationPlan.filter((feature) => feature.owner === "dynamic" && feature.enabled),
       initializeDynamicFeature,
     );
+    bombSystem = createBombSystem({
+      timeSystem,
+      worlds: worldRealms.realms,
+      onChange: scheduleEntityRender,
+      damageAt: (realmName, cell, amount, { at = performance.now() } = {}) => {
+        const realm = worldRealms.realms[realmName];
+        if (!realm) return;
+        const occupant = dynamicOccupancies.get(realmName)?.getAt(cell);
+        if (occupant?.type === "player") {
+          characterState = createCharacterState({ ...characterState, gold: characterGold, keys: characterKeys });
+          const contact = resolveCharacterContact(characterState, createContactTarget({ kind: "bomb-damage", cell, bomb: true }), {
+            shield: {
+              canHandle: (target, state) => target.kind === "bomb-damage" && state.slots.some((item) => item?.id === "shield"),
+              handle: () => {
+                const defense = combatStatsSystem.getDefenseSnapshot();
+                const damage = calculatePlayerDamageTaken(amount, defense.current, defense.maximum);
+                wearCharacterItem("shield", damage);
+                return damage;
+              },
+            },
+            body: { canHandle: (target) => target.kind === "bomb-damage", handle: () => amount },
+          });
+          applyPlayerHealthDelta(-contact.outcome, at);
+          if (playerLifecycle.isDead()) clearMovementInput();
+          return;
+        }
+        if (occupant?.type === "enemy") { enemySystem?.damage(occupant.id, amount, { attacker: "bomb", at }); return; }
+        if (occupant?.type === "enemy-spawner") { enemySpawnerSystem?.damage(occupant.id, amount, { attacker: "bomb", at }); return; }
+        if (occupant?.type === "npc") { npcSystem?.damage(occupant.id, amount, { at }); return; }
+        if (occupant?.type === "npc-spawner") { npcSpawnerSystem?.damage(occupant.id, amount, { onDamage: recordEntityDamage, at }); return; }
+        const mountain = getDiggableMountainTarget(realm, realmName, cell);
+        if (mountain) {
+          const result = damageMountainTarget(mountain, amount);
+          if (!result.handled) return;
+          recordEntityDamage(result.target, at);
+          if (result.killed) { scheduleMovementRender({ refreshLighting: true }); scheduleMinimapRender(); renderMapview(); }
+        }
+      },
+    });
     performanceMonitor.markMilestone("complete-visible-placement");
     timeSystem.dispatchCurrent("session-start");
     notifyGold();
@@ -3427,6 +3525,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
       return () => goldListeners.delete(listener);
     },
     getHealth() { return playerLifecycle.getHealth(); },
+    getMaxHealth() { return MAX_PLAYER_HEALTH; },
     subscribeToHealth(listener) {
       return playerLifecycle.subscribeToHealth(listener);
     },
@@ -3629,6 +3728,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
       cancelScheduledRenders();
       cancelMapviewRender();
       npcSystem?.dispose();
+      bombSystem?.dispose();
       unsubscribeDeferredWorkMetrics();
       deferredWorkScheduler.dispose();
       transitionSystem.dispose();

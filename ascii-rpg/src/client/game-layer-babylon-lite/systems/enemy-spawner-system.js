@@ -197,5 +197,5 @@ export function createEnemySpawnerSystem({
     return updated;
   };
 
-  return Object.freeze({ addSpawner, damage });
+  return Object.freeze({ addSpawner, damage, get(id) { return occupancy.get(id); } });
 }

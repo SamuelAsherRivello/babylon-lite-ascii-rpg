@@ -48,8 +48,8 @@ void Promise.all([paletteReady, fontReady, generationSettingsReady])
     sendCharacterStateSnapshot(controller.getCharacterState?.() ?? getCharacterStateSnapshot());
     controller.subscribeToCharacterState?.(sendCharacterStateSnapshot);
     controller.subscribeToGold?.((gold) => sendGoldSnapshot(gold));
-    sendHealthSnapshot(controller.getHealth?.() ?? getHealthSnapshot());
-    controller.subscribeToHealth?.((health) => sendHealthSnapshot(health));
+    sendHealthSnapshot(controller.getHealth?.() ?? getHealthSnapshot(), controller.getMaxHealth?.() ?? 100);
+    controller.subscribeToHealth?.((health) => sendHealthSnapshot(health, controller.getMaxHealth?.() ?? 100));
     sendStaminaSnapshot(controller.getStaminaSnapshot?.() ?? getStaminaSnapshot());
     controller.subscribeToStamina?.(sendStaminaSnapshot);
     sendExperienceSnapshot(controller.getExperienceSnapshot?.() ?? getExperienceSnapshot());

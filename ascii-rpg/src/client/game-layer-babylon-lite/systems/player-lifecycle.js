@@ -1,5 +1,5 @@
-export const INITIAL_PLAYER_HEALTH = 100;
-export const MAX_PLAYER_HEALTH = 100;
+export const INITIAL_PLAYER_HEALTH = 125;
+export const MAX_PLAYER_HEALTH = 125;
 
 function clampHealth(value) {
   return Math.min(MAX_PLAYER_HEALTH, Math.max(0, Number(value) || 0));

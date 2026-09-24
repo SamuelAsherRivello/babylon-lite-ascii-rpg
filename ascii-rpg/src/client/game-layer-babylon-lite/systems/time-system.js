@@ -14,10 +14,24 @@ export function createTimeSystem(initialTime = INITIAL_WORLD_TIME, { scheduler =
   const diagnostics = { completed: 0, cancelled: 0, stale: 0, failed: 0 };
   const listeners = new Set();
   const tickables = new Map();
+  const preTickables = new Map();
 
-  const dispatch = (cause, deltaTimeInMilliseconds = 0) => {
+  const dispatch = (cause, deltaTimeInMilliseconds = 0, shouldContinue = null, beforeTick = null) => {
     const tickTime = time;
     const event = Object.freeze({ time: tickTime, cause });
+    const preTickableSnapshot = [...preTickables.entries()];
+    for (const [id, tick] of preTickableSnapshot) {
+      if (preTickables.get(id) === tick) tick(event);
+    }
+    if (typeof shouldContinue === "function" && !shouldContinue(event)) {
+      for (const listener of [...listeners]) listener(tickTime, event);
+      return event;
+    }
+    beforeTick?.(event);
+    if (typeof shouldContinue === "function" && !shouldContinue(event)) {
+      for (const listener of [...listeners]) listener(tickTime, event);
+      return event;
+    }
     const tickableSnapshot = [...tickables.entries()];
 
     const deliver = (index) => {
@@ -54,7 +68,7 @@ export function createTimeSystem(initialTime = INITIAL_WORLD_TIME, { scheduler =
     } else {
       for (let index = 0; index < tickableSnapshot.length; index += 1) deliver(index);
     }
-    for (const listener of [...listeners]) listener(time, event);
+    for (const listener of [...listeners]) listener(tickTime, event);
 
     return event;
   };
@@ -63,7 +77,7 @@ export function createTimeSystem(initialTime = INITIAL_WORLD_TIME, { scheduler =
     getTime() {
       return time;
     },
-    advance(amount = 1, cause = "movement") {
+    advance(amount = 1, cause = "movement", { shouldContinue = null, beforeTick = null } = {}) {
       if (!Number.isInteger(amount) || amount < 1) {
         throw new RangeError("Time advance amount must be a positive integer.");
       }
@@ -73,7 +87,8 @@ export function createTimeSystem(initialTime = INITIAL_WORLD_TIME, { scheduler =
       lastTriggerAt = triggerAt;
       for (let step = 0; step < amount; step += 1) {
         time += 1;
-        dispatch(cause, step === 0 ? elapsed : 0);
+        dispatch(cause, step === 0 ? elapsed : 0, shouldContinue, beforeTick);
+        if (typeof shouldContinue === "function" && !shouldContinue(Object.freeze({ time, cause }))) break;
       }
       return time;
     },
@@ -88,6 +103,12 @@ export function createTimeSystem(initialTime = INITIAL_WORLD_TIME, { scheduler =
       tickables.set(id, tick);
       return true;
     },
+    registerPreTickable(id, tick) {
+      if (typeof id !== "string" || id.length === 0 || typeof tick !== "function" || preTickables.has(id)) return false;
+      preTickables.set(id, tick);
+      return true;
+    },
+    unregisterPreTickable(id) { return preTickables.delete(id); },
     unregisterTickable(id) {
       return tickables.delete(id);
     },
@@ -116,6 +137,7 @@ export function createTimeSystem(initialTime = INITIAL_WORLD_TIME, { scheduler =
       lifecycleGeneration += 1;
       if (scheduler?.cancelWhere) scheduler.cancelWhere((metadata) => metadata?.type === "time-tick");
       tickables.clear();
+      preTickables.clear();
       pendingSince.clear();
       listeners.clear();
     },
