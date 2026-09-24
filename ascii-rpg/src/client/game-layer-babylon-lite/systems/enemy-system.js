@@ -155,7 +155,7 @@ export function createEnemySystem({
       bornAtTime,
     });
     if (!enemy) return null;
-    if (!timeSystem.registerTickable(`enemy:${id}`, (event) => simulate(id, event))) {
+    if (!timeSystem.registerTickable(`enemy:${id}`, (time, deltaTimeInMilliseconds) => simulate(id, { time, deltaTimeInMilliseconds }))) {
       occupancy.remove(id);
       return null;
     }

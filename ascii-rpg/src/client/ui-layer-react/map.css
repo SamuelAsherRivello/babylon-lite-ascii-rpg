@@ -80,9 +80,26 @@
 }
 
 #game_layer {
+  --game-browser-zoom: 1;
+  --game-browser-zoom-inverse: 1;
   position: fixed;
-  inset: 0;
+  inset: auto;
+  top: 50%;
+  left: 50%;
   z-index: 1;
+  width: calc(100vw * var(--game-browser-zoom));
+  height: calc(100vh * var(--game-browser-zoom));
+  transform: translate(-50%, -50%) scale(var(--game-browser-zoom-inverse));
+  transform-origin: center center;
+}
+
+html[data-mapview-open="true"] #game_layer {
+  inset: 0;
+  top: auto;
+  left: auto;
+  width: 100vw;
+  height: 100vh;
+  transform: none;
 }
 
 html[data-mapview-open="true"] #game_layer {
@@ -186,9 +203,9 @@ html[data-presentation-aspect="portrait"] #game_layer {
   inset: auto;
   top: 50%;
   left: 50%;
-  width: var(--presentation-frame-width);
-  height: var(--presentation-frame-height);
-  transform: translate(-50%, -50%);
+  width: calc(var(--presentation-frame-width) * var(--game-browser-zoom));
+  height: calc(var(--presentation-frame-height) * var(--game-browser-zoom));
+  transform: translate(-50%, -50%) scale(var(--game-browser-zoom-inverse));
 }
 
 html[data-presentation-aspect="portrait"] #ui_layer {

@@ -42,7 +42,7 @@ export function normalizeGenerationSettings(value, { diagnostics = isGenerationD
           : !diagnostics || ["npc-spawner", "enemy-spawner"].includes(pass.id)
             ? "Med"
             : pass.density,
-      enabled: !diagnostics || pass.required === true ? true : selectedById.get(pass.id)?.enabled !== false,
+      enabled: pass.required === true ? true : selectedById.get(pass.id)?.enabled !== false,
     }))),
   };
   if (diagnostics && isGenerationUrlOverrideSession()) {

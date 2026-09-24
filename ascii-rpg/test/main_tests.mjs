@@ -18,6 +18,24 @@ async function readStyles() {
   )).join("\n");
 }
 
+async function readUiSource() {
+  const files = [
+    "App.jsx",
+    "arguments-window.jsx",
+    "character-components.jsx",
+    "changelog-window.jsx",
+    "gameplay-settings-window.jsx",
+    "generation-enabled-checkbox.jsx",
+    "lighting-window.jsx",
+    "log-components.jsx",
+    "palette-glyph.jsx",
+    "quest-components.jsx",
+    "tutorial-windows.jsx",
+    "stored-setting-helpers.js",
+  ];
+  return (await Promise.all(files.map((fileName) => readFile(new URL(`src/client/ui-layer-react/${fileName}`, appRoot), "utf8")))).join("\n");
+}
+
 test("builds for the GitHub Pages project path", () => {
   if (viteConfig.base !== "/babylon-lite-ascii-rpg/") {
     throw new Error("The GitHub Pages build must use the repository project path as its Vite base.");
@@ -70,7 +88,7 @@ test("documents the randomized desktop Portrait letterbox", async () => {
 
 test("documents the plain safe-area template", async () => {
   const page = await readFile(new URL("index.html", appRoot), "utf8");
-  const app = await readFile(new URL("src/client/ui-layer-react/App.jsx", appRoot), "utf8");
+  const app = await readUiSource();
   const main = await readFile(new URL("src/main.jsx", appRoot), "utf8");
   const gameLayer = await readFile(new URL("src/client/game-layer-babylon-lite/index.js", appRoot), "utf8");
   const gameBridge = await readFile(new URL("src/client/bridge-layer/game-bridge.js", appRoot), "utf8");
@@ -153,7 +171,7 @@ test("documents the plain safe-area template", async () => {
     || !styles.includes("max-width: calc(100vw - 16px)")
     || !app.includes("function formatTooltipDescription(description)")
     || !app.includes('replace(/\\?+/g, "")')
-    || !app.includes('<SettingTooltipTarget className="character_bar_tooltip_target"')
+    || !app.includes('className="character_bar_tooltip_target"')
     || app.includes("title={row.tooltip}")
     || app.includes('title="Gold: The currency of your character."')
     || app.includes('title="Keys: The keys your character is holding."')
@@ -264,7 +282,7 @@ test("documents the plain safe-area template", async () => {
     'icon: "⚔"',
     'icon: "⛨"',
     'icon: "✦"',
-    'color={row.color}',
+    '"--character-bar-color": row.color',
   ]) {
     if (!app.includes(requiredFragment)) {
       throw new Error(`The character details UI must include ${requiredFragment}.`);
@@ -278,7 +296,7 @@ test("documents the plain safe-area template", async () => {
   if (!app.includes("CHARACTER_BAR_DELTA_DURATION_MS")
     || !app.includes("getCharacterBarMaximumPercent")
     || !app.includes("getCharacterBarSegments")
-    || !app.includes("setTransitionPercent(fromPercent)")) {
+    || !app.includes("setTransitionPercent(from);")) {
     throw new Error("Every Character bar must use model-supplied percentages and the transient delta lifecycle.");
   }
   if (!app.includes("getStaminaSnapshot") || !app.includes("subscribeToStamina")
@@ -792,7 +810,7 @@ test("documents the plain safe-area template", async () => {
 });
 
 test("documents the event-only movement tutorial flow", async () => {
-  const app = await readFile(new URL("src/client/ui-layer-react/App.jsx", appRoot), "utf8");
+  const app = await readUiSource();
   const bridge = await readFile(new URL("src/client/bridge-layer/game-bridge.js", appRoot), "utf8");
   const gameLayer = await readFile(new URL("src/client/game-layer-babylon-lite/index.js", appRoot), "utf8");
   const styles = await readStyles();
@@ -834,7 +852,7 @@ test("documents the event-only movement tutorial flow", async () => {
 });
 
 test("documents Escape dismissal for closeable windows", async () => {
-  const app = await readFile(new URL("src/client/ui-layer-react/App.jsx", appRoot), "utf8");
+  const app = await readUiSource();
   for (const required of [
     'event.key !== "Escape"',
     "closeTopmostWindow",
@@ -853,7 +871,7 @@ test("documents Escape dismissal for closeable windows", async () => {
 });
 
 test("documents the player death lifecycle and recovery prompt", async () => {
-  const app = await readFile(new URL("src/client/ui-layer-react/App.jsx", appRoot), "utf8");
+  const app = await readUiSource();
   const bridge = await readFile(new URL("src/client/bridge-layer/game-bridge.js", appRoot), "utf8");
   const main = await readFile(new URL("src/main.jsx", appRoot), "utf8");
   const gameLayer = await readFile(new URL("src/client/game-layer-babylon-lite/index.js", appRoot), "utf8");
@@ -887,7 +905,7 @@ test("documents the player death lifecycle and recovery prompt", async () => {
 });
 
 test("documents the quest tracker, live gold bridge, and quest toasts", async () => {
-  const app = await readFile(new URL("src/client/ui-layer-react/App.jsx", appRoot), "utf8");
+  const app = await readUiSource();
   const questComponents = await readFile(new URL("src/client/ui-layer-react/quest-components.jsx", appRoot), "utf8");
   const questUi = `${app}\n${questComponents}`;
   const bridge = await readFile(new URL("src/client/bridge-layer/game-bridge.js", appRoot), "utf8");
@@ -920,7 +938,7 @@ test("documents the quest tracker, live gold bridge, and quest toasts", async ()
 });
 
 test("documents the Gameplay Settings quest selector and default persistence", async () => {
-  const app = await readFile(new URL("src/client/ui-layer-react/App.jsx", appRoot), "utf8");
+  const app = await readUiSource();
   const questData = JSON.parse(await readFile(new URL("src/client/game-layer-babylon-lite/data/quest_data.json", appRoot), "utf8"));
   const gameLayer = await readFile(new URL("src/client/game-layer-babylon-lite/index.js", appRoot), "utf8");
   const bridge = await readFile(new URL("src/client/bridge-layer/game-bridge.js", appRoot), "utf8");
@@ -951,7 +969,7 @@ test("documents the Gameplay Settings quest selector and default persistence", a
 });
 
 test("derives the character gold icon color from the shared palette", async () => {
-  const app = await readFile(new URL("src/client/ui-layer-react/App.jsx", appRoot), "utf8");
+  const app = await readUiSource();
   const palette = JSON.parse(await readFile(new URL("src/client/game-layer-babylon-lite/data/palette_data.json", appRoot), "utf8"));
   if (!app.includes('getPaletteStyle(palette, "💰")') || !app.includes("style={{ color: goldStyle.color }}")) {
     throw new Error("The character gold icon must resolve its color from the shared palette.");

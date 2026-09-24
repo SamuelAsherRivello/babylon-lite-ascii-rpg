@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "worldSize": "Med",
+  "worldSize": "Low",
   "passes": [
     {
       "id": "ground",

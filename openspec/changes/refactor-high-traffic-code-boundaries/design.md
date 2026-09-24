@@ -4,7 +4,7 @@
 
 See [proposal.md](proposal.md). The game layer currently concentrates generation helpers, world mutation, startup orchestration, rendering coordination, and input in large modules. Generation feature metadata is also repeated in the editable catalog, registry, profile resolver, and React settings store. `App.jsx` similarly contains windows, HUD presentation, persistence helpers, and bridge coordination. Tests already mirror many source paths, but `main_tests.mjs` remains a broad source-contract collection.
 
-The implementation must preserve the established React/bridge/Babylon Lite ownership boundary, the current ordered deterministic generation pipeline, development-file and deployed-localStorage settings behavior, and the explicit Node test command. It must not add a dependency or create a second game-state owner.
+The implementation must preserve the established React/bridge/Babylon Lite ownership boundary, the current ordered deterministic generation pipeline, development-file and deployed-localStorage settings behavior, and the explicit Node test command. It must not add a dependency or create a second game-state owner. This design records the bounded extraction that was completed; full decomposition of the remaining large entry modules and broad manual QA are deliberately deferred to separate work.
 
 ## Goals / Non-Goals
 
@@ -12,8 +12,8 @@ The implementation must preserve the established React/bridge/Babylon Lite owner
 
 - Give each procedural pass a discoverable, independently editable `generation-layers` module.
 - Make feature metadata and density mapping single-source while retaining settings compatibility.
-- Isolate lifecycle, rendering, UI-window, and test ownership behind stable facades.
-- Ensure source and tests retain mirrored ownership after the refactor.
+- Isolate lifecycle, rendering, UI-window, and settings-helper ownership behind stable facades.
+- Ensure source contracts observe the extracted modules without requiring a broad test-file move.
 
 **Non-Goals:**
 
@@ -59,9 +59,9 @@ The generation-layer registry is the source for configurable status, defaults, r
 
 The existing serialized settings shape and storage key remain unchanged. This avoids a migration and allows active work to retain its current persisted values.
 
-### 5. Extract UI and tests along existing product boundaries
+### 5. Extract the completed UI owners and preserve contract coverage
 
-Extract `App.jsx` windows, character/quest/log presentation, and browser-persistence helpers into independently owned modules while leaving `AppContent` as bridge and top-level state composition. Move `main_tests.mjs` source contracts into focused mirrored tests by UI/window, game-session, and documentation/build responsibility. Update the explicit Node test list once after test paths are final; do not add Playwright work.
+Extract the completed `App.jsx` windows, character/quest/log presentation, and browser-persistence helpers into independently owned modules while leaving `AppContent` as bridge and top-level state composition. Make the existing source-contract harness read the owner modules so moved contracts remain executable. Do not expand this change into a complete `main_tests.mjs` file split or add Playwright work.
 
 ## Risks / Trade-offs
 
@@ -76,8 +76,8 @@ Extract `App.jsx` windows, character/quest/log presentation, and browser-persist
 1. Capture baseline deterministic generation, settings normalization, bridge, render, and UI contract results.
 2. Introduce the registry and generation-layer modules behind unchanged exports; migrate one pass family at a time in current order.
 3. Reduce the game entry point to composition after its extracted controllers pass focused tests.
-4. Extract UI components and split contract tests without changing DOM text, persisted settings, or bridge messages.
-5. Update the explicit test command, run the existing Node suite and build, then manually verify Procedural preview, regeneration, and normal gameplay rendering.
+4. Extract the scoped UI components and update contract-source loading without changing DOM text, persisted settings, or bridge messages.
+5. Run the focused Node contract suite and production build; retain broader manual verification as a separate follow-up when needed.
 6. Roll back by restoring the previous facade internals in a follow-up commit; no persisted-data cleanup is required because the wire format remains unchanged.
 
 ## Open Questions

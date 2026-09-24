@@ -94,7 +94,7 @@ export function createNpcSystem({ timeSystem, occupancy, worldFor, isWalkable, i
     const patrol = deferredScheduler || !world ? null : createPatrol(draft, world, random);
     const npc = occupancy.claim({ id, type: "npc", glyph: NPC_GLYPH, realm, cell, home: Object.freeze({ ...home }), bornAtTime, destination: patrol?.destination ?? null, route: patrol?.route ?? Object.freeze([]), routeIndex: 0, returning: false, ...(deferredScheduler ? { patrolState: "pending", pendingActionAt: null } : {}) });
     if (!npc) return null;
-    if (!timeSystem.registerTickable(`npc:${id}`, (event) => simulate(id, event))) { occupancy.remove(id); return null; }
+    if (!timeSystem.registerTickable(`npc:${id}`, (time, deltaTimeInMilliseconds) => simulate(id, { time, deltaTimeInMilliseconds }))) { occupancy.remove(id); return null; }
     if (deferredScheduler && world) {
       const preparation = createPatrolPreparation(draft, world, random);
       const jobId = `npc-patrol:${id}`;

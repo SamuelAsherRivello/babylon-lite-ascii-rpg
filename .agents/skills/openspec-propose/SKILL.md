@@ -12,6 +12,8 @@ metadata:
 
 Propose a new change - create the change and generate all artifacts in one step.
 
+**Mode requirement:** Before beginning this workflow, enter Plan mode with `/plan`. Remain in Plan mode while clarifying the request and producing planning artifacts unless the user explicitly changes the mode.
+
 **Planning boundary**: This workflow creates planning artifacts only. The user request that selected or triggered this workflow authorizes planning only, even if it asks to build or fix something. Do not edit project code. After the planning artifacts are complete, stop. Do not start implementation in the same response, even if the initial request asks for it. Wait for a new user request after the artifacts are presented; then start the apply workflow.
 
 I'll create a change with the artifacts your schema defines. With the default spec-driven schema that is:

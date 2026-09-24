@@ -166,9 +166,9 @@ export function createEnemySpawnerSystem({
     });
     if (!spawner) return null;
 
-    const registered = timeSystem.registerTickable(`enemy-spawner:${id}`, (event) => {
+    const registered = timeSystem.registerTickable(`enemy-spawner:${id}`, (time, deltaTimeInMilliseconds) => {
       const current = occupancy.get(id);
-      if (current) attemptSpawn(current, event);
+      if (current) attemptSpawn(current, { time, deltaTimeInMilliseconds });
     });
     if (!registered) {
       occupancy.remove(id);

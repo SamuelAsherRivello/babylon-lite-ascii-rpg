@@ -4,6 +4,8 @@
 
 See proposal.md and the `asynchronous-logical-ticks` delta for the motivation and behavioral contract. The current time system increments its counter and invokes all registered tickables synchronously. The game already has a game-owned deferred scheduler that runs bounded resumable jobs on requestAnimationFrame opportunities, while Babylon Lite owns simulation and React consumes narrow snapshots.
 
+The current tick inventory is: enemy entities and enemy spawners mutate dynamic occupancy, combat, health, and logs; NPC entities mutate patrol occupancy and optional player contact; stamina recovery and UI-facing time snapshots are `subscribe` consumers; combat advances time through the same time system; and world setup dispatches the session-start tick across both realms. Tickables capture birth time when registered, while registration/unregistration during a dispatch is governed by the existing snapshot semantics. Visual effects remain game-layer presentation consequences rather than React-owned tick work.
+
 ## Goals / Non-Goals
 
 **Goals:**

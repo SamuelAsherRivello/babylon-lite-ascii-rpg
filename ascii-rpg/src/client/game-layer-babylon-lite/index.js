@@ -1,4 +1,5 @@
 import { isGenerationDiagnosticsEnabled } from "../generation-mode.js";
+import { startSprintDiagnostic } from "./sprint-diagnostic.js";
 import {
   addSpriteRendererLayer,
   addSprite2DIndex,
@@ -18,6 +19,7 @@ import {
   spriteBlendAdditive,
   updateSprite2DIndex,
 } from "@babylonjs/lite";
+import { getBrowserZoomCompensation } from "./browser-zoom-compensation.js";
 import {
   DEFAULT_FONT_RESOLUTION,
   DEFAULT_ZOOM,
@@ -272,8 +274,9 @@ async function createGameSessionImplementation(container, initialPalette, initia
   validatePaletteEntries(initialPalette);
   validateFontId(initialFontId);
   const diagnostics = isGenerationDiagnosticsEnabled();
+  let stopSprintDiagnostic = null;
   const enabledLayerOrders = diagnostics ? getWorldGenerationLayersEnabledFromSearch(window.location.search) : undefined;
-  const runtimeGenerationSettings = !diagnostics ? { ...generationSettings, passes: generationSettings.passes.map(pass => ({ ...pass, enabled: true })) } : enabledLayerOrders === undefined ? generationSettings : {
+  const runtimeGenerationSettings = enabledLayerOrders === undefined ? generationSettings : {
     ...generationSettings,
     passes: generationSettings.passes.map((pass) => ({
       ...pass,
@@ -379,12 +382,23 @@ async function createGameSessionImplementation(container, initialPalette, initia
     height: Math.max(1, canvas.clientHeight || window.innerHeight),
   };
   let lastDevicePixelRatio = window.devicePixelRatio || 1;
+  const baselineDevicePixelRatio = lastDevicePixelRatio;
   let canvasResizeObserver = null;
   let browserZoomMediaQuery = null;
   let aspectRebuildFrame = null;
   let activeAspectMode = document.documentElement.dataset.presentationAspect === "portrait"
     ? "portrait"
     : "landscape";
+  const applyBrowserZoomCompensation = () => {
+    const compensation = getBrowserZoomCompensation({
+      currentDevicePixelRatio: window.devicePixelRatio || 1,
+      baselineDevicePixelRatio,
+      isCoarsePointer: window.matchMedia?.("(pointer: coarse)")?.matches === true,
+    });
+    container.style.setProperty("--game-browser-zoom", String(compensation.ratio));
+    container.style.setProperty("--game-browser-zoom-inverse", String(compensation.inverse));
+  };
+  applyBrowserZoomCompensation();
   let world = null;
   let worldRealms = null;
   let sessionSeed = null;
@@ -421,7 +435,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
   let initialPlayableRenderComplete = false;
   let cameraModeReapplyAfterTransition = false;
   let cameraMode = normalizeCameraMode(initialCameraMode);
-  const timeSystem = createTimeSystem();
+  const timeSystem = createTimeSystem(undefined, { scheduler: deferredWorkScheduler });
   const staminaSystem = createStaminaSystem();
   const experienceSystem = createExperienceSystem();
   const combatStatsSystem = createCombatStatsSystem({ staminaSystem });
@@ -2236,7 +2250,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
     return cells;
   };
 
-  const movePlayer = () => {
+  const movePlayerImplementation = () => {
     const exhaustedAtAttempt = staminaSystem.getCurrent() === 0;
     if (playerLifecycle.isDead() || gameplayInputLocked) {
       clearMovementInput();
@@ -2388,6 +2402,13 @@ async function createGameSessionImplementation(container, initialPalette, initia
     return exhaustedAtAttempt;
   };
 
+  const movePlayer = () => {
+    if (!performanceMonitor.isActive()) return movePlayerImplementation();
+    const started = performance.now();
+    try { return movePlayerImplementation(); }
+    finally { performanceMonitor.recordPhase("player-move", performance.now() - started); }
+  };
+
   const scheduleRepeat = (delay) => {
     clearRepeat();
     repeatTimer = window.setTimeout(() => {
@@ -2480,6 +2501,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
       && nextDevicePixelRatio === lastDevicePixelRatio) return;
     lastCanvasSize = nextCanvasSize;
     lastDevicePixelRatio = nextDevicePixelRatio;
+    applyBrowserZoomCompensation();
     watchBrowserZoom();
     clearTouchInput();
     // Browser zoom changes the canvas' CSS dimensions. Reapply the selected
@@ -3145,6 +3167,20 @@ async function createGameSessionImplementation(container, initialPalette, initia
     throw error;
   }
 
+  if (diagnostics && new URLSearchParams(window.location.search).get("performanceSprint") === "true") {
+    stopSprintDiagnostic = startSprintDiagnostic({
+      monitor: performanceMonitor,
+      read: () => ({ disposed, locked: gameplayInputLocked || transitionActive, realm: activeRealm,
+        cell: playerCell, rows: world.rows, columns: world.columns, dead: playerLifecycle.isDead(),
+        exhausted: staminaSystem.getCurrent() === 0, ticks: timeSystem.getDiagnostics() }),
+      canEnter: (cell) => world.terrain?.[cell.y]?.[cell.x]?.walkable === true
+        && !getOccupancyForWorld()?.getAt(cell)
+        && !staticOccupancyIndexes.get(activeRealm)?.has(cell.y * world.columns + cell.x)
+        && !world.stairs?.some((stair) => stair.x === cell.x && stair.y === cell.y),
+      keyDown: handleKeyDown, keyUp: handleKeyUp, changeRealm: (realm) => startRealmTransition(realm),
+    });
+  }
+
   return Object.freeze({
     startPerformanceSession(options = {}) {
       const session = performanceMonitor.start({
@@ -3447,6 +3483,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
     },
     dispose() {
       if (disposed) return;
+      stopSprintDiagnostic?.();
       disposed = true;
       rendererLifecycle.beginDisposal();
       clearMovementInput();
