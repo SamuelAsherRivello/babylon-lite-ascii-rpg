@@ -5,6 +5,13 @@ export function getBrowserZoomRatio(currentDevicePixelRatio, baselineDevicePixel
   return current / baseline;
 }
 
+export function getBrowserZoomFactor({ outerWidth, innerWidth, devicePixelRatio }) {
+  const outer = Number(outerWidth);
+  const inner = Number(innerWidth);
+  if (Number.isFinite(outer) && outer > 0 && Number.isFinite(inner) && inner > 0) return outer / inner;
+  return Number(devicePixelRatio);
+}
+
 export function getBrowserZoomCompensation({ currentDevicePixelRatio, baselineDevicePixelRatio, isCoarsePointer }) {
   if (isCoarsePointer) return { ratio: 1, inverse: 1, enabled: false };
   const ratio = getBrowserZoomRatio(currentDevicePixelRatio, baselineDevicePixelRatio);

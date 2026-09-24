@@ -1,6 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { getBrowserZoomCompensation, getBrowserZoomRatio } from "../../../src/client/game-layer-babylon-lite/browser-zoom-compensation.js";
+import { getBrowserZoomCompensation, getBrowserZoomFactor, getBrowserZoomRatio } from "../../../src/client/game-layer-babylon-lite/browser-zoom-compensation.js";
+
+test("uses outer-to-inner dimensions when available for extreme browser zoom", () => {
+  assert.equal(getBrowserZoomFactor({ outerWidth: 1280, innerWidth: 5120, devicePixelRatio: 0.5 }), 0.25);
+  assert.equal(getBrowserZoomFactor({ outerWidth: 1280, innerWidth: 640, devicePixelRatio: 3 }), 2);
+});
 
 test("derives browser zoom relative to the startup device pixel ratio", () => {
   assert.equal(getBrowserZoomRatio(1.25, 1), 1.25);

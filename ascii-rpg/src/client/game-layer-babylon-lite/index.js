@@ -19,7 +19,7 @@ import {
   spriteBlendAdditive,
   updateSprite2DIndex,
 } from "@babylonjs/lite";
-import { getBrowserZoomCompensation } from "./browser-zoom-compensation.js";
+import { getBrowserZoomCompensation, getBrowserZoomFactor } from "./browser-zoom-compensation.js";
 import {
   DEFAULT_FONT_RESOLUTION,
   DEFAULT_ZOOM,
@@ -383,6 +383,11 @@ async function createGameSessionImplementation(container, initialPalette, initia
   };
   let lastDevicePixelRatio = window.devicePixelRatio || 1;
   const baselineDevicePixelRatio = lastDevicePixelRatio;
+  const baselineBrowserZoomFactor = getBrowserZoomFactor({
+    outerWidth: window.outerWidth,
+    innerWidth: window.innerWidth,
+    devicePixelRatio: baselineDevicePixelRatio,
+  });
   let canvasResizeObserver = null;
   let browserZoomMediaQuery = null;
   let aspectRebuildFrame = null;
@@ -391,8 +396,12 @@ async function createGameSessionImplementation(container, initialPalette, initia
     : "landscape";
   const applyBrowserZoomCompensation = () => {
     const compensation = getBrowserZoomCompensation({
-      currentDevicePixelRatio: window.devicePixelRatio || 1,
-      baselineDevicePixelRatio,
+      currentDevicePixelRatio: getBrowserZoomFactor({
+        outerWidth: window.outerWidth,
+        innerWidth: window.innerWidth,
+        devicePixelRatio: window.devicePixelRatio || 1,
+      }),
+      baselineDevicePixelRatio: baselineBrowserZoomFactor,
       isCoarsePointer: window.matchMedia?.("(pointer: coarse)")?.matches === true,
     });
     container.style.setProperty("--game-browser-zoom", String(compensation.ratio));
