@@ -56,23 +56,23 @@ commands from the repository root:
 
 ## Workflows
 
-### 🎨 1. Copy styles from AI Skills Library
+### 🛠️ 1. Copy styles from AI Skills Library
 
 Manually copy the desired styles from the
 [AI Skills Library](https://github.com/SamuelAsherRivello/ai-skills-library)
 repository into the appropriate folder in this Ascii RPG checkout.
 
-### 🕹️ 2. Choose new feature
+### 🛠️ 2. Choose new feature
 
 There are many cool ideas! Here is a partial list.
 
 - [Possible Game Mechanics](ascii-rpg/documentation/inspiration/ideas.md)
 
-### 🕹️ 3. Implement
+### 🛠️ 3. Implement
 
 - Use an [openspec](https://github.com/SamuelAsherRivello/babylon-lite-ascii-rpg/blob/main/openspec) workflow for collaboration with minimal code conflicts.
 - See this 30-second [video short](https://www.youtube.com/shorts/lce1edytViI).
-- See the table of commands in the [AI Skills Library](https://github.com/SamuelAsherRivello/ai-skills-library).
+- See table of commands here [Ai Skills Library](https://github.com/SamuelAsherRivello/ai-skills-library).
 
 ## Project Details
 
