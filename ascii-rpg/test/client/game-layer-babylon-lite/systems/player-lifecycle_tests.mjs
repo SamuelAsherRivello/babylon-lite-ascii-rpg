@@ -4,11 +4,18 @@ import { createPlayerLifecycle, INITIAL_PLAYER_HEALTH } from "../../../../src/cl
 
 test("starts alive at the initial health and clamps healing to the maximum", () => {
   const lifecycle = createPlayerLifecycle();
-  assert.equal(INITIAL_PLAYER_HEALTH, 100);
+  assert.equal(INITIAL_PLAYER_HEALTH, 125);
   assert.equal(lifecycle.getHealth(), INITIAL_PLAYER_HEALTH);
   assert.equal(lifecycle.isDead(), false);
   lifecycle.applyHealthDelta(100);
-  assert.equal(lifecycle.getHealth(), 100);
+  assert.equal(lifecycle.getHealth(), 125);
+  assert.equal(lifecycle.isDead(), false);
+});
+
+test("survives one unmitigated bomb hit at full health", () => {
+  const lifecycle = createPlayerLifecycle();
+  lifecycle.applyHealthDelta(-100);
+  assert.equal(lifecycle.getHealth(), 25);
   assert.equal(lifecycle.isDead(), false);
 });
 
@@ -42,7 +49,7 @@ test("revive restores full health and publishes a living state", () => {
   lifecycle.subscribeToDeath((value) => deaths.push(value));
   lifecycle.applyHealthDelta(-1);
   lifecycle.revive();
-  assert.equal(lifecycle.getHealth(), 100);
+  assert.equal(lifecycle.getHealth(), 125);
   assert.equal(lifecycle.isDead(), false);
   assert.deepEqual(deaths, [true, false]);
 });

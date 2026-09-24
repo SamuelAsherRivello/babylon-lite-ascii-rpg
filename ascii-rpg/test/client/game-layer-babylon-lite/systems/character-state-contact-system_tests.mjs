@@ -2,15 +2,19 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   createCharacterState,
+  changeCharacterItemCount,
   createContactTarget,
   damageCharacterItem,
   DEFAULT_CHARACTER_STATE,
   normalizeContactTarget,
   resolveCharacterContact,
+  resolveCharacterAction,
 } from "../../../../src/client/game-layer-babylon-lite/systems/character-state-contact-system.js";
+import { createTimeSystem } from "../../../../src/client/game-layer-babylon-lite/systems/time-system.js";
 
 test("creates the default immutable ordered loadout", () => {
-  assert.deepEqual(DEFAULT_CHARACTER_STATE.slots.map((item) => item?.id ?? null), ["sword", "shield", "pickaxe", null]);
+  assert.deepEqual(DEFAULT_CHARACTER_STATE.slots.map((item) => item?.id ?? null), ["sword", "shield", "pickaxe", "bomb"]);
+  assert.equal(DEFAULT_CHARACTER_STATE.slots[3].count, 50);
   assert.deepEqual(DEFAULT_CHARACTER_STATE.slots.slice(0, 3).map((item) => [item.health, item.maxHealth]), [[1000, 1000], [1000, 1000], [1000, 1000]]);
   assert.equal(Object.isFrozen(DEFAULT_CHARACTER_STATE), true);
   assert.equal(Object.isFrozen(DEFAULT_CHARACTER_STATE.slots), true);
@@ -48,6 +52,29 @@ test("checks resources before the body and leaves unsupported contacts unhandled
   assert.equal(result.capability, "keys");
   assert.equal(result.outcome, "unlock");
   assert.equal(resolveCharacterContact(DEFAULT_CHARACTER_STATE, door, {}).handled, false);
+});
+
+test("decrements bomb stacks without durable-item health and rejects depleted actions", () => {
+  const target = createContactTarget({ kind: "bomb", cell: { x: 1, y: 1 } });
+  let calls = 0;
+  const responders = { bomb: { canHandle: () => true, handle: () => { calls += 1; return true; } } };
+  const used = changeCharacterItemCount(DEFAULT_CHARACTER_STATE, "bomb", -1);
+  assert.equal(used.slots[3].count, 49);
+  assert.equal(used.slots[3].health, undefined);
+  assert.equal(resolveCharacterAction(used, "bomb", target, responders).outcome, true);
+  const empty = changeCharacterItemCount(used, "bomb", -49);
+  assert.equal(empty.slots[3].count, 0);
+  assert.equal(resolveCharacterAction(empty, "bomb", target, responders).handled, false);
+  assert.equal(calls, 1);
+});
+
+test("a failed bomb capability check does not run its time-consuming action", () => {
+  const timeSystem = createTimeSystem();
+  const result = resolveCharacterAction(DEFAULT_CHARACTER_STATE, "bomb", { kind: "bomb" }, {
+    bomb: { canHandle: () => false, handle: () => timeSystem.advance() },
+  });
+  assert.equal(result.handled, false);
+  assert.equal(timeSystem.getTime(), 1);
 });
 
 test("normalizes cardinal dynamic, object, terrain, and NPC contacts only", () => {

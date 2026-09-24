@@ -55,6 +55,20 @@ test("spawners create exactly once during setup and never repeat on later ticks"
   timeSystem.dispatchCurrent(); timeSystem.advance(200); assert.equal(spawned.length, 1);
 });
 
+test("bomb damage removes an NPC spawner while its already-created NPC survives", () => {
+  const timeSystem = createTimeSystem(); const occupancy = createDynamicOccupancy();
+  const npcSystem = createNpcSystem({ timeSystem, occupancy, worldFor: () => null, isWalkable: () => true });
+  const spawners = createNpcSpawnerSystem({ timeSystem, occupancy, spawnNpc: (request) => npcSystem.addNpc(request), isWalkable: () => true, isStaticOccupied: () => false, randomFor: () => () => 0 });
+  spawners.addSpawner({ id: "npc-spawner-1", realm: "Overground", cell: { x: 10, y: 10 } });
+  assert.equal(occupancy.get("npc-1").health, 100);
+  assert.equal(occupancy.get("npc-spawner-1").health, 100);
+  spawners.damage("npc-spawner-1", 100);
+  assert.equal(occupancy.get("npc-spawner-1"), null);
+  assert.equal(occupancy.get("npc-1").type, "npc");
+  assert.equal(npcSystem.damage("npc-1", 100), null);
+  assert.equal(occupancy.get("npc-1"), null);
+});
+
 test("spawner remains empty when its setup spawn is blocked", () => {
   const timeSystem = createTimeSystem(); const occupancy = createDynamicOccupancy(); const spawned = [];
   const spawners = createNpcSpawnerSystem({ timeSystem, occupancy, spawnNpc: (request) => { spawned.push(request); return request; }, isWalkable: () => true, randomFor: () => () => 0 });

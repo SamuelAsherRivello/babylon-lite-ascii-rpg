@@ -21,8 +21,10 @@ export function resolvePlayerDynamicCollision(occupant, {
     : PLAYER_BASE_DAMAGE;
   let result;
   if (occupant.type === "enemy") {
+    if (enemySystem?.get && !enemySystem.get(occupant.id)) return createCombatResult({ handled: false, killed: false });
     result = enemySystem?.damage(occupant.id, damage, { attacker: "player" });
   } else if (occupant.type === "enemy-spawner") {
+    if (spawnerSystem?.get && !spawnerSystem.get(occupant.id)) return createCombatResult({ handled: false, killed: false });
     result = spawnerSystem?.damage(occupant.id, damage, { attacker: "player" });
   } else if (occupant.type === "mountain") {
     result = mountainSystem?.damage(occupant, damage, { attacker: "player" });
@@ -46,21 +48,27 @@ export function resolvePlayerCombatTurn(occupant, {
   spawnerSystem,
   mountainSystem,
   combatStatsSystem,
+  advanceBeforeAction = false,
+  shouldContinue = null,
 } = {}) {
-  const result = resolvePlayerDynamicCollision(occupant, {
-    enemySystem,
-    spawnerSystem,
-    mountainSystem,
-    combatStatsSystem,
-  });
-  if (result.handled) {
+  let result = createCombatResult({ handled: false, killed: false });
+  const attack = () => {
+    result = resolvePlayerDynamicCollision(occupant, {
+      enemySystem, spawnerSystem, mountainSystem, combatStatsSystem,
+    });
+    if (!result.handled) return;
     experienceSystem?.awardAttack?.();
     if (result.killed) {
       if (occupant.type === "enemy") experienceSystem?.awardEnemyKill?.();
       if (occupant.type === "enemy-spawner") experienceSystem?.awardSpawnerKill?.();
     }
     staminaSystem?.spendForAttack();
-    timeSystem?.advance(1, "combat");
+  };
+  if (advanceBeforeAction) {
+    timeSystem?.advance(1, "combat", { beforeTick: attack, shouldContinue });
+  } else {
+    attack();
+    if (result.handled) timeSystem?.advance(1, "combat");
   }
   return result;
 }

@@ -211,7 +211,7 @@ test("damages Player Lifecycle to zero and publishes death once", () => {
   });
   system.addEnemy({ id: "enemy-1", realm: "Underground", cell: { x: 2, y: 3 }, bornAtTime: 1 });
 
-  timeSystem.advance(42);
+  timeSystem.advance(52);
   assert.equal(lifecycle.getHealth(), 0);
   assert.deepEqual(deaths, [true]);
   assert.deepEqual(occupancy.get("enemy-1").cell, { x: 2, y: 3 });

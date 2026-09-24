@@ -58,12 +58,23 @@ import {
   getKeySnapshot,
   sendKeySnapshot,
   subscribeToKey,
+  sendHealthSnapshot,
+  getHealthSnapshot,
   startQuest,
   startPerformanceSession,
   stopPerformanceSession,
   getPerformanceReport,
   resetPerformanceSession,
 } from "../../../src/client/bridge-layer/game-bridge.js";
+
+test("normalizes health against its supplied maximum while preserving the percentage HUD", () => {
+  sendHealthSnapshot(125, 125);
+  assert.equal(getHealthSnapshot(), 100);
+  sendHealthSnapshot(25, 125);
+  assert.equal(getHealthSnapshot(), 20);
+  sendHealthSnapshot(25);
+  assert.equal(getHealthSnapshot(), 25);
+});
 
 test("publishes the current session random seed", () => {
   const received = [];

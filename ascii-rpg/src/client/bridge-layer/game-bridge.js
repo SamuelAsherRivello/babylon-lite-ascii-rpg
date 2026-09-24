@@ -32,7 +32,7 @@ let characterStateSnapshot = Object.freeze({
     Object.freeze({ slot: "Slot 01", id: "sword", glyph: "🗡", name: "Sword", health: 1000, maxHealth: 1000 }),
     Object.freeze({ slot: "Slot 02", id: "shield", glyph: "🛡", name: "Shield", health: 1000, maxHealth: 1000 }),
     Object.freeze({ slot: "Slot 03", id: "pickaxe", glyph: "⛏", name: "Pickaxe", health: 1000, maxHealth: 1000 }),
-    null,
+    Object.freeze({ slot: "Slot 04", id: "bomb", glyph: "●", name: "Bomb", count: 50 }),
   ]),
   gold: 0,
   keys: 0,
@@ -301,8 +301,9 @@ export function sendCharacterStateSnapshot(state) {
 
 export function getHealthSnapshot() { return healthSnapshot; }
 export function subscribeToHealth(listener) { healthListeners.add(listener); return () => healthListeners.delete(listener); }
-export function sendHealthSnapshot(health) {
-  healthSnapshot = Math.max(0, Math.min(100, Number(health) || 0));
+export function sendHealthSnapshot(health, maximum = 100) {
+  const maxHealth = Math.max(1, Number(maximum) || 100);
+  healthSnapshot = Math.max(0, Math.min(100, ((Number(health) || 0) / maxHealth) * 100));
   for (const listener of healthListeners) listener();
 }
 

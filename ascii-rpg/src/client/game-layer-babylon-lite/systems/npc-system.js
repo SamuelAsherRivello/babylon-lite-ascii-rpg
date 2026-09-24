@@ -7,7 +7,8 @@ const MAX_PATROL_DISTANCE = 20;
 const MAX_PATROL_DESTINATION_ATTEMPTS = 32;
 const PATROL_SEARCH_NODES_PER_SLICE = 64;
 
-export function createNpcSystem({ timeSystem, occupancy, worldFor, isWalkable, isStaticOccupied = () => false, randomFor = () => Math.random, getPlayerState = null, resolvePlayerContact = null, onChange = () => {}, deferredScheduler = null, isActive = () => true, isRealmActive = () => true } = {}) {
+export const NPC_HEALTH = 100;
+export function createNpcSystem({ timeSystem, occupancy, worldFor, isWalkable, isStaticOccupied = () => false, randomFor = () => Math.random, getPlayerState = null, resolvePlayerContact = null, onDamage = () => {}, onChange = () => {}, deferredScheduler = null, isActive = () => true, isRealmActive = () => true } = {}) {
   const patrolDestinations = (npc, world) => {
     const destinations = [];
     const knownDestinations = new Set();
@@ -92,7 +93,7 @@ export function createNpcSystem({ timeSystem, occupancy, worldFor, isWalkable, i
     const draft = { id, realm, home: Object.freeze({ ...home }) };
     const random = randomFor(draft, bornAtTime);
     const patrol = deferredScheduler || !world ? null : createPatrol(draft, world, random);
-    const npc = occupancy.claim({ id, type: "npc", glyph: NPC_GLYPH, realm, cell, home: Object.freeze({ ...home }), bornAtTime, destination: patrol?.destination ?? null, route: patrol?.route ?? Object.freeze([]), routeIndex: 0, returning: false, ...(deferredScheduler ? { patrolState: "pending", pendingActionAt: null } : {}) });
+    const npc = occupancy.claim({ id, type: "npc", glyph: NPC_GLYPH, realm, cell, home: Object.freeze({ ...home }), bornAtTime, health: NPC_HEALTH, maxHealth: NPC_HEALTH, destination: patrol?.destination ?? null, route: patrol?.route ?? Object.freeze([]), routeIndex: 0, returning: false, ...(deferredScheduler ? { patrolState: "pending", pendingActionAt: null } : {}) });
     if (!npc) return null;
     if (!timeSystem.registerTickable(`npc:${id}`, (event) => simulate(id, event))) { occupancy.remove(id); return null; }
     if (deferredScheduler && world) {
@@ -142,5 +143,16 @@ export function createNpcSystem({ timeSystem, occupancy, worldFor, isWalkable, i
     timeSystem.unregisterTickable(`npc:${id}`);
     return Boolean(occupancy.remove(id));
   };
-  return Object.freeze({ addNpc, removeNpc, dispose() { for (const id of deferredJobs) deferredScheduler?.cancel(id); deferredJobs.clear(); } });
+  const damage = (id, amount, { at = globalThis.performance?.now?.() ?? Date.now() } = {}) => {
+    const npc = occupancy.get(id);
+    if (!npc || npc.type !== "npc" || amount <= 0) return npc;
+    const appliedDamage = Math.min(npc.health, Math.max(0, Number(amount) || 0));
+    const health = npc.health - appliedDamage;
+    onDamage({ ...npc, health, previousHealth: npc.health }, at);
+    if (health === 0) { removeNpc(id); onChange(); return null; }
+    const updated = occupancy.update(id, { health });
+    onChange();
+    return updated;
+  };
+  return Object.freeze({ addNpc, removeNpc, damage, dispose() { for (const id of deferredJobs) deferredScheduler?.cancel(id); deferredJobs.clear(); } });
 }

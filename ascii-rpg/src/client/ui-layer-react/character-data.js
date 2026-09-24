@@ -3,7 +3,7 @@ export const INITIAL_CHARACTER = Object.freeze({
     Object.freeze({ slot: "Slot 01", id: "sword", glyph: "🗡", name: "Sword", health: 1000, maxHealth: 1000 }),
     Object.freeze({ slot: "Slot 02", id: "shield", glyph: "🛡", name: "Shield", health: 1000, maxHealth: 1000 }),
     Object.freeze({ slot: "Slot 03", id: "pickaxe", glyph: "⛏", name: "Pickaxe", health: 1000, maxHealth: 1000 }),
-    null,
+    Object.freeze({ slot: "Slot 04", id: "bomb", glyph: "●", name: "Bomb", count: 50 }),
   ]),
   health: Object.freeze({ startingPercent: 100, currentPercent: 100, pendingPercent: 100 }),
   stamina: Object.freeze({
@@ -28,3 +28,12 @@ export const INITIAL_CHARACTER = Object.freeze({
   gold: Object.freeze({ startingAmount: 0, currentAmount: 0 }),
   keys: Object.freeze({ startingAmount: 0, currentAmount: 0 }),
 });
+
+export function getCharacterSlotPresentation(item, emptySlotLabel) {
+  const isBombStack = item?.id === "bomb";
+  return Object.freeze({
+    glyph: item?.glyph ?? emptySlotLabel,
+    count: isBombStack ? Math.max(0, Math.floor(Number(item.count) || 0)) : null,
+    showHealth: Boolean(item && !isBombStack),
+  });
+}

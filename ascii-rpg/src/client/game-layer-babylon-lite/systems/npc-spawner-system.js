@@ -61,10 +61,21 @@ export function createNpcSpawnerSystem({ timeSystem, occupancy, spawnNpc, worldF
     return false;
   };
   const addSpawner = ({ id, realm, cell, bornAtTime = timeSystem.getTime() }) => {
-    const spawner = occupancy.claim({ id, type: "npc-spawner", glyph: NPC_SPAWNER_GLYPH, realm, cell, bornAtTime });
+    const spawner = occupancy.claim({ id, type: "npc-spawner", glyph: NPC_SPAWNER_GLYPH, realm, cell, bornAtTime, health: 100, maxHealth: 100 });
     if (!spawner) return null;
     attempt(spawner, bornAtTime);
     onChange(); return spawner;
   };
-  return Object.freeze({ addSpawner, NPC_GLYPH });
+  const damage = (id, amount, { onDamage = () => {}, at = globalThis.performance?.now?.() ?? Date.now() } = {}) => {
+    const spawner = occupancy.get(id);
+    if (!spawner || spawner.type !== "npc-spawner" || amount <= 0) return spawner;
+    const appliedDamage = Math.min(spawner.health, Math.max(0, Number(amount) || 0));
+    const health = spawner.health - appliedDamage;
+    onDamage({ ...spawner, health, previousHealth: spawner.health }, at);
+    if (health === 0) { occupancy.remove(id); onChange(); return null; }
+    const updated = occupancy.update(id, { health });
+    onChange();
+    return updated;
+  };
+  return Object.freeze({ addSpawner, damage, NPC_GLYPH });
 }

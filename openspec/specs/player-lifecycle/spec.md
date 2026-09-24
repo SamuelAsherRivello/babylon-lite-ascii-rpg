@@ -56,11 +56,11 @@ Activating `Restart Game` SHALL reload the current game page so the game layer a
 
 ### Requirement: Player starts at full health
 
-Each new game session SHALL initialize the player with current health `100` and maximum health `100` before gameplay entities process world time `1`.
+Each new game session SHALL initialize the player with current health `125` and maximum health `125` before gameplay entities process world time `1`.
 
 #### Scenario: New player health
 - **WHEN** a new game session starts
-- **THEN** the authoritative player lifecycle SHALL report 100 current health and the player SHALL be alive
+- **THEN** the authoritative player lifecycle SHALL report 125 current health and the player SHALL be alive
 
 ### Requirement: Enemy attacks use the authoritative player lifecycle
 
