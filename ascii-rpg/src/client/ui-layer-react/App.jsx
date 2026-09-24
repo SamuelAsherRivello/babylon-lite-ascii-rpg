@@ -49,12 +49,10 @@ import { colorToLinearRgba } from "../game-layer-babylon-lite/palette-color-cach
 import { DEFAULT_ZOOM } from "../game-layer-babylon-lite/zoom-scale.js";
 import {
   getStoredAspectMode,
-  getStoredBooleanValue,
   getStoredInitialCameraMode,
-  getStoredInitialZoom,
   isMobilePlatform,
 } from "./platform-settings.js";
-import { MAX_ZOOM, MIN_ZOOM, ZOOM_SCALE_STORAGE_VERSION } from "../game-layer-babylon-lite/zoom-scale.js";
+import { ZOOM_SCALE_STORAGE_VERSION } from "../game-layer-babylon-lite/zoom-scale.js";
 import {
   getTimeSnapshot,
   getCombatStatsSnapshot,
@@ -116,9 +114,20 @@ import {
   DEFAULT_CAMERA_MODE,
   getNextCameraMode,
 } from "../bridge-layer/camera.js";
-import { getNextMinimapScale, migrateMinimapScale } from "../game-layer-babylon-lite/systems/minimap-zoom.js";
+import { getNextMinimapScale } from "../game-layer-babylon-lite/systems/minimap-zoom.js";
 import { performanceMonitor } from "../game-layer-babylon-lite/performance-monitor.js";
 import { isLogScrollAtBottom } from "./log-scroll.js";
+import {
+  fullscreenStorageKey, aspectStorageKey, developerOpenStorageKey, logOpenStorageKey,
+  zoomStorageKey, zoomStorageVersionKey, overgroundAmbientStorageKey, undergroundAmbientStorageKey,
+  realmStorageKey, torchLightingStorageKey, playerLightingStorageKey, torchShadowStorageKey,
+  playerShadowStorageKey, gpuLightPassStorageKey, playerGpuShadowBleedRangeStorageKey,
+  glyphBackgroundStorageKey, backgroundDarknessStorageKey, minimapZoomStorageKey,
+  lightingWindowPositionStorageKey, tutorialSkipStorageKey, defaultQuestStorageKey,
+  minZoom, maxZoom, DEFAULT_BACKGROUND_DARKNESS, getStoredZoom, getStoredMinimapZoom,
+  getStoredBoolean, getStoredBackgroundDarkness, getStoredAmbientLight, getStoredSourceIndex,
+  getStoredPlayerGpuShadowBleedRange,
+} from "./stored-setting-helpers.js";
 import {
   AMBIENT_LIGHT_STEP,
   LIGHTING_PROFILES,
@@ -131,29 +140,6 @@ import {
 } from "../game-layer-babylon-lite/systems/world-system.js";
 import questData from "../game-layer-babylon-lite/data/quest_data.json";
 
-const fullscreenStorageKey = "babylon-lite-ascii-rpg.fullscreen";
-const aspectStorageKey = "babylon-lite-ascii-rpg.aspect";
-const developerOpenStorageKey = "babylon-lite-ascii-rpg.developer-open";
-const logOpenStorageKey = "babylon-lite-ascii-rpg.log-open";
-const zoomStorageKey = "babylon-lite-ascii-rpg.zoom";
-const zoomStorageVersionKey = "babylon-lite-ascii-rpg.zoom-version";
-const overgroundAmbientStorageKey = "babylon-lite-ascii-rpg.ambient-overground";
-const undergroundAmbientStorageKey = "babylon-lite-ascii-rpg.ambient-underground";
-const realmStorageKey = "babylon-lite-ascii-rpg.active-realm";
-const torchLightingStorageKey = "babylon-lite-ascii-rpg.torch-lighting";
-const playerLightingStorageKey = "babylon-lite-ascii-rpg.player-lighting";
-const torchShadowStorageKey = "babylon-lite-ascii-rpg.torch-shadow";
-const playerShadowStorageKey = "babylon-lite-ascii-rpg.player-shadow";
-const gpuLightPassStorageKey = "babylon-lite-ascii-rpg.gpu-light-pass";
-const playerGpuShadowBleedRangeStorageKey = "babylon-lite-ascii-rpg.player-gpu-shadow-bleed-range";
-const glyphBackgroundStorageKey = "babylon-lite-ascii-rpg.glyph-background";
-const backgroundDarknessStorageKey = "babylon-lite-ascii-rpg.background-darkness";
-const minimapZoomStorageKey = "babylon-lite-ascii-rpg.minimap-zoom";
-const lightingWindowPositionStorageKey = "babylon-lite-ascii-rpg.lighting-window-position";
-const tutorialSkipStorageKey = "babylon-lite-ascii-rpg.tutorial-skip";
-const defaultQuestStorageKey = "babylon-lite-ascii-rpg.default-quest";
-const minZoom = MIN_ZOOM;
-const maxZoom = MAX_ZOOM;
 const repositoryUrl = "https://github.com/SamuelAsherRivello/babylon-lite-ascii-rpg";
 const changelogFeaturePaths = Object.freeze({
   "Procedural generation controls": "openspec/specs/procedural-generation-settings/spec.md",
@@ -213,7 +199,6 @@ const glyphDetailsWindowMargin = 16;
 const lightingWindowMargin = 12;
 const defaultLightingWindowPosition = { left: 180, top: 410 };
 const DEFAULT_GLYPH_BACKGROUND = true;
-const DEFAULT_BACKGROUND_DARKNESS = 50;
 // The full character catalog is still available through the All filter, but
 // opening settings should not synchronously mount hundreds of controls while
 // the WebGPU game is rendering.
@@ -259,48 +244,6 @@ const settingsHelp = Object.freeze({
   zoomOut: "Make map glyphs smaller.",
   reset: "Clear local storage and reload.",
 });
-
-function getStoredZoom() {
-  return getStoredInitialZoom();
-}
-
-function getStoredMinimapZoom() {
-  const storedZoom = Number.parseInt(localStorage.getItem(minimapZoomStorageKey), 10);
-  return migrateMinimapScale(storedZoom);
-}
-
-function getStoredBoolean(storageKey, defaultValue) {
-  return getStoredBooleanValue(localStorage.getItem(storageKey), defaultValue);
-}
-
-function getStoredBackgroundDarkness() {
-  const storedValue = localStorage.getItem(backgroundDarknessStorageKey);
-  if (storedValue === null || storedValue.trim() === "") return DEFAULT_BACKGROUND_DARKNESS;
-
-  const stored = Number(storedValue);
-  return Number.isInteger(stored) && stored >= 0 && stored <= 100
-    ? stored
-    : DEFAULT_BACKGROUND_DARKNESS;
-}
-
-function getStoredAmbientLight(storageKey, fallback) {
-  const stored = Number.parseFloat(localStorage.getItem(storageKey));
-  return Number.isFinite(stored) ? Math.min(1, Math.max(0, stored)) : fallback;
-}
-
-function getStoredSourceIndex(storageKey, defaultIndex) {
-  const storedIndex = Number.parseInt(localStorage.getItem(storageKey), 10);
-  return Number.isInteger(storedIndex) && storedIndex >= 0 && storedIndex < LIGHTING_SOURCE_STATES.length
-    ? storedIndex
-    : defaultIndex;
-}
-
-function getStoredPlayerGpuShadowBleedRange() {
-  const storedValue = localStorage.getItem(playerGpuShadowBleedRangeStorageKey);
-  if (storedValue === null) return 2;
-  const stored = Number(storedValue);
-  return PLAYER_GPU_SHADOW_BLEED_RANGES.includes(stored) ? stored : 2;
-}
 
 export function getGlyphDetailsWindowPosition(anchor, containerBounds = { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight, scrollLeft: 0, scrollTop: 0 }) {
   const availableHeight = Math.max(0, containerBounds.height - glyphDetailsWindowMargin * 2);
@@ -1322,6 +1265,13 @@ const argumentBlocks = [
     value: () => "true",
     description: "skips the tutorial for this page load.",
     fallback: "Without it, the tutorial starts unless the saved browser setting skips it.",
+  },
+  {
+    name: "GenerationOverrides (AI tester)",
+    parameter: "generationOverrides",
+    value: () => "disable:7,11;low:8,16",
+    description: "keeps the real generation data, then disables passes 7 and 11 and sets passes 8 and 16 to Low.",
+    fallback: "This argument activates AI tester mode; overrides are read-only and never write generation settings to disk.",
   },
 ];
 

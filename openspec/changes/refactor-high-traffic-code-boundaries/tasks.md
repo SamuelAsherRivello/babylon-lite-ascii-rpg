@@ -23,7 +23,7 @@
 ## 4. Decompose game-session orchestration
 
 - [x] 4.1 Extract game-service construction and lifecycle disposal into a `game-session` factory while retaining `startGameLayer` as the existing facade; verify game startup, restart, and disposal tests pass.
-- [ ] 4.2 Extract input, generation-preview, minimap, mapview, and world-render scheduling controllers from the game entry module; verify rendering, scheduler, transition, and bridge tests pass without changed commands.
+- [x] 4.2 Extract input, generation-preview, minimap, mapview, and world-render scheduling controllers from the game entry module; verify rendering, scheduler, transition, and bridge tests pass without changed commands.
 - [ ] 4.3 Reduce `game-layer-babylon-lite/index.js` to composition and stable export wiring; verify its public imports and production build succeed.
 
 ## 5. Decompose the React UI and contracts

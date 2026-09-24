@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createGameSession } from "../../../src/client/game-layer-babylon-lite/game-session.js";
 import { createInputController } from "../../../src/client/game-layer-babylon-lite/game-session/input-controller.js";
+import { createRenderControllers } from "../../../src/client/game-layer-babylon-lite/game-session/render-controller.js";
 import { createWalkabilityPass } from "../../../src/client/game-layer-babylon-lite/generation-layers/walkability-generation-layer.js";
 import { createCharacters } from "../../../src/client/game-layer-babylon-lite/generation-layers/player-start-generation-layer.js";
 import { initializeDynamicGenerationFeatures } from "../../../src/client/game-layer-babylon-lite/generation-layers/dynamic-entity-generation-layer.js";
@@ -46,4 +47,25 @@ test("input controller binds and disposes the session input boundary", () => {
   controller.dispose();
   controller.dispose();
   assert.equal(targets.reduce((count, target) => count + target.removed.length, 0), 10);
+});
+
+test("render controllers share a disposable renderer boundary", async () => {
+  const cancelled = [];
+  const render = (name) => () => ({ cancel: () => cancelled.push(name) });
+  const controllers = createRenderControllers({
+    minimap: render("minimap"),
+    mapview: render("mapview"),
+    preview: render("preview"),
+    world: render("world"),
+  });
+  controllers.minimap.render();
+  controllers.mapview.render();
+  controllers.preview.render();
+  controllers.world.render();
+  controllers.minimap.dispose();
+  controllers.mapview.dispose();
+  controllers.preview.dispose();
+  controllers.world.dispose();
+  assert.deepEqual(cancelled, ["minimap", "mapview", "preview", "world"]);
+  await controllers.preview.render();
 });

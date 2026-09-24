@@ -18,6 +18,13 @@ density/size choices remain valid. Development, or an explicit
 `generationDiagnostics=true` session, permits disabling layers. A raw
 `worldGenerationLayersEnabled` query does not disable production content by itself.
 
+For an AI tester, the Arguments window provides one focused override example:
+`?generationOverrides=disable%3A7%2C11%3Blow%3A8%2C16`. It starts with the real
+generation settings, disables passes 7 and 11, and changes passes 8 and 16 to
+Low. Unlisted passes keep their real values. Because this argument is an AI
+tester session, the generation settings store is read-only and never writes to
+browser storage or `generation_settings.json`.
+
 Each game/minimap/mapview resolves world contents only for positive fog visibility
 inside its own source rectangle. Hidden dirty slots still receive clearing work
 to remove formerly visible contents. This is not permission to stop offscreen

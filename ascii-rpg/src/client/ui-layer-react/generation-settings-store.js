@@ -8,7 +8,7 @@ import {
 // Compatibility exports for UI consumers while the registry owns the catalog.
 export { GENERATION_DENSITY_DETAILS, GENERATION_PASS_DESCRIPTIONS, GENERATION_PASS_REALMS };
 import { DEFAULT_WORLD_SIZE, normalizeWorldSize } from "../world-size-settings.js";
-import { isGenerationDiagnosticsEnabled } from "../generation-mode.js";
+import { getGenerationOverridesFromSearch, isGenerationDiagnosticsEnabled, isGenerationUrlOverrideSession } from "../generation-mode.js";
 
 const bundledSettings = Object.freeze({ version: 1, worldSize: DEFAULT_WORLD_SIZE, passes: GENERATION_FEATURES });
 
@@ -26,7 +26,7 @@ export function normalizeGenerationSettings(value, { diagnostics = isGenerationD
   const selectedById = new Map((Array.isArray(value?.passes) ? value.passes : []).map((pass) => [pass?.id, pass]));
   const legacyCaveWallsDensity = selectedById.get("cave-walls")?.density;
   const legacyCivilizationDensity = selectedById.get("civilization")?.density;
-  return Object.freeze({
+  const normalized = {
     version: 1,
     worldSize: normalizeWorldSize(value?.worldSize),
     passes: Object.freeze([...bundledById.values()].map((pass) => Object.freeze({
@@ -44,7 +44,24 @@ export function normalizeGenerationSettings(value, { diagnostics = isGenerationD
             : pass.density,
       enabled: !diagnostics || pass.required === true ? true : selectedById.get(pass.id)?.enabled !== false,
     }))),
-  });
+  };
+  if (diagnostics && isGenerationUrlOverrideSession()) {
+    const parameters = new URLSearchParams(globalThis.location?.search ?? "");
+    const overrides = getGenerationOverridesFromSearch();
+    const urlDensity = parameters.get("generationDensity");
+    const layerValue = parameters.get("worldGenerationLayersEnabled");
+    const enabledOrders = layerValue === null ? undefined : new Set(layerValue.split(",").map((part) => Number.parseInt(part.trim(), 10)).filter((order) => Number.isInteger(order) && order > 0));
+    if (DENSITY_LEVELS.includes(urlDensity) || enabledOrders?.size || overrides) {
+      normalized.passes = Object.freeze(normalized.passes.map((pass) => Object.freeze({
+        ...pass,
+        ...(DENSITY_LEVELS.includes(urlDensity) && pass.configurable !== false ? { density: urlDensity } : {}),
+        ...(enabledOrders?.size ? { enabled: pass.required === true || enabledOrders.has(pass.order) } : {}),
+        ...(overrides?.disable.includes(pass.order) ? { enabled: false } : {}),
+        ...(overrides?.low.includes(pass.order) && pass.configurable !== false ? { density: "Low" } : {}),
+      })));
+    }
+  }
+  return Object.freeze(normalized);
 }
 
 export function createDefaultGenerationSettings({ diagnostics = isGenerationDiagnosticsEnabled() } = {}) {
@@ -55,7 +72,7 @@ export function createDefaultGenerationSettings({ diagnostics = isGenerationDiag
 }
 
 function readLocalSettings() {
-  if (isV2Environment || typeof window === "undefined") return null;
+  if (isV2Environment || typeof window === "undefined" || isGenerationUrlOverrideSession()) return null;
   try {
     const stored = window.localStorage.getItem(GENERATION_SETTINGS_STORAGE_KEY);
     return stored ? JSON.parse(stored) : null;
@@ -65,7 +82,7 @@ function readLocalSettings() {
 }
 
 let settings = normalizeGenerationSettings(readLocalSettings() ?? (isV2Environment ? bundledSettings : undefined));
-if (!isV2Environment && typeof window !== "undefined" && !isGenerationDiagnosticsEnabled()) {
+if (!isV2Environment && typeof window !== "undefined" && !isGenerationDiagnosticsEnabled() && !isGenerationUrlOverrideSession()) {
   try { window.localStorage.setItem(GENERATION_SETTINGS_STORAGE_KEY, JSON.stringify(settings)); } catch { /* Read-only storage still permits play. */ }
 }
 const listeners = new Set();
@@ -84,12 +101,16 @@ async function loadRemoteSettings() {
   return response.json();
 }
 
-export const generationSettingsReady = isV2Environment && typeof window !== "undefined"
+export const generationSettingsReady = isV2Environment && typeof window !== "undefined" && !isGenerationUrlOverrideSession()
   ? loadRemoteSettings().then(replaceSettings).catch(() => {})
   : Promise.resolve();
 
 export async function commitGenerationSettings(nextSettings) {
   const next = normalizeGenerationSettings(nextSettings);
+  if (isGenerationUrlOverrideSession()) {
+    replaceSettings(next);
+    return;
+  }
   if (isV2Environment) {
     const response = await fetch("/__ascii_generation_settings", {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(next),

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { createDefaultGenerationSettings, isV2GenerationSettingsEnvironment, normalizeGenerationSettings } from "../../../src/client/ui-layer-react/generation-settings-store.js";
-import { isGenerationDiagnosticsEnabled } from "../../../src/client/generation-mode.js";
+import { getGenerationOverridesFromSearch, isGenerationDiagnosticsEnabled, isGenerationUrlOverrideSession } from "../../../src/client/generation-mode.js";
 import { resolveGenerationProfile } from "../../../src/client/game-layer-babylon-lite/generation-profile.js";
 import { getWorldSizeDimensions, WORLD_SIZE_DETAILS } from "../../../src/client/world-size-settings.js";
 
@@ -101,6 +101,10 @@ test("production enables every layer and defaults Med independently of debug cat
   assert.equal(isGenerationDiagnosticsEnabled({ development: false, search: "?worldGenerationLayersEnabled=1" }), false);
   assert.equal(isGenerationDiagnosticsEnabled({ development: false, search: "?generationDiagnostics=true" }), true);
   assert.equal(isGenerationDiagnosticsEnabled({ development: true, search: "" }), true);
+  assert.equal(isGenerationUrlOverrideSession("?generationDiagnostics=true&generationDensity=Low"), true);
+  assert.equal(isGenerationUrlOverrideSession("?generationDensity=Low"), false);
+  assert.deepEqual(getGenerationOverridesFromSearch("?generationOverrides=disable:7,11;low:8,16"), { disable: [7, 11], low: [8, 16] });
+  assert.equal(getGenerationOverridesFromSearch("?generationOverrides=bad"), undefined);
 });
 
 test("migrates legacy Civilization density to the Doors sublayer", () => {

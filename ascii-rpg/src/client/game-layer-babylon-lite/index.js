@@ -139,6 +139,7 @@ import { createGameSession } from "./game-session.js";
 import { initializeDynamicGenerationFeatures } from "./generation-layers/dynamic-entity-generation-layer.js";
 import { createRenderSchedulingController } from "./game-session/render-scheduling-controller.js";
 import { createInputController } from "./game-session/input-controller.js";
+import { createRenderControllers } from "./game-session/render-controller.js";
 import { resolveGenerationPlan } from "./world-feature-generation-registry.js";
 import { getWorldSizeDimensions } from "../world-size-settings.js";
 
@@ -363,6 +364,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
   let mapviewRealm = null;
   let mapviewRenderJob = null;
   let inputController = null;
+  let renderControllers = null;
   let settingsMapRenderJob = null;
   let settingsMapGenerationController = null;
   let settingsMapPreviewRevision = 0;
@@ -2041,6 +2043,13 @@ async function createGameSessionImplementation(container, initialPalette, initia
     return result;
   };
 
+  renderControllers = createRenderControllers({
+    minimap: renderMinimap,
+    mapview: renderMapview,
+    preview: renderGenerationSettingsPreview,
+    world: renderWorld,
+  });
+
   // Mapview composition is cooperative, but repeatedly starting it cancels and
   // rebuilds a large canvas job. UI changes therefore share one current-frame
   // request before they touch any renderer-owned surface.
@@ -3116,6 +3125,10 @@ async function createGameSessionImplementation(container, initialPalette, initia
     rendererLifecycle.beginDisposal();
     clearMovementInput();
     cancelScheduledRenders();
+    renderControllers?.minimap.dispose();
+    renderControllers?.mapview.dispose();
+    renderControllers?.preview.dispose();
+    renderControllers?.world.dispose();
     window.removeEventListener("pagehide", handlePageHide);
     document.removeEventListener("visibilitychange", handleVisibilityChange);
     window.removeEventListener("blur", handleWindowBlur);
@@ -3418,7 +3431,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
       scheduleMapviewRender();
     },
     renderGenerationSettingsPreview(targetCanvas, previewSettings, previewRealm, seedMode) {
-      return renderGenerationSettingsPreview(targetCanvas, previewSettings, previewRealm, seedMode);
+      return renderControllers?.preview.render(targetCanvas, previewSettings, previewRealm, seedMode);
     },
     setCameraMode(nextMode) {
       const selected = normalizeCameraMode(nextMode);
@@ -3438,6 +3451,10 @@ async function createGameSessionImplementation(container, initialPalette, initia
       rendererLifecycle.beginDisposal();
       clearMovementInput();
       generationController.abort();
+      renderControllers?.minimap.dispose();
+      renderControllers?.mapview.dispose();
+      renderControllers?.preview.dispose();
+      renderControllers?.world.dispose();
       cancelSettingsMapPreview();
       if (aspectRebuildFrame !== null) {
         window.cancelAnimationFrame(aspectRebuildFrame);
