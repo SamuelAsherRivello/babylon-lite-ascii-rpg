@@ -19,13 +19,11 @@ preference, version display, and GitHub Pages deployment path.
 
 ## Table of Contents
 
-1. [Images](#images)
-2. [Live Demo](#live-demo)
-3. [Collaborate](#collaborate)
-4. [Possible Game Ideas](#possible-game-ideas)
-5. [Getting Started](#getting-started)
-6. [Project Details](#project-details)
-7. [Credits](#credits)
+1. [Collaborate](#collaborate)
+2. [Possible Game Ideas](#possible-game-ideas)
+3. [Getting Started](#getting-started)
+4. [Project Details](#project-details)
+5. [Credits](#credits)
 
 ## Collaborate
 
@@ -58,13 +56,13 @@ commands from the repository root:
 
 ## Workflows
 
-## 🎨 1. Copy styles from AI Skills Library
+### 🎨 1. Copy styles from AI Skills Library
 
 Manually copy the desired styles from the
 [AI Skills Library](https://github.com/SamuelAsherRivello/ai-skills-library)
 repository into the appropriate folder in this Ascii RPG checkout.
 
-## 🕹️ 2. Choose new feature
+### 🕹️ 2. Choose new feature
 
 There are many cool ideas! Here is a partial list.
 
@@ -72,19 +70,9 @@ There are many cool ideas! Here is a partial list.
 
 ### 🕹️ 3. Implement
 
-Here is an [openspec](openspec/) workflow for collaboration with minimal code conflicts. See this 30-second [video short](https://www.youtube.com/shorts/lce1edytViI). 
-
-| # | Name | Command | Comment |
-| --- | --- | --- | --- |
-| -  | (Git Synchronize)  | - | Share progress |
-| 1 | Explore | `$openspec-explore` | (Optional) Brainstorm possibilities. |
-| 2 | Propose | `$openspec-propose` | Creates one focused feature change. |
-| 3 | Refine | `$openspec-grill-me {n}` | (Optional) Clear doubts via {n} multi-choice questions |
-| -  | (Git Synchronize)  | - | Share progress |
-| 4 | Apply | `$openspec-apply-change` | Implements and completes one change. |
-| 5 | Sync | `$openspec-sync-specs` | Updates main specs without archiving. |
-| 6 | Archive | `$openspec-archive-change` | Finalizes and archives a change. |
-| -  | (Git Synchronize)  | - | Share progress |
+- Use an [openspec](https://github.com/SamuelAsherRivello/babylon-lite-ascii-rpg/blob/main/openspec) workflow for collaboration with minimal code conflicts.
+- See this 30-second [video short](https://www.youtube.com/shorts/lce1edytViI).
+- See the table of commands in the [AI Skills Library](https://github.com/SamuelAsherRivello/ai-skills-library).
 
 ## Project Details
 
