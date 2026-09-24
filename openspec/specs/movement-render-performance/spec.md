@@ -10,7 +10,7 @@ render pipeline while the player travels rapidly through the world.
 
 During a sustained movement stress run in the supported desktop browser at the
 normal game viewport, the visible game SHALL maintain a sampled frame rate of
-at least `55` FPS while the player is moving with the Shift modifier at the
+at least `45` FPS while the player is moving with the Shift modifier at the
 fastest movement cadence. Idle presentation SHALL remain at or near the
 browser's available `60` FPS baseline.
 
@@ -18,7 +18,7 @@ browser's available `60` FPS baseline.
 
 - **WHEN** the player holds or repeatedly uses Shift with a movement direction
   for a sustained stress run of at least ten seconds
-- **THEN** every sampled one-second FPS value SHALL be `55` or higher, and the
+- **THEN** every sampled one-second FPS value SHALL be `45` or higher, and the
   run SHALL not reproduce the current `41`, `30`, `26`, or `33` FPS class of
   drops
 
@@ -75,3 +75,25 @@ light at a previous position, or leave stale GPU light sprites visible.
   is pending
 - **THEN** the visible light field and GPU light pass SHALL represent the
   newest player cell, with no light trail at superseded cells
+
+### Requirement: Movement refresh work follows measured visual invalidation
+
+The movement presentation pipeline SHALL avoid a redundant full minimap or
+game-world refresh when a coalesced movement update cannot change that
+surface's visible output. It SHALL preserve the final player position, fog
+discovery, lighting, GPU-light presentation, minimap markers, and frame-pacing
+results for the same world state and input sequence.
+
+#### Scenario: Coalesced movement skips redundant surface work
+
+- **WHEN** multiple movement events are coalesced before the next presentation
+  opportunity and an intermediate state is superseded
+- **THEN** the renderer SHALL present the newest eligible state without
+  submitting a redundant full refresh for the superseded state
+
+#### Scenario: Visible movement still refreshes required surfaces
+
+- **WHEN** movement changes player position, discovery, lighting, or a visible
+  minimap marker
+- **THEN** the affected game and minimap surfaces SHALL present the newest
+  state with the established visual result

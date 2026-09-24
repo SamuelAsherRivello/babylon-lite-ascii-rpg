@@ -47,6 +47,16 @@ function sanitizeEnvironment(environment) {
   return result;
 }
 
+function sanitizeContext(context) {
+  const source = context && typeof context === "object" ? context : {};
+  const result = {};
+  for (const [key, value] of Object.entries(source)) {
+    if (/seed|storage|token|secret|password/i.test(key)) continue;
+    if (typeof value === "string" || typeof value === "boolean" || Number.isFinite(value) || value === null) result[key] = value;
+  }
+  return result;
+}
+
 function normalizeScenario(scenario) {
   return Object.values(PERFORMANCE_SCENARIOS).includes(scenario)
     ? scenario
@@ -69,23 +79,29 @@ function createReport(session, endedAt, completion) {
   const elapsedMs = Math.max(0, endedAt - session.startedAt);
   const frameTimes = session.frameTimes;
   const totalFrameTimeMs = frameTimes.reduce((total, value) => total + value, 0);
+  const completedMeasurement = completion === "completed" && session.playableAt !== null;
   return Object.freeze({
     version: 1,
     scenario: session.scenario,
     direction: session.direction,
     sprint: session.sprint,
     completion,
+    playableAt: session.playableAt,
+    firstViewAt: session.firstViewAt,
+    measurementAvailable: completedMeasurement,
     startedAt: session.startedAt,
     endedAt,
     durationMs: elapsedMs,
     frameCount: frameTimes.length,
-    averageFps: elapsedMs > 0 ? frameTimes.length * 1000 / elapsedMs : 0,
+    averageFps: completedMeasurement && elapsedMs > 0 ? frameTimes.length * 1000 / elapsedMs : null,
     averageFrameTimeMs: frameTimes.length > 0 ? totalFrameTimeMs / frameTimes.length : null,
     p95FrameTimeMs: percentile(frameTimes, 0.95),
     worstFrameTimeMs: frameTimes.length > 0 ? Math.max(...frameTimes) : null,
     phaseTimings: Object.freeze(Object.fromEntries(
       [...session.phases.entries()].map(([name, samples]) => [name, summarizePhase(samples)]),
     )),
+    milestones: Object.freeze(Object.fromEntries(session.milestones)),
+    attempts: Object.freeze(Object.fromEntries(session.attempts)),
     environment: Object.freeze({ ...session.environment }),
   });
 }
@@ -114,6 +130,7 @@ export function createPerformanceMonitor({
     sprint = false,
     durationMs = defaultDurationMs,
     environment = getEnvironment(),
+    awaitPlayable = false,
   } = {}) => {
     if (activeSession) stop("interrupted");
     const startedAt = now();
@@ -123,10 +140,17 @@ export function createPerformanceMonitor({
       sprint: sprint === true,
       startedAt,
       deadline: startedAt + Math.max(0, finiteNumber(durationMs, defaultDurationMs)),
+      durationMs: Math.max(0, finiteNumber(durationMs, defaultDurationMs)),
+      playableAt: awaitPlayable ? null : startedAt,
       environment: sanitizeEnvironment(environment),
       frameTimes: [],
       phases: new Map(),
       lastFrameAt: null,
+      firstViewAt: null,
+      openPhases: new Map(),
+      nextPhaseId: 0,
+      milestones: new Map(),
+      attempts: new Map(),
     };
     return Object.freeze({
       scenario: activeSession.scenario,
@@ -137,6 +161,7 @@ export function createPerformanceMonitor({
 
   const recordFrame = (timestamp = now()) => {
     if (!activeSession) return false;
+    if (activeSession.playableAt === null) return false;
     if (timestamp >= activeSession.deadline) {
       stop("completed", activeSession.deadline);
       return false;
@@ -149,9 +174,10 @@ export function createPerformanceMonitor({
   };
 
   const recordPhase = (name, durationMs, context = {}) => {
-    if (!activeSession || typeof name !== "string" || activeSession.frameTimes.length >= maxSamples) return false;
+    if (!activeSession || typeof name !== "string") return false;
     const samples = activeSession.phases.get(name) ?? [];
-    samples.push({ durationMs: Math.max(0, finiteNumber(durationMs)), context: { ...context } });
+    if (samples.length >= maxSamples) return false;
+    samples.push({ durationMs: Math.max(0, finiteNumber(durationMs)), context: sanitizeContext(context) });
     activeSession.phases.set(name, samples);
     return true;
   };
@@ -159,6 +185,7 @@ export function createPerformanceMonitor({
   const mark = (name, timestamp = now()) => {
     if (!activeSession || typeof name !== "string") return false;
     const durationMs = timestamp - activeSession.startedAt;
+    activeSession.milestones.set(name, Math.max(0, durationMs));
     return recordPhase(`mark:${name}`, durationMs);
   };
 
@@ -168,7 +195,52 @@ export function createPerformanceMonitor({
     reset() { activeSession = null; lastReport = null; },
     recordFrame,
     recordPhase,
+    recordAttempt({ realm = "unknown", feature = "generation", attempt = 1 } = {}) {
+      if (!activeSession || !Number.isInteger(attempt) || attempt < 1) return false;
+      const key = `${String(realm)}:${String(feature)}`;
+      activeSession.attempts.set(key, Math.max(activeSession.attempts.get(key) ?? 0, attempt));
+      return true;
+    },
+    recordYieldWait(durationMs, context = {}) { return recordPhase("yield-wait", durationMs, context); },
+    beginPhase(name, context = {}, timestamp = now()) {
+      if (!activeSession || typeof name !== "string") return null;
+      const id = `phase-${++activeSession.nextPhaseId}`;
+      activeSession.openPhases.set(id, { name, context: sanitizeContext(context), startedAt: timestamp, childMs: 0, parent: [...activeSession.openPhases.keys()].at(-1) ?? null });
+      return id;
+    },
+    endPhase(id, timestamp = now()) {
+      if (!activeSession || typeof id !== "string") return false;
+      const phase = activeSession.openPhases.get(id);
+      if (!phase) return false;
+      activeSession.openPhases.delete(id);
+      const elapsed = Math.max(0, timestamp - phase.startedAt);
+      if (phase.parent) {
+        const parent = activeSession.openPhases.get(phase.parent);
+        if (parent) parent.childMs += elapsed;
+      }
+      return recordPhase(phase.name, Math.max(0, elapsed - phase.childMs), phase.context);
+    },
+    markPlayable(timestamp = now()) {
+      if (!activeSession || activeSession.playableAt !== null) return false;
+      if (activeSession.scenario !== PERFORMANCE_SCENARIOS.STARTUP) {
+        activeSession.startedAt = timestamp;
+        activeSession.deadline = timestamp + activeSession.durationMs;
+      }
+      activeSession.playableAt = timestamp;
+      activeSession.firstViewAt ??= timestamp;
+      activeSession.lastFrameAt = null;
+      return true;
+    },
+    failStartup(reason, completion = "unavailable", endedAt = now()) {
+      if (!activeSession || activeSession.playableAt !== null) return null;
+      activeSession.environment = { ...activeSession.environment, startupFailure: String(reason ?? "startup failed") };
+      return stop(completion === "interrupted" ? "interrupted" : "unavailable", endedAt);
+    },
     mark,
+    markMilestone(name, timestamp = now()) {
+      if (!activeSession || activeSession.milestones.has(name)) return false;
+      return mark(name, timestamp);
+    },
     isActive() { return activeSession !== null; },
     getActiveScenario() { return activeSession?.scenario ?? null; },
     updateEnvironment(environment = {}) {

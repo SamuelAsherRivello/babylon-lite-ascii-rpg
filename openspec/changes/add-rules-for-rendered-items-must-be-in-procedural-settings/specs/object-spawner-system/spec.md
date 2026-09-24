@@ -14,6 +14,10 @@ The Object Spawner System SHALL run the catalog's Object Distribution and Civili
 - **WHEN** a realm finishes player placement
 - **THEN** every qualifying level-spawned object, including Hearts, Torches, Traps, and paired Stairs, SHALL be distributed before the realm is published as playable
 
+#### Scenario: Disabled object distribution is absent
+- **WHEN** a realm is generated with Heart Distribution disabled
+- **THEN** no ambient Heart objects SHALL be created while other enabled object passes remain eligible to run
+
 #### Scenario: New level-spawned object is automatic
 - **WHEN** a new object catalog entry is valid, has `IsLevelSpawned: true`, and declares its realm scope and distribution rules
 - **THEN** Object Distribution SHALL consider it without a feature-specific startup placement call

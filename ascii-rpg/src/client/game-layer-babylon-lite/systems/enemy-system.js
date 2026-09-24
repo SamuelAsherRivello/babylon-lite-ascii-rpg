@@ -111,6 +111,7 @@ export function createEnemySystem({
     if (manhattanDistance(enemy.cell, player.cell) > navigationRadius) {
       const route = AStarUtility.findHierarchicalPath(player.world, enemy.cell, player.cell, {
         isBlocked: (cell) => isStaticOccupied(cell, enemy.realm),
+        isBlockedIndex: isStaticOccupiedIndex,
       });
       const cell = route?.nextCell;
       if (cell && occupancy.move(id, cell)) {

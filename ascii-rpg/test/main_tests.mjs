@@ -328,19 +328,25 @@ test("documents the plain safe-area template", async () => {
     throw new Error("The lower-left HUD stats section must be labeled Info.");
   }
   const windowsMarkup = app.slice(app.indexOf('id="windows"'), app.indexOf('id="stats"'));
-  if (windowsMarkup.indexOf('id="arguments_toggle"') > windowsMarkup.indexOf('id="ascii_palette_toggle"')
-    || windowsMarkup.indexOf('id="ascii_palette_toggle"') > windowsMarkup.indexOf('id="gameplay_settings_toggle"')
-    || windowsMarkup.indexOf('id="gameplay_settings_toggle"') > windowsMarkup.indexOf('id="lighting_window_toggle"')) {
+  const windowControlIds = [
+    'arguments_toggle',
+    'ascii_palette_toggle',
+    'changelog_toggle',
+    'gameplay_settings_toggle',
+    'lighting_window_toggle',
+    'procedural_settings_toggle',
+  ];
+  if (windowControlIds.some((id, index) => index > 0 && windowsMarkup.indexOf(`id="${windowControlIds[index - 1]}"`) > windowsMarkup.indexOf(`id="${id}"`))) {
     throw new Error("The Windows controls must be ordered alphabetically by visible label.");
   }
-  if (!windowsMarkup.includes('className="windows_control_row"')
-    || !windowsMarkup.includes('className="corner_body windows_control_separator" aria-hidden="true">/</span>')
+  if (windowsMarkup.match(/className="windows_control_row"/g)?.length !== 3
+    || windowsMarkup.split('className="corner_body windows_control_separator" aria-hidden="true">/</span>').length - 1 !== 3
     || !windowsMarkup.includes("Args")
     || windowsMarkup.includes("Arguments\n")
     || !styles.includes(".windows_control_row")
     || !styles.includes(".windows_control_separator")
     || !styles.includes("grid-template-columns: max-content max-content max-content")) {
-    throw new Error("The Windows controls must render as two compact slash-separated two-button rows.");
+    throw new Error("The Windows controls must render as three compact slash-separated two-button rows.");
   }
   if (!styles.includes(".corner_body") || !styles.includes(".corner_title")
     || !styles.includes(".hud_block_title") || !styles.includes(".hud_block_body")) {
@@ -491,9 +497,19 @@ test("documents the plain safe-area template", async () => {
   if (!app.includes('id="changelog_toggle"') || !app.includes("ChangelogWindow") || !app.includes("Changelog")) {
     throw new Error("The developer panel must expose the Changelog window.");
   }
+  const sharedStyles = await readFile(new URL("src/client/ui-layer-react/styles.css", appRoot), "utf8");
+  if (!sharedStyles.includes("a:visited") || !sharedStyles.includes("color: inherit") || !sharedStyles.includes("text-decoration: underline")) {
+    throw new Error("Links must retain surrounding text color and use an underline.");
+  }
   if (!app.includes("randomSeed === \"0\" ? \"0\" : \"random\"")
     || !app.includes("<ProceduralSettingsWindow settings={generationSettings} randomSeed={randomSeed}")) {
     throw new Error("The Procedural preview must initialize to seed 0 for a seed-0 session.");
+  }
+  if (!gameLayer.includes("worldViewCache.releaseView(\"settings-preview\")")
+    || !gameLayer.includes("revision !== settingsMapPreviewRevision || controller !== settingsMapGenerationController")
+    || !gameLayer.includes("if (revision !== settingsMapPreviewRevision) return;")
+    || !gameLayer.includes("if (settingsMapRenderJob !== renderJob) return;")) {
+    throw new Error("A replaced generation-settings preview must cancel and prevent its obsolete cache or canvas result from publishing.");
   }
   if (!app.includes('getUrlBooleanArgument(window.location.href, "skipTutorial")')) {
     throw new Error("skipTutorial must default to false and skip the tutorial only when its URL value is true.");
@@ -857,11 +873,16 @@ test("documents the player death lifecycle and recovery prompt", async () => {
     || !app.includes("<li>Gold: 00</li>") || !app.includes("<li>Time: 00</li>")
     || !app.includes(">Restart from checkpoint</button>") || !app.includes(">Restart game</button>")
     || !app.includes("restartFromCheckpoint") || !app.includes("restartGame")
-    || !app.includes("blockDeadRunInput")) {
+    || !app.includes("blockDeadRunInput")
+    || !app.includes("disabled={!checkpointActive}")) {
     throw new Error("The death prompt must preserve the exact Adventure copy and restart behavior.");
   }
   if (!styles.includes(".death_window_summary")) {
     throw new Error("The death prompt summary must have dedicated compact list styling.");
+  }
+  if (!styles.includes(".lighting_window button") || !styles.includes(".lighting_window button:disabled")
+    || !styles.includes("cursor: not-allowed")) {
+    throw new Error("Window buttons must have a shared style and a clearly disabled appearance.");
   }
 });
 

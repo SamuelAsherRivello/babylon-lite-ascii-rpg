@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import objectData from "../../../src/client/game-layer-babylon-lite/data/object_data.json" with { type: "json" };
 import { GENERATION_FEATURES, GENERATION_SEMANTIC_CARDS, resolveGenerationPlan, validateGenerationRegistry } from "../../../src/client/game-layer-babylon-lite/world-feature-generation-registry.js";
@@ -24,7 +25,7 @@ test("registry rejects missing generated-object registrations and prerequisite c
 });
 
 test("resolved plans preserve raw order and realm exclusions", () => {
-  const settings = { passes: [{ id: "civilization-stairs", density: "High" }] };
+  const settings = { passes: [{ id: "civilization-stairs", density: "High" }, { id: "civilization-doors", enabled: false }, { id: "enemy-spawner", enabled: true }] };
   const overground = resolveGenerationPlan(settings, "Overground");
   const underground = resolveGenerationPlan(settings, "Underground");
   assert.deepEqual(overground.map((feature) => feature.order), [...overground].map((feature) => feature.order).sort((left, right) => left - right));
@@ -32,6 +33,11 @@ test("resolved plans preserve raw order and realm exclusions", () => {
   assert.equal(underground.some((feature) => feature.id === "civilization-homes"), false);
   assert.equal(overground.find((feature) => feature.id === "civilization-stairs").density, "High");
   assert.ok(underground.find((feature) => feature.id === "enemy-spawner").order > underground.find((feature) => feature.id === "civilization-doors").order);
+  assert.equal(underground.find((feature) => feature.id === "civilization-doors").enabled, false);
+  assert.equal(underground.find((feature) => feature.id === "enemy-spawner").enabled, true);
+  assert.equal(overground.find((feature) => feature.id === "ground").enabled, true);
+  assert.equal(overground.find((feature) => feature.id === "walkability").enabled, true);
+  assert.equal(overground.find((feature) => feature.id === "player-position").enabled, true);
 });
 
 test("every generated object is registered, planned, and represented by a semantic card", () => {
@@ -44,4 +50,19 @@ test("every generated object is registered, planned, and represented by a semant
     assert.ok(plannedIds.has(feature.id), object.type);
     assert.equal(feature.seedNamespace, object.generation.seedNamespace, object.type);
   }
+});
+
+test("runtime dynamic setup follows the resolved plan and shares its seed namespaces", async () => {
+  const source = await readFile(new URL("../../../src/client/game-layer-babylon-lite/index.js", import.meta.url), "utf8");
+  const dynamicFeatures = resolveGenerationPlan().filter((feature) => feature.owner === "dynamic");
+
+  assert.deepEqual(dynamicFeatures.map((feature) => feature.id), ["npc-spawner", "enemy-spawner"]);
+  assert.ok(source.includes("const featureSeedNamespace = (id) => plannedFeature(id)?.seedNamespace ?? id;"));
+  assert.ok(source.includes("const enabledLayerOrders = diagnostics ? getWorldGenerationLayersEnabledFromSearch(window.location.search) : undefined;"));
+  assert.ok(source.includes("enabled: pass.required === true || enabledLayerOrders.includes(pass.order)"));
+  assert.ok(source.includes('"npc-spawner": initializeNpcSpawners'));
+  assert.ok(source.includes('"enemy-spawner": initializeEnemySpawners'));
+  assert.ok(source.includes(".filter((feature) => feature.owner === \"dynamic\" && feature.enabled)"));
+  assert.ok(source.includes("random: createRandom(`${underground.options.seed}:${featureSeedNamespace(\"enemy-spawner\")}`)"));
+  assert.ok(source.includes("random: createRandom(`${overground.options.seed}:${featureSeedNamespace(\"npc-spawner\")}`)"));
 });

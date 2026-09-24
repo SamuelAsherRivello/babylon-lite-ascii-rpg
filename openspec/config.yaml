@@ -8,6 +8,18 @@ context: |
   Before proposing or applying a change, record the project's verified purpose,
   client targets, architecture, dependency policy, security constraints, and
   validation commands here.
+  Verified for heavy-optimization-pass (2026-09-24): the client is a procedural
+  two-realm ASCII RPG for modern desktop/mobile browsers with WebGPU support.
+  React owns the UI, the bridge connects it to Babylon Lite gameplay, and Vite
+  builds from ascii-rpg/ using the repository-root npm package. Existing runtime
+  dependencies include @babylonjs/lite and @esengine/pathfinding. This change
+  plans no new dependencies or renderer replacement. Keep diagnostics local
+  and opt-in; never record credentials, storage contents, or gameplay seeds in
+  exported performance reports. Run npm.cmd test and npm.cmd run build from
+  the repository root; use focused Node tests and manual browser verification
+  with explicit randomSeed values. Do not use Playwright test files by default.
+  Validate this change with openspec validate heavy-optimization-pass --type
+  change --strict. OpenSpec 1.13.1 and openspec doctor --json were verified.
 rules:
   proposal:
     - Mark unresolved decisions clearly; recommendations are not approvals.

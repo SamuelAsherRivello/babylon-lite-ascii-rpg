@@ -29,6 +29,7 @@ export function createWorldViewComposition({
   discovered,
   getVisibility = getFogVisibility,
   onlyDiscovered = false,
+  dirtyCells = null,
 } = {}) {
   if (!world || !Number.isInteger(world.columns) || !Number.isInteger(world.rows)) {
     throw new TypeError("World-view composition requires a generated world.");
@@ -41,12 +42,11 @@ export function createWorldViewComposition({
     ? (fogState, currentWorld, cell) => discovered(fogState, currentWorld, cell) ? 100 : 0
     : getVisibility;
   const cells = [];
-  for (let localY = 0; localY < region.height; localY += 1) {
-    for (let localX = 0; localX < region.width; localX += 1) {
-      const cell = { x: region.x + localX, y: region.y + localY };
+  const append = (cell) => {
+      const localX = cell.x - region.x, localY = cell.y - region.y;
       const visibility = resolveVisibility(fog, world, cell);
       const isVisible = visibility > 0;
-      if (onlyDiscovered && !isVisible) continue;
+      if (onlyDiscovered && !isVisible) return;
       cells.push({
         cell,
         localX,
@@ -56,7 +56,17 @@ export function createWorldViewComposition({
         visibility,
         glyph: isVisible ? getGlyph(world, cell) : null,
       });
+  };
+  if (dirtyCells !== null) {
+    const slots = new Set();
+    for (const cell of dirtyCells) {
+      if (!Number.isInteger(cell.x) || !Number.isInteger(cell.y) || cell.x < region.x || cell.y < region.y || cell.x >= region.x + region.width || cell.y >= region.y + region.height) continue;
+      slots.add((cell.y - region.y) * region.width + cell.x - region.x);
     }
+    // Preserve full-view draw order, but visit only the invalidated slots.
+    for (const slot of [...slots].sort((a, b) => a - b)) append({ x: region.x + slot % region.width, y: region.y + Math.floor(slot / region.width) });
+  } else {
+    for (let localY = 0; localY < region.height; localY += 1) for (let localX = 0; localX < region.width; localX += 1) append({ x: region.x + localX, y: region.y + localY });
   }
   return Object.freeze({
     region,

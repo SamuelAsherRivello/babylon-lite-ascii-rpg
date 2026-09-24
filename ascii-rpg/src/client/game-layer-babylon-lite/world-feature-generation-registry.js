@@ -3,12 +3,12 @@ import objectData from "./data/object_data.json" with { type: "json" };
 
 const DENSITIES = new Set(["Low", "Med", "High"]);
 const declarations = new Map([
-  ["ground", { owner: "terrain", realms: ["Overground", "Underground"], configurable: false, seedNamespace: "ground" }],
+  ["ground", { owner: "terrain", realms: ["Overground", "Underground"], configurable: false, required: true, seedNamespace: "ground" }],
   ["overground-walls", { owner: "terrain", realms: ["Overground"], seedNamespace: "overground-walls" }],
   ["underground-caves", { owner: "terrain", realms: ["Underground"], seedNamespace: "underground-caves" }],
   ["water", { owner: "terrain", realms: ["Overground", "Underground"], seedNamespace: "water" }],
-  ["walkability", { owner: "terrain", realms: ["Overground", "Underground"], seedNamespace: "walkability" }],
-  ["player-position", { owner: "player", realms: ["Overground", "Underground"], configurable: false, requires: ["walkability"], seedNamespace: "player-position" }],
+  ["walkability", { owner: "terrain", realms: ["Overground", "Underground"], required: true, seedNamespace: "walkability" }],
+  ["player-position", { owner: "player", realms: ["Overground", "Underground"], configurable: false, required: true, requires: ["walkability"], seedNamespace: "player-position" }],
   ["object-heart", { owner: "objects", realms: ["Overground", "Underground"], requires: ["player-position"], objectType: "heart", seedNamespace: "heart:placement" }],
   ["object-chest", { owner: "objects", realms: ["Overground", "Underground"], requires: ["player-position"], objectType: "chest", seedNamespace: "chest:placement" }],
   ["object-trap", { owner: "objects", realms: ["Overground", "Underground"], requires: ["player-position"], objectType: "trap", seedNamespace: "trap:placement" }],
@@ -68,10 +68,11 @@ export function validateGenerationRegistry(features = GENERATION_FEATURES, catal
 
 export function resolveGenerationPlan(settings = { passes: [] }, realm = null) {
   validateGenerationRegistry();
-  const densityById = new Map((settings.passes ?? []).map((pass) => [pass.id, pass.density]));
+  const selectedById = new Map((settings.passes ?? []).map((pass) => [pass.id, pass]));
   return Object.freeze(GENERATION_FEATURES.filter((feature) => !realm || feature.realms.includes(realm)).map((feature) => Object.freeze({
     ...feature,
-    density: feature.configurable === false ? feature.density : densityById.get(feature.id) ?? feature.density,
+    density: feature.configurable === false ? feature.density : selectedById.get(feature.id)?.density ?? feature.density,
+    enabled: feature.required === true ? true : selectedById.get(feature.id)?.enabled !== false,
   })));
 }
 

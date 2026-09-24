@@ -1,5 +1,6 @@
 import { Component, Fragment, createRef, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { HexColorPicker } from "react-colorful";
+import { isGenerationDiagnosticsEnabled } from "../generation-mode.js";
 import versionText from "../../../../version.txt?raw";
 import changelog from "./data/changelog.json";
 import {
@@ -13,6 +14,7 @@ import {
 import { DEFAULT_FONT_ID, FONT_OPTIONS, getFontOption } from "../bridge-layer/font.js";
 import { commitPalette, getPalette, subscribeToPalette } from "./palette-store.js";
 import { commitGenerationSettings, DENSITY_LEVELS, GENERATION_DENSITY_DETAILS, GENERATION_PASS_DESCRIPTIONS, GENERATION_PASS_REALMS, getGenerationSettings, normalizeGenerationSettings, subscribeToGenerationSettings } from "./generation-settings-store.js";
+import { WORLD_SIZE_DETAILS, WORLD_SIZE_LEVELS } from "../world-size-settings.js";
 import { getGenerationSemanticCards } from "../game-layer-babylon-lite/world-feature-generation-registry.js";
 import { sendGenerationSettingsPreview } from "../bridge-layer/game-bridge.js";
 import {
@@ -1435,11 +1437,22 @@ export function ChangelogWindow({ onClose }) {
   );
 }
 
+function GenerationEnabledCheckbox({ title, enabled, disabled = false, mixed = false, onChange }) {
+  const checkboxRef = useRef(null);
+  useEffect(() => { if (checkboxRef.current) checkboxRef.current.indeterminate = mixed; }, [mixed]);
+  if (!isGenerationDiagnosticsEnabled()) return null;
+  const action = enabled ? "Disable" : "Enable";
+  return <input ref={checkboxRef} className="procedural_layer_enabled" type="checkbox" checked={enabled} disabled={disabled}
+    aria-label={disabled ? `${title} must remain enabled` : `${action} ${title}`} title={disabled ? `${title} must remain enabled` : `${action} ${title}`}
+    onChange={onChange} />;
+}
+
 export function ProceduralSettingsWindow({ settings, randomSeed, onConfirm, onClose }) {
   const [draft, setDraft] = useState(() => normalizeGenerationSettings(settings));
   const [previewRealm, setPreviewRealm] = useState("Overground");
   const [previewSeed, setPreviewSeed] = useState(() => randomSeed === "0" ? "0" : "random");
   const [previewViewport, setPreviewViewport] = useState({ zoom: 1, x: 0, y: 0 });
+  const [previewLoading, setPreviewLoading] = useState(true);
   const [error, setError] = useState("");
   const previewCanvasRef = useRef(null);
   const semanticCards = getGenerationSemanticCards();
@@ -1459,15 +1472,45 @@ export function ProceduralSettingsWindow({ settings, randomSeed, onConfirm, onCl
   const previewDragRef = useRef(null);
 
   useEffect(() => {
-    sendGenerationSettingsPreview(previewCanvasRef.current, draft, previewRealm, previewSeed);
-    return () => sendGenerationSettingsPreview(null, null);
+    let current = true;
+    setPreviewLoading(true);
+    Promise.resolve()
+      .then(() => current ? sendGenerationSettingsPreview(previewCanvasRef.current, draft, previewRealm, previewSeed) : undefined)
+      .catch((nextError) => {
+        if (current) setError(nextError.message || "Unable to render generation preview.");
+      })
+      .finally(() => {
+        if (current) setPreviewLoading(false);
+      });
+    return () => {
+      current = false;
+    };
   }, [draft, previewRealm, previewSeed]);
+  useEffect(() => () => { sendGenerationSettingsPreview(null, null); }, []);
 
-  const selectDensity = (id, density) => {
-    setDraft((current) => normalizeGenerationSettings({
+  const startPreviewRedraw = (update) => {
+    setPreviewLoading(true);
+    update();
+  };
+
+  const selectDensity = (id, density) => startPreviewRedraw(() => setDraft((current) => normalizeGenerationSettings({
       ...current,
       passes: current.passes.map((pass) => pass.id === id ? { ...pass, density } : pass),
-    }));
+    })));
+  const selectWorldSize = (worldSize) => startPreviewRedraw(() => setDraft((current) => normalizeGenerationSettings({ ...current, worldSize })));
+  const setEnabled = (id, enabled) => startPreviewRedraw(() => setDraft((current) => normalizeGenerationSettings({
+    ...current, passes: current.passes.map((pass) => pass.id === id ? { ...pass, enabled } : pass),
+  })));
+  const setMacroEnabled = (ids, enabled) => startPreviewRedraw(() => setDraft((current) => normalizeGenerationSettings({
+    ...current, passes: current.passes.map((pass) => ids.has(pass.id) ? { ...pass, enabled } : pass),
+  })));
+  const macroCheckbox = (card) => {
+    // Macro toggles intentionally use the complete card membership. A child
+    // can belong to another realm than the active preview, but its setting
+    // must still follow the macro checkbox.
+    const children = card.featureIds.map((id) => draft.passes.find((pass) => pass.id === id)).filter(Boolean);
+    const enabled = children.every((pass) => pass.enabled);
+    return <GenerationEnabledCheckbox title={card.title} enabled={enabled} mixed={!enabled && children.some((pass) => pass.enabled)} onChange={() => setMacroEnabled(new Set(card.featureIds), !enabled)} />;
   };
 
   const confirm = async () => {
@@ -1481,7 +1524,7 @@ export function ProceduralSettingsWindow({ settings, randomSeed, onConfirm, onCl
 
   const resetDraft = () => {
     setError("");
-    setDraft(normalizeGenerationSettings({ passes: [] }));
+    startPreviewRedraw(() => setDraft(normalizeGenerationSettings({ passes: [] })));
   };
 
   const constrainPreviewViewport = (viewport, bounds) => {
@@ -1543,36 +1586,57 @@ export function ProceduralSettingsWindow({ settings, randomSeed, onConfirm, onCl
         <div className="window_header">
           <h1 id="procedural_settings_title" className="prompt_title">Procedural</h1>
           <div className="title_tabs" role="tablist" aria-label="Procedural settings sections">
-            <button className="prompt_tab" type="button" role="tab" aria-selected="true">Level Generation</button>
+            <button className="prompt_tab" type="button" role="tab" aria-selected="true">World Generation</button>
           </div>
           <button className="prompt_button window_close" type="button" aria-label="Close Procedural" onClick={onClose}>X</button>
         </div>
         <div className="prompt_body procedural_settings_body">
           <div className="procedural_settings_options">
+            {previewLoading ? <div className="procedural_preview_blocker" role="status" aria-live="polite"><span>Loading</span></div> : null}
             <div className="procedural_settings_options_scroll">
-              <h2>Procedural Level Generation Passes</h2>
+              <h2>Procedural World Generation Passes</h2>
               <p className="gameplay_settings_hint">Set the density &amp; distribution to feed the system.<br /><span className="procedural_settings_notice">Some of these buttons apparently do nothing yet</span></p>
               <div className="quest_settings_list">
+                <section className="quest_settings_card procedural_object_settings_card" aria-label="World Settings, pass 1">
+                  <div className="procedural_object_settings_header">
+                    <h3>1. World Settings</h3>
+                    <span className="procedural_settings_description">Sets the size before terrain generation</span>
+                  </div>
+                  <div className="procedural_object_density_row">
+                    <span>World Size</span>
+                    <div className="procedural_density_controls procedural_object_density_controls" role="group" aria-label="World Size">
+                      {WORLD_SIZE_LEVELS.map((worldSize) => (
+                        <button key={worldSize} className={`prompt_button${draft.worldSize === worldSize ? " procedural_density_selected" : ""}`} type="button" aria-pressed={draft.worldSize === worldSize} title={WORLD_SIZE_DETAILS[worldSize]} onClick={() => selectWorldSize(worldSize)}>
+                          {worldSize}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="procedural_object_density_row">
+                    <span>Realm Count: 2</span>
+                  </div>
+                </section>
                 {orderedPasses.filter((pass) => pass.order <= 6).map((pass) => {
                   const unavailable = !isPassAvailableInPreview(pass);
-                  return <section key={pass.id} className={`quest_settings_card procedural_settings_card${unavailable ? " procedural_realm_unavailable" : ""}`} aria-label={`${pass.title}, pass ${pass.order}`} aria-disabled={unavailable}>
-                <h3>{pass.order}. {pass.title}</h3>
-                {pass.configurable === false ? <div className="procedural_density_controls procedural_density_controls_static"><span className="procedural_realm_scope procedural_realm_scope_static">Realms: {GENERATION_PASS_REALMS[pass.id]}</span><span className="procedural_no_settings">No Settings</span></div> : <div className="procedural_density_controls" role="group" aria-label={`${pass.title} density and distribution`}>
+                  return <section key={pass.id} className={`quest_settings_card procedural_settings_card${unavailable ? " procedural_realm_unavailable" : ""}`} aria-label={`${pass.title}, pass ${pass.order + 1}`} aria-disabled={unavailable}>
+                <h3>{pass.order + 1}. {pass.title}</h3>
+                {pass.configurable === false ? <div className="procedural_density_controls procedural_density_controls_static"><span className="procedural_realm_scope procedural_realm_scope_static">Realms: {GENERATION_PASS_REALMS[pass.id]}</span><span className="procedural_no_settings">No Settings</span><GenerationEnabledCheckbox title={pass.title} enabled={pass.enabled} disabled={pass.required === true} onChange={() => setEnabled(pass.id, !pass.enabled)} /></div> : <div className="procedural_density_controls" role="group" aria-label={`${pass.title} density and distribution`}>
                   <span className="procedural_realm_scope">Realms: {GENERATION_PASS_REALMS[pass.id]}</span>
                   {DENSITY_LEVELS.map((density) => (
                     <button key={density} className={`prompt_button${pass.density === density ? " procedural_density_selected" : ""}`} type="button" aria-pressed={pass.density === density} title={GENERATION_DENSITY_DETAILS[pass.id][density]} disabled={unavailable} onClick={() => selectDensity(pass.id, density)}>
                       {density}
                     </button>
                   ))}
+                  <GenerationEnabledCheckbox title={pass.title} enabled={pass.enabled} disabled={pass.required === true} onChange={() => setEnabled(pass.id, !pass.enabled)} />
                 </div>}
                 <span className="procedural_settings_description">{GENERATION_PASS_DESCRIPTIONS[pass.id]}</span>
               </section>
                 })}
-                <section className="quest_settings_card procedural_object_settings_card" aria-label="Object Distribution, pass 7">
+                <section className="quest_settings_card procedural_object_settings_card" aria-label="Object Distribution, pass 8">
                   <div className="procedural_object_settings_header">
-                    <h3>7. {objectCard.title}</h3>
+                    <h3>8. {objectCard.title}</h3>
                     <span className="procedural_settings_description">Controls objects</span>
-                    <span className="procedural_realm_scope">Realms: All</span>
+                    <span className="procedural_realm_scope procedural_group_enabled">Realms: All{macroCheckbox(objectCard)}</span>
                   </div>
                   {objectPasses.map((pass) => {
                     const unavailable = !isPassAvailableInPreview(pass);
@@ -1584,14 +1648,16 @@ export function ProceduralSettingsWindow({ settings, randomSeed, onConfirm, onCl
                             {density}
                           </button>
                         ))}
+                        <GenerationEnabledCheckbox title={pass.title} enabled={pass.enabled} onChange={() => setEnabled(pass.id, !pass.enabled)} />
                       </div>
                     </div>
                   })}
                 </section>
-                <section className="quest_settings_card procedural_object_settings_card" aria-label="Civilization Placement, pass 8">
+                <section className="quest_settings_card procedural_object_settings_card" aria-label="Civilization Placement, pass 9">
                   <div className="procedural_object_settings_header">
-                    <h3>8. {civilizationCard.title}</h3>
+                    <h3>9. {civilizationCard.title}</h3>
                     <span className="procedural_settings_description">Controls Stairs, Doors, and Homes placement</span>
+                    <span className="procedural_group_enabled">{macroCheckbox(civilizationCard)}</span>
                   </div>
                   {orderedPasses.filter((pass) => civilizationPassIds.has(pass.id)).map((pass) => {
                     const unavailable = !isPassAvailableInPreview(pass);
@@ -1603,14 +1669,16 @@ export function ProceduralSettingsWindow({ settings, randomSeed, onConfirm, onCl
                             {density}
                           </button>
                         ))}
+                        <GenerationEnabledCheckbox title={pass.title} enabled={pass.enabled} onChange={() => setEnabled(pass.id, !pass.enabled)} />
                       </div>
                     </div>
                   })}
                 </section>
-                <section className="quest_settings_card procedural_object_settings_card" aria-label="Character Distribution, pass 9">
+                <section className="quest_settings_card procedural_object_settings_card" aria-label="Character Distribution, pass 10">
                   <div className="procedural_object_settings_header">
-                    <h3>9. {characterCard.title}</h3>
+                    <h3>10. {characterCard.title}</h3>
                     <span className="procedural_settings_description">Controls character placement</span>
+                    <span className="procedural_group_enabled">{macroCheckbox(characterCard)}</span>
                   </div>
                   {characterCard.featureIds.map((id) => orderedPasses.find((pass) => pass.id === id)).filter(Boolean).map((pass) => {
                     const unavailable = !isPassAvailableInPreview(pass);
@@ -1622,14 +1690,15 @@ export function ProceduralSettingsWindow({ settings, randomSeed, onConfirm, onCl
                             {density}
                           </button>
                         ))}
+                        <GenerationEnabledCheckbox title={pass.title} enabled={pass.enabled} onChange={() => setEnabled(pass.id, !pass.enabled)} />
                       </div>
                     </div>
                   })}
                 </section>
                 {orderedPasses.filter((pass) => pass.order > 6 && !objectPassIds.has(pass.id) && !civilizationPassIds.has(pass.id) && !characterPassIds.has(pass.id)).map((pass, index) => {
                   const unavailable = !isPassAvailableInPreview(pass);
-                  return <section key={pass.id} className={`quest_settings_card procedural_settings_card${unavailable ? " procedural_realm_unavailable" : ""}`} aria-label={`${pass.title}, pass ${pass.order}`} aria-disabled={unavailable}>
-                <h3>{9 + index}. {pass.title}</h3>
+                  return <section key={pass.id} className={`quest_settings_card procedural_settings_card${unavailable ? " procedural_realm_unavailable" : ""}`} aria-label={`${pass.title}, pass ${pass.order + 1}`} aria-disabled={unavailable}>
+                <h3>{10 + index}. {pass.title}</h3>
                 <div className="procedural_density_controls" role="group" aria-label={`${pass.title} density and distribution`}>
                   <span className="procedural_realm_scope">Realms: {GENERATION_PASS_REALMS[pass.id]}</span>
                   {DENSITY_LEVELS.map((density) => (
@@ -1637,6 +1706,7 @@ export function ProceduralSettingsWindow({ settings, randomSeed, onConfirm, onCl
                       {density}
                     </button>
                   ))}
+                  <GenerationEnabledCheckbox title={pass.title} enabled={pass.enabled} disabled={pass.required === true} onChange={() => setEnabled(pass.id, !pass.enabled)} />
                 </div>
                 <span className="procedural_settings_description">{GENERATION_PASS_DESCRIPTIONS[pass.id]}</span>
               </section>
@@ -1650,8 +1720,8 @@ export function ProceduralSettingsWindow({ settings, randomSeed, onConfirm, onCl
                 <button className="prompt_button" type="button" onClick={onClose}>Cancel</button>
               </div>
               <div className="procedural_settings_actions_right">
-                <button className="prompt_button" type="button" aria-pressed={previewRealm === "Underground"} onClick={() => setPreviewRealm((realm) => realm === "Overground" ? "Underground" : "Overground")}>{previewRealm === "Overground" ? "Overworld" : "Underworld"}</button>
-                <button className="prompt_button" type="button" aria-pressed={previewSeed === "0"} onClick={() => setPreviewSeed((seed) => seed === "random" ? "0" : "random")}>{previewSeed === "random" ? "Seed=Random" : "Seed=0"}</button>
+                <button className="prompt_button" type="button" aria-pressed={previewRealm === "Underground"} onClick={() => startPreviewRedraw(() => setPreviewRealm((realm) => realm === "Overground" ? "Underground" : "Overground"))}>{previewRealm === "Overground" ? "Overworld" : "Underworld"}</button>
+                <button className="prompt_button" type="button" aria-pressed={previewSeed === "0"} onClick={() => startPreviewRedraw(() => setPreviewSeed((seed) => seed === "random" ? "0" : "random"))}>{previewSeed === "random" ? "Seed=Random" : "Seed=0"}</button>
               </div>
               {error ? <span className="procedural_settings_error" role="alert">{error}</span> : null}
             </div>
@@ -2218,6 +2288,12 @@ function AppContent() {
             </SettingTooltipTarget>
           </div>
           <div className="windows_control_row">
+            <SettingTooltipTarget description={settingsHelp.changelog} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
+              <button id="changelog_toggle" className="corner_body settings_option" type="button" aria-description={settingsHelp.changelog} tabIndex={-1} onClick={() => setChangelogOpen(true)}>
+                Changelog
+              </button>
+            </SettingTooltipTarget>
+            <span className="corner_body windows_control_separator" aria-hidden="true">/</span>
             <SettingTooltipTarget description={settingsHelp.gameplaySettings} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
               <button id="gameplay_settings_toggle" className="corner_body settings_option" type="button" aria-description={settingsHelp.gameplaySettings} tabIndex={-1} onClick={() => setGameplaySettingsOpen(true)}>
                 Gameplay
@@ -2225,22 +2301,15 @@ function AppContent() {
             </SettingTooltipTarget>
           </div>
           <div className="windows_control_row">
-            <SettingTooltipTarget description={settingsHelp.proceduralSettings} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
-              <button id="procedural_settings_toggle" className="corner_body settings_option" type="button" aria-description={settingsHelp.proceduralSettings} tabIndex={-1} onClick={() => setProceduralSettingsOpen(true)}>
-                Procedural
-              </button>
-            </SettingTooltipTarget>
-            <span className="corner_body windows_control_separator" aria-hidden="true">/</span>
             <SettingTooltipTarget description={settingsHelp.lighting} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
               <button id="lighting_window_toggle" className="corner_body settings_option" type="button" aria-expanded={lightingWindowOpen} aria-controls="lighting_window" aria-description={settingsHelp.lighting} tabIndex={-1} onClick={() => setLightingWindowOpen((isOpen) => !isOpen)}>
                 Lighting
               </button>
             </SettingTooltipTarget>
-          </div>
-          <div className="windows_control_row">
-            <SettingTooltipTarget description={settingsHelp.changelog} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
-              <button id="changelog_toggle" className="corner_body settings_option" type="button" aria-description={settingsHelp.changelog} tabIndex={-1} onClick={() => setChangelogOpen(true)}>
-                Changelog
+            <span className="corner_body windows_control_separator" aria-hidden="true">/</span>
+            <SettingTooltipTarget description={settingsHelp.proceduralSettings} onShow={showSettingTooltip} onHide={hideSettingTooltip}>
+              <button id="procedural_settings_toggle" className="corner_body settings_option" type="button" aria-description={settingsHelp.proceduralSettings} tabIndex={-1} onClick={() => setProceduralSettingsOpen(true)}>
+                Procedural
               </button>
             </SettingTooltipTarget>
           </div>

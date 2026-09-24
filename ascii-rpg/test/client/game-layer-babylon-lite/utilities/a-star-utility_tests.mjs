@@ -27,6 +27,18 @@ test("AStarUtility returns a deterministic cardinal path around blockers", () =>
   assert.ok(path.some((cell) => cell.y === 7));
 });
 
+test("resumable A* preserves synchronous cardinal route ties without scanning a grid upfront", () => {
+  const map = world(48, 48);
+  for (let y = 2; y < 46; y += 1) if (y !== 31) map.terrain[y][23].walkable = false;
+  const from = { x: 3, y: 3 }, to = { x: 43, y: 43 };
+  const expected = AStarUtility.findPath(map, from, to, { isBlocked: cell => cell.x === 24 && cell.y === 31 });
+  const search = AStarUtility.createResumablePathSearch(map, from, to, { isBlocked: cell => cell.x === 24 && cell.y === 31 });
+  let progress;
+  do { progress = search.step(3); } while (!progress.done);
+  assert.deepEqual(progress.path, expected);
+  assert.ok(progress.searched < map.rows * map.columns, "search records only cells it expands");
+});
+
 test("AStarUtility finds nearest cells deterministically and reports unreachable targets", () => {
   const map = world(5, 5);
   const nearest = AStarUtility.findNearest(map, { x: 2, y: 2 }, [{ x: 4, y: 2 }, { x: 0, y: 2 }]);
@@ -47,7 +59,18 @@ test("AStarUtility distance fields honor blockers and maximum distance", () => {
   assert.equal(field.getDistance({ x: 3, y: 2 }), -1);
   assert.equal(field.getDistance({ x: 2, y: 0 }), 2);
   assert.equal(field.getDistance({ x: 2, y: 4 }), 2);
-  assert.equal(field.getDistance({ x: 0, y: 2 }), -1);
+  assert.equal(field.getDistance({ x: 0, y: 0 }), -1);
+});
+
+test("AStarUtility refines a reachable sector exit around a barrier and invalidates a revised sector graph", () => {
+  const map = world(32, 16);
+  for (let y = 0; y < 15; y += 1) map.terrain[y][15].walkable = false;
+  const route = AStarUtility.findHierarchicalPath(map, { x: 1, y: 1 }, { x: 30, y: 1 });
+  assert.deepEqual(route?.sectorExit, { x: 15, y: 15 });
+  assertCardinal(route?.path ?? []);
+  assert.ok(route?.path.some((cell) => cell.y === 15));
+  map.terrain[15][15].walkable = false;
+  assert.equal(AStarUtility.findHierarchicalPath(map, { x: 1, y: 1 }, { x: 30, y: 1 }, { terrainRevision: 1 }), null);
 });
 
 test("AStarUtility keeps realm-local paths local and uses an explicit paired-stair transition", () => {

@@ -37,6 +37,7 @@ import {
   createWorldCooperative,
   createWorldRealms,
   getRandomSeedFromSearch,
+  getWorldGenerationLayersEnabledFromSearch,
   getVisibleGlyph,
   isWalkableCell,
   clearCharacter,
@@ -54,6 +55,24 @@ function assertMinimumTorchDistance(torches, minimumDistance = OBJECT_DISTRIBUTI
     }
   }
 }
+
+test("required-only worlds contain no hidden torches, water, or stairs", async () => {
+  const options = { rows: 40, columns: 40, seed: "all-off", torchCount: 0, stairCount: 0, caveEnabled: false, waterEnabled: false };
+  const sync = createWorld(options);
+  const cooperative = await createWorldCooperative(options);
+  for (const world of [sync, cooperative]) {
+    assert.deepEqual(world.torches, []);
+    assert.deepEqual(world.waterCells, []);
+    assert.equal(world.characters.flat().filter(Boolean).length, 1);
+  }
+  assert.deepEqual(cooperative.terrain, sync.terrain);
+  const realms = await createWorldRealms({ ...options, caveEnabledByRealm: { Overground: false, Underground: false } });
+  for (const realm of Object.values(realms.realms)) {
+    assert.deepEqual(realm.torches, []);
+    assert.deepEqual(realm.stairs, []);
+    assert.equal(realm.characters.flat().some(glyph => glyph === TORCH_GLYPH || glyph === STAIR_GLYPH), false);
+  }
+});
 
 test("publishes every glyph used by the project maps", () => {
   assert.deepEqual(new Set(PROJECT_MAP_GLYPHS), new Set([
@@ -352,6 +371,39 @@ test("creates deterministic paired realm stairs on walkable terrain", async () =
     assert.equal(underground.terrain[stair.y][stair.x].walkable, true);
     assert.equal(overground.characters[stair.y][stair.x], STAIR_GLYPH);
     assert.equal(underground.characters[stair.y][stair.x], STAIR_GLYPH);
+  }
+});
+
+test("reads an optional raw generation-layer override from the URL query", () => {
+  assert.deepEqual(getWorldGenerationLayersEnabledFromSearch("?worldGenerationLayersEnabled=1,7,11"), [1, 7, 11]);
+  assert.deepEqual(getWorldGenerationLayersEnabledFromSearch("?worldGenerationLayersEnabled=7,7, 11"), [7, 11]);
+  assert.equal(getWorldGenerationLayersEnabledFromSearch("?worldGenerationLayersEnabled=none"), undefined);
+  assert.equal(getWorldGenerationLayersEnabledFromSearch("?randomSeed=0"), undefined);
+});
+
+test("keeps the required playable baseline when optional terrain passes are disabled", async () => {
+  const options = {
+    rows: 24,
+    columns: 32,
+    torchCount: 0,
+    stairCount: 0,
+    seed: "optional-terrain-off",
+    caveEnabledByRealm: { Overground: false, Underground: false },
+    waterEnabled: false,
+  };
+  const first = await createWorldRealms(options);
+  const second = await createWorldRealms(options);
+  const { realms } = first;
+  assert.deepEqual(first, second);
+
+  for (const realm of Object.values(realms)) {
+    assert.equal(realm.waterCells.length, 0);
+    assert.equal(realm.stairs.length, 0);
+    assert.equal(realm.terrain[realm.playerStart.y][realm.playerStart.x].walkable, true);
+    assert.equal(realm.terrain.flat().filter((cell) => cell.walkable).length, (realm.rows - 2) * (realm.columns - 2));
+    const neighbor = { x: realm.playerStart.x + 1, y: realm.playerStart.y };
+    assert.equal(isWalkableCell(realm, neighbor), true);
+    assert.deepEqual(moveWorldCell(realm.playerStart, { x: 1, y: 0 }, realm), neighbor);
   }
 });
 

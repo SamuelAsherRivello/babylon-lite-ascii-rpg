@@ -1,0 +1,9 @@
+.git
+.github
+.npm-cache
+.playwright-cli
+node_modules
+ascii-rpg/dist
+output
+openspec/changes/archive
+*.log

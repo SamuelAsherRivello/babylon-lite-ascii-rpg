@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { normalizeGenerationSettings } from "../../../src/client/ui-layer-react/generation-settings-store.js";
+import { isGenerationDiagnosticsEnabled } from "../../../src/client/generation-mode.js";
 import { resolveGenerationProfile } from "../../../src/client/game-layer-babylon-lite/generation-profile.js";
+import { getWorldSizeDimensions, WORLD_SIZE_DETAILS } from "../../../src/client/world-size-settings.js";
 
 test("generation settings retain the ordered catalog and default malformed densities to Med", () => {
   const settings = normalizeGenerationSettings({
@@ -20,7 +22,7 @@ test("generation settings retain the ordered catalog and default malformed densi
   assert.equal(settings.passes.find((pass) => pass.id === "enemy-spawner").density, "Med");
   assert.equal(settings.passes.find((pass) => pass.id === "npc-spawner").density, "Med");
   assert.equal(settings.passes.find((pass) => pass.id === "object-fireplace").density, "Med");
-  assert.equal(settings.passes.find((pass) => pass.id === "object-chest").density, "High");
+  assert.equal(settings.passes.find((pass) => pass.id === "object-chest").density, "Med");
   assert.equal(settings.passes.find((pass) => pass.id === "civilization-stairs").density, "Med");
   assert.equal(settings.passes.find((pass) => pass.id === "civilization-homes").density, "Med");
   assert.equal(settings.passes.find((pass) => pass.id === "player-position").configurable, false);
@@ -30,6 +32,57 @@ test("defaults the split wall controls to Medium when no prior choice is saved",
   const settings = normalizeGenerationSettings();
   assert.equal(settings.passes.find((pass) => pass.id === "overground-walls").density, "Med");
   assert.equal(settings.passes.find((pass) => pass.id === "underground-caves").density, "Med");
+});
+
+test("normalizes World Size and maps every supported selection to square per-realm dimensions", () => {
+  assert.equal(normalizeGenerationSettings().worldSize, "Med");
+  assert.equal(normalizeGenerationSettings({ worldSize: "High" }).worldSize, "High");
+  assert.equal(normalizeGenerationSettings({ worldSize: "unsupported" }).worldSize, "Med");
+  assert.deepEqual(["Low", "Med", "High"].map((worldSize) => getWorldSizeDimensions(worldSize)), [
+    { rows: 128, columns: 128 },
+    { rows: 256, columns: 256 },
+    { rows: 512, columns: 512 },
+  ]);
+  assert.deepEqual(WORLD_SIZE_DETAILS, {
+    Low: "Low, 128 x 128",
+    Med: "Med, 256 x 256",
+    High: "High, 512 x 512",
+  });
+});
+
+test("defaults legacy enabled settings to true and retains a disabled pass density", () => {
+  const legacy = normalizeGenerationSettings({ passes: [{ id: "water", density: "High" }] });
+  const disabled = normalizeGenerationSettings({ passes: [{ id: "water", density: "High", enabled: false }, { id: "ground", enabled: false }] }, { diagnostics: true });
+  assert.equal(legacy.passes.find((pass) => pass.id === "water").enabled, true);
+  assert.equal(disabled.passes.find((pass) => pass.id === "water").enabled, false);
+  assert.equal(disabled.passes.find((pass) => pass.id === "water").density, "High");
+  assert.equal(disabled.passes.find((pass) => pass.id === "ground").enabled, true);
+});
+
+test("keeps optional enablement independent across compound child selections", () => {
+  const settings = normalizeGenerationSettings({
+    passes: [
+      { id: "civilization-doors", density: "High", enabled: false },
+      { id: "enemy-spawner", density: "Low", enabled: true },
+    ],
+  }, { diagnostics: true });
+  assert.equal(settings.passes.find((pass) => pass.id === "civilization-doors").enabled, false);
+  assert.equal(settings.passes.find((pass) => pass.id === "enemy-spawner").enabled, true);
+});
+
+test("production enables every layer and defaults Med independently of debug catalog values", () => {
+  const defaults = normalizeGenerationSettings(undefined, { diagnostics: false });
+  assert.equal(defaults.worldSize, "Med");
+  assert.ok(defaults.passes.every(pass => pass.enabled && pass.density === "Med"));
+  assert.deepEqual(normalizeGenerationSettings({ passes: "invalid" }, { diagnostics: false }), defaults);
+  const stored = normalizeGenerationSettings({ worldSize: "High", passes: [{ id: "water", enabled: false, density: "High" }, { id: "object-chest", density: "bad" }] }, { diagnostics: false });
+  assert.equal(stored.worldSize, "High");
+  assert.ok(stored.passes.every(pass => pass.enabled));
+  assert.equal(stored.passes.find(pass => pass.id === "water").density, "High");
+  assert.equal(stored.passes.find(pass => pass.id === "object-chest").density, "Med");
+  assert.equal(isGenerationDiagnosticsEnabled({ development: false, search: "?worldGenerationLayersEnabled=1" }), false);
+  assert.equal(isGenerationDiagnosticsEnabled({ development: false, search: "?generationDiagnostics=true" }), true);
+  assert.equal(isGenerationDiagnosticsEnabled({ development: true, search: "" }), true);
 });
 
 test("migrates legacy Civilization density to the Doors sublayer", () => {
@@ -85,10 +138,16 @@ test("keeps Object and Character Distribution in their separate procedural cards
   const app = await readFile(new URL("../../../src/client/ui-layer-react/App.jsx", import.meta.url), "utf8");
   const gameLayer = await readFile(new URL("../../../src/client/game-layer-babylon-lite/index.js", import.meta.url), "utf8");
   assert.ok(app.includes("getGenerationSemanticCards"));
-  assert.ok(app.includes('aria-label="Object Distribution, pass 7"'));
+  assert.ok(app.includes('aria-label="World Settings, pass 1"'));
+  assert.ok(app.includes("1. World Settings"));
+  assert.ok(app.includes("World Generation"));
+  assert.ok(app.includes("Procedural World Generation Passes"));
+  assert.ok(app.includes("Realm Count: 2"));
+  assert.ok(app.includes("WORLD_SIZE_DETAILS[worldSize]"));
+  assert.ok(app.includes('aria-label="Object Distribution, pass 8"'));
   assert.ok(app.includes("Controls objects"));
-  assert.ok(app.includes('aria-label="Character Distribution, pass 9"'));
-  assert.ok(app.includes("9. {characterCard.title}"));
+  assert.ok(app.includes('aria-label="Character Distribution, pass 10"'));
+  assert.ok(app.includes("10. {characterCard.title}"));
   assert.ok(app.includes("Realm: {GENERATION_PASS_REALMS[pass.id]}"));
   assert.ok(!app.includes("Low 4 · Med 8 · High 12 Overworld NPC spawners"));
   assert.ok(gameLayer.includes('getObjectDistributionCount("fireplace", previewWorld.options.seed)'));
@@ -108,7 +167,7 @@ test("keeps Object and Character Distribution in their separate procedural cards
   assert.ok(gameLayer.includes('previewSeedNamespace("civilization-homes")'));
   assert.ok(gameLayer.includes('kind: "home", glyph: "^", color: "#d6a55a"'));
   assert.ok(gameLayer.includes("...homeMarkers"));
-  assert.ok(gameLayer.includes('...(previewWorld.stairs ?? []).map'));
+  assert.ok(gameLayer.includes('previewFeatureEnabled("civilization-stairs") ? previewWorld.stairs ?? [] : []'));
   assert.ok(gameLayer.includes("const PROCEDURAL_PREVIEW_OBJECT_ICON_SIZE = Object.freeze({"));
   assert.ok(gameLayer.includes("minimumPixels: 12,"));
   assert.ok(gameLayer.includes("maximumPixels: 36,"));
@@ -118,10 +177,28 @@ test("keeps Object and Character Distribution in their separate procedural cards
   assert.ok(app.includes("const isPassAvailableInPreview"));
   assert.ok(app.includes("disabled={unavailable}"));
   assert.ok(app.includes("procedural_realm_unavailable"));
-  assert.ok(app.includes('aria-label="Civilization Placement, pass 8"'));
-  assert.ok(app.includes("8. {civilizationCard.title}"));
+  assert.ok(app.includes('aria-label="Civilization Placement, pass 9"'));
+  assert.ok(app.includes("9. {civilizationCard.title}"));
   assert.ok(app.includes("Controls Stairs, Doors, and Homes placement"));
   assert.ok(app.includes('["civilization-doors", "civilization-homes"].includes(pass.id)'));
+  assert.ok(app.includes("function GenerationEnabledCheckbox"));
+  assert.ok(app.includes('title={disabled ? `${title} must remain enabled` : `${action} ${title}`}'));
+  assert.ok(app.includes("checkboxRef.current.indeterminate = mixed"));
+  assert.ok(app.includes("const setMacroEnabled = (ids, enabled)"));
+  assert.ok(app.includes("ids.has(pass.id) ? { ...pass, enabled } : pass"));
+  assert.ok(app.includes("setMacroEnabled(new Set(card.featureIds), !enabled)"));
+  assert.ok(app.includes("const children = card.featureIds.map((id) => draft.passes.find((pass) => pass.id === id)).filter(Boolean)"));
+  assert.ok(gameLayer.includes("caveEnabledByRealm: {"));
+  assert.ok(gameLayer.includes("waterEnabled: previewFeatureEnabled(\"water\")"));
+  assert.ok(gameLayer.includes("waterEnabled: featureEnabled(\"water\")"));
+  assert.ok(gameLayer.includes("const previewDimensions = getWorldSizeDimensions(previewSettings.worldSize)"));
+  assert.ok(gameLayer.includes("rows: previewDimensions.rows"));
+  assert.ok(gameLayer.includes("columns: previewDimensions.columns"));
+  assert.ok(gameLayer.includes("const worldDimensions = getWorldSizeDimensions(runtimeGenerationSettings.worldSize)"));
+  assert.ok(gameLayer.includes("rows: worldDimensions.rows"));
+  assert.ok(gameLayer.includes("columns: worldDimensions.columns"));
+  assert.ok(gameLayer.includes("featureEnabled(\"civilization-doors\") ? createCivilizationGroups"));
+  assert.ok(gameLayer.includes("featureEnabled(\"enemy-spawner\") ? selectEnemySpawnerCells"));
 
   const fireplaceCounts = ["Low", "Med", "High"].map((density) => resolveGenerationProfile({
     passes: [{ id: "object-fireplace", density }],

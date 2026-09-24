@@ -79,3 +79,23 @@ test("cancelled callbacks cannot render after a lifecycle transition", () => {
   scheduler.cancel();
   callback();
 });
+
+test("coalesced rendering can skip unchanged semantic surface revisions", () => {
+  const callbacks = [];
+  const surfaces = [];
+  const scheduler = createCoalescedFrameScheduler({
+    scheduleFrame(callback) { callbacks.push(callback); return callbacks.length; },
+    cancelFrame() {},
+    render(state, previous) {
+      if (state.revision !== previous?.revision) surfaces.push(state.revision);
+    },
+  });
+
+  scheduler.schedule({ revision: 1 });
+  callbacks.shift()();
+  scheduler.schedule({ revision: 1 });
+  callbacks.shift()();
+  scheduler.schedule({ revision: 2 });
+  callbacks.shift()();
+  assert.deepEqual(surfaces, [1, 2]);
+});

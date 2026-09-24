@@ -79,33 +79,27 @@ SHALL not apply a collision consequence.
   produce no object log entry
 
 ### Requirement: Final level-spawn distribution pass
-
-The Object Spawner System SHALL run after player placement and SHALL
-distribute every catalog entry with `IsLevelSpawned: true` using its JSON
-distribution rules. Underground civilization distribution SHALL then select
-eligible screen regions with a seeded approximately 10% chance and place
-solvable fence, door, and key groups without replacing terrain or player
-state.
+The Object Spawner System SHALL run after player placement and SHALL distribute each catalog entry with `IsLevelSpawned: true` only when its corresponding generation pass is enabled, using its JSON distribution rules. Disabled ambient object passes SHALL create no objects of that type. Underground civilization distribution SHALL then select eligible screen regions with a seeded approximately 10% chance and place solvable fence, door, and key groups only when its enabled sublayer runs, without replacing terrain or player state.
 
 #### Scenario: Underground civilization is distributed
-- **WHEN** an Underground realm finishes player placement and existing object
-  distribution
-- **THEN** eligible civilization groups SHALL be considered before the realm
-  is published as playable
+- **WHEN** an Underground realm finishes player placement and enabled existing object distribution
+- **THEN** eligible enabled civilization groups SHALL be considered before the realm is published as playable
 
 #### Scenario: Level-spawned objects are distributed
-- **WHEN** a realm finishes player placement
-- **THEN** Hearts, Torches, Traps, and paired Stairs SHALL be distributed
-  before the realm is published as playable
+- **WHEN** a realm finishes player placement with a level-spawned object pass enabled
+- **THEN** that object type SHALL be distributed before the realm is published as playable
+
+#### Scenario: Disabled object distribution is absent
+- **WHEN** a realm is generated with Heart Distribution disabled
+- **THEN** no ambient Heart objects SHALL be created while other enabled object passes remain eligible to run
 
 #### Scenario: Overground has no civilization group
 - **WHEN** an Overground realm completes its final level-spawn pass
 - **THEN** no fence, door, or key group SHALL be created
 
 #### Scenario: Seeded distribution is repeatable
-- **WHEN** the same realm seed, dimensions, catalog, and generation inputs are
-  used twice
-- **THEN** object types, civilization states, and positions SHALL match exactly
+- **WHEN** the same realm seed, dimensions, catalog, and generation inputs are used twice
+- **THEN** enabled object types, civilization states, and positions SHALL match exactly
 
 ### Requirement: Quest-requested object spawning
 
@@ -155,3 +149,70 @@ The Object Spawner System SHALL apply independently selected Heart, Trap, and To
 #### Scenario: High Heart distribution remains deterministic
 - **WHEN** a realm is generated twice with the same seed and High Heart distribution
 - **THEN** the Heart count and positions SHALL match, while Trap and Torch counts continue to use their independently selected profiles
+
+### Requirement: Treasure chest catalog and deterministic distribution
+The Object Spawner System SHALL define a level-spawned non-pickup Treasure Chest with distinct closed and open glyphs, both present in the active palette. For each realm, it SHALL deterministically distribute one, two, or three closed chests for the selected Low, Med, or High Chest profile respectively. Each chest SHALL occupy an otherwise eligible walkable cell whose Euclidean grid-cell distance from that realm's player-start cell is at most 50, while retaining existing placement exclusions.
+
+#### Scenario: Chest profile produces the selected count in each realm
+- **WHEN** a world is generated with Low, Med, or High Chest distribution
+- **THEN** each realm SHALL contain one, two, or three eligible closed chests respectively within 50 grid cells of its own player start
+
+#### Scenario: Chest distribution is seeded
+- **WHEN** the same realm seed and Chest profile are used twice
+- **THEN** chest positions and initial closed state SHALL match
+
+### Requirement: Cardinal chest opening and spent state
+The Object Spawner System SHALL block movement into a closed Treasure Chest. When a player attempts a cardinal move into that cell, the chest SHALL change immediately to its open glyph, remain rendered, and become spent. A spent chest SHALL remain blocking and SHALL not create another reward on later cardinal bump attempts.
+
+#### Scenario: Cardinal movement opens a chest
+- **WHEN** the player attempts to move left, right, up, or down into a closed Treasure Chest
+- **THEN** the player SHALL remain in the adjacent cell and the chest SHALL render its open glyph
+
+#### Scenario: Opened chest remains blocking
+- **WHEN** the player later attempts a cardinal move into an opened Treasure Chest cell
+- **THEN** the player SHALL remain adjacent and the chest SHALL not create another reward
+
+### Requirement: Chest reward spawning
+The Object Spawner System SHALL select a chest reward from a weighted subset of catalog object types and create exactly one instance using the selected object type's normal behavior. The initial Treasure Chest reward table SHALL select Heart with 100 percent probability. On opening, the selected reward SHALL spawn on one randomly selected empty walkable cell among the eight cells surrounding the chest that is not occupied by the player.
+
+#### Scenario: Opening a chest creates a Heart
+- **WHEN** the player opens a closed Treasure Chest
+- **THEN** exactly one Heart SHALL appear on an eligible empty surrounding cell, including a diagonal when selected, be written to the visible world grid, and retain normal Heart pickup behavior
+
+#### Scenario: No eligible reward cell preserves the spent chest
+- **WHEN** a chest opens with no empty walkable surrounding cell other than the player's cell
+- **THEN** the chest SHALL become open and spent without creating a reward
+
+### Requirement: Level-spawned objects use the declared catalog
+The Object Spawner System SHALL create level-spawned objects only from declared catalog definitions, preserve each definition's interaction and reward metadata, and support house-owned chest objects without introducing a separate chest type or interaction path.
+
+#### Scenario: Declared house chest is created
+- **WHEN** the Overworld building pass declares a valid house chest placement
+- **THEN** the Object Spawner System creates a catalog-defined `chest` object at that cell and records its owning house when ownership is provided
+
+#### Scenario: Unknown house chest type is rejected
+- **WHEN** a house placement requests an object type absent from the catalog
+- **THEN** object creation fails using the existing unknown-object validation and does not create a partial object
+
+#### Scenario: House chest preserves catalog behavior
+- **WHEN** a house-owned chest is added
+- **THEN** its glyphs, open state, reward metadata, realm, and active state follow the same catalog-defined contract as any other chest
+
+### Requirement: Chest interaction completes on the first valid cardinal step
+The movement integration MUST attempt chest interaction for a cardinal destination after combat resolution reports no handled combat collision, and MUST open a closed chest during that same input without requiring a second step.
+
+#### Scenario: First step into a chest opens it
+- **WHEN** the player is cardinally adjacent to a closed chest and steps toward it
+- **AND** no combat collision handles the attempted destination
+- **THEN** the chest opens on that input
+- **AND** the player remains in the originating cell
+
+### Requirement: Opened chests spawn one guaranteed heart only in a valid neighboring cell
+When a chest reward is a heart, the system MUST select one of the eight surrounding cells that is walkable and not occupied by the player or any active object. The chest MUST still open if no such cell exists, but MUST not place a heart in an invalid cell.
+
+#### Scenario: Heart avoids all occupied neighbors
+- **WHEN** a chest opens with a heart reward
+- **THEN** exactly one heart is added when at least one surrounding cell is valid
+- **AND** its cell is walkable
+- **AND** its cell is not the player cell
+- **AND** its cell is not occupied by any active object

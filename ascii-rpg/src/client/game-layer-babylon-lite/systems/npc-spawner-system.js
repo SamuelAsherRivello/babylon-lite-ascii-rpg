@@ -13,13 +13,17 @@ function candidates(world) {
   for (const group of world.civilizationGroups ?? []) for (const cell of [...(group.cells ?? []), ...(group.keys ?? []), group.door].filter(Boolean)) blocked.add(key(cell));
   for (const building of world.buildings ?? []) for (const cell of [...(building.cells ?? []), building.key].filter(Boolean)) blocked.add(key(cell));
   for (let y = 0; y < (world.characters?.length ?? 0); y += 1) for (let x = 0; x < world.characters[y].length; x += 1) if (world.characters[y][x] !== null) blocked.add(`${x},${y}`);
-  return [...Array(world.rows).keys()].flatMap((y) => [...Array(world.columns).keys()].map((x) => ({ x, y }))).filter((cell) => cell.x > 0 && cell.y > 0 && cell.x < world.columns - 1 && cell.y < world.rows - 1 && world.terrain[cell.y][cell.x].walkable && !blocked.has(key(cell)));
+  const result = [];
+  for (let y = 1; y < world.rows - 1; y += 1) for (let x = 1; x < world.columns - 1; x += 1) {
+    if (world.terrain[y][x].walkable && !blocked.has(`${x},${y}`)) result.push({ x, y });
+  }
+  return result;
 }
 
 export function selectNpcSpawnerCells(world, { realm, count = NPC_SPAWNER_COUNT, random = Math.random } = {}) {
-  if (realm !== "Overground" || !world?.terrain) return Object.freeze({ cells: Object.freeze([]) });
+  if (realm !== "Overground" || !world?.terrain || count <= 0) return Object.freeze({ cells: Object.freeze([]) });
   const validCells = candidates(world);
-  const distanceField = AStarUtility.createDistanceField(world, world.playerStart);
+  const distanceField = AStarUtility.createDistanceField(world, world.playerStart, { maxDistance: 50 });
   const nearbyCells = validCells.filter((cell) => distanceField.getDistance(cell) > 0 && distanceField.getDistance(cell) <= 50);
   if (nearbyCells.length === 0) return Object.freeze({ cells: Object.freeze([]) });
   const first = nearbyCells[Math.min(nearbyCells.length - 1, Math.floor(random() * nearbyCells.length))];

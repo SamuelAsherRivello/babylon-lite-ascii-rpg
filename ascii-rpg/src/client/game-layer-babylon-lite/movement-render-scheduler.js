@@ -6,6 +6,7 @@ export function createCoalescedFrameScheduler({ scheduleFrame, cancelFrame, rend
   let frameHandle = null;
   let pendingState = null;
   let generation = 0;
+  let lastRenderedState = null;
 
   return {
     schedule(state) {
@@ -17,13 +18,15 @@ export function createCoalescedFrameScheduler({ scheduleFrame, cancelFrame, rend
         frameHandle = null;
         const nextState = pendingState;
         pendingState = null;
-        render(nextState);
+        render(nextState, lastRenderedState);
+        lastRenderedState = nextState;
       });
     },
     cancel() {
       if (frameHandle !== null) cancelFrame(frameHandle);
       frameHandle = null;
       pendingState = null;
+      lastRenderedState = null;
       generation += 1;
     },
     get pending() {

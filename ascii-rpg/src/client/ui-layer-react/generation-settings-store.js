@@ -1,6 +1,8 @@
 import { GENERATION_FEATURES } from "../game-layer-babylon-lite/world-feature-generation-registry.js";
+import { DEFAULT_WORLD_SIZE, normalizeWorldSize } from "../world-size-settings.js";
+import { isGenerationDiagnosticsEnabled } from "../generation-mode.js";
 
-const bundledSettings = Object.freeze({ version: 1, passes: GENERATION_FEATURES });
+const bundledSettings = Object.freeze({ version: 1, worldSize: DEFAULT_WORLD_SIZE, passes: GENERATION_FEATURES });
 
 export const GENERATION_SETTINGS_STORAGE_KEY = "babylon-lite-ascii-rpg.generation-settings";
 export const DENSITY_LEVELS = Object.freeze(["Low", "Med", "High"]);
@@ -61,24 +63,28 @@ export const GENERATION_PASS_REALMS = Object.freeze({
 
 const isDevelopment = import.meta.env?.DEV === true;
 
-export function normalizeGenerationSettings(value) {
+export function normalizeGenerationSettings(value, { diagnostics = isGenerationDiagnosticsEnabled() } = {}) {
   const bundledById = new Map(bundledSettings.passes.map((pass) => [pass.id, pass]));
-  const selectedById = new Map((value?.passes ?? []).map((pass) => [pass?.id, pass?.density]));
-  const legacyCaveWallsDensity = selectedById.get("cave-walls");
-  const legacyCivilizationDensity = selectedById.get("civilization");
+  const selectedById = new Map((Array.isArray(value?.passes) ? value.passes : []).map((pass) => [pass?.id, pass]));
+  const legacyCaveWallsDensity = selectedById.get("cave-walls")?.density;
+  const legacyCivilizationDensity = selectedById.get("civilization")?.density;
   return Object.freeze({
     version: 1,
+    worldSize: normalizeWorldSize(value?.worldSize),
     passes: Object.freeze([...bundledById.values()].map((pass) => Object.freeze({
       ...pass,
       density: pass.configurable === false
         ? pass.density
-        : DENSITY_LEVELS.includes(selectedById.get(pass.id))
-        ? selectedById.get(pass.id)
+        : DENSITY_LEVELS.includes(selectedById.get(pass.id)?.density)
+        ? selectedById.get(pass.id).density
         : pass.id === "civilization-doors" && DENSITY_LEVELS.includes(legacyCivilizationDensity)
           ? legacyCivilizationDensity
         : ["overground-walls", "underground-caves"].includes(pass.id) && DENSITY_LEVELS.includes(legacyCaveWallsDensity)
           ? legacyCaveWallsDensity
-          : pass.density,
+          : !diagnostics || ["npc-spawner", "enemy-spawner"].includes(pass.id)
+            ? "Med"
+            : pass.density,
+      enabled: !diagnostics || pass.required === true ? true : selectedById.get(pass.id)?.enabled !== false,
     }))),
   });
 }
@@ -93,7 +99,10 @@ function readLocalSettings() {
   }
 }
 
-let settings = normalizeGenerationSettings(readLocalSettings() ?? bundledSettings);
+let settings = normalizeGenerationSettings(readLocalSettings() ?? (isDevelopment ? bundledSettings : undefined));
+if (!isDevelopment && typeof window !== "undefined" && !isGenerationDiagnosticsEnabled()) {
+  try { window.localStorage.setItem(GENERATION_SETTINGS_STORAGE_KEY, JSON.stringify(settings)); } catch { /* Read-only storage still permits play. */ }
+}
 const listeners = new Set();
 
 export function getGenerationSettings() { return settings; }

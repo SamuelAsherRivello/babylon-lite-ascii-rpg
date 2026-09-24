@@ -24,18 +24,27 @@ function validateCatalog(catalog) {
   return catalog;
 }
 
-function collectCandidates(world, start, reserved = new Set(), rule = null, maximumDistance = Infinity) {
+function collectCandidates(world, start, reserved = new Set(), rule = null, maximumDistance = Infinity, candidateCells = null) {
   const candidates = [];
-  for (let y = 1; y < world.rows - 1; y += 1) {
-    for (let x = 1; x < world.columns - 1; x += 1) {
-      const cell = { x, y };
-      if (!world.terrain?.[y]?.[x]?.walkable || sameCell(cell, start) || reserved.has(key(cell))) continue;
-      if (Math.hypot(cell.x - start.x, cell.y - start.y) > maximumDistance) continue;
-      if (world.characters?.[y]?.[x] !== null && world.characters?.[y]?.[x] !== undefined) continue;
+  const append = (cell) => {
+      const { x, y } = cell;
+      if (!world.terrain?.[y]?.[x]?.walkable || sameCell(cell, start) || reserved.has(key(cell))) return;
+      if (Number.isFinite(maximumDistance) && Math.hypot(x - start.x, y - start.y) > maximumDistance) return;
+      if (world.characters?.[y]?.[x] !== null && world.characters?.[y]?.[x] !== undefined) return;
       if (rule === "wall-adjacent" && ![
         { x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 },
-      ].some((direction) => !world.terrain?.[y + direction.y]?.[x + direction.x]?.walkable)) continue;
+      ].some((direction) => !world.terrain?.[y + direction.y]?.[x + direction.x]?.walkable)) return;
       candidates.push(cell);
+  };
+  if (candidateCells) {
+    for (const cell of candidateCells) append(cell);
+  } else {
+    const minX = Math.max(1, Math.ceil(start.x - maximumDistance));
+    const maxX = Math.min(world.columns - 2, Math.floor(start.x + maximumDistance));
+    const minY = Math.max(1, Math.ceil(start.y - maximumDistance));
+    const maxY = Math.min(world.rows - 2, Math.floor(start.y + maximumDistance));
+    for (let y = minY; y <= maxY; y += 1) {
+      for (let x = minX; x <= maxX; x += 1) append({ x, y });
     }
   }
   return candidates;
@@ -49,8 +58,9 @@ function shuffle(values, random) {
   return values;
 }
 
-export function selectObjectCells(world, start, count, random = Math.random, { minimumDistance = 3, rule = null, reserved = new Set(), maximumDistance = Infinity } = {}) {
-  const candidates = shuffle(collectCandidates(world, start, reserved, rule, maximumDistance), random);
+export function selectObjectCells(world, start, count, random = Math.random, { minimumDistance = 3, rule = null, reserved = new Set(), maximumDistance = Infinity, candidateCells = null } = {}) {
+  if (count <= 0) return [];
+  const candidates = shuffle(collectCandidates(world, start, reserved, rule, maximumDistance, candidateCells), random);
   const selected = [];
   const minimumDistanceSquared = minimumDistance ** 2;
   for (const candidate of candidates) {
@@ -65,15 +75,21 @@ export function selectObjectCells(world, start, count, random = Math.random, { m
 export function placeDeclaredLevelObjects({ world, start, catalog = [], features = [], realm, countFor = () => 0, randomFor = () => Math.random, reserved = new Set() } = {}) {
   const definitions = new Map(catalog.map((object) => [object.type, object]));
   const placements = [];
+  let candidateCells = null;
   for (const feature of features) {
     const definition = definitions.get(feature.objectType);
     if (!definition?.IsLevelSpawned || !definition.generation || !feature.objectType) continue;
     if (realm && !definition.generation.realms?.includes(realm)) continue;
-    const cells = selectObjectCells(world, start, countFor(feature, definition), randomFor(feature, definition), {
+    const count = countFor(feature, definition);
+    // Owned only by this synchronous placement batch, never retained across
+    // terrain changes. Every child still checks the current reservations.
+    if (count > 0 && candidateCells === null) candidateCells = collectCandidates(world, start);
+    const cells = selectObjectCells(world, start, count, randomFor(feature, definition), {
       minimumDistance: definition.distribution?.minimumDistance ?? 3,
       rule: definition.distribution?.rule ?? null,
       maximumDistance: definition.distribution?.maximumDistance ?? Infinity,
       reserved,
+      candidateCells,
     });
     placements.push(Object.freeze({ feature, definition, cells: Object.freeze(cells) }));
   }
@@ -174,7 +190,9 @@ export function createObjectSpawnerSystem({ catalog = [], eventSystem = null } =
 
   const getActiveObjectAtCell = (cell, context = {}) => [...objects.values()].find((candidate) => candidate.active
     && (!context.world || candidate.realm === context.world)
-    && sameCell(candidate.cell, cell)) ?? null;
+    && sameCell(candidate.cell, cell))
+    ?? context.world?.objects?.find((candidate) => candidate?.active !== false && sameCell(candidate.cell, cell))
+    ?? null;
 
   const interactAtCell = (cell, {
     world = null,
@@ -183,7 +201,7 @@ export function createObjectSpawnerSystem({ catalog = [], eventSystem = null } =
     log = () => {},
     playerCell = null,
     random = Math.random,
-    spawnChestReward = () => null,
+    createChestRewardEffect = () => () => {},
   } = {}) => {
     const object = getActiveObjectAtCell(cell, { world });
     if (!object) return null;
@@ -194,13 +212,16 @@ export function createObjectSpawnerSystem({ catalog = [], eventSystem = null } =
       object.glyph = object.openGlyph ?? object.glyph;
       if (world?.characters?.[cell.y]) world.characters[cell.y][cell.x] = object.glyph;
       const neighbors = [
-        { x: cell.x - 1, y: cell.y - 1 }, { x: cell.x, y: cell.y - 1 }, { x: cell.x + 1, y: cell.y - 1 },
-        { x: cell.x - 1, y: cell.y }, { x: cell.x + 1, y: cell.y },
-        { x: cell.x - 1, y: cell.y + 1 }, { x: cell.x, y: cell.y + 1 }, { x: cell.x + 1, y: cell.y + 1 },
+        { x: cell.x, y: cell.y - 1 }, { x: cell.x + 1, y: cell.y },
+        { x: cell.x, y: cell.y + 1 }, { x: cell.x - 1, y: cell.y },
+        { x: cell.x - 1, y: cell.y - 1 }, { x: cell.x + 1, y: cell.y - 1 },
+        { x: cell.x + 1, y: cell.y + 1 }, { x: cell.x - 1, y: cell.y + 1 },
       ].filter((candidate) => world?.terrain?.[candidate.y]?.[candidate.x]?.walkable
         && !sameCell(candidate, playerCell)
         && (world.characters?.[candidate.y]?.[candidate.x] === null
-          || world.characters?.[candidate.y]?.[candidate.x] === undefined));
+          || world.characters?.[candidate.y]?.[candidate.x] === undefined)
+        && !(world.objects ?? []).some((other) => other?.active !== false && sameCell(other.cell, candidate))
+        && ![...objects.values()].some((other) => other.active && (!world || other.realm === world) && sameCell(other.cell, candidate)));
       const rewards = object.definition.rewards ?? [];
       const totalWeight = rewards.reduce((total, reward) => total + (reward.weight ?? 0), 0);
       let rewardType = null;
@@ -212,10 +233,15 @@ export function createObjectSpawnerSystem({ catalog = [], eventSystem = null } =
         }
       }
       const rewardCell = neighbors.length > 0 ? neighbors[Math.floor(random() * neighbors.length)] : null;
-      const reward = rewardType && rewardCell ? spawnChestReward({ type: rewardType, cell: rewardCell, chest: object }) : null;
+      const reward = rewardType && rewardCell
+        ? addObject({ type: rewardType, cell: rewardCell, realm: world, effect: createChestRewardEffect(rewardType) })
+        : null;
       if (reward && rewardCell && world?.characters?.[rewardCell.y]) {
-        world.characters[rewardCell.y][rewardCell.x] = reward.glyph ?? definitions.get(rewardType)?.glyph ?? null;
+        if (Array.isArray(world.objects)) world.objects.push(reward);
+        if (Array.isArray(world.pickups) && world.pickups !== world.objects) world.pickups.push(reward);
+        world.characters[rewardCell.y][rewardCell.x] = reward.glyph;
       }
+      log("Opened Chest");
       emit({ type: "chest-opened", objectId: object.id, objectType: object.type, cell: { ...object.cell }, rewardType: reward?.type ?? null, rewardCell });
       return { handled: true, opened: true, object, reward };
     }

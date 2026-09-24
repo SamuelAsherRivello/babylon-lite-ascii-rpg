@@ -37,6 +37,13 @@ test("a fireplace remains after collision and saves on every entry", () => {
   assert.deepEqual(saves, ["saved", "saved"]);
 });
 
+test("zero object count reads no candidates, consumes no random draws, and leaves reservations intact", () => {
+  const reserved = new Set(["3,4"]);
+  const world = new Proxy({}, { get() { assert.fail("zero count must not inspect the world"); } });
+  assert.deepEqual(selectObjectCells(world, { x: 1, y: 1 }, 0, () => assert.fail("unexpected RNG"), { reserved }), []);
+  assert.deepEqual([...reserved], ["3,4"]);
+});
+
 test("object placement is seeded, spaced, and excludes the player cell", () => {
   const world = createWorld();
   const first = selectObjectCells(world, { x: 12, y: 12 }, 8, () => 0.25, { minimumDistance: 3 });
@@ -107,7 +114,7 @@ test("closed doors require a key and open without moving the player", () => {
   ]);
 });
 
-test("a cardinal chest bump opens once and can choose a Heart on a diagonal surrounding cell", () => {
+test("a cardinal chest bump spawns a Heart even without pre-generated Hearts", () => {
   const world = createWorld();
   const system = createObjectSpawnerSystem({ catalog: [
     { type: "heart", name: "Heart", glyph: "♥", IsPickup: true, IsLevelSpawned: true },
@@ -116,21 +123,32 @@ test("a cardinal chest bump opens once and can choose a Heart on a diagonal surr
   const chest = system.addObject({ id: "chest-1", type: "chest", cell: { x: 5, y: 5 }, realm: world });
   world.characters[5][5] = "◆";
   world.characters[4][4] = "█";
-  const rewards = [];
+  world.objects = [{ id: "occupied-neighbor", type: "fence", active: true, cell: { x: 4, y: 5 } }];
+  const messages = [];
+  let collectedHearts = 0;
   const opened = system.interactAtCell({ x: 5, y: 5 }, {
     world,
     playerCell: { x: 4, y: 5 },
     random: () => 0,
-    spawnChestReward: (reward) => { rewards.push(reward); return { type: reward.type, glyph: "♥" }; },
+    createChestRewardEffect: (type) => type === "heart" ? () => { collectedHearts += 1; } : () => {},
+    log: (message) => messages.push(message),
   });
   assert.equal(opened.handled, true);
   assert.equal(opened.opened, true);
   assert.equal(chest.open, true);
   assert.equal(world.characters[5][5], "◇");
-  assert.deepEqual(rewards, [{ type: "heart", cell: { x: 5, y: 4 }, chest }]);
+  assert.equal(world.objects.length, 2);
+  const reward = world.objects.find((object) => object.type === "heart");
+  assert.deepEqual(reward.cell, { x: 5, y: 4 });
+  assert.equal(reward.type, "heart");
   assert.equal(world.characters[4][5], "♥");
+  assert.equal(world.characters[5][5], "◇");
+  system.collideAtCell({ x: 5, y: 4 }, { world });
+  assert.equal(collectedHearts, 1);
+  assert.deepEqual(messages, ["Opened Chest"]);
   assert.deepEqual(system.interactAtCell({ x: 5, y: 5 }, { world }), { handled: true, opened: false, object: chest });
-  assert.deepEqual(rewards, [{ type: "heart", cell: { x: 5, y: 4 }, chest }]);
+  assert.equal(world.objects.length, 2);
+  assert.deepEqual(messages, ["Opened Chest"]);
   assert.equal(system.collideAtCell({ x: 5, y: 5 }, { world }), null);
 });
 
@@ -184,4 +202,27 @@ test("declared level-spawned catalog objects join distribution without a startup
   assert.equal(placements.length, 1);
   assert.equal(placements[0].definition.type, "fixture");
   assert.equal(placements[0].cells.length, 1);
+});
+
+test("declared objects are repeatable and reserve cells across distribution entries", () => {
+  const world = createWorld(32); world.playerStart = { x: 16, y: 16 };
+  const catalog = [
+    { type: "first", name: "First", glyph: "1", IsPickup: false, IsLevelSpawned: true, distribution: { minimumDistance: 1 }, generation: { realms: ["Underground"] } },
+    { type: "second", name: "Second", glyph: "2", IsPickup: false, IsLevelSpawned: true, distribution: { minimumDistance: 1 }, generation: { realms: ["Underground"] } },
+  ];
+  const options = {
+    world,
+    start: world.playerStart,
+    catalog,
+    features: [{ id: "object-first", objectType: "first" }, { id: "object-second", objectType: "second" }],
+    realm: "Underground",
+    countFor: () => 4,
+    randomFor: () => () => 0.25,
+  };
+  const first = placeDeclaredLevelObjects(options);
+  const second = placeDeclaredLevelObjects({ ...options, world: createWorld(32), start: { x: 16, y: 16 } });
+  const cells = first.flatMap((placement) => placement.cells);
+
+  assert.deepEqual(first, second);
+  assert.equal(new Set(cells.map((cell) => `${cell.x},${cell.y}`)).size, cells.length);
 });

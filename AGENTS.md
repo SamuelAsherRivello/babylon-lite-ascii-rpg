@@ -91,6 +91,17 @@ existing Node tests, build checks, and manual browser verification only when
 the user explicitly requests Playwright test work or when a later request
 explicitly overrides this policy.
 
+For repeatable agent-driven browser runs, include an explicit `randomSeed` URL
+argument (for example, `?randomSeed=codex-cache-check`) whenever comparing
+reloads or diagnosing world-generation-dependent behavior. Omit or vary the
+seed only when intentionally testing random generation.
+
+When an agent opens a new browser window solely for verification, it may
+temporarily override procedural layer enablement and density settings needed to
+exercise the requested behavior. Keep those overrides isolated to that new
+window, use an explicit `randomSeed`, and do not treat them as a user-facing
+configuration change.
+
 ## README screenshots
 
 - Every README screenshot of the game MUST use the URL argument

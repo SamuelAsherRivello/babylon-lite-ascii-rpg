@@ -107,7 +107,7 @@ function collectRuns(world, orientation, region) {
       }
     }
   }
-  return runs.filter((candidate) => candidateIsInRegion(candidate, region));
+  return region ? runs.filter((candidate) => candidateIsInRegion(candidate, region)) : runs;
 }
 
 function getSide(cell, orientation, door) {
@@ -153,9 +153,13 @@ export function createCivilizationGroups(world, {
   if (!world?.terrain) return [];
   const groups = [];
   const occupied = new Set(reserved);
+  let runs = null;
   for (const region of createScreenRegions(world, screenColumns, screenRows)) {
     if (random() >= chance) continue;
-    const candidates = findCivilizationCandidates(world, region, occupied);
+    // Natural terrain does not change during placement. Scan it once and keep
+    // the original horizontal/vertical order when filtering each region.
+    runs ??= [...collectRuns(world, "horizontal"), ...collectRuns(world, "vertical")];
+    const candidates = runs.filter(candidate => candidateIsInRegion(candidate, region) && hasNoOverlap(candidate, occupied));
     if (candidates.length === 0) continue;
     const candidate = candidates[Math.floor(random() * candidates.length)];
     if (!candidate) continue;

@@ -212,6 +212,38 @@ test("cooperative world-view rendering preserves synchronous final pass order", 
   assert.deepEqual(coopResult, { ...syncResult, cancelled: false });
 });
 
+test("partial composition visits only onscreen dirty cells and never resolves hidden contents", () => {
+  const world = createWorld(512, 512);
+  const visits = [], glyphs = [];
+  const composition = createWorldViewComposition({ world,
+    source: { x: 10, y: 10, width: 3, height: 2 },
+    dirtyCells: [{ x: 11, y: 11 }, { x: 10, y: 10 }, { x: 11, y: 11 }, { x: 9, y: 10 }, { x: 13, y: 11 }],
+    getVisibility: (_fog, _world, cell) => { visits.push(cell); return cell.x === 10 ? 0 : 100; },
+    getGlyph: (_world, cell) => { glyphs.push(cell); return "P"; },
+  });
+  assert.deepEqual(visits, [{ x: 10, y: 10 }, { x: 11, y: 11 }]);
+  assert.deepEqual(glyphs, [{ x: 11, y: 11 }]);
+  assert.deepEqual(composition.cells.map(c => [c.slot, c.glyph]), [[0, null], [4, "P"]]);
+  const drawn = [];
+  renderWorldViewComposition(composition, { drawCell: c => drawn.push([c.slot, c.discovered]) });
+  assert.deepEqual(drawn, [[0, false], [4, true]], "hidden dirty slots still clear stale content");
+});
+
+test("partial draw commands match the same slots in a full composition at both map scales", () => {
+  const world = createWorld(20, 20);
+  for (const cellWidth of [1, 16]) {
+    const options = { world, source: { x: 5, y: 5, width: 10, height: 10 },
+      destination: { cellWidth, cellHeight: cellWidth },
+      getVisibility: (_fog, _world, cell) => cell.x % 2 ? 100 : 0,
+      getGlyph: (_world, cell) => `${cell.x},${cell.y}` };
+    const dirtyCells = [{ x: 7, y: 6 }, { x: 6, y: 6 }, { x: 8, y: 8 }];
+    const full = createWorldViewComposition(options);
+    const partial = createWorldViewComposition({ ...options, dirtyCells });
+    assert.deepEqual(partial.cells, full.cells.filter(({ cell }) => dirtyCells.some(dirty => dirty.x === cell.x && dirty.y === cell.y)));
+    assert.deepEqual(partial.destination, full.destination);
+  }
+});
+
 test("world-view rendering queries persistent fog without mutating discovery", () => {
   const world = {
     ...createWorld(4, 1),

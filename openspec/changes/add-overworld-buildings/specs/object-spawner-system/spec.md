@@ -17,6 +17,10 @@ The Object Spawner System SHALL run after player placement and SHALL distribute 
 - **WHEN** a realm finishes player placement
 - **THEN** Hearts, Torches, Traps, and paired Stairs SHALL be distributed before the realm is published as playable
 
+#### Scenario: Disabled object distribution is absent
+- **WHEN** a realm is generated with Heart Distribution disabled
+- **THEN** no ambient Heart objects SHALL be created while other enabled object passes remain eligible to run
+
 #### Scenario: Realm-scoped static groups
 - **WHEN** an Overworld realm completes its final level-spawn pass
 - **THEN** it SHALL create no Underground fence-line civilization group but MAY create configured Buildings with their associated existing Doors and Keys

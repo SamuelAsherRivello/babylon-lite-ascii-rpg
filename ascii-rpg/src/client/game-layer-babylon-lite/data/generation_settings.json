@@ -13,7 +13,9 @@
         "Underground"
       ],
       "seedNamespace": "ground",
-      "requires": []
+      "requires": [],
+      "required": true,
+      "enabled": true
     },
     {
       "id": "overground-walls",
@@ -25,7 +27,8 @@
         "Overground"
       ],
       "seedNamespace": "overground-walls",
-      "requires": []
+      "requires": [],
+      "enabled": true
     },
     {
       "id": "underground-caves",
@@ -37,20 +40,22 @@
         "Underground"
       ],
       "seedNamespace": "underground-caves",
-      "requires": []
+      "requires": [],
+      "enabled": true
     },
     {
       "id": "water",
       "title": "Water",
       "order": 4,
-      "density": "High",
+      "density": "Low",
       "owner": "terrain",
       "realms": [
         "Overground",
         "Underground"
       ],
       "seedNamespace": "water",
-      "requires": []
+      "requires": [],
+      "enabled": true
     },
     {
       "id": "walkability",
@@ -63,7 +68,9 @@
         "Underground"
       ],
       "seedNamespace": "walkability",
-      "requires": []
+      "requires": [],
+      "required": true,
+      "enabled": true
     },
     {
       "id": "player-position",
@@ -79,7 +86,9 @@
       "requires": [
         "walkability"
       ],
-      "seedNamespace": "player-position"
+      "seedNamespace": "player-position",
+      "required": true,
+      "enabled": true
     },
     {
       "id": "object-heart",
@@ -95,7 +104,8 @@
         "player-position"
       ],
       "objectType": "heart",
-      "seedNamespace": "heart:placement"
+      "seedNamespace": "heart:placement",
+      "enabled": true
     },
     {
       "id": "object-chest",
@@ -111,7 +121,8 @@
         "player-position"
       ],
       "objectType": "chest",
-      "seedNamespace": "chest:placement"
+      "seedNamespace": "chest:placement",
+      "enabled": true
     },
     {
       "id": "object-trap",
@@ -127,7 +138,8 @@
         "player-position"
       ],
       "objectType": "trap",
-      "seedNamespace": "trap:placement"
+      "seedNamespace": "trap:placement",
+      "enabled": true
     },
     {
       "id": "object-torch",
@@ -143,7 +155,8 @@
         "player-position"
       ],
       "objectType": "torch",
-      "seedNamespace": "torch:placement"
+      "seedNamespace": "torch:placement",
+      "enabled": true
     },
     {
       "id": "npc-spawner",
@@ -157,7 +170,8 @@
       "requires": [
         "player-position"
       ],
-      "seedNamespace": "npc-spawner:placement"
+      "seedNamespace": "npc-spawner:placement",
+      "enabled": true
     },
     {
       "id": "object-fireplace",
@@ -172,7 +186,8 @@
         "civilization-doors"
       ],
       "objectType": "fireplace",
-      "seedNamespace": "fireplace:placement"
+      "seedNamespace": "fireplace:placement",
+      "enabled": true
     },
     {
       "id": "civilization-stairs",
@@ -189,7 +204,8 @@
       ],
       "objectType": "stairs",
       "seedNamespace": "stairs",
-      "pairedRealms": true
+      "pairedRealms": true,
+      "enabled": true
     },
     {
       "id": "civilization-doors",
@@ -203,7 +219,8 @@
       "requires": [
         "civilization-stairs"
       ],
-      "seedNamespace": "civilization:placement"
+      "seedNamespace": "civilization:placement",
+      "enabled": true
     },
     {
       "id": "civilization-homes",
@@ -217,7 +234,8 @@
       "requires": [
         "civilization-stairs"
       ],
-      "seedNamespace": "buildings:placement"
+      "seedNamespace": "buildings:placement",
+      "enabled": true
     },
     {
       "id": "enemy-spawner",
@@ -231,7 +249,8 @@
       "requires": [
         "civilization-doors"
       ],
-      "seedNamespace": "enemy-spawner:placement"
+      "seedNamespace": "enemy-spawner:placement",
+      "enabled": true
     }
   ]
 }

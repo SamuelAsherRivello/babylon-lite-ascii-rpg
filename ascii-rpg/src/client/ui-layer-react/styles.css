@@ -30,6 +30,16 @@ html {
   --box-border-color: #555;
 }
 
+/* Links stay visually integrated with their surrounding UI text while retaining
+   a consistent affordance across HUD panels and modal windows. */
+a,
+a:visited,
+a:hover,
+a:active {
+  color: inherit;
+  text-decoration: underline;
+}
+
 /* Keep every scrollable surface inside the dark UI on the same grey palette. */
 *,
 *::before,
