@@ -1,5 +1,6 @@
 {
   "version": 1,
+  "worldSize": "Med",
   "passes": [
     {
       "id": "ground",
@@ -47,7 +48,7 @@
       "id": "water",
       "title": "Water",
       "order": 4,
-      "density": "Low",
+      "density": "Med",
       "owner": "terrain",
       "realms": [
         "Overground",
@@ -111,7 +112,7 @@
       "id": "object-chest",
       "title": "Chest Distribution",
       "order": 8,
-      "density": "High",
+      "density": "Med",
       "owner": "objects",
       "realms": [
         "Overground",
