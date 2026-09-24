@@ -26,7 +26,7 @@ See proposal.md and the `asynchronous-logical-ticks` delta for the motivation an
 
 ### 1. Use a logical tick record plus resumable system jobs
 
-When time advances, create one immutable tick record containing the time, cause, session revision, and any ordering metadata. Snapshot the eligible registration order once. Each system/entity receives a job for that logical record; a job may yield and resume, but it cannot create another delivery for the same tick.
+When time advances, create one immutable tick record containing the time, cause, trigger-time delta in milliseconds, session revision, and ordering metadata. Snapshot the eligible registration order once and announce ticks in ascending logical-time order. Each system receives `tick(currentTimeInTUnits, deltaTimeInMilliseconds)`; the system does not inspect queues or determine whether delivery is in order. A job may yield and resume, but it cannot create another delivery for the same tick.
 
 The existing deferred scheduler is the preferred execution mechanism because it already supports frame-bounded slices, fairness, cancellation, visibility suspension, and completion states. Extend it or add a tick-specific coordinator above it rather than introducing a second general scheduler.
 
@@ -34,17 +34,17 @@ Alternative rejected: wrapping the existing synchronous dispatch in a promise. A
 
 ### 2. Commit time separately from resolving tick work
 
-The time counter and UI-facing time notification are committed when the action triggers the tick. Completion of enemy, NPC, stamina, and other work is tracked separately. The renderer may continue normally while the tick is pending.
+The time counter and UI-facing time notification are committed when the action triggers the tick. The coordinator captures real elapsed time at that trigger. For a multi-unit advance, the first announced tick receives the elapsed interval and later ticks in that batch receive zero; the initial/session-start tick receives zero. Completion of enemy, NPC, stamina, and other work is tracked separately. The renderer may continue normally while the tick is pending.
 
 This avoids confusing logical time with frame count and prevents the UI from waiting for simulation completion merely to display the new time. If a gameplay action depends on prior work, it uses an explicit pending dependency rather than blocking the render loop.
 
-### 3. Preserve per-system ordering through explicit dependencies
+### 3. Preserve coordinator-owned ordering
 
-The coordinator will classify tick work as ordered simulation work or independently resumable work. Mutations that depend on another system's result must declare that dependency or remain in the existing deterministic order. Independent presentation invalidation can be coalesced after authoritative state changes.
+The coordinator owns logical tick ordering and invokes each system with ordered tick calls. Systems remain dumb consumers of the callback contract and do not inspect, compare, queue, or repair ordering. Any required cross-system dependency remains coordinator-owned; independent presentation invalidation can be coalesced after authoritative state changes.
 
 The initial implementation should serialize only where required for correctness, not serialize the entire render loop or assume that all systems must finish before another frame renders. Overlapping logical ticks are retained as records; dependent work cannot overtake its prerequisite.
 
-Alternative rejected: globally waiting for tick 2 to settle before accepting or rendering tick 3. That would turn tick completion into a frame/input stall and contradict the requirement that logical ticks are not render frames.
+Alternative rejected: requiring systems to detect or repair out-of-order ticks themselves. That duplicates scheduler policy inside gameplay systems and makes deterministic behavior dependent on every system implementing the same queue logic.
 
 ### 4. Guard every deferred result with lifecycle identity
 

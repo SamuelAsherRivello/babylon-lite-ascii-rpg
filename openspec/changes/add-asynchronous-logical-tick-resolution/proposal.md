@@ -10,11 +10,11 @@ The game needs to preserve deterministic logical time while allowing the work ca
 
 - Introduce an asynchronous logical-tick lifecycle in the Babylon Lite game layer.
 - Commit a tick identity and cause immediately when movement or another time-consuming action advances world time.
-- Deliver one immutable tick event to every eligible tickable system exactly once while allowing each system's work to yield and resume across later render frames.
+- Announce each logical tick to every eligible system in order, using `tick(currentTimeInTUnits, deltaTimeInMilliseconds)`. Each system is intentionally simple: it processes the tick it receives and does not inspect or repair tick ordering. Its work may yield and resume across later render frames.
 - Keep Babylon Lite authoritative for tick registration, simulation, entity state, combat, occupancy, and rendering invalidation; React continues to receive only approved snapshots.
 - Keep the render loop independent from tick completion so the game can continue rendering, animating, and accepting input while prior tick work is pending.
 - Preserve deterministic seeded behavior, entity birth/age semantics, registration order where required, and the existing movement/combat time-advance rules.
-- Define behavior for overlapping logical ticks, stale or cancelled work, entity removal, realm changes, disposal, hidden documents, and deferred failures.
+- Define behavior for ordered multi-tick announcements, stale or cancelled work, entity removal, realm changes, disposal, hidden documents, and deferred failures.
 - Add focused instrumentation and tests proving logical tick order separately from render-frame scheduling and proving that a tick can span multiple frames.
 
 ## Capabilities

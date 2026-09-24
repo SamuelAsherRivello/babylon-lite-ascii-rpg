@@ -74,13 +74,6 @@ export const REALM_PROFILES = Object.freeze({
   Underground: Object.freeze({ wallFillPercent: 50, minWalkablePercent: 0.3, fogUnclearRadius: 6, startingFogClearCoverage: Object.freeze({ x: 0.6, y: 0.6 }), groundKind: "dirt", groundGlyph: UNDERGROUND_FLOOR_GLYPH, groundColor: "#8b5a2b", blockedKind: "wall", blockedGlyph: WALL_GLYPH }),
 });
 
-const CARDINAL_DIRECTIONS = [
-  { x: 0, y: -1 },
-  { x: 1, y: 0 },
-  { x: 0, y: 1 },
-  { x: -1, y: 0 },
-];
-
 const TERRAIN_COLORS = Object.freeze({
   wall: "#f5f5f5",
   ground: "#f5f5f5",
@@ -130,40 +123,12 @@ export function createRandom(seed) {
   };
 }
 
-function createGrid(rows, columns, valueFactory) {
-  const grid = new Array(rows);
-  for (let y = 0; y < rows; y += 1) {
-    const row = new Array(columns);
-    for (let x = 0; x < columns; x += 1) row[x] = valueFactory(x, y);
-    grid[y] = row;
-  }
-  return grid;
-}
-
-function isBorderCell(x, y, rows, columns) {
-  return x === 0 || y === 0 || x === columns - 1 || y === rows - 1;
-}
-
 function cellKey(cell) {
   return `${cell.x},${cell.y}`;
 }
 
 function cellIndex(cell, columns) {
   return cell.y * columns + cell.x;
-}
-
-function countWalls(grid, x, y) {
-  const above = grid[y - 1], row = grid[y], below = grid[y + 1];
-  return Number(above[x - 1]) + Number(above[x]) + Number(above[x + 1])
-    + Number(row[x - 1]) + Number(row[x]) + Number(row[x + 1])
-    + Number(below[x - 1]) + Number(below[x]) + Number(below[x + 1]);
-}
-
-function smoothGrid(grid, rows, columns) {
-  return createGrid(rows, columns, (x, y) => {
-    if (isBorderCell(x, y, rows, columns)) return true;
-    return countWalls(grid, x, y) >= 5;
-  });
 }
 
 function getRegion(grid, start, rows, columns, isBlocked, visited) {
@@ -214,21 +179,6 @@ function getCenterMostCell(region, rows, columns) {
     const closestDistance = Math.abs(closest.x - centerX) + Math.abs(closest.y - centerY);
     return distance < closestDistance ? cell : closest;
   });
-}
-
-function createGroundPass(rows, columns) {
-  return createGrid(rows, columns, (x, y) => (isBorderCell(x, y, rows, columns) ? "wall" : "ground"));
-}
-
-function createCavePass({ rows, columns, wallFillPercent, smoothingIterations, random, ground, caveEnabled = true }) {
-  if (!caveEnabled) return createGrid(rows, columns, (x, y) => ground[y][x] === "wall");
-  let walls = createGrid(rows, columns, (x, y) => {
-    return ground[y][x] === "wall" || random() * 100 < wallFillPercent;
-  });
-  for (let iteration = 0; iteration < smoothingIterations; iteration += 1) {
-    walls = smoothGrid(walls, rows, columns);
-  }
-  return walls;
 }
 
 function getCellNeighbors(cell, rows, columns) {
@@ -1088,4 +1038,13 @@ export function getVisibleGlyph(world, cell) {
   if (!world || cell.x < 0 || cell.y < 0 || cell.x >= world.columns || cell.y >= world.rows) return null;
   return world.characters[cell.y][cell.x] ?? world.terrain[cell.y][cell.x].glyph;
 }
-import { GENERATION_FEATURES } from "../world-feature-generation-registry.js";
+import { GENERATION_FEATURES } from "../generation-layers/generation-layer-registry.js";
+import {
+  CARDINAL_DIRECTIONS,
+  countWalls,
+  createCavePass,
+  createGrid,
+  createGroundPass,
+  isBorderCell,
+  smoothGrid,
+} from "../generation-layers/grid-generation-layer.js";

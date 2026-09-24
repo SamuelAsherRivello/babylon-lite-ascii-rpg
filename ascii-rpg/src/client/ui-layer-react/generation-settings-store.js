@@ -1,4 +1,4 @@
-import { GENERATION_FEATURES } from "../game-layer-babylon-lite/world-feature-generation-registry.js";
+import { GENERATION_FEATURES } from "../game-layer-babylon-lite/generation-layers/generation-layer-registry.js";
 import { DEFAULT_WORLD_SIZE, normalizeWorldSize } from "../world-size-settings.js";
 import { isGenerationDiagnosticsEnabled } from "../generation-mode.js";
 

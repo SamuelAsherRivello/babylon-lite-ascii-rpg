@@ -24,28 +24,42 @@ When a valid time-consuming action advances world time, the game SHALL commit th
 - **WHEN** the player successfully moves from time 1 and the resulting tick work is pending
 - **THEN** the authoritative time SHALL become 2 immediately, the tick event SHALL identify time 2 and cause `movement`, and pending system work SHALL not delay the time commit
 
-### Requirement: Each eligible tickable receives exactly one logical delivery
+### Requirement: Each eligible system receives ordered logical tick calls
 
-For each committed tick, every tickable entity eligible at dispatch SHALL receive that tick exactly once in the established deterministic registration order. Entities removed before their pending delivery SHALL receive no delivery, and entities registered during a tick SHALL begin with the next applicable tick according to the existing birth and registration rules.
+For each committed tick, every eligible system SHALL receive exactly one call with the signature `tick(currentTimeInTUnits, deltaTimeInMilliseconds)`. The coordinator SHALL call systems in logical tick order and SHALL not require systems to inspect, compare, queue, or repair tick ordering. Entities removed before their pending delivery SHALL receive no delivery, and entities registered during a tick SHALL begin with the next applicable tick according to the existing birth and registration rules.
 
 #### Scenario: Pending delivery remains exactly once
 
 - **WHEN** tick 2 is split across three render frames and a registered enemy remains present throughout resolution
-- **THEN** the enemy SHALL process tick 2 once, not once per render frame
+- **THEN** the enemy system SHALL receive `tick(2, deltaTimeInMilliseconds)` once, not once per render frame, and SHALL process that call without determining whether tick 2 is in order
 
 #### Scenario: Removed entity is cancelled
 
 - **WHEN** an entity is removed after tick 2 is committed but before its queued tick-2 work runs
 - **THEN** its pending tick-2 work SHALL be cancelled or ignored and SHALL not mutate the world
 
-### Requirement: Pending ticks preserve logical ordering
+### Requirement: Multi-unit advances announce every logical tick in order
 
-The game SHALL preserve the configured simulation ordering for dependent work when additional ticks are triggered while an earlier tick remains unresolved. A later tick SHALL NOT cause a system to observe a dependent state transition out of logical order.
+When one action advances time by multiple units, the coordinator SHALL announce each logical tick separately and in ascending order. Each system SHALL receive tick `n` before tick `n+1`; asynchronous resolution SHALL not merge, skip, or reorder those announcements.
 
 #### Scenario: A later movement arrives during pending work
 
-- **WHEN** tick 2 is still resolving and another successful movement triggers tick 3
-- **THEN** the game SHALL retain both logical tick identities and SHALL process dependent system work according to its declared ordering contract without rewriting, dropping, or duplicating either tick
+- **WHEN** one movement advances time from 1 to 4
+- **THEN** systems SHALL receive `tick(2, elapsedDelta)`, `tick(3, 0)`, and `tick(4, 0)` in that order, with each call independently eligible to resolve across later render frames
+
+### Requirement: Tick deltas use trigger-time wall-clock intervals
+
+The coordinator SHALL capture real elapsed wall-clock milliseconds when a logical tick is triggered. A normal tick SHALL receive the time since the preceding logical tick trigger; for a multi-unit advance at one trigger moment, only the first logical tick SHALL receive that elapsed interval and every subsequent tick in the batch SHALL receive `0`. The initial/session-start tick SHALL receive `0`.
+
+#### Scenario: Delayed movement supplies elapsed time
+
+- **WHEN** tick 1 is triggered and the player waits 1000 milliseconds before triggering tick 2
+- **THEN** systems SHALL receive tick 1 with the startup delta and tick 2 with a delta of approximately 1000 milliseconds, independent of asynchronous tick-1 resolution time
+
+#### Scenario: Batch ticks assign delta once
+
+- **WHEN** one action triggers ticks 2, 3, and 4 at one real-time instant after 250 milliseconds
+- **THEN** systems SHALL receive deltas `250`, `0`, and `0` respectively
 
 ### Requirement: Cancellation and lifecycle boundaries are safe
 

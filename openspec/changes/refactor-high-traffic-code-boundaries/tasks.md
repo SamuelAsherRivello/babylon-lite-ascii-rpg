@@ -2,13 +2,13 @@
 
 ## 1. Establish refactor safeguards
 
-- [ ] 1.1 Record deterministic Overworld and Underground generation fixtures, normalized settings snapshots, and current bridge/UI contracts; verify focused existing Node tests pass before moving code.
-- [ ] 1.2 Identify and preserve the public exports, persisted generation-settings shape, storage key, pass order, and active working-tree ownership; verify no unrelated dirty file is staged or overwritten.
+- [x] 1.1 Record deterministic Overworld and Underground generation fixtures, normalized settings snapshots, and current bridge/UI contracts; verify focused existing Node tests pass before moving code.
+- [x] 1.2 Identify and preserve the public exports, persisted generation-settings shape, storage key, pass order, and active working-tree ownership; verify no unrelated dirty file is staged or overwritten.
 
 ## 2. Create the generation-layers boundary
 
-- [ ] 2.1 Create `generation-layers/` and `generation-layer-registry.js` with the existing feature order, realms, dependencies, semantic cards, descriptions, and density policy; verify registry and settings-store focused tests cover the complete catalog.
-- [ ] 2.2 Extract grid and terrain behavior into `grid-generation-layer.js` and `terrain-generation-layer.js` using explicit context inputs; verify seeded cave/wall fixtures match the baseline.
+- [x] 2.1 Create `generation-layers/` and `generation-layer-registry.js` with the existing feature order, realms, dependencies, semantic cards, descriptions, and density policy; verify registry and settings-store focused tests cover the complete catalog.
+- [x] 2.2 Extract grid and terrain behavior into `grid-generation-layer.js` and `terrain-generation-layer.js` using explicit context inputs; verify seeded cave/wall fixtures match the baseline.
 - [ ] 2.3 Extract water and walkability behavior into `water-generation-layer.js` and `walkability-generation-layer.js`; verify deterministic lake depth, walkability, and ordered-pass tests pass.
 - [ ] 2.4 Extract player placement and static object distribution into `player-start-generation-layer.js` and `object-generation-layer.js`; verify player-start, torch, pickup, and object-spawner tests pass.
 - [ ] 2.5 Extract civilization and dynamic-entity setup into `civilization-generation-layer.js` and `dynamic-entity-generation-layer.js`; verify paired stairs, doors, NPC, and enemy-spawner ordering tests pass.
