@@ -1,6 +1,31 @@
 {
   "releases": [
     {
+      "version": "0.0.20",
+      "items": [
+        {
+          "label": "Performance monitoring system",
+          "featurePath": "openspec/specs/performance-monitoring/spec.md"
+        },
+        {
+          "label": "Diggable mountains",
+          "featurePath": "openspec/specs/combat-stats/spec.md"
+        },
+        {
+          "label": "Initial aspect render",
+          "featurePath": "openspec/specs/responsive-ui-layout/spec.md"
+        },
+        {
+          "label": "Group civilization door settings",
+          "featurePath": "openspec/specs/procedural-generation-settings/spec.md"
+        },
+        {
+          "label": "Changelog",
+          "featurePath": "openspec/specs/changelog/spec.md"
+        }
+      ]
+    },
+    {
       "version": "0.0.19",
       "items": [
         "Procedural generation controls",
