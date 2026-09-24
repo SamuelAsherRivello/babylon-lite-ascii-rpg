@@ -58,13 +58,19 @@ commands from the repository root:
 
 ## Workflows
 
-## 🕹️ 1. Choose new feature
+## 🎨 1. Copy styles from AI Skills Library
+
+Manually copy the desired styles from the
+[AI Skills Library](https://github.com/SamuelAsherRivello/ai-skills-library)
+repository into the appropriate folder in this Ascii RPG checkout.
+
+## 🕹️ 2. Choose new feature
 
 There are many cool ideas! Here is a partial list.
 
 - [Possible Game Mechanics](ascii-rpg/documentation/inspiration/ideas.md)
 
-### 🕹️ 2. Implement 
+### 🕹️ 3. Implement
 
 Here is an [openspec](openspec/) workflow for collaboration with minimal code conflicts. See this 30-second [video short](https://www.youtube.com/shorts/lce1edytViI). 
 
