@@ -55,6 +55,19 @@ test("a fireplace remains after collision and saves on every entry", () => {
   assert.deepEqual(saves, ["saved", "saved"]);
 });
 
+test("Welcome Sign interaction remains active and delegates to a dialog", () => {
+  const world = createWorld();
+  const system = createObjectSpawnerSystem({ catalog: [{ type: "welcome-sign", name: "Welcome Sign", glyph: "⚑", IsPickup: false, IsLevelSpawned: true }] });
+  system.addObject({ id: "sign-1", type: "welcome-sign", cell: { x: 3, y: 3 }, realm: world });
+  const opened = [];
+  const first = system.interactAtCell({ x: 3, y: 3 }, { world, openDialog: (request) => { opened.push(request.object.id); return true; } });
+  const second = system.interactAtCell({ x: 3, y: 3 }, { world, openDialog: (request) => { opened.push(request.object.id); return true; } });
+  assert.equal(first.handled, true);
+  assert.equal(second.handled, true);
+  assert.deepEqual(opened, ["sign-1", "sign-1"]);
+  assert.equal(system.getActiveObjects().length, 1);
+});
+
 test("zero object count reads no candidates, consumes no random draws, and leaves reservations intact", () => {
   const reserved = new Set(["3,4"]);
   const world = new Proxy({}, { get() { assert.fail("zero count must not inspect the world"); } });

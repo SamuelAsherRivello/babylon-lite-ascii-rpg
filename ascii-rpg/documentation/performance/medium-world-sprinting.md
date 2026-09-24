@@ -18,7 +18,7 @@ Each of the original thirteen optional procedural layers was disabled independen
 | 4 Water | 59.63 | 53.81 | 9,383 |
 | 7 Hearts | 59.87 | 59.13 | 9,857 |
 | 8 Chests | 59.62 | 56.25 | 10,351 |
-| 9 Traps | 59.75 | 59.09 | 8,891 |
+| 9 Traps | 59.75 | 59.09 | 8,894 |
 | 10 Torches | 18.13 | 44.13 | 8,571 |
 | 11 NPCs | 54.75 | 56.50 | 8,461 |
 | 12 Fireplaces | 59.50 | 59.25 | 10,885 |
@@ -53,6 +53,17 @@ In B Underground, average main-world presentation was 0.42 ms and minimap 3.20 m
 
 Phase arrays retain at most 12,000 samples, so high-volume deferred phase summaries cover only their retained portion; per-second queue samples and final diagnostics are needed to judge the entire run. Earlier development-server measurements are not final acceptance evidence: live edits repeatedly caused hot reload, and the natural browser viewport changed. An earlier incomplete fix also accumulated 16,564 underground callbacks and the player died; that run was rejected.
 
+### Latest integrated-build repeat (failed)
+
+After near-field reuse and further concurrent gameplay changes, build `index-C5DzEayr.js` was tested with run B at the same reported viewport/DPR. Both realms completed thirty seconds with movement in every sample, but performance was worse:
+
+| Realm | Average / minimum FPS | Moves / unique cells | p95 / worst frame ms | End pending / oldest age ms |
+|---|---:|---:|---:|---:|
+| Overground | 55.93 / 42.57 | 582 / 543 | 33.1 / 100.2 | 0 / 0 |
+| Underground | 31.10 / 18.10 | 481 / 475 | 66.6 / 166.7 | 1,841 / 413.8 |
+
+Average minimap presentation increased to 8.40 ms Overground and 5.53 ms Underground; main-world averages were 0.97 and 0.67 ms. The Underground scheduler's longest slice reached 10.5 ms. These results remain failures. They cannot establish whether host load, concurrent gameplay changes or the optimization caused the regression; a stable-checkout comparison and further minimap/long-frame profiling are required. Do not substitute the earlier better averages for this latest evidence.
+
 ## Reproduction
 
 From the repository root, run `npm.cmd run build`, then `npm.cmd run preview -- --host 127.0.0.1 --port 4178 --strictPort`. Use the normal browser viewport, Camera Center and Zoom 5. Diagnostic settings are session-isolated and do not change saved procedural defaults.
@@ -68,5 +79,5 @@ Read console messages prefixed `ASCII RPG sprint diagnostic`. Check `sustainedMo
 - Focused scheduler, pathfinding, lighting/source identity, route caching and diagnostic tests pass.
 - Production build passes (existing >500 kB bundle warning).
 - Strict validation of this OpenSpec change passes.
-- Full-suite validation is currently affected by concurrent `add-world-dialog-system` edits: generation reference hashes, the object catalog, and layer registry/default settings expectations changed with the new welcome sign. These unrelated files/expectations were not reverted or silently updated to make this optimization pass.
+- Latest full-suite run: **413/416 passed**, with three failures in `generation-reference_tests.mjs` (`optimization-open`, `optimization-water`, `optimization-obstructed`). These are Overground reference-hash mismatches during concurrent `add-world-dialog-system`/welcome-sign changes; Underground hashes match. Earlier catalog and layer-registry failures disappeared as that work progressed. These unrelated files/expectations were not reverted or silently updated by this optimization to make the suite pass.
 - Remaining acceptance: repeat stable, uninterrupted all-layer medium-world sprinting after checkout integration settles; all complete one-second samples must reach 50 FPS in both realms for both seeds. Keep the OpenSpec verification tasks open until that evidence and the full-suite pass exist.
