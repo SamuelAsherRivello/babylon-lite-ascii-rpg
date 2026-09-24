@@ -15,7 +15,7 @@ test("generation settings retain the ordered catalog and default malformed densi
     ],
   });
 
-  assert.deepEqual(settings.passes.map((pass) => pass.order), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
+  assert.deepEqual(settings.passes.map((pass) => pass.order), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]);
   assert.equal(settings.passes.find((pass) => pass.id === "water").density, "High");
   assert.equal(settings.passes.find((pass) => pass.id === "overground-walls").density, "High");
   assert.equal(settings.passes.find((pass) => pass.id === "underground-caves").density, "High");
@@ -88,14 +88,14 @@ test("keeps optional enablement independent across compound child selections", (
   assert.equal(settings.passes.find((pass) => pass.id === "enemy-spawner").enabled, true);
 });
 
-test("production enables every layer and defaults Med independently of debug catalog values", () => {
+test("preserves every layer's enabled state and defaults Med independently of catalog values", () => {
   const defaults = normalizeGenerationSettings(undefined, { diagnostics: false });
   assert.equal(defaults.worldSize, "Med");
   assert.ok(defaults.passes.every(pass => pass.enabled && pass.density === "Med"));
   assert.deepEqual(normalizeGenerationSettings({ passes: "invalid" }, { diagnostics: false }), defaults);
   const stored = normalizeGenerationSettings({ worldSize: "High", passes: [{ id: "water", enabled: false, density: "High" }, { id: "object-chest", density: "bad" }] }, { diagnostics: false });
   assert.equal(stored.worldSize, "High");
-  assert.ok(stored.passes.every(pass => pass.enabled));
+  assert.equal(stored.passes.find(pass => pass.id === "water").enabled, false);
   assert.equal(stored.passes.find(pass => pass.id === "water").density, "High");
   assert.equal(stored.passes.find(pass => pass.id === "object-chest").density, "Med");
   assert.equal(isGenerationDiagnosticsEnabled({ development: false, search: "?worldGenerationLayersEnabled=1" }), false);
@@ -158,6 +158,7 @@ test("keeps every Water density within the generator's valid range", () => {
 
 test("keeps Object and Character Distribution in their separate procedural cards", async () => {
   const app = await readFile(new URL("../../../src/client/ui-layer-react/App.jsx", import.meta.url), "utf8");
+  const generationCheckbox = await readFile(new URL("../../../src/client/ui-layer-react/generation-enabled-checkbox.jsx", import.meta.url), "utf8");
   const gameLayer = await readFile(new URL("../../../src/client/game-layer-babylon-lite/index.js", import.meta.url), "utf8");
   assert.ok(app.includes("getGenerationSemanticCards"));
   assert.ok(app.includes('aria-label="World Settings, pass 1"'));
@@ -203,9 +204,9 @@ test("keeps Object and Character Distribution in their separate procedural cards
   assert.ok(app.includes("9. {civilizationCard.title}"));
   assert.ok(app.includes("Controls Stairs, Doors, and Homes placement"));
   assert.ok(app.includes('["civilization-doors", "civilization-homes"].includes(pass.id)'));
-  assert.ok(app.includes("function GenerationEnabledCheckbox"));
-  assert.ok(app.includes('title={disabled ? `${title} must remain enabled` : `${action} ${title}`}'));
-  assert.ok(app.includes("checkboxRef.current.indeterminate = mixed"));
+  assert.ok(generationCheckbox.includes("function GenerationEnabledCheckbox"));
+  assert.ok(generationCheckbox.includes('title={disabled ? `${title} must remain enabled` : `${action} ${title}`}'));
+  assert.ok(generationCheckbox.includes("checkboxRef.current.indeterminate = mixed"));
   assert.ok(app.includes("const setMacroEnabled = (ids, enabled)"));
   assert.ok(app.includes("ids.has(pass.id) ? { ...pass, enabled } : pass"));
   assert.ok(app.includes("setMacroEnabled(new Set(card.featureIds), !enabled)"));

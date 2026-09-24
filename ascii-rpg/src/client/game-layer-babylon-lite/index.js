@@ -1,4 +1,5 @@
 import { isGenerationDiagnosticsEnabled } from "../generation-mode.js";
+import { startSprintDiagnostic } from "./sprint-diagnostic.js";
 import {
   addSpriteRendererLayer,
   addSprite2DIndex,
@@ -18,6 +19,7 @@ import {
   spriteBlendAdditive,
   updateSprite2DIndex,
 } from "@babylonjs/lite";
+import { getBrowserZoomCompensation, getBrowserZoomFactor } from "./browser-zoom-compensation.js";
 import {
   DEFAULT_FONT_RESOLUTION,
   DEFAULT_ZOOM,
@@ -29,6 +31,7 @@ import {
   INITIAL_REPEAT_DELAY_MS,
   createViewport,
   getCellCenter,
+  getActionForKey,
   getPixelSnappedCellBounds,
   getCombinedDirection,
   getDirectionForKey,
@@ -43,7 +46,7 @@ import {
 import { normalizeCameraMode } from "../bridge-layer/camera.js";
 import { getFontOption, validateFontId } from "../bridge-layer/font.js";
 import { getPaletteEntryId, getPaletteEntryOffsets, getPaletteStyle, validatePaletteEntries } from "../bridge-layer/palette.js";
-import { PLAYER_MOVED_EVENTS, sendKeySnapshot, sendPlayerMovedEvent } from "../bridge-layer/game-bridge.js";
+import { PLAYER_MOVED_EVENTS, sendDialogSnapshot, sendInputAction, sendKeySnapshot, sendPlayerMovedEvent } from "../bridge-layer/game-bridge.js";
 import {
   createGeneratedSeed,
   createRandom,
@@ -105,7 +108,7 @@ import { createStaminaSystem } from "./systems/stamina-system.js";
 import { createExperienceSystem } from "./systems/experience-system.js";
 import { calculatePlayerDamageTaken, createCombatStatsSystem } from "./systems/combat-stats-system.js";
 import { createCivilizationGroups, isCardinalDirection } from "./systems/civilization-system.js";
-import { createOverworldBuildings, getIndexedBuildingGlyph, getBuildingPresentationDirtyCells } from "./systems/building-system.js";
+import { createOverworldBuildings, getIndexedBuildingGlyph, getBuildingPresentationDirtyCells, HOME_ROOF_GLYPH } from "./systems/building-system.js";
 import { createDynamicOccupancy, getDynamicVisibleGlyph } from "./systems/dynamic-occupancy.js";
 import { createEnemySystem } from "./systems/enemy-system.js";
 import { createEnemySpawnerSystem, selectEnemySpawnerCells } from "./systems/enemy-spawner-system.js";
@@ -273,8 +276,9 @@ async function createGameSessionImplementation(container, initialPalette, initia
   validatePaletteEntries(initialPalette);
   validateFontId(initialFontId);
   const diagnostics = isGenerationDiagnosticsEnabled();
+  let stopSprintDiagnostic = null;
   const enabledLayerOrders = diagnostics ? getWorldGenerationLayersEnabledFromSearch(window.location.search) : undefined;
-  const runtimeGenerationSettings = !diagnostics ? { ...generationSettings, passes: generationSettings.passes.map(pass => ({ ...pass, enabled: true })) } : enabledLayerOrders === undefined ? generationSettings : {
+  const runtimeGenerationSettings = enabledLayerOrders === undefined ? generationSettings : {
     ...generationSettings,
     passes: generationSettings.passes.map((pass) => ({
       ...pass,
@@ -362,6 +366,8 @@ async function createGameSessionImplementation(container, initialPalette, initia
   let transitionActive = false;
   let initialRevealActive = false;
   let gameplayInputLocked = true;
+  let dialogSnapshot = null;
+  let dialogResolver = null;
   let mapviewOpen = false;
   let mapviewRealm = null;
   let mapviewRenderJob = null;
@@ -381,12 +387,32 @@ async function createGameSessionImplementation(container, initialPalette, initia
     height: Math.max(1, canvas.clientHeight || window.innerHeight),
   };
   let lastDevicePixelRatio = window.devicePixelRatio || 1;
+  const baselineDevicePixelRatio = lastDevicePixelRatio;
+  const baselineBrowserZoomFactor = getBrowserZoomFactor({
+    outerWidth: window.outerWidth,
+    innerWidth: window.innerWidth,
+    devicePixelRatio: baselineDevicePixelRatio,
+  });
   let canvasResizeObserver = null;
   let browserZoomMediaQuery = null;
   let aspectRebuildFrame = null;
   let activeAspectMode = document.documentElement.dataset.presentationAspect === "portrait"
     ? "portrait"
     : "landscape";
+  const applyBrowserZoomCompensation = () => {
+    const compensation = getBrowserZoomCompensation({
+      currentDevicePixelRatio: getBrowserZoomFactor({
+        outerWidth: window.outerWidth,
+        innerWidth: window.innerWidth,
+        devicePixelRatio: window.devicePixelRatio || 1,
+      }),
+      baselineDevicePixelRatio: baselineBrowserZoomFactor,
+      isCoarsePointer: window.matchMedia?.("(pointer: coarse)")?.matches === true,
+    });
+    container.style.setProperty("--game-browser-zoom", String(compensation.ratio));
+    container.style.setProperty("--game-browser-zoom-inverse", String(compensation.inverse));
+  };
+  applyBrowserZoomCompensation();
   let world = null;
   let worldRealms = null;
   let sessionSeed = null;
@@ -424,7 +450,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
   let initialPlayableRenderComplete = false;
   let cameraModeReapplyAfterTransition = false;
   let cameraMode = normalizeCameraMode(initialCameraMode);
-  const timeSystem = createTimeSystem();
+  const timeSystem = createTimeSystem(undefined, { scheduler: deferredWorkScheduler });
   const staminaSystem = createStaminaSystem();
   const experienceSystem = createExperienceSystem();
   const combatStatsSystem = createCombatStatsSystem({ staminaSystem });
@@ -433,6 +459,31 @@ async function createGameSessionImplementation(container, initialPalette, initia
   });
   const logSystem = createLogSystem();
   const gameplayEvents = createGameplayEventSystem();
+  const publishDialog = (next) => {
+    dialogSnapshot = next ? Object.freeze({
+      ...next,
+      anchor: next.anchor ? Object.freeze({ ...next.anchor }) : null,
+      choices: Object.freeze((next.choices ?? []).map((choice) => Object.freeze({ ...choice }))),
+    }) : null;
+    sendDialogSnapshot(dialogSnapshot);
+  };
+  const openDialog = ({ id, isModal, speaker, text, choices, anchor, onResult }) => {
+    if (dialogSnapshot) return false;
+    dialogResolver = onResult;
+    publishDialog({ id, isModal, speaker, text, choices, anchor });
+    if (isModal) gameplayInputLocked = true;
+    return true;
+  };
+  const resolveDialog = (value) => {
+    if (!dialogSnapshot) return false;
+    const resolver = dialogResolver;
+    const snapshot = dialogSnapshot;
+    dialogResolver = null;
+    publishDialog(null);
+    if (snapshot.isModal) gameplayInputLocked = mapviewOpen || transitionActive;
+    resolver?.(value);
+    return true;
+  };
   const realmSystem = createRealmSystem({ eventSystem: gameplayEvents });
   let palette = initialPalette.map((entry) => ({ ...entry }));
   let paletteColors = reconcilePaletteColors(null, palette).colors;
@@ -501,10 +552,13 @@ async function createGameSessionImplementation(container, initialPalette, initia
   const getOccupancyForWorld = (targetWorld = world) => dynamicOccupancies.get(targetWorld?.realmName) ?? null;
   const getClientVisibleRecord = (targetWorld, cell) => getOccupancyForWorld(targetWorld)?.getAt(cell) ?? null;
   const getBuildingOverlayGlyph = (targetWorld, cell) => getIndexedBuildingGlyph(targetWorld?.buildings, cell, targetWorld.playerCell ?? playerCell);
+  const getExteriorBuildingOverlayGlyph = (targetWorld, cell) => {
+    const glyph = getBuildingOverlayGlyph(targetWorld, cell);
+    return glyph === HOME_ROOF_GLYPH ? glyph : null;
+  };
   const getClientVisibleGlyph = (targetWorld, cell) => {
     const dynamicGlyph = getDynamicVisibleGlyph(getOccupancyForWorld(targetWorld), targetWorld, cell, () => null);
-    if (dynamicGlyph) return dynamicGlyph;
-    return bombSystem?.getGlyphAt(targetWorld?.realmName, cell) ?? targetWorld?.characters?.[cell.y]?.[cell.x] ?? getBuildingOverlayGlyph(targetWorld, cell) ?? getVisibleGlyph(targetWorld, cell);
+    return dynamicGlyph ?? bombSystem?.getGlyphAt(targetWorld?.realmName, cell) ?? getExteriorBuildingOverlayGlyph(targetWorld, cell) ?? targetWorld?.characters?.[cell.y]?.[cell.x] ?? getBuildingOverlayGlyph(targetWorld, cell) ?? getVisibleGlyph(targetWorld, cell);
   };
   const markPlayable = () => {
     playable = true;
@@ -513,7 +567,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
   };
   const getClientVisibleGlyphKey = (targetWorld, cell) => {
     const record = getClientVisibleRecord(targetWorld, cell);
-    const glyph = record?.glyph ?? bombSystem?.getGlyphAt(targetWorld?.realmName, cell) ?? targetWorld?.characters?.[cell.y]?.[cell.x] ?? getBuildingOverlayGlyph(targetWorld, cell) ?? getVisibleGlyph(targetWorld, cell);
+    const glyph = record?.glyph ?? bombSystem?.getGlyphAt(targetWorld?.realmName, cell) ?? getExteriorBuildingOverlayGlyph(targetWorld, cell) ?? targetWorld?.characters?.[cell.y]?.[cell.x] ?? getBuildingOverlayGlyph(targetWorld, cell) ?? getVisibleGlyph(targetWorld, cell);
     return getOffsetGlyphKey(getFacingGlyphKey(glyph, record?.facing), paletteOffsets.get(glyph));
   };
   const setPlayerFacingFromDirection = (direction) => {
@@ -726,7 +780,9 @@ async function createGameSessionImplementation(container, initialPalette, initia
         const baseGlyph = getFacingGlyph(graphic.glyph);
         const baseColor = paletteColors.get(baseGlyph) ?? colorToLinearRgba(getPaletteStyle(palette, baseGlyph));
         const litColor = linearRgbaToRendererHex(applyLightingToColor(baseColor, lightingFactor));
-        const cacheKey = `${glyph}:${litColor}:${lightingFactor.toFixed(6)}:${fogOpacity.toFixed(2)}:${raster.width}`;
+        // The raster depends on the final tint and fog alpha, not the
+        // unrounded light factor which produced that same tint.
+        const cacheKey = `${glyph}:${litColor}:${fogOpacity.toFixed(2)}:${raster.width}`;
         let glyphCanvas = minimapGlyphCanvases.get(cacheKey);
         if (!glyphCanvas) {
           glyphCanvas = createGlyphRasterCanvas(raster, litColor, {
@@ -1315,6 +1371,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
 
   const activateRealm = (name, arrival = null) => {
     if (!worldRealms?.realms?.[name]) return;
+    timeSystem.invalidatePending();
     const sourceScreenCell = playerCell
       ? { x: playerCell.x - viewOrigin.x, y: playerCell.y - viewOrigin.y }
       : null;
@@ -1454,6 +1511,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
 
   const startRealmTransition = (destination, arrival = null) => {
     if (transitionActive || !transitionSystem || !worldRealms?.realms?.[destination]) return false;
+    timeSystem.invalidatePending();
     const { cover } = getTransitionRadii();
     clearMovementInput();
     // Ensure the source realm's latest player position is submitted before the
@@ -2119,6 +2177,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
   // Coalescing movement-driven renders prevents held input from starving
   // animation frames while preserving the final player position and lighting.
   const scheduleMovementRender = ({ refreshLighting = false, player = false, viewport = false, fog = false, lightingChanged = false, paletteChanged = false, markers = false, gpuEffect = false, dirtyCells = [], force = true } = {}) => {
+    if (refreshLighting) lightingFieldCache.invalidate();
     const revisions = visualInvalidation.invalidate({
       player: player || force, viewport, fog, lighting: refreshLighting || lightingChanged || force, palette: paletteChanged, markers: markers || force, gpuEffect,
     });
@@ -2254,7 +2313,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
     return cells;
   };
 
-  const movePlayer = () => {
+  const movePlayerImplementation = () => {
     const exhaustedAtAttempt = staminaSystem.getCurrent() === 0;
     if (playerLifecycle.isDead() || gameplayInputLocked) {
       clearMovementInput();
@@ -2284,6 +2343,14 @@ async function createGameSessionImplementation(container, initialPalette, initia
       playerCell,
       random: createRandom(`${world.options.seed}:${attemptedCell.x},${attemptedCell.y}:chest-reward`),
       createChestRewardEffect: (type) => type === "heart" ? applyHeartEffect : () => {},
+      openDialog: ({ object, cell }) => object.type === "welcome-sign" && openDialog({
+        id: "welcome-sign",
+        isModal: false,
+        speaker: "Welcome Sign",
+        text: `Welcome to town ${100 + Math.floor(createRandom(`${world.options.seed}:${object.id}`)() * 900)}`,
+        choices: [{ label: "OK", value: "dismiss" }],
+        anchor: cell,
+      }),
     });
     characterState = createCharacterState({ ...characterState, gold: characterGold, keys: characterKeys });
     const contact = target ? resolveCharacterContact(characterState, target, {
@@ -2310,8 +2377,24 @@ async function createGameSessionImplementation(container, initialPalette, initia
         handle: interactWithObject,
       },
       body: {
-        canHandle: (candidate) => candidate.kind === "chest",
-        handle: interactWithObject,
+        canHandle: (candidate) => candidate.kind === "chest" || candidate.kind === "npc",
+        handle: (candidate) => {
+          if (candidate.kind === "chest") return interactWithObject();
+          const npc = candidate.npc ?? candidate.occupant;
+          if (!npc || npc.recruited) return { handled: true };
+          return openDialog({
+            id: `npc-party-join:${npc.id}`,
+            isModal: true,
+            speaker: "Traveler",
+            text: "Can I join your party?",
+            choices: [{ label: "Yes", value: "accept" }, { label: "No", value: "decline" }],
+            anchor: npc.cell,
+            onResult: (value) => {
+              if (value !== "accept") return;
+              npcSystem.recruitNpc(npc.id);
+            },
+          });
+        },
       },
     }) : null;
     if (contact?.handled) {
@@ -2320,10 +2403,13 @@ async function createGameSessionImplementation(container, initialPalette, initia
         if (contact.capability === "pickaxe") wearCharacterItem("pickaxe", contact.outcome.appliedDamage);
         const doorInteraction = contact.outcome;
         if (doorInteraction.opened && doorInteraction.object.type === "door") {
+          lightingFieldCache.invalidate();
+          world.navigationRevision = (world.navigationRevision ?? 0) + 1;
           staticOccupancyIndexes.get(activeRealm)?.delete(attemptedCell.y * world.columns + attemptedCell.x);
         }
         const dirtyCells = [attemptedCell];
         if (doorInteraction.reward?.cell) {
+          world.navigationRevision = (world.navigationRevision ?? 0) + 1;
           dirtyCells.push(doorInteraction.reward.cell);
           staticOccupancyIndexes.get(activeRealm)?.add(doorInteraction.reward.cell.y * world.columns + doorInteraction.reward.cell.x);
         }
@@ -2338,6 +2424,8 @@ async function createGameSessionImplementation(container, initialPalette, initia
       const doorInteraction = interactWithObject();
       if (doorInteraction?.handled) {
         if (doorInteraction.opened && doorInteraction.object.type === "door") {
+          lightingFieldCache.invalidate();
+          world.navigationRevision = (world.navigationRevision ?? 0) + 1;
           staticOccupancyIndexes.get(activeRealm)?.delete(attemptedCell.y * world.columns + attemptedCell.x);
         }
         // A chest mutates two static cells at once: its own glyph and the
@@ -2346,6 +2434,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
         // glyph is initialized even when the Heart generation pass is off.
          const dirtyCells = [attemptedCell];
          if (doorInteraction.reward?.cell) {
+           world.navigationRevision = (world.navigationRevision ?? 0) + 1;
            dirtyCells.push(doorInteraction.reward.cell);
            staticOccupancyIndexes.get(activeRealm)?.add(
              doorInteraction.reward.cell.y * world.columns + doorInteraction.reward.cell.x,
@@ -2389,6 +2478,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
     }
     const objectCollision = objectSpawnerSystem?.collideAtCell(playerCell, { playerCell: { ...playerCell }, world });
     if (objectCollision?.pickupId) {
+      world.navigationRevision = (world.navigationRevision ?? 0) + 1;
       staticOccupancyIndexes.get(activeRealm)?.delete(playerCell.y * world.columns + playerCell.x);
     }
     if (direction.x === 0 && direction.y === -1) sendPlayerMovedEvent(PLAYER_MOVED_EVENTS.up);
@@ -2411,6 +2501,13 @@ async function createGameSessionImplementation(container, initialPalette, initia
     scheduleMovementRender({ player: true, dirtyCells: [...getPlayerLightInfluenceCells(previousPlayerCell, playerCell), ...buildingDirtyCells] });
     if (buildingDirtyCells.length) scheduleMapviewRender({ dirtyCells: buildingDirtyCells });
     return exhaustedAtAttempt;
+  };
+
+  const movePlayer = () => {
+    if (!performanceMonitor.isActive()) return movePlayerImplementation();
+    const started = performance.now();
+    try { return movePlayerImplementation(); }
+    finally { performanceMonitor.recordPhase("player-move", performance.now() - started); }
   };
 
   const scheduleRepeat = (delay) => {
@@ -2461,9 +2558,12 @@ async function createGameSessionImplementation(container, initialPalette, initia
       return;
     }
     const movementKey = event.key.toLowerCase();
-    if (!getDirectionForKey(movementKey)) return;
+    const action = getActionForKey(movementKey);
+    if (!action || !getDirectionForKey(movementKey)) return;
+    const inputWasLocked = gameplayInputLocked;
+    sendInputAction(action);
     shiftHeld = heldModifierKeys.size > 0 || event.shiftKey;
-    if (gameplayInputLocked) return;
+    if (inputWasLocked) return;
     event.preventDefault();
     const wasHeld = heldKeys.has(movementKey);
     heldKeys.add(movementKey);
@@ -2539,6 +2639,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
       && nextDevicePixelRatio === lastDevicePixelRatio) return;
     lastCanvasSize = nextCanvasSize;
     lastDevicePixelRatio = nextDevicePixelRatio;
+    applyBrowserZoomCompensation();
     watchBrowserZoom();
     clearTouchInput();
     // Browser zoom changes the canvas' CSS dimensions. Reapply the selected
@@ -2796,6 +2897,23 @@ async function createGameSessionImplementation(container, initialPalette, initia
           logSystem.log({ message: "Lost -25 Health from Trap" });
         } : () => {},
       })));
+      if (featureEnabled("civilization-signs")) {
+        const signReserved = new Set(realm.objects.map((object) => `${object.cell.x},${object.cell.y}`));
+        (realm.stairs ?? []).forEach((stair) => {
+          const stairIdentity = `${stair.x}-${stair.y}`;
+          const [signCell] = selectObjectCells(realm, stair, 1, createRandom(`${realm.options.seed}:signs:placement:${stairIdentity}`), {
+            minimumDistance: 1,
+            maximumDistance: 50,
+            reserved: signReserved,
+          });
+          if (signCell) addObjectToRealm(realm, {
+            id: `${realmName.toLowerCase()}-welcome-sign-${stairIdentity}`,
+            type: "welcome-sign",
+            cell: signCell,
+            effect: () => {},
+          });
+        });
+      }
       if (realmName === "Overground" && featureEnabled("civilization-homes")) {
         const reserved = new Set(realm.objects.map((object) => `${object.cell.x},${object.cell.y}`));
         const buildings = createOverworldBuildings(realm, {
@@ -3014,6 +3132,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
         logSystem.log({ message: `Player dug Mountain for -${result.appliedDamage} Health` });
         recordEntityDamage(result.target, performance.now());
         if (result.killed) {
+          world.navigationRevision = (world.navigationRevision ?? 0) + 1;
           scheduleMovementRender({ refreshLighting: true });
           scheduleMinimapRender();
           renderMapview();
@@ -3024,6 +3143,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
     const initializeEnemySpawners = () => {
     enemySystem = createEnemySystem({
       timeSystem,
+      getNavigationRevision: (realmName) => worldRealms.realms[realmName].navigationRevision ?? 0,
       occupancy: undergroundOccupancy,
       getPlayerState: (realmName) => activeRealm === realmName ? {
         realm: realmName,
@@ -3104,7 +3224,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
       timeSystem,
       occupancy: overgroundOccupancy,
       worldFor: (realmName) => worldRealms.realms[realmName],
-      getPlayerState: (realmName) => activeRealm === realmName ? { realm: realmName, cell: playerCell, alive: !playerLifecycle.isDead() } : null,
+      getPlayerState: (realmName) => activeRealm === realmName ? { realm: realmName, cell: playerCell, facing: playerFacing, alive: !playerLifecycle.isDead() } : null,
       resolvePlayerContact: ({ npc, player, event }) => {
         characterState = createCharacterState({ ...characterState, gold: characterGold, keys: characterKeys });
         return resolveCharacterContact(characterState, createContactTarget({ kind: "npc", cell: player.cell, npc, event }), {});
@@ -3114,6 +3234,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
       randomFor: (npc, tick) => createRandom(`${overground.options.seed}:${npc.id}:${tick}`),
       onDamage: recordEntityDamage,
       onChange: scheduleEntityRender,
+      onDamage: recordEntityDamage,
       deferredScheduler: deferredWorkScheduler,
       isActive: () => !disposed,
       isRealmActive: (realmName) => activeRealm === realmName,
@@ -3244,6 +3365,23 @@ async function createGameSessionImplementation(container, initialPalette, initia
     throw error;
   }
 
+  if (diagnostics && new URLSearchParams(window.location.search).get("performanceSprint") === "true") {
+    stopSprintDiagnostic = startSprintDiagnostic({
+      monitor: performanceMonitor,
+      durationMs: Math.min(60000, Math.max(4000, Number(new URLSearchParams(window.location.search).get("performanceDurationMs")) || 8000)),
+      read: () => ({ disposed, locked: gameplayInputLocked || transitionActive, realm: activeRealm,
+        cell: playerCell, rows: world.rows, columns: world.columns, dead: playerLifecycle.isDead(),
+        exhausted: staminaSystem.getCurrent() === 0, ticks: timeSystem.getDiagnostics() }),
+      canEnter: (cell) => world.terrain?.[cell.y]?.[cell.x]?.walkable === true
+        && Boolean(getViewOriginForCamera(cameraMode, cell, viewport, world, viewOrigin,
+          { x: cell.x - playerCell.x, y: cell.y - playerCell.y }))
+        && !getOccupancyForWorld()?.getAt(cell)
+        && !staticOccupancyIndexes.get(activeRealm)?.has(cell.y * world.columns + cell.x)
+        && !world.stairs?.some((stair) => stair.x === cell.x && stair.y === cell.y),
+      keyDown: handleKeyDown, keyUp: handleKeyUp, changeRealm: (realm) => startRealmTransition(realm),
+    });
+  }
+
   return Object.freeze({
     startPerformanceSession(options = {}) {
       const session = performanceMonitor.start({
@@ -3354,6 +3492,12 @@ async function createGameSessionImplementation(container, initialPalette, initia
       return questManager?.getSnapshot() ?? snapshot;
     },
     getQuestSnapshot() { return questManager?.getSnapshot() ?? null; },
+    getDialogSnapshot() { return dialogSnapshot; },
+    subscribeToDialog(listener) {
+      listener(dialogSnapshot);
+      return () => {};
+    },
+    resolveDialog,
     subscribeToQuest(listener) {
       questListeners.add(listener);
       if (questManager?.getSnapshot()) listener(questManager.getSnapshot());
@@ -3547,6 +3691,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
     },
     dispose() {
       if (disposed) return;
+      stopSprintDiagnostic?.();
       disposed = true;
       rendererLifecycle.beginDisposal();
       clearMovementInput();

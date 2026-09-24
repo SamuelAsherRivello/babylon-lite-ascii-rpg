@@ -65,6 +65,9 @@ import {
   stopPerformanceSession,
   getPerformanceReport,
   resetPerformanceSession,
+  getDialogSnapshot,
+  sendDialogSnapshot,
+  subscribeToDialog,
 } from "../../../src/client/bridge-layer/game-bridge.js";
 
 test("normalizes health against its supplied maximum while preserving the percentage HUD", () => {
@@ -74,6 +77,19 @@ test("normalizes health against its supplied maximum while preserving the percen
   assert.equal(getHealthSnapshot(), 20);
   sendHealthSnapshot(25);
   assert.equal(getHealthSnapshot(), 25);
+});
+
+test("publishes immutable dialog snapshots and clears them", () => {
+  const received = [];
+  const unsubscribe = subscribeToDialog((snapshot) => received.push(snapshot));
+  sendDialogSnapshot({ id: "sign", isModal: false, speaker: "Sign", text: "Welcome", choices: [{ label: "OK", value: "dismiss" }] });
+  assert.equal(getDialogSnapshot().id, "sign");
+  assert.equal(Object.isFrozen(getDialogSnapshot()), true);
+  assert.equal(Object.isFrozen(getDialogSnapshot().choices[0]), true);
+  sendDialogSnapshot(null);
+  assert.equal(getDialogSnapshot(), null);
+  assert.equal(received.at(-1), null);
+  unsubscribe();
 });
 
 test("publishes the current session random seed", () => {

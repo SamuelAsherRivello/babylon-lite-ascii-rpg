@@ -11,6 +11,8 @@ Resolve material ambiguity through an adaptive, one-question-at-a-time
 interview. Turn confirmed decisions into coherent planning artifacts when
 authorized. Never edit implementation code or start implementation.
 
+**Mode requirement:** Before beginning the interview, enter Plan mode with `/plan`. Remain in Plan mode for the duration of this skill unless the user explicitly changes the mode.
+
 ## Establish Context
 
 1. Identify the target from the user's request and conversation.

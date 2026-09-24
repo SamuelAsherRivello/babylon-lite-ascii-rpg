@@ -94,3 +94,15 @@ test("AStarUtility keeps realm-local paths local and uses an explicit paired-sta
   assert.equal(crossRealm?.segments[1].transition, "stairs");
   assert.deepEqual(crossRealm?.segments[2].cells.at(-1), { x: 4, y: 4 });
 });
+
+test("hierarchical exits use one bounded sector search and honor static blockers", () => {
+  const map = world(64, 64);
+  let queries = 0;
+  const route = AStarUtility.findHierarchicalPath(map, { x: 20, y: 20 }, { x: 60, y: 60 }, {
+    isBlockedIndex: (x, y) => { queries += 1; return x === 19; },
+  });
+  assert.ok(route);
+  assertCardinal(route.path);
+  assert.ok(route.path.every(cell => cell.x !== 19));
+  assert.ok(queries <= 16 * 16 * 4, `visited blockers ${queries} times for a 256-cell sector`);
+});

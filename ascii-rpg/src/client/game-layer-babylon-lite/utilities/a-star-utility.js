@@ -65,16 +65,22 @@ function buildSectorGraph(world, revision = 0) {
     graph.set(from, edges);
   };
   const { rows, columns } = dimensions(world);
-  for (let y = 0; y < rows; y += 1) for (let x = 0; x < columns; x += 1) {
-    const cell = { x, y };
-    if (!isWalkable(world, cell)) continue;
-    for (const direction of CARDINAL_DIRECTIONS) {
-      const next = { x: x + direction.x, y: y + direction.y };
-      if (!isWalkable(world, next) || sectorKey(cell) === sectorKey(next)) continue;
-      add(sectorKey(cell), sectorKey(next), cell);
-    }
+  // Only sector boundaries can contribute edges. Interior cells need no scan.
+  const connect = (cell, next) => {
+    if (!isWalkable(world, cell) || !isWalkable(world, next)) return;
+    add(sectorKey(cell), sectorKey(next), cell);
+    add(sectorKey(next), sectorKey(cell), next);
+  };
+  for (let x = NAVIGATION_SECTOR_SIZE - 1; x + 1 < columns; x += NAVIGATION_SECTOR_SIZE)
+    for (let y = 0; y < rows; y += 1) connect({ x, y }, { x: x + 1, y });
+  for (let y = NAVIGATION_SECTOR_SIZE - 1; y + 1 < rows; y += NAVIGATION_SECTOR_SIZE)
+    for (let x = 0; x < columns; x += 1) connect({ x, y }, { x, y: y + 1 });
+  const reverse = new Map();
+  for (const [sector, edges] of graph) for (const edge of edges) {
+    if (!reverse.has(edge.to)) reverse.set(edge.to, new Set());
+    reverse.get(edge.to).add(sector);
   }
-  const value = Object.freeze({ revision, graph });
+  const value = Object.freeze({ revision, graph, reverse, reachable: new Map() });
   sectorCaches.set(world, value);
   return value;
 }
@@ -179,28 +185,32 @@ export class AStarUtility {
     distances.fill(-1);
     const index = (cell) => (cell.y - minY) * width + cell.x - minX;
     const inBounds = cell => cell.x >= minX && cell.x <= maxX && cell.y >= minY && cell.y <= maxY;
-    const blockers = isBlockedIndex ? new Int8Array(width * height).fill(-1) : null;
-    const blockedAt = (cell) => {
-      if (!isBlockedIndex) return isBlocked(cell);
-      const cellIndex = index(cell);
-      if (blockers[cellIndex] === -1) blockers[cellIndex] = isBlockedIndex(cell.x, cell.y) ? 1 : 0;
-      return blockers[cellIndex] === 1;
-    };
     if (!isWalkable(world, target)) return Object.freeze({ getDistance: () => -1 });
-    const queue = [freezeCell(target)];
-    distances[index(target)] = 0;
-    for (let cursor = 0; cursor < queue.length; cursor += 1) {
-      const cell = queue[cursor]; const distance = distances[index(cell)] + 1;
+    // Store local indexes instead of allocating/freeze-checking four neighbor
+    // objects per visited cell. -2 remembers rejected static blockers.
+    const queue = new Int32Array(width * height);
+    let length = 1;
+    queue[0] = index(target);
+    distances[queue[0]] = 0;
+    for (let cursor = 0; cursor < length; cursor += 1) {
+      const current = queue[cursor];
+      const x = current % width + minX, y = Math.floor(current / width) + minY;
+      const distance = distances[current] + 1;
       if (distance > maxDistance) continue;
       for (const direction of CARDINAL_DIRECTIONS) {
-        const next = { x: cell.x + direction.x, y: cell.y + direction.y };
-        if (!inBounds(next)) continue;
-        const blocked = blockedAt(next);
-        if (!isWalkable(world, next) || distances[index(next)] !== -1 || (blocked && !sameCell(next, target))) continue;
-        distances[index(next)] = distance; queue.push(freezeCell(next));
+        const nx = x + direction.x, ny = y + direction.y;
+        if (nx < minX || nx > maxX || ny < minY || ny > maxY) continue;
+        const next = (ny - minY) * width + nx - minX;
+        if (distances[next] !== -1) continue;
+        if (!world.terrain[ny][nx].walkable || (isBlockedIndex ? isBlockedIndex(nx, ny) : isBlocked({ x: nx, y: ny }))) {
+          distances[next] = -2;
+          continue;
+        }
+        distances[next] = distance;
+        queue[length++] = next;
       }
     }
-    return Object.freeze({ getDistance(cell) { return inBounds(cell) && isWalkable(world, cell) ? distances[index(cell)] : -1; } });
+    return Object.freeze({ getDistance(cell) { return inBounds(cell) && isWalkable(world, cell) ? Math.max(-1, distances[index(cell)]) : -1; } });
   }
 
   static findPath(world, from, to, { isBlocked = () => false, isBlockedIndex = null } = {}) {
@@ -221,34 +231,57 @@ export class AStarUtility {
   }
 
   static findHierarchicalPath(world, from, to, { terrainRevision = 0, ...options } = {}) {
-    const { graph } = buildSectorGraph(world, terrainRevision);
+    const { graph, reverse, reachable } = buildSectorGraph(world, terrainRevision);
     const originSector = sectorKey(from);
     const targetSector = sectorKey(to);
     if (originSector === targetSector) {
       const path = this.findPath(world, from, to, options);
       return path ? Object.freeze({ path, nextCell: path[1] ?? null, sectorExit: freezeCell(path.at(-1)), coarse: false }) : null;
     }
-    const reverse = new Map();
-    for (const [sector, edges] of graph) for (const edge of edges) {
-      const previous = reverse.get(edge.to) ?? [];
-      previous.push(sector);
-      reverse.set(edge.to, previous);
+    let reachableSectors = reachable.get(targetSector);
+    if (!reachableSectors) {
+      reachableSectors = new Set([targetSector]);
+      const queue = [targetSector];
+      for (let cursor = 0; cursor < queue.length; cursor += 1) for (const sector of reverse.get(queue[cursor]) ?? []) {
+        if (!reachableSectors.has(sector)) { reachableSectors.add(sector); queue.push(sector); }
+      }
+      // Retain only the current destination sector for this world revision.
+      reachable.clear();
+      reachable.set(targetSector, reachableSectors);
     }
-    const reachableSectors = new Set([targetSector]);
-    const queue = [targetSector];
-    for (let cursor = 0; cursor < queue.length; cursor += 1) for (const sector of reverse.get(queue[cursor]) ?? []) {
-      if (!reachableSectors.has(sector)) { reachableSectors.add(sector); queue.push(sector); }
+    const bounds = sectorBounds(world, originSector);
+    const width = bounds.maxX - bounds.minX + 1;
+    const index = (cell) => (cell.y - bounds.minY) * width + cell.x - bounds.minX;
+    const distances = new Int32Array(width * (bounds.maxY - bounds.minY + 1)).fill(-1);
+    if (!isWalkable(world, from) || !isWalkable(world, to)) return null;
+    const queue = [from];
+    distances[index(from)] = 0;
+    for (let cursor = 0; cursor < queue.length; cursor += 1) {
+      const cell = queue[cursor];
+      for (const direction of CARDINAL_DIRECTIONS) {
+        const next = { x: cell.x + direction.x, y: cell.y + direction.y };
+        if (next.x < bounds.minX || next.x > bounds.maxX || next.y < bounds.minY || next.y > bounds.maxY
+          || distances[index(next)] !== -1 || !isWalkable(world, next)) continue;
+        distances[index(next)] = distances[index(cell)] + 1;
+        // A* permits a blocked destination, but never traverses it. Record
+        // its distance for exit ranking without using it as an intermediate.
+        const blocked = options.isBlockedIndex ? options.isBlockedIndex(next.x, next.y) : options.isBlocked?.(next);
+        if (!blocked) queue.push(next);
+      }
     }
     const candidates = (graph.get(originSector) ?? [])
-      .filter((edge) => reachableSectors.has(edge.to))
-      .map((edge) => ({ edge, path: findPathInBounds(world, from, edge.exit, sectorBounds(world, originSector), options) }))
-      .filter(({ path }) => path)
-      .sort((left, right) => left.path.length - right.path.length || left.edge.exit.y - right.edge.exit.y || left.edge.exit.x - right.edge.exit.x);
+        .filter((edge) => reachableSectors.has(edge.to))
+        .map((edge) => ({ edge, distance: distances[index(edge.exit)] }))
+        .filter(({ distance }) => distance >= 0)
+        .sort((left, right) => left.distance - right.distance || left.edge.exit.y - right.edge.exit.y || left.edge.exit.x - right.edge.exit.x);
     const candidate = candidates[0];
     if (!candidate) return null;
+    // Refine only the winning exit, retaining the existing A* tie behavior.
+    const path = findPathInBounds(world, from, candidate.edge.exit, bounds, options);
+    if (!path) return null;
     return Object.freeze({
-      path: candidate.path,
-      nextCell: candidate.path[1] ?? null,
+      path,
+      nextCell: path[1] ?? null,
       sectorExit: freezeCell(candidate.edge.exit),
       coarse: true,
     });

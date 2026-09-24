@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createDynamicOccupancy } from "../../../../src/client/game-layer-babylon-lite/systems/dynamic-occupancy.js";
-import { createNpcSystem, NPC_ACTION_INTERVAL, NPC_GLYPH } from "../../../../src/client/game-layer-babylon-lite/systems/npc-system.js";
+import { createNpcSystem, NPC_ACTION_INTERVAL, NPC_DEAD_GLYPH, NPC_FOLLOW_DISTANCE, NPC_GLYPH, NPC_HEALTH } from "../../../../src/client/game-layer-babylon-lite/systems/npc-system.js";
 import { createNpcSpawnerSystem, selectNpcSpawnerCells } from "../../../../src/client/game-layer-babylon-lite/systems/npc-spawner-system.js";
 import { createTimeSystem } from "../../../../src/client/game-layer-babylon-lite/systems/time-system.js";
 import { createDeferredWorkScheduler } from "../../../../src/client/game-layer-babylon-lite/deferred-work-scheduler.js";
@@ -67,6 +67,39 @@ test("bomb damage removes an NPC spawner while its already-created NPC survives"
   assert.equal(occupancy.get("npc-1").type, "npc");
   assert.equal(npcSystem.damage("npc-1", 100), null);
   assert.equal(occupancy.get("npc-1"), null);
+});
+
+test("NPCs start unrecruited and can be removed to become passable", () => {
+  const map = world(); const timeSystem = createTimeSystem(); const occupancy = createDynamicOccupancy();
+  const system = createNpcSystem({ timeSystem, occupancy, worldFor: () => map, isWalkable: () => true, randomFor: () => () => 0 });
+  const npc = system.addNpc({ id: "npc-recruit", realm: "Overground", cell: { x: 10, y: 10 } });
+  assert.equal(npc.recruited, false);
+  assert.equal(occupancy.get("npc-recruit")?.type, "npc");
+  assert.equal(system.removeNpc("npc-recruit"), true);
+  assert.equal(occupancy.get("npc-recruit"), null);
+});
+
+test("recruited NPCs follow three cells behind the player and die as blocking corpses", () => {
+  const map = world(); const timeSystem = createTimeSystem(); const occupancy = createDynamicOccupancy();
+  let playerCell = { x: 20, y: 10 };
+  const system = createNpcSystem({
+    timeSystem,
+    occupancy,
+    worldFor: () => map,
+    getPlayerState: () => ({ cell: playerCell, facing: "right", alive: true }),
+    isWalkable: (cell) => Boolean(map.terrain[cell.y]?.[cell.x]?.walkable),
+  });
+  system.addNpc({ id: "npc-follow", realm: "Overground", cell: { x: 10, y: 10 } });
+  assert.equal(occupancy.get("npc-follow").health, NPC_HEALTH);
+  assert.equal(system.recruitNpc("npc-follow"), true);
+  for (let step = 0; step < 7; step += 1) timeSystem.advance(NPC_ACTION_INTERVAL);
+  assert.equal(Math.abs(occupancy.get("npc-follow").cell.x - playerCell.x), NPC_FOLLOW_DISTANCE);
+  assert.equal(system.damageNpc("npc-follow", NPC_HEALTH), occupancy.get("npc-follow"));
+  const dead = occupancy.get("npc-follow");
+  assert.equal(dead.health, 0);
+  assert.equal(dead.glyph, NPC_DEAD_GLYPH);
+  assert.equal(dead.dead, true);
+  assert.equal(occupancy.isOccupied(dead.cell), true);
 });
 
 test("spawner remains empty when its setup spawn is blocked", () => {

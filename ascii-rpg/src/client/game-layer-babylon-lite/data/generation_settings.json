@@ -239,9 +239,26 @@
       "enabled": true
     },
     {
+      "id": "civilization-signs",
+      "title": "Welcome Signs",
+      "order": 16,
+      "density": "Med",
+      "owner": "civilization",
+      "realms": [
+        "Overground",
+        "Underground"
+      ],
+      "requires": [
+        "civilization-stairs"
+      ],
+      "objectType": "welcome-sign",
+      "seedNamespace": "signs:placement",
+      "enabled": true
+    },
+    {
       "id": "enemy-spawner",
       "title": "Enemy Spawner Distribution",
-      "order": 16,
+      "order": 17,
       "density": "Med",
       "owner": "dynamic",
       "realms": [

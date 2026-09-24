@@ -1,6 +1,17 @@
 {
   "objects": [
     {
+      "type": "welcome-sign",
+      "name": "Welcome Sign",
+      "glyph": "⚑",
+      "IsPickup": false,
+      "IsLevelSpawned": true,
+      "consequence": { "id": "welcome-dialog" },
+      "logText": null,
+      "distribution": { "minimumDistance": 1, "maximumDistance": 50 },
+      "generation": { "passId": "civilization-signs", "realms": ["Overground", "Underground"], "seedNamespace": "signs:placement" }
+    },
+    {
       "type": "gold",
       "name": "Gold",
       "glyph": "💰",

@@ -329,6 +329,7 @@ export function createSceneLightingFieldCache() {
   };
 
   return {
+    invalidate() { torchEntries.length = 0; playerEntries.length = 0; },
     get(world, region, torches, playerCell, settings = {}) {
       const ambient = Number.isFinite(settings.ambient)
         ? Math.min(1, Math.max(0, settings.ambient))

@@ -14,14 +14,32 @@ function createWorld(size = 24) {
   };
 }
 
+test("torch snapshots retain identity until their realm's sources change", () => {
+  const system = createObjectSpawnerSystem({ catalog: objectData.objects });
+  const world = createWorld();
+  const other = createWorld();
+  system.addObject({ type: "torch", cell: { x: 2, y: 2 }, realm: world });
+  const lights = system.getLightingSources(world);
+  assert.equal(system.getLightingSources(world), lights);
+  system.addObject({ type: "heart", cell: { x: 3, y: 3 }, realm: world });
+  system.addObject({ type: "torch", cell: { x: 4, y: 4 }, realm: other });
+  assert.equal(system.getLightingSources(world), lights);
+  system.addObject({ type: "torch", cell: { x: 5, y: 5 }, realm: world });
+  assert.notEqual(system.getLightingSources(world), lights);
+  assert.equal(system.getLightingSources(world).length, 2);
+  assert.equal(lights.length, 1);
+  assert.ok(Object.isFrozen(lights[0]));
+});
+
 test("the object catalog is palette-backed and declares pickup and level-spawn ownership", () => {
   assert.equal(validateObjectPalette(objectData.objects, paletteData.entries), true);
   assert.deepEqual(objectData.objects.map((object) => [object.type, object.IsPickup, object.IsLevelSpawned]), [
-    ["gold", true, false], ["heart", true, true], ["chest", false, true], ["torch", false, true], ["trap", false, true], ["stairs", false, true],
+    ["welcome-sign", false, true], ["gold", true, false], ["heart", true, true], ["chest", false, true], ["torch", false, true], ["trap", false, true], ["stairs", false, true],
     ["key", true, false], ["fence", false, false], ["door", false, false], ["fireplace", false, true],
   ]);
   assert.equal(objectData.objects.find((object) => object.type === "torch").glyph, "🕯️");
   assert.equal(validateObjectPalette([{ type: "door", name: "Door", glyph: "█", openGlyph: "□", IsPickup: false, IsLevelSpawned: false }], paletteData.entries), true);
+  assert.equal(objectData.objects.find((object) => object.type === "welcome-sign").glyph, "⚑");
 });
 
 test("a fireplace remains after collision and saves on every entry", () => {
@@ -35,6 +53,19 @@ test("a fireplace remains after collision and saves on every entry", () => {
   system.collideAtCell({ x: 3, y: 3 }, { world });
   assert.equal(system.getActiveObjects().some((object) => object.id === "fireplace-1"), true);
   assert.deepEqual(saves, ["saved", "saved"]);
+});
+
+test("Welcome Sign interaction remains active and delegates to a dialog", () => {
+  const world = createWorld();
+  const system = createObjectSpawnerSystem({ catalog: [{ type: "welcome-sign", name: "Welcome Sign", glyph: "⚑", IsPickup: false, IsLevelSpawned: true }] });
+  system.addObject({ id: "sign-1", type: "welcome-sign", cell: { x: 3, y: 3 }, realm: world });
+  const opened = [];
+  const first = system.interactAtCell({ x: 3, y: 3 }, { world, openDialog: (request) => { opened.push(request.object.id); return true; } });
+  const second = system.interactAtCell({ x: 3, y: 3 }, { world, openDialog: (request) => { opened.push(request.object.id); return true; } });
+  assert.equal(first.handled, true);
+  assert.equal(second.handled, true);
+  assert.deepEqual(opened, ["sign-1", "sign-1"]);
+  assert.equal(system.getActiveObjects().length, 1);
 });
 
 test("zero object count reads no candidates, consumes no random draws, and leaves reservations intact", () => {
@@ -145,10 +176,10 @@ test("a cardinal chest bump spawns a Heart even without pre-generated Hearts", (
   assert.equal(world.characters[5][5], "◇");
   system.collideAtCell({ x: 5, y: 4 }, { world });
   assert.equal(collectedHearts, 1);
-  assert.deepEqual(messages, ["Opened Chest"]);
+  assert.deepEqual(messages, ["Chest was opened", "Chest contained heart"]);
   assert.deepEqual(system.interactAtCell({ x: 5, y: 5 }, { world }), { handled: true, opened: false, object: chest });
   assert.equal(world.objects.length, 2);
-  assert.deepEqual(messages, ["Opened Chest"]);
+  assert.deepEqual(messages, ["Chest was opened", "Chest contained heart"]);
   assert.equal(system.collideAtCell({ x: 5, y: 5 }, { world }), null);
 });
 

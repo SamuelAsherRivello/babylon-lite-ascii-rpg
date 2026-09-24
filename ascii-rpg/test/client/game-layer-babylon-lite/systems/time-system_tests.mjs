@@ -33,13 +33,13 @@ test("dispatches registered tickables in stable order at the current startup tim
   const timeSystem = createTimeSystem();
   const received = [];
 
-  timeSystem.registerTickable("first", (event) => received.push(["first", event]));
-  timeSystem.registerTickable("second", (event) => received.push(["second", event]));
+  timeSystem.registerTickable("first", (time, delta) => received.push(["first", time, delta]));
+  timeSystem.registerTickable("second", (time, delta) => received.push(["second", time, delta]));
 
   assert.equal(timeSystem.dispatchCurrent("session-start"), 1);
   assert.deepEqual(received, [
-    ["first", { time: 1, cause: "session-start" }],
-    ["second", { time: 1, cause: "session-start" }],
+    ["first", 1, 0],
+    ["second", 1, 0],
   ]);
 });
 
@@ -47,14 +47,14 @@ test("newborn tickables wait until the next tick and removed tickables do not ru
   const timeSystem = createTimeSystem();
   const received = [];
 
-  timeSystem.registerTickable("parent", ({ time }) => {
+  timeSystem.registerTickable("parent", (time) => {
     received.push(`parent:${time}`);
     if (time === 2) {
       timeSystem.unregisterTickable("removed");
-      timeSystem.registerTickable("newborn", ({ time: newbornTime }) => received.push(`newborn:${newbornTime}`));
+      timeSystem.registerTickable("newborn", (newbornTime) => received.push(`newborn:${newbornTime}`));
     }
   });
-  timeSystem.registerTickable("removed", ({ time }) => received.push(`removed:${time}`));
+  timeSystem.registerTickable("removed", (time) => received.push(`removed:${time}`));
 
   timeSystem.advance();
   assert.deepEqual(received, ["parent:2"]);
@@ -84,4 +84,68 @@ test("lets movement-only stamina recovery ignore combat ticks", () => {
   assert.equal(stamina.getCurrent(), 10);
   timeSystem.advance(1, "movement");
   assert.equal(stamina.getCurrent(), 20);
+});
+
+test("captures trigger-time delta and assigns it only to the first tick in a batch", () => {
+  let now = 100;
+  const timeSystem = createTimeSystem(1, { now: () => now });
+  const received = [];
+  timeSystem.registerTickable("system", (time, delta) => received.push([time, delta]));
+
+  now = 1100;
+  assert.equal(timeSystem.advance(3), 4);
+  assert.deepEqual(received, [[2, 1000], [3, 0], [4, 0]]);
+});
+
+test("delivers scheduled tick work in registration order without repeating it per frame", () => {
+  const jobs = [];
+  const scheduler = {
+    enqueue(job) { jobs.push(job); return { id: job.id }; },
+  };
+  const timeSystem = createTimeSystem(1, { scheduler, now: () => 0 });
+  const received = [];
+  timeSystem.registerTickable("first", (time, delta) => received.push(["first", time, delta]));
+  timeSystem.registerTickable("second", (time, delta) => received.push(["second", time, delta]));
+
+  timeSystem.advance(2);
+  assert.deepEqual(received, []);
+  jobs.forEach((job) => job.run({}));
+  assert.deepEqual(received, [["first", 2, 0], ["second", 2, 0], ["first", 3, 0], ["second", 3, 0]]);
+});
+
+test("invalidates pending scheduled ticks without allowing stale delivery", () => {
+  const jobs = [];
+  const scheduler = {
+    enqueue(job) { jobs.push(job); return { id: job.id }; },
+    cancelWhere(predicate) { jobs.filter((job) => predicate(job.metadata)).forEach((job) => { job.cancelled = true; }); },
+    snapshot() { return { pending: jobs.length }; },
+  };
+  const timeSystem = createTimeSystem(1, { scheduler, now: () => 0 });
+  const received = [];
+  timeSystem.registerTickable("system", (time) => received.push(time));
+  timeSystem.advance();
+  assert.equal(timeSystem.getDiagnostics().pending, 1);
+  timeSystem.invalidatePending();
+  jobs.forEach((job) => job.run({}));
+  assert.deepEqual(received, []);
+  assert.equal(timeSystem.getDiagnostics().stale, 1);
+  assert.equal(timeSystem.getDiagnostics().logicalTickAgeMs, 0);
+});
+
+test("pending tick age tracks the final callback and clears across realm invalidation", () => {
+  const jobs = [];
+  let clock = 10;
+  const time = createTimeSystem(1, { now: () => clock, scheduler: { enqueue: job => jobs.push(job) } });
+  time.registerTickable("first", () => {});
+  time.registerTickable("last", () => {});
+  time.advance();
+  clock = 50;
+  jobs[0].run();
+  assert.equal(time.getDiagnostics().logicalTickAgeMs, 40);
+  jobs[1].run();
+  assert.equal(time.getDiagnostics().logicalTickAgeMs, 0);
+  time.advance();
+  clock = 100;
+  time.invalidatePending();
+  assert.equal(time.getDiagnostics().logicalTickAgeMs, 0);
 });

@@ -17,6 +17,7 @@ export const GENERATION_DENSITY_DETAILS = Object.freeze({
   "civilization-stairs": Object.freeze({ Low: "Quarter stair count", Med: "Current stair count", High: "Triple stair count" }),
   "civilization-doors": Object.freeze({ Low: "Quarter current door chance", Med: "Current door chance", High: "Double current door chance" }),
   "civilization-homes": Object.freeze({ Low: "Quarter current home chance", Med: "Current home chance", High: "Double current home chance" }),
+  "civilization-signs": Object.freeze({ Low: "One sign per stair", Med: "One sign per stair", High: "One sign per stair" }),
   "enemy-spawner": Object.freeze({ Low: "4 maximum spawners", Med: "16 maximum spawners", High: "32 maximum spawners" }),
 });
 
@@ -36,13 +37,14 @@ export const GENERATION_PASS_DESCRIPTIONS = Object.freeze({
   "civilization-stairs": "Controls paired stair placement density",
   "civilization-doors": "Controls underground door placement chance",
   "civilization-homes": "Controls Overworld home placement chance",
+  "civilization-signs": "Places one Welcome Sign within 50 cells of every stair",
   "enemy-spawner": "Controls enemy spawner placement density",
 });
 
 export const GENERATION_PASS_REALMS = Object.freeze({
   ground: "All", "overground-walls": "Overworld", "underground-caves": "Underworld", water: "All", walkability: "All", "player-position": "All",
   "object-heart": "All", "object-chest": "All", "object-trap": "All", "object-torch": "All", "object-fireplace": "Underworld",
-  "npc-spawner": "Overworld", "civilization-stairs": "All", "civilization-doors": "Underworld", "civilization-homes": "Overworld", "enemy-spawner": "Underworld",
+  "npc-spawner": "Overworld", "civilization-stairs": "All", "civilization-doors": "Underworld", "civilization-homes": "Overworld", "civilization-signs": "All", "enemy-spawner": "Underworld",
 });
 const declarations = new Map([
   ["ground", { owner: "terrain", realms: ["Overground", "Underground"], configurable: false, required: true, seedNamespace: "ground" }],
@@ -60,6 +62,7 @@ const declarations = new Map([
   ["civilization-stairs", { owner: "civilization", realms: ["Overground", "Underground"], requires: ["player-position"], objectType: "stairs", seedNamespace: "stairs", pairedRealms: true }],
   ["civilization-doors", { owner: "civilization", realms: ["Underground"], requires: ["civilization-stairs"], seedNamespace: "civilization:placement" }],
   ["civilization-homes", { owner: "civilization", realms: ["Overground"], requires: ["civilization-stairs"], seedNamespace: "buildings:placement" }],
+  ["civilization-signs", { owner: "civilization", realms: ["Overground", "Underground"], requires: ["civilization-stairs"], objectType: "welcome-sign", seedNamespace: "signs:placement" }],
   ["enemy-spawner", { owner: "dynamic", realms: ["Underground"], requires: ["civilization-doors"], seedNamespace: "enemy-spawner:placement" }],
 ]);
 
@@ -72,7 +75,7 @@ export const GENERATION_FEATURES = Object.freeze(bundledSettings.passes.map((pas
 export const GENERATION_SEMANTIC_CARDS = Object.freeze([
   ...GENERATION_FEATURES.filter((feature) => feature.order <= 6).map((feature) => Object.freeze({ id: feature.id, title: feature.title, featureIds: Object.freeze([feature.id]) })),
   Object.freeze({ id: "object-distribution", title: "Object Distribution", featureIds: Object.freeze(["object-heart", "object-chest", "object-trap", "object-torch", "object-fireplace"]) }),
-  Object.freeze({ id: "civilization-placement", title: "Civilization Placement", featureIds: Object.freeze(["civilization-stairs", "civilization-doors", "civilization-homes"]) }),
+  Object.freeze({ id: "civilization-placement", title: "Civilization Placement", featureIds: Object.freeze(["civilization-stairs", "civilization-doors", "civilization-homes", "civilization-signs"]) }),
   Object.freeze({ id: "character-distribution", title: "Character Distribution", featureIds: Object.freeze(["enemy-spawner", "npc-spawner"]) }),
 ]);
 

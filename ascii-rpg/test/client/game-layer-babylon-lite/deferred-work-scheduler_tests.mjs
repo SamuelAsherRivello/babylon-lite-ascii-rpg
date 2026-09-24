@@ -48,3 +48,14 @@ test("priority aging gives lower-priority pending work a bounded turn", () => {
   assert.ok(order.indexOf("low") <= 10);
   assert.ok(control.scheduler.snapshot().longestSliceMs >= 1);
 });
+
+test("incoming sprint ticks cannot restart an active queue's presentation delay", () => {
+  const control = controlledScheduler();
+  const completed = [];
+  for (let frame = 0; frame < 12; frame += 1) {
+    control.scheduler.enqueue({ id: `tick-${frame}`, run: () => { completed.push(frame); return "done"; } });
+    control.frames.shift()();
+  }
+  assert.ok(completed.length >= 9, "continuous input must make forward progress");
+  assert.ok(control.scheduler.snapshot().pending <= 2);
+});
