@@ -16,4 +16,4 @@
 - [x] 3.1 Run the focused enemy, NPC, combat, occupancy, and health-bar Node tests and verify they pass without changing unrelated behavior.
 - [x] 3.2 Run `npm.cmd test` and `npm.cmd run build` from the repository root and verify both complete successfully.
 - [x] 3.3 Run `openspec validate add-enemy-ai-for-npc --type change --strict` and verify the change validates.
-- [ ] 3.4 Manually verify a browser session with an explicit `randomSeed`: NPC follow behavior remains unchanged, an enemy attacks the nearer NPC or player, NPC health decreases, the NPC disappears at zero health, and the enemy retargets the remaining living target.
+- [x] 3.4 Manually verify a browser session with an explicit `randomSeed`: NPC follow behavior remains unchanged, a stationary player advances no enemy action, four player-driven ticks produce exactly two enemy eligible actions, an enemy attacks the nearer NPC or player, NPC health decreases, the NPC disappears at zero health, and the enemy retargets the remaining living target.

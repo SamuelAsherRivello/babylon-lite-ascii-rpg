@@ -7,6 +7,17 @@ export const UNDERGROUND_TERRAIN_FRAMES = Object.freeze({
 });
 const KEY_PREFIX = "terrain-art:";
 
+// Adjacent terrain tiles share exactly the same rounded edge. Glyph footprints
+// deliberately overlap, but translucent full-cell art must not double-blend.
+export function getTerrainArtBounds(cell, viewport, offset = { x: 0, y: 0 }) {
+  const left = Math.round(offset.x + cell.x * viewport.gridWidth);
+  const right = Math.round(offset.x + (cell.x + 1) * viewport.gridWidth);
+  const top = Math.round(offset.y + cell.y * viewport.gridHeight);
+  const bottom = Math.round(offset.y + (cell.y + 1) * viewport.gridHeight);
+  return { center: { x: (left + right) / 2, y: (top + bottom) / 2 },
+    size: { width: right - left, height: bottom - top } };
+}
+
 export function resolveUndergroundTerrainFrame(world, cell) {
   if ((world?.realm ?? world?.realmName) !== "Underground") return null;
   return UNDERGROUND_TERRAIN_FRAMES[world.terrain?.[cell.y]?.[cell.x]?.kind] ?? null;

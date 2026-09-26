@@ -32,6 +32,15 @@ Babylon Lite sprite-atlas/layer rendering for Tiled-authored assets.
 
 ## Decisions
 
+### Phase-one human revision: reduce PNG grid seams (2026-09-26)
+
+At the user's request, PNG-based cells bypass per-cell lighting RGB/alpha
+modulation for comparison, retaining source colors and discovery/fog opacity.
+Their pixel-snapped bounds share rounded edges instead of overlapping
+floor/ceil bounds. Glyph-only cells retain their existing bounds, backgrounds,
+and lighting. The optional additive GPU light overlay remains unchanged.
+This is a phase-one visual revision, not approval to start autotiling.
+
 ### Phase-one source approval and mapping (2026-09-26)
 
 The user confirmed full rights to include these assets in the game and its

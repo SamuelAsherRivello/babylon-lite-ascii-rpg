@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { compositeTerrainPixels, getTerrainArtKey, parseTerrainArtKey, resolveUndergroundTerrainFrame, UNDERGROUND_TERRAIN_FRAMES } from "../../../src/client/game-layer-babylon-lite/underground-terrain-art.js";
+import { compositeTerrainPixels, getTerrainArtBounds, getTerrainArtKey, parseTerrainArtKey, resolveUndergroundTerrainFrame, UNDERGROUND_TERRAIN_FRAMES } from "../../../src/client/game-layer-babylon-lite/underground-terrain-art.js";
 import { createWorldViewComposition, collectWorldViewGlyphs } from "../../../src/client/game-layer-babylon-lite/world-view.js";
-import { createGlyphVisualCache, darkenGlyphColor, FACING_RIGHT, getFacingGlyphKey, getFacingGlyphOffsets, getGlyphOffsetKey, getGlyphOffsetsFromKey, getGlyphRasterSize, getOffsetGlyphKey, rasterizeSolidGlyph, tintGlyphRgb } from "../../../src/client/game-layer-babylon-lite/glyph-visual-cache.js";
+import { createGlyphRasterCanvas, createGlyphVisualCache, darkenGlyphColor, FACING_RIGHT, getFacingGlyphKey, getFacingGlyphOffsets, getGlyphOffsetKey, getGlyphOffsetsFromKey, getGlyphRasterSize, getOffsetGlyphKey, rasterizeSolidGlyph, tintGlyphRgb } from "../../../src/client/game-layer-babylon-lite/glyph-visual-cache.js";
 import { collectVisibleGlyphs, getVisibleRegion, getVisibleSlot, shouldUpdateVisibleSprite } from "../../../src/client/game-layer-babylon-lite/visible-region.js";
 import { createFrameCheckpoint, getVisibleGlyph } from "../../../src/client/game-layer-babylon-lite/systems/world-system.js";
 import { colorToLinearRgba, linearRgbaToHex, linearRgbaToRendererHex, reconcilePaletteColors } from "../../../src/client/game-layer-babylon-lite/palette-color-cache.js";
@@ -84,6 +84,38 @@ test("terrain pixels remain opaque and overlay tint composes above, without chan
   assert.deepEqual([...compositeTerrainPixels(terrain)], [...terrain]);
   assert.deepEqual([...compositeTerrainPixels(terrain, overlay, [0.5, 1, 1])], [100, 100, 50, 255, 80, 100, 120, 255]);
   assert.deepEqual([...terrain], [40, 60, 80, 255, 80, 100, 120, 255]);
+});
+
+test("PNG terrain edges meet without overlap at fractional zooms", () => {
+  for (const size of [0.64, 6.4, 28.8, 32, 44.8]) {
+    const viewport = { gridWidth: size, gridHeight: size };
+    for (let x = 0; x < 50; x += 1) {
+      const a = getTerrainArtBounds({ x, y: x }, viewport);
+      const b = getTerrainArtBounds({ x: x + 1, y: x + 1 }, viewport);
+      assert.equal(a.center.x + a.size.width / 2, b.center.x - b.size.width / 2);
+      assert.equal(a.center.y + a.size.height / 2, b.center.y - b.size.height / 2);
+    }
+  }
+});
+
+test("PNG comparison keeps source RGB and lets fog alone control opacity", () => {
+  const previousDocument = globalThis.document;
+  let painted;
+  globalThis.document = { createElement: () => ({ getContext: () => ({
+    createImageData: () => ({ data: new Uint8ClampedArray(4) }),
+    putImageData: (image) => { painted = image.data; },
+  }) }) };
+  try {
+    const raster = { width: 1, height: 1, composite: true, terrainArt: true,
+      pixels: new Uint8ClampedArray([80, 100, 120, 255]) };
+    for (const fog of [0, 0.5, 1]) {
+      createGlyphRasterCanvas(raster, "#ff0000", { colorScale: 1, alphaScale: fog, tint: true });
+      assert.deepEqual([...painted], [80, 100, 120, Math.round(255 * fog)]);
+    }
+  } finally {
+    if (previousDocument === undefined) delete globalThis.document;
+    else globalThis.document = previousDocument;
+  }
 });
 
 test("glyph visuals are lazy, reusable by zoom and font, tint-independent, and bounded", () => {

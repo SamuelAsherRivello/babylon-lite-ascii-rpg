@@ -9,7 +9,7 @@ Enemies currently pursue and attack the player, while NPCs can follow the player
 - Extend enemy target selection to consider living same-realm NPCs and the player.
 - Make enemy pursuit and adjacent attacks use the nearest reachable target, with deterministic tie-breaking.
 - Preserve NPC follow behavior; NPCs do not attack the player as part of this change.
-- Apply the existing enemy attack damage to NPC health and retain the existing player-driven tick cadence.
+- Apply the existing enemy attack damage to NPC health and retain the existing player-driven tick cadence: world time advances only through player-driven ticks, and each enemy receives one eligible action every two such ticks.
 - Resolve NPC death at zero health so the NPC stops acting and is no longer a valid enemy target.
 - Add focused tests for target selection, pursuit, NPC attacks, target switching, and NPC death, plus manual browser verification.
 

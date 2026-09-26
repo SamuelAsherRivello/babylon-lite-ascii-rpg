@@ -72,7 +72,7 @@ import {
 import { createTimeSystem } from "./systems/time-system.js";
 import { FACING_LEFT, FACING_RIGHT, createGlyphRasterCanvas, createGlyphVisualCache, getFacingGlyph, getFacingGlyphKey, getGlyphOffsetsFromKey, getGlyphOffsetKey, getOffsetGlyphKey, rasterizeCompositeGlyph, rasterizeGlyph, rasterizeSolidGlyph } from "./glyph-visual-cache.js";
 import undergroundTerrainUrl from "../../assets/underground/walls_floor.png";
-import { getTerrainArtKey, loadUndergroundTerrainImage, parseTerrainArtKey, rasterizeTerrainArt } from "./underground-terrain-art.js";
+import { getTerrainArtBounds, getTerrainArtKey, loadUndergroundTerrainImage, parseTerrainArtKey, rasterizeTerrainArt } from "./underground-terrain-art.js";
 import { getVisibleRegion, getVisibleSlot, shouldUpdateVisibleSprite } from "./visible-region.js";
 import { collectWorldViewGlyphs, createWorldViewComposition, renderWorldViewComposition, renderWorldViewCompositionCooperatively } from "./world-view.js";
 import { colorToLinearRgba, linearRgbaToRendererHex, reconcilePaletteColors } from "./palette-color-cache.js";
@@ -231,10 +231,10 @@ function getRenderedCellCenter(cell, viewport, world) {
   };
 }
 
-function getRenderedCellSpriteBounds(cell, viewport, world) {
+function getRenderedCellSpriteBounds(cell, viewport, world, terrainArt = false) {
   const worldFitsHorizontally = viewport.columns >= world.columns;
   const worldFitsVertically = viewport.rows >= world.rows;
-  return getPixelSnappedCellBounds(cell, viewport, {
+  return (terrainArt ? getTerrainArtBounds : getPixelSnappedCellBounds)(cell, viewport, {
     x: worldFitsHorizontally
       ? Math.max(0, (viewport.screenWidth - world.columns * viewport.gridWidth) / 2)
       : 0,
@@ -823,7 +823,8 @@ async function createGameSessionImplementation(container, initialPalette, initia
         const litColor = linearRgbaToRendererHex(applyLightingToColor(baseColor, lightingFactor));
         // The raster depends on the final tint and fog alpha, not the
         // unrounded light factor which produced that same tint.
-        const artLighting = raster.terrainArt ? lightingFactor : 1;
+        // PNG comparison: no cell-by-cell lighting steps. Glyph tint is unchanged.
+        const artLighting = 1;
         const cacheKey = `${glyph}:${litColor}:${fogOpacity.toFixed(2)}:${raster.width}:${artLighting}`;
         let glyphCanvas = minimapGlyphCanvases.get(cacheKey);
         if (!glyphCanvas) {
@@ -831,7 +832,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
             // `litColor` already contains the complete game lighting result.
             // Applying lighting again through alpha or color scaling makes
             // the minimap differ from the game view.
-            alphaScale: fogOpacity * artLighting,
+            alphaScale: fogOpacity,
             colorScale: artLighting,
             tint: true,
           });
@@ -994,11 +995,11 @@ async function createGameSessionImplementation(container, initialPalette, initia
         const baseGlyph = getFacingGlyph(getClientVisibleGlyph(mapviewWorld, cell));
         const baseColor = paletteColors.get(baseGlyph) ?? colorToLinearRgba(getPaletteStyle(palette, baseGlyph));
         const litColor = linearRgbaToRendererHex(applyLightingToColor(baseColor, getMapviewLightingFactor()));
-        const artLighting = raster.terrainArt ? getMapviewLightingFactor() : 1;
+        const artLighting = 1;
         const cacheKey = `${glyph}:${litColor}:1:${raster.width}:${artLighting}`;
         let glyphCanvas = mapviewGlyphCanvases.get(cacheKey);
         if (!glyphCanvas) {
-          glyphCanvas = createGlyphRasterCanvas(raster, litColor, { alphaScale: artLighting, colorScale: artLighting, tint: true });
+          glyphCanvas = createGlyphRasterCanvas(raster, litColor, { alphaScale: 1, colorScale: artLighting, tint: true });
           mapviewGlyphCanvases.set(cacheKey, glyphCanvas);
         }
         const glyphBounds = getMinimapGlyphBounds(
@@ -2097,6 +2098,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
     const cell = { x: region.x + x, y: region.y + y };
     const glyph = glyphOverride ?? getClientVisibleGlyph(world, cell);
     const visualGlyph = getClientVisibleGlyphKey(world, cell);
+    const terrainArt = parseTerrainArtKey(visualGlyph) !== null;
     const frame = frames.get(visualGlyph);
     if (frame === undefined) throw new Error(`Missing cached glyph frame: ${visualGlyph}`);
     const terrain = world.terrain[cell.y][cell.x];
@@ -2107,7 +2109,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
       world.buildings, cell, playerCell, lighting.ambient, lightField.getFactor(cell),
     );
     const previous = spriteStates[slot];
-    const spriteBounds = getRenderedCellSpriteBounds({ x, y }, viewport, world);
+    const spriteBounds = getRenderedCellSpriteBounds({ x, y }, viewport, world, terrainArt);
     const center = spriteBounds.center;
     if (playerCell && cell.x === playerCell.x && cell.y === playerCell.y) {
       playerRenderCenter = center;
@@ -2117,11 +2119,11 @@ async function createGameSessionImplementation(container, initialPalette, initia
       return;
     }
     const fogOpacity = visibility / 100;
-    const terrainArt = parseTerrainArtKey(visualGlyph) !== null;
-    const litColor = glyphBackgroundEnabled || terrainArt
+    const litColor = terrainArt ? [1, 1, 1, 1] : glyphBackgroundEnabled
       ? [lightingFactor, lightingFactor, lightingFactor, lightingFactor]
       : applyLightingToColor(baseColor, lightingFactor);
-    const color = [...litColor.slice(0, 3), litColor[3] * fogOpacity];
+    // PNG terrain bypasses per-cell lighting; only fog changes its opacity.
+    const color = [...litColor.slice(0, 3), (terrainArt ? 1 : litColor[3]) * fogOpacity];
     // At displayed zoom 1 the nominal cell is 0.64px wide. Preserve the
     // nominal grid positions, but give each glyph a small screen-space
     // footprint so the explored area at the farthest zoom remains inspectable

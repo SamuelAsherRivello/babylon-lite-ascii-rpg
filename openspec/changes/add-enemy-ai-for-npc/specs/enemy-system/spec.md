@@ -4,7 +4,15 @@
 
 ### Requirement: Same-realm pursuit and cross-realm idling
 
-On an eligible action, an enemy with a living player in the same realm SHALL consider the living player and every living NPC in that realm as valid targets. It SHALL choose the target with the shortest reachable cardinal path distance from its current cell, breaking equal-distance ties in favor of the player and then by stable actor identifier. It SHALL take at most one deterministic cardinal step toward the selected target while respecting terrain and occupied cells. When no NPC or player target is reachable, it SHALL remain in place. An enemy whose player and NPC targets are in another realm SHALL remain in place for that action.
+World time SHALL advance only through player-driven ticks. An enemy SHALL receive an eligible action on every second world-time tick after it is created and SHALL not move or attack between those eligible actions. On an eligible action, an enemy with a living player in the same realm SHALL consider the living player and every living NPC in that realm as valid targets. It SHALL choose the target with the shortest reachable cardinal path distance from its current cell, breaking equal-distance ties in favor of the player and then by stable actor identifier. It SHALL take at most one deterministic cardinal step toward the selected target while respecting terrain and occupied cells. When no NPC or player target is reachable, it SHALL remain in place. An enemy whose player and NPC targets are in another realm SHALL remain in place for that action.
+
+#### Scenario: Stationary player does not advance enemy actions
+- **WHEN** the player remains stationary and no player-driven world-time tick occurs
+- **THEN** a nearby enemy SHALL remain in its current cell and SHALL not attack
+
+#### Scenario: Enemy acts twice across four player-driven ticks
+- **WHEN** a player advances world time by four player-driven ticks while an eligible enemy has a reachable target
+- **THEN** the enemy SHALL receive exactly two eligible actions and SHALL take at most two cardinal movement steps or attacks in total
 
 #### Scenario: Enemy pursues the nearest NPC
 - **WHEN** an eligible enemy has a reachable NPC closer than the player in the same realm

@@ -25,6 +25,11 @@ void Promise.all([paletteReady, fontReady, generationSettingsReady])
       report: getPerformanceReport,
       reset: resetPerformanceSession,
     });
+    if (new URL(window.location.href).searchParams.get("testHarness") === "chest-and-heart") {
+      window.asciiRpgTest = Object.freeze({
+        snapshot: () => controller.getChestAndHeartTestSnapshot(),
+      });
+    }
     if (performanceMode === "idle" || performanceMode === "movement" || performanceMode === "sprint") {
       startPerformanceSession({
         scenario: performanceMode,

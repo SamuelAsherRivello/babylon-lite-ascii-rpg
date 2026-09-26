@@ -9,7 +9,9 @@ world content for an eligible logical terrain cell before lighting and overlays,
 instead of that cell's glyph-background and glyph composition. For cells that
 do not resolve terrain art, the renderer SHALL perform any enabled opaque
 glyph-background composition before glyph composition. It SHALL apply the
-cell's configured lighting to the resulting world content and SHALL perform
+cell's configured lighting to glyph-based world content; for the phase-one
+PNG comparison, terrain-art composites SHALL bypass per-cell lighting
+modulation while retaining discovery/fog opacity. It SHALL perform
 any enabled overlay after world content. The game view, mini-map, and mapview
 SHALL use the same enabled terrain-art or glyph/background visual source,
 adapted only to their destination scale. When the GPU light pass is enabled,

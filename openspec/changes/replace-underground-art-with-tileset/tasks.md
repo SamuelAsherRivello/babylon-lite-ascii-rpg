@@ -9,8 +9,8 @@
 ## 2. Phase 1 - 1-tile Underground terrain skin
 
 - [x] 2.1 Extend world-view presentation so visible Underground logical `wall` and `dirt` cells use their approved fixed terrain-art frames while non-terrain overlays retain their existing glyph presentation; verify focused renderer tests pass.
-- [ ] 2.2 Preserve game-view, mini-map, and mapview terrain-art parity at their destination scales, fog opacity, lighting order, and overlay order; verify focused world-view and minimap/mapview tests pass.
-- [ ] 2.3 Verify the phase-one implementation with `npm.cmd run build` and a manual fixed-seed browser session in Underground, confirming movement, terrain blocking, fog, stairs, actors, and overlays remain correct.
+- [x] 2.2 Preserve game-view, mini-map, and mapview terrain-art parity at their destination scales, fog opacity, lighting order, and overlay order; verify focused world-view and minimap/mapview tests pass.
+- [x] 2.3 Verify the phase-one implementation with `npm.cmd run build` and a manual fixed-seed browser session in Underground, confirming movement, terrain blocking, fog, stairs, actors, and overlays remain correct.
 
 ## 3. Phase 1 human acceptance gate
 
