@@ -6,6 +6,28 @@
   background: #000;
 }
 
+#pfx_overlay {
+  position: absolute;
+  inset: 0;
+  /* Keep particle and hero effects above the canvas, but below the realm
+     transition mask so a close fully covers the outgoing scene. */
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+#pfx_overlay img {
+  position: absolute;
+  image-rendering: pixelated;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+#pfx_overlay #hero_sprite_overlay {
+  z-index: 3;
+  transform: translateZ(0);
+}
+
 .mouse_navigation_reticle {
   position: absolute;
   z-index: 2;

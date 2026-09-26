@@ -61,6 +61,7 @@ import {
   getStaminaSnapshot,
   getLogSnapshot,
   getPlayerDeadSnapshot,
+  getPlayerRecoveryReadySnapshot,
   getCheckpointSnapshot,
   getRandomSeedSnapshot,
   getQuestSnapshot,
@@ -96,6 +97,7 @@ import {
   subscribeToStamina,
   subscribeToLog,
   subscribeToPlayerDead,
+  subscribeToPlayerRecoveryReady,
   subscribeToCheckpoint,
   subscribeToRandomSeed,
   subscribeToQuest,
@@ -105,6 +107,8 @@ import {
   subscribeToMinimapZoom,
   restartFromCheckpoint,
   restartGame,
+  sendPfxSelectionSnapshot,
+  sendPfxPlacement,
 } from "../bridge-layer/game-bridge.js";
 import {
   CAMERA_MODE_LABELS,
@@ -125,6 +129,8 @@ import { PaletteGlyph } from "./palette-glyph.jsx";
 import { GenerationEnabledCheckbox } from "./generation-enabled-checkbox.jsx";
 import { LightingWindow as ExtractedLightingWindow } from "./lighting-window.jsx";
 import { DialogWindow } from "./dialog-window.jsx";
+import { PfxWindow } from "./pfx-window.jsx";
+import { PARTICLE_EFFECTS } from "../game-layer-babylon-lite/particle-effects.js";
 
 import {
   fullscreenStorageKey, aspectStorageKey, developerOpenStorageKey, logOpenStorageKey,
@@ -207,6 +213,7 @@ const glyphDetailsWindowHeight = 280;
 const glyphDetailsWindowMargin = 16;
 const lightingWindowMargin = 12;
 const defaultLightingWindowPosition = { left: 180, top: 410 };
+const defaultPfxWindowPosition = { left: 420, top: 180 };
 const DEFAULT_GLYPH_BACKGROUND = true;
 // The full character catalog is still available through the All filter, but
 // opening settings should not synchronously mount hundreds of controls while
@@ -1047,6 +1054,9 @@ function AppContent() {
   const [torchShadowIndex, setTorchShadowIndex] = useState(() => getStoredSourceIndex(torchShadowStorageKey, 4));
   const [playerShadowIndex, setPlayerShadowIndex] = useState(() => getStoredSourceIndex(playerShadowStorageKey, 3));
   const [lightingWindowOpen, setLightingWindowOpen] = useState(false);
+  const [pfxWindowOpen, setPfxWindowOpen] = useState(false);
+  const [pfxSelection, setPfxSelection] = useState(PARTICLE_EFFECTS[0]?.name ?? null);
+  const [pfxWindowPosition, setPfxWindowPosition] = useState(defaultPfxWindowPosition);
   const [mapviewOpen, setMapviewOpen] = useState(false);
   const [developerOpen, setDeveloperOpen] = useState(() => getStoredBoolean(developerOpenStorageKey, false));
   const [logOpen, setLogOpen] = useState(() => getStoredBoolean(logOpenStorageKey, true));
@@ -1089,6 +1099,7 @@ function AppContent() {
   const dialog = useSyncExternalStore(subscribeToDialog, getDialogSnapshot, getDialogSnapshot);
   const log = useSyncExternalStore(subscribeToLog, getLogSnapshot, getLogSnapshot);
   const playerDead = useSyncExternalStore(subscribeToPlayerDead, getPlayerDeadSnapshot, getPlayerDeadSnapshot);
+  const playerRecoveryReady = useSyncExternalStore(subscribeToPlayerRecoveryReady, getPlayerRecoveryReadySnapshot, getPlayerRecoveryReadySnapshot);
   const checkpoint = useSyncExternalStore(subscribeToCheckpoint, getCheckpointSnapshot, getCheckpointSnapshot);
   const randomSeed = useSyncExternalStore(subscribeToRandomSeed, getRandomSeedSnapshot, getRandomSeedSnapshot);
   const previousQuestRef = useRef(null);
@@ -1132,6 +1143,7 @@ function AppContent() {
         argumentsOpen && (() => setArgumentsOpen(false)),
         asciiPaletteOpen && (() => setAsciiPaletteOpen(false)),
         lightingWindowOpen && (() => setLightingWindowOpen(false)),
+        pfxWindowOpen && (() => setPfxWindowOpen(false)),
         (tutorialPhase === "initial" || tutorialPhase === "complete") && (() => setTutorialPhase("finished")),
       ].find(Boolean);
       if (!closeAction) return;
@@ -1143,13 +1155,16 @@ function AppContent() {
 
     window.addEventListener("keydown", closeTopmostWindow, true);
     return () => window.removeEventListener("keydown", closeTopmostWindow, true);
-  }, [argumentsOpen, asciiPaletteOpen, gameplaySettingsOpen, lightingWindowOpen, proceduralSettingsOpen, tutorialPhase]);
+  }, [argumentsOpen, asciiPaletteOpen, gameplaySettingsOpen, lightingWindowOpen, pfxWindowOpen, proceduralSettingsOpen, tutorialPhase]);
 
   useEffect(() => {
     if (!playerDead) return undefined;
     const blockDeadRunInput = (event) => {
       const target = event.target;
-      if (target instanceof HTMLElement && target.closest(".death_window button")) return;
+      const isUiControl = target instanceof HTMLElement && target.closest("button, input, select, textarea, [contenteditable=true]");
+      const isGameplayKey = event.type === "keydown" && ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "w", "a", "s", "d", "W", "A", "S", "D", " ", "Space", "Shift"].includes(event.key);
+      const isCanvasPointer = event.type === "pointerdown" && target instanceof HTMLElement && target.closest("#game_canvas");
+      if ((!isGameplayKey || isUiControl) && !isCanvasPointer) return;
       event.preventDefault();
       event.stopPropagation();
     };
@@ -1272,6 +1287,26 @@ function AppContent() {
   useEffect(() => {
     localStorage.setItem(developerOpenStorageKey, developerOpen ? "true" : "false");
   }, [developerOpen]);
+
+  useEffect(() => {
+    sendPfxSelectionSnapshot(pfxSelection);
+  }, [pfxSelection]);
+
+  useEffect(() => {
+    if (!pfxWindowOpen || !pfxSelection) return undefined;
+    const place = (event) => {
+      if (event.button !== 0) return;
+      const targetIsGameCanvas = event.target?.id === "game_canvas"
+        || event.target?.closest?.("#game_canvas")
+        || event.composedPath?.().some((node) => node?.id === "game_canvas");
+      if (!targetIsGameCanvas) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      sendPfxPlacement(event.clientX, event.clientY);
+    };
+    document.addEventListener("pointerdown", place, true);
+    return () => document.removeEventListener("pointerdown", place, true);
+  }, [pfxWindowOpen, pfxSelection]);
 
   useEffect(() => {
     localStorage.setItem(logOpenStorageKey, logOpen ? "true" : "false");
@@ -1602,6 +1637,7 @@ function AppContent() {
                 Procedural
               </button>
             </SettingTooltipTarget>
+            <button id="pfx_window_toggle" className="corner_body settings_option" type="button" aria-expanded={pfxWindowOpen} aria-controls="pfx_window" onClick={() => setPfxWindowOpen((isOpen) => !isOpen)}>PFX</button>
           </div>
         </HudBlockLayout>
         <HudBlockLayout className="hud_section" id="stats" aria-labelledby="stats_title" titleId="stats_title" titleClassName="developer-title" bodyClassName="developer-body-text" title="Info">
@@ -1699,6 +1735,14 @@ function AppContent() {
           closeOnBackdropClick
         />
       ) : null}
+      {pfxWindowOpen ? <PfxWindow
+        position={pfxWindowPosition}
+        selected={pfxSelection}
+        onSelect={setPfxSelection}
+        onPositionChange={setPfxWindowPosition}
+        onClose={() => setPfxWindowOpen(false)}
+        getWindowPosition={getLightingWindowPosition}
+      /> : null}
       {mapviewOpen ? (
         <div id="mapview_overlay" className="mapview_overlay" role="dialog" aria-modal="true" aria-label="Map">
           <div className="mapview_controls">
@@ -1718,7 +1762,7 @@ function AppContent() {
           onClose={() => setTutorialPhase("finished")}
         />
       ) : null}
-      {playerDead ? <DeathWindow checkpointActive={checkpoint.active} onRestartFromCheckpoint={restartFromCheckpoint} onRestartGame={restartGame} /> : null}
+      {playerRecoveryReady ? <DeathWindow checkpointActive={checkpoint.active} onRestartFromCheckpoint={restartFromCheckpoint} onRestartGame={restartGame} /> : null}
       <DialogWindow dialog={dialog} />
       {settingTooltip ? (
         <div

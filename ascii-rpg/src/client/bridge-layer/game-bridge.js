@@ -58,9 +58,11 @@ let combatStatsSnapshot = Object.freeze({
   defense: Object.freeze({ current: 25, maximum: 25, currentPercent: 25, previousPercent: 25, revision: 0 }),
 });
 let playerDeadSnapshot = false;
+let playerRecoveryReadySnapshot = false;
 let checkpointSnapshot = Object.freeze({ active: false, revision: 0 });
 let logSnapshot = [];
 let dialogSnapshot = null;
+let pfxSelectionSnapshot = null;
 const inputActionListeners = new Set();
 const timeListeners = new Set();
 const realmListeners = new Set();
@@ -76,11 +78,13 @@ const staminaListeners = new Set();
 const experienceListeners = new Set();
 const combatStatsListeners = new Set();
 const playerDeadListeners = new Set();
+const playerRecoveryReadyListeners = new Set();
 const checkpointListeners = new Set();
 const logListeners = new Set();
 const playerMovedListeners = new Set();
 const randomSeedListeners = new Set();
 const dialogListeners = new Set();
+const pfxSelectionListeners = new Set();
 
 export const PLAYER_MOVED_EVENTS = Object.freeze({
   up: "player moved up",
@@ -190,6 +194,21 @@ export function sendMapviewSnapshot(open) {
 export function sendAspectSnapshot(aspect) {
   aspectSnapshot = aspect === "portrait" ? "portrait" : "landscape";
   gameController?.setAspectMode?.(aspectSnapshot);
+}
+
+export function getPfxSelectionSnapshot() { return pfxSelectionSnapshot; }
+export function subscribeToPfxSelection(listener) {
+  pfxSelectionListeners.add(listener);
+  listener(pfxSelectionSnapshot);
+  return () => pfxSelectionListeners.delete(listener);
+}
+export function sendPfxSelectionSnapshot(name) {
+  pfxSelectionSnapshot = name ? String(name) : null;
+  gameController?.setPfxSelection?.(pfxSelectionSnapshot);
+  for (const listener of pfxSelectionListeners) listener(pfxSelectionSnapshot);
+}
+export function sendPfxPlacement(clientX, clientY) {
+  return gameController?.placeParticleAtScreen?.({ clientX, clientY }) ?? false;
 }
 
 export function sendMapviewRealmToggle() {
@@ -397,6 +416,12 @@ export function subscribeToPlayerDead(listener) { playerDeadListeners.add(listen
 export function sendPlayerDeadSnapshot(dead) {
   playerDeadSnapshot = dead === true;
   for (const listener of playerDeadListeners) listener();
+}
+export function getPlayerRecoveryReadySnapshot() { return playerRecoveryReadySnapshot; }
+export function subscribeToPlayerRecoveryReady(listener) { playerRecoveryReadyListeners.add(listener); return () => playerRecoveryReadyListeners.delete(listener); }
+export function sendPlayerRecoveryReadySnapshot(ready) {
+  playerRecoveryReadySnapshot = ready === true;
+  for (const listener of playerRecoveryReadyListeners) listener();
 }
 export function getCheckpointSnapshot() { return checkpointSnapshot; }
 export function subscribeToCheckpoint(listener) { checkpointListeners.add(listener); return () => checkpointListeners.delete(listener); }

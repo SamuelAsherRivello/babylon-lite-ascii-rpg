@@ -6,6 +6,11 @@ The Underground realm currently conveys its walkable dirt and blocked cave walls
 
 ## What Changes
 
+Latest user revision: phase-one walls use Dungeons-and-Pixels-v1.4 tile 31
+and floors use tile 13 from the same sheet. All pack folders remain in the project.
+See [new-art-evaluation.md](new-art-evaluation.md) for the replacement assessment;
+the source-specific descriptions below record the initial implementation.
+
 - Add an Underground-only terrain-art presentation that substitutes a selected `walls_floor.png` frame for each visible logical `wall` and `dirt` terrain cell. The mapping is presentation-only: `wall` remains blocked and `dirt` remains walkable.
 - Implement phase 1 as **1-tile** replacement: one fixed graphic per terrain type (one wall frame plus one floor frame), with no neighbor-based selection. Water, props, actors, pickups, stairs, fog, collision, pathfinding, world generation, and their authoritative glyph identities remain unchanged.
 - Require a human visual and gameplay review after phase 1 before any neighbor-aware variants are introduced.

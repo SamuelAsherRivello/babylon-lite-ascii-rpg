@@ -1,9 +1,13 @@
 import { getFacingGlyph, getGlyphOffsetsFromKey, rasterizeGlyph } from "./glyph-visual-cache.js";
 
-// Zero-based pixel coordinates in the copied 272 x 464 Tiled_files sheet.
+// Project-local source sheets; Tiled IDs are zero-based and never map IDs.
+export const UNDERGROUND_TERRAIN_SHEETS = Object.freeze({
+  wall: Object.freeze({ width: 384, height: 288 }),
+  dirt: Object.freeze({ width: 384, height: 288 }),
+});
 export const UNDERGROUND_TERRAIN_FRAMES = Object.freeze({
-  wall: Object.freeze({ x: 32, y: 64, width: 16, height: 16 }),
-  dirt: Object.freeze({ x: 128, y: 224, width: 16, height: 16 }),
+  wall: Object.freeze({ source: "wall", x: 224, y: 64, width: 32, height: 32 }),
+  dirt: Object.freeze({ source: "dirt", x: 32, y: 32, width: 32, height: 32 }),
 });
 const KEY_PREFIX = "terrain-art:";
 
@@ -38,11 +42,12 @@ export function parseTerrainArtKey(key) {
   return { frame: UNDERGROUND_TERRAIN_FRAMES[kind], overlay };
 }
 
-export async function loadUndergroundTerrainImage(url) {
+export async function loadUndergroundTerrainImage(url, source = "dirt") {
   const image = new Image();
   image.src = url;
   await image.decode();
-  if (image.naturalWidth !== 272 || image.naturalHeight !== 464) {
+  const expected = UNDERGROUND_TERRAIN_SHEETS[source];
+  if (image.naturalWidth !== expected.width || image.naturalHeight !== expected.height) {
     throw new Error("Unexpected Underground terrain sheet dimensions.");
   }
   return image;
@@ -61,7 +66,7 @@ export function compositeTerrainPixels(terrainPixels, overlayRaster = null, colo
   return pixels;
 }
 
-export function rasterizeTerrainArt(key, image, family, size, paletteColors) {
+export function rasterizeTerrainArt(key, images, family, size, paletteColors) {
   const visual = parseTerrainArtKey(key);
   if (!visual) return null;
   const canvas = document.createElement("canvas");
@@ -70,7 +75,7 @@ export function rasterizeTerrainArt(key, image, family, size, paletteColors) {
   if (!context) throw new Error("Terrain art needs a 2D canvas context.");
   context.imageSmoothingEnabled = false;
   const { x, y, width, height } = visual.frame;
-  context.drawImage(image, x, y, width, height, 0, 0, size, size);
+  context.drawImage(images[visual.frame.source], x, y, width, height, 0, 0, size, size);
   const overlay = visual.overlay === null ? null : rasterizeGlyph(
     visual.overlay, family, size, "#ffffff", getGlyphOffsetsFromKey(visual.overlay),
   );

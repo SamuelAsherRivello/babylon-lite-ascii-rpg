@@ -26,6 +26,7 @@ async function readUiSource() {
     "changelog-window.jsx",
     "gameplay-settings-window.jsx",
     "generation-enabled-checkbox.jsx",
+    "draggable-window.jsx",
     "lighting-window.jsx",
     "log-components.jsx",
     "palette-glyph.jsx",
@@ -438,7 +439,8 @@ test("documents the plain safe-area template", async () => {
     || !gameLayer.includes("for (let slot = region.count; slot < spriteIndexes.length; slot += 1)")
     || !gameLayer.includes("resetLayerSprites();")
     || !gameLayer.includes("renderWorld({ refreshLighting: true });")
-    || !gameLayer.includes("? CAMERA_RESOLVE_INTENTS.transitionPreserve")) {
+    || !gameLayer.includes("? CAMERA_RESOLVE_INTENTS.transitionPreserve")
+    || !gameLayer.includes("intent !== CAMERA_RESOLVE_INTENTS.transitionPreserve")) {
     throw new Error("Camera-triggered renders must reconcile stale cells and preserve covered realm transition presentation.");
   }
   if (!gameLayer.includes("canvas.clientWidth || window.innerWidth")
@@ -464,9 +466,8 @@ test("documents the plain safe-area template", async () => {
     || !bottomLeftMarkup.includes("Fullscreen") || !bottomLeftMarkup.includes("Reset Settings") || bottomLeftMarkup.includes('id="show_ui_toggle"')) {
     throw new Error("The lower-left Dev panel must contain the retained Windows and Settings controls without the Developer toggle.");
   }
-  const lightingWindowStart = app.indexOf('id="lighting_window"');
-  const lightingWindowMarkup = app.slice(lightingWindowStart, app.indexOf("</section>", lightingWindowStart));
-  if (lightingWindowStart === -1 || !lightingWindowMarkup.includes('id="lighting_window_title"')
+  const lightingWindowMarkup = app;
+  if (!lightingWindowMarkup.includes('id="lighting_window"') || !lightingWindowMarkup.includes('const titleId = `${id}_title`')
     || !lightingWindowMarkup.includes('className="corner_title"') || !lightingWindowMarkup.includes('className="corner_body settings_option"')
     || !lightingWindowMarkup.includes('id="gpu_light_pass_toggle"') || !lightingWindowMarkup.includes('id="ambient_overground_control"') || !lightingWindowMarkup.includes('id="ambient_underground_control"')) {
     throw new Error("The Lighting window must reuse corner text styles and contain every lighting control.");
@@ -480,7 +481,7 @@ test("documents the plain safe-area template", async () => {
     || !lightingWindowMarkup.includes("GPU Light Pass") || lightingWindowMarkup.includes("Lighting GPU Light Pass") || lightingWindowMarkup.includes("Light Ambient")) {
     throw new Error("Lighting controls must use short labels in alphabetic order.");
   }
-  if (!app.includes('aria-label="Close Lighting"') || !app.includes("onPointerDown={beginDrag}")
+  if (!app.includes("aria-label={`Close ${title}`}") || !app.includes("onPointerDown={beginDrag}")
     || !app.includes("onPointerMove={moveDrag}") || !app.includes("getLightingWindowPosition")
     || !styles.includes(".lighting_window") || !styles.includes(".lighting_window_titlebar")
     || !styles.includes("touch-action: none")) {
@@ -500,7 +501,7 @@ test("documents the plain safe-area template", async () => {
     || !styles.includes("background: rgb(0 0 0 / 50%)")) {
     throw new Error("Lighting and tutorial windows must share the window class and configurable backdrop behavior.");
   }
-  const closeLightingStart = app.indexOf('aria-label="Close Lighting"');
+  const closeLightingStart = app.indexOf("aria-label={`Close ${title}`}");
   const closeLightingMarkup = app.slice(app.lastIndexOf("<button", closeLightingStart), app.indexOf("</button>", closeLightingStart));
   if (closeLightingMarkup.includes("aria-description") || app.slice(Math.max(0, closeLightingStart - 300), closeLightingStart).includes("SettingTooltipTarget")) {
     throw new Error("Close controls must not show a tooltip.");
@@ -686,6 +687,9 @@ test("documents the plain safe-area template", async () => {
     || !styles.includes("--transition-color: #000")
     || !styles.includes("background: #000")) {
     throw new Error("The transition mask must be a pointer-transparent, soft-edged game-only surface above the game canvas and below the minimap.");
+  }
+  if (!styles.includes("#pfx_overlay") || !styles.includes("transition mask so a close fully covers the outgoing scene")) {
+    throw new Error("Game visual effects must remain below the realm-transition mask.");
   }
   if (!gameLayer.includes("const REALM_TRANSITION_CLOSE_MS = 500")
     || !gameLayer.includes("const REALM_TRANSITION_OPEN_MS = 500")

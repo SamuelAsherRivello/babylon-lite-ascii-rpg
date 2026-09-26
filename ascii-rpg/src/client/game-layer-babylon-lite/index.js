@@ -71,7 +71,6 @@ import {
 } from "./world-state-facade.js";
 import { createTimeSystem } from "./systems/time-system.js";
 import { FACING_LEFT, FACING_RIGHT, createGlyphRasterCanvas, createGlyphVisualCache, getFacingGlyph, getFacingGlyphKey, getGlyphOffsetsFromKey, getGlyphOffsetKey, getOffsetGlyphKey, rasterizeCompositeGlyph, rasterizeGlyph, rasterizeSolidGlyph } from "./glyph-visual-cache.js";
-import undergroundTerrainUrl from "../../assets/underground/walls_floor.png";
 import { getTerrainArtBounds, getTerrainArtKey, loadUndergroundTerrainImage, parseTerrainArtKey, rasterizeTerrainArt } from "./underground-terrain-art.js";
 import { getVisibleRegion, getVisibleSlot, shouldUpdateVisibleSprite } from "./visible-region.js";
 import { collectWorldViewGlyphs, createWorldViewComposition, renderWorldViewComposition, renderWorldViewCompositionCooperatively } from "./world-view.js";
@@ -109,6 +108,7 @@ import { createLogSystem } from "./systems/log-system.js";
 import { createGameplayEventSystem } from "./systems/gameplay-event-system.js";
 import { createRealmSystem } from "./systems/realm-system.js";
 import { createPlayerLifecycle, MAX_PLAYER_HEALTH } from "./systems/player-lifecycle.js";
+import { createDeathPresentation } from "./systems/death-presentation.js";
 import { createStaminaSystem } from "./systems/stamina-system.js";
 import { createExperienceSystem } from "./systems/experience-system.js";
 import { calculatePlayerDamageTaken, createCombatStatsSystem } from "./systems/combat-stats-system.js";
@@ -127,15 +127,7 @@ import { createBombSystem } from "./systems/bomb-system.js";
 import { createHealthBarSystem } from "./systems/health-bar-system.js";
 import { createFloatingTextSystem } from "./systems/floating-text-system.js";
 import { getFloatingTextStyle } from "./systems/floating-text-renderer.js";
-import {
-  createSolidHealthBarFrame,
-  getHealthBarSpriteGeometry,
-  HEALTH_BAR_DELTA_COLOR,
-  HEALTH_BAR_FILL_COLOR,
-  HEALTH_BAR_LAYER_ORDER,
-  HEALTH_BAR_OUTLINE_COLOR,
-  HEALTH_BAR_TRACK_COLOR,
-} from "./systems/health-bar-renderer.js";
+import { getHealthBarSpriteGeometry } from "./systems/health-bar-renderer.js";
 import { attachReplacementRendererLayer } from "./systems/renderer-layer-handoff.js";
 import { createCoalescedFrameScheduler } from "./movement-render-scheduler.js";
 import { createDeferredWorkScheduler } from "./deferred-work-scheduler.js";
@@ -151,6 +143,7 @@ import { createInputController, shouldPlaceBombForKeydown } from "./game-session
 import { createRenderControllers } from "./game-session/render-controller.js";
 import { resolveGenerationPlan } from "./world-feature-generation-registry.js";
 import { getWorldSizeDimensions } from "../world-size-settings.js";
+import { advanceParticleInstance, createParticleInstance, getParticleEffect } from "./particle-effects.js";
 
 const GLYPHS = PROJECT_MAP_GLYPHS;
 const FOG_BACKING_GLYPH = "\u0000fog-backing";
@@ -314,6 +307,9 @@ async function createGameSessionImplementation(container, initialPalette, initia
   const floatingTextLayer = document.createElement("div");
   floatingTextLayer.className = "floating_text_layer";
   floatingTextLayer.setAttribute("aria-hidden", "true");
+  const healthBarOverlay = document.createElement("div");
+  healthBarOverlay.className = "health_bar_overlay";
+  healthBarOverlay.setAttribute("aria-hidden", "true");
   const mouseNavigationReticle = document.createElement("div");
   mouseNavigationReticle.className = "mouse_navigation_reticle";
   mouseNavigationReticle.setAttribute("aria-hidden", "true");
@@ -323,7 +319,31 @@ async function createGameSessionImplementation(container, initialPalette, initia
     corner.className = "mouse_navigation_reticle__corner";
     mouseNavigationReticle.append(corner);
   }
-  container.replaceChildren(canvas, minimapCanvas, mapviewCanvas, transitionMask, floatingTextLayer, mouseNavigationReticle);
+  container.replaceChildren(canvas, minimapCanvas, mapviewCanvas, transitionMask, floatingTextLayer, mouseNavigationReticle, healthBarOverlay);
+  const pfxOverlay = document.createElement("div");
+  pfxOverlay.id = "pfx_overlay";
+  pfxOverlay.setAttribute("aria-hidden", "true");
+  container.append(pfxOverlay);
+  const heroOverlay = document.createElement("img");
+  heroOverlay.id = "hero_sprite_overlay";
+  heroOverlay.alt = "";
+  heroOverlay.draggable = false;
+  heroOverlay.setAttribute("aria-hidden", "true");
+  pfxOverlay.append(heroOverlay);
+
+  const heroAnimationFrames = Object.freeze({
+    idle: Object.freeze([0, 1, 2, 3]),
+    run: Object.freeze([0, 1, 2, 3, 4, 5]),
+    attack: Object.freeze([0, 1, 2, 3]),
+    death: Object.freeze([0, 1, 2, 3, 4, 5]),
+  });
+  const heroAnimationDurations = Object.freeze({ idle: 180, run: 100, attack: 120, death: 150 });
+  const heroAssetBase = `${import.meta.env.BASE_URL}assets/images/Dungeons-and-Pixels-v1.4/Characters/Hero_Warrior/Frames`;
+  let heroAnimation = "idle";
+  let heroAnimationFrame = 0;
+  let heroAnimationStartedAt = performance.now();
+  let heroAnimationRaf = null;
+  let heroCorpse = false;
 
   let engine;
   let renderer;
@@ -334,14 +354,13 @@ async function createGameSessionImplementation(container, initialPalette, initia
   let minimapGlyphCache;
   let gpuLightAtlas;
   let gpuLightLayer;
-  let healthBarAtlas;
-  let healthBarLayer;
   let gpuLightPassEnabled = false;
   const minimapGlyphCanvases = new Map();
   const mapviewGlyphCanvases = new Map();
   const settingsMapGlyphCanvases = new Map();
   const minimapGpuLightSamples = [];
   let disposed = false;
+  const deathPresentation = createDeathPresentation();
   const deferredWorkScheduler = createDeferredWorkScheduler({
     scheduleFrame: (callback) => window.requestAnimationFrame(callback),
     cancelFrame: (handle) => window.cancelAnimationFrame(handle),
@@ -446,6 +465,10 @@ async function createGameSessionImplementation(container, initialPalette, initia
   let characterKeys = 0;
   let characterState = createCharacterState(DEFAULT_CHARACTER_STATE);
   const playerLifecycle = createPlayerLifecycle();
+  playerLifecycle.subscribeToDeath((dead) => {
+    if (dead) deathPresentation.begin();
+    else deathPresentation.reset();
+  });
   let checkpoint = null;
   let checkpointRevision = 0;
   const checkpointListeners = new Set();
@@ -541,8 +564,11 @@ async function createGameSessionImplementation(container, initialPalette, initia
   const gpuLightSpriteIndexes = [];
   const gpuLightSpriteStates = [];
   const gpuLightSamples = [];
-  const healthBarSprites = new Map();
+  const healthBarElements = new Map();
   const floatingTextElements = new Map();
+  const particleInstances = new Map();
+  let pfxSelection = null;
+  let particleAnimationFrame = null;
   let gpuLightActiveSlots = new Uint8Array(0);
   const metrics = {
     visibleCells: 0, submittedCells: 0, skippedCells: 0, glyphWarmupMs: 0,
@@ -1383,7 +1409,9 @@ async function createGameSessionImplementation(container, initialPalette, initia
     direction = { x: 0, y: 0 },
     commit = true,
   } = {}) => {
-    if (transitionActive && !(initialRevealActive && initialPlayableRenderComplete)) {
+    if (transitionActive
+      && intent !== CAMERA_RESOLVE_INTENTS.transitionPreserve
+      && !(initialRevealActive && initialPlayableRenderComplete)) {
       if (intent === CAMERA_RESOLVE_INTENTS.initial
         || intent === CAMERA_RESOLVE_INTENTS.reapply) {
         cameraModeReapplyAfterTransition = true;
@@ -1762,14 +1790,14 @@ async function createGameSessionImplementation(container, initialPalette, initia
     }
     mouseNavigationPointerId = null;
     mouseNavigationSprint = false;
-    if (!hasHeldMovement()) clearRepeat();
+    if (!hasHeldMovement()) { clearRepeat(); if (!heroCorpse) setHeroAnimation("idle", { restart: false }); }
   };
 
   const clearTouchInput = () => {
     activePointerId = null;
     touchStart = null;
     touchDirection = null;
-    if (!hasHeldMovement()) clearRepeat();
+    if (!hasHeldMovement()) { clearRepeat(); if (!heroCorpse) setHeroAnimation("idle", { restart: false }); }
   };
 
   const clearKeyboardInput = () => {
@@ -1777,7 +1805,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
     bombKeyHeld = false;
     shiftHeld = false;
     heldModifierKeys.clear();
-    if (!hasHeldMovement()) clearRepeat();
+    if (!hasHeldMovement()) { clearRepeat(); if (!heroCorpse) setHeroAnimation("idle", { restart: false }); }
   };
 
   const clearMovementInput = () => {
@@ -1937,21 +1965,8 @@ async function createGameSessionImplementation(container, initialPalette, initia
   };
 
   const disposeHealthBarOverlay = () => {
-    if (renderer && healthBarLayer) removeSpriteRendererLayer(renderer, healthBarLayer);
-    healthBarLayer = undefined;
-    healthBarSprites.clear();
-    if (healthBarAtlas) disposeSpriteAtlas(healthBarAtlas);
-    healthBarAtlas = undefined;
-  };
-
-  const ensureHealthBarOverlay = (capacity) => {
-    if (healthBarLayer && healthBarLayer._capacity >= capacity) return;
-    disposeHealthBarOverlay();
-    healthBarAtlas = createSpriteAtlasFromFrames(engine, [createSolidHealthBarFrame()], { sampling: "linear" });
-    healthBarLayer = createSprite2DLayer(healthBarAtlas, {
-      capacity: Math.max(3, capacity), order: HEALTH_BAR_LAYER_ORDER,
-    });
-    addSpriteRendererLayer(renderer, healthBarLayer);
+    healthBarOverlay.replaceChildren();
+    healthBarElements.clear();
   };
 
   const renderHealthBars = (region, now = performance.now()) => {
@@ -1967,7 +1982,6 @@ async function createGameSessionImplementation(container, initialPalette, initia
       .filter(({ entity }) => getVisibleSlot(region, entity.cell) !== -1
         && isDiscovered(fogOfWar, world, entity.cell));
 
-    if (states.length > 0) ensureHealthBarOverlay(states.length * 4);
     const activeIds = new Set();
     for (const { state, entity } of states) {
       activeIds.add(state.id);
@@ -1979,34 +1993,38 @@ async function createGameSessionImplementation(container, initialPalette, initia
         deltaStartRatio: state.deltaStartRatio,
         deltaWidthRatio: state.deltaWidthRatio,
       });
-      const definitions = [
-        { geometry: geometry.outline, color: HEALTH_BAR_OUTLINE_COLOR, visible: true },
-        { geometry: geometry.track, color: HEALTH_BAR_TRACK_COLOR, visible: true },
-        { geometry: geometry.fill, color: HEALTH_BAR_FILL_COLOR, visible: geometry.fill.sizePx[0] > 0 },
-        { geometry: geometry.delta, color: HEALTH_BAR_DELTA_COLOR, visible: geometry.delta.sizePx[0] > 0 },
-      ];
-      let indexes = healthBarSprites.get(state.id);
-      if (!indexes) {
-        indexes = definitions.map(({ geometry: spriteGeometry, color, visible }) => addSprite2DIndex(healthBarLayer, {
-          positionPx: spriteGeometry.positionPx,
-          sizePx: spriteGeometry.sizePx,
-          frame: 0,
-          color: [...color, state.alpha],
-          visible,
-        }));
-        healthBarSprites.set(state.id, indexes);
-      } else {
-        definitions.forEach(({ geometry: spriteGeometry, color, visible }, index) => updateSprite2DIndex(healthBarLayer, indexes[index], {
-          positionPx: spriteGeometry.positionPx,
-          sizePx: spriteGeometry.sizePx,
-          color: [...color, state.alpha],
-          visible,
-        }));
+      let element = healthBarElements.get(state.id);
+      if (!element) {
+        element = document.createElement("div");
+        element.className = "health_bar";
+        for (const part of ["track", "fill", "delta"]) {
+          const child = document.createElement("div");
+          child.className = `health_bar__${part}`;
+          element.append(child);
+        }
+        healthBarOverlay.append(element);
+        healthBarElements.set(state.id, element);
       }
+      const positionPart = (part, spriteGeometry, visible = true) => {
+        part.style.left = `${spriteGeometry.positionPx[0] - geometry.outline.positionPx[0] + geometry.outline.sizePx[0] / 2}px`;
+        part.style.top = `${spriteGeometry.positionPx[1] - geometry.outline.positionPx[1] + geometry.outline.sizePx[1] / 2}px`;
+        part.style.width = `${spriteGeometry.sizePx[0]}px`;
+        part.style.height = `${spriteGeometry.sizePx[1]}px`;
+        part.hidden = !visible;
+      };
+      element.style.left = `${geometry.outline.positionPx[0]}px`;
+      element.style.top = `${geometry.outline.positionPx[1]}px`;
+      element.style.width = `${geometry.outline.sizePx[0]}px`;
+      element.style.height = `${geometry.outline.sizePx[1]}px`;
+      element.style.opacity = `${state.alpha}`;
+      positionPart(element.children[0], geometry.track);
+      positionPart(element.children[1], geometry.fill, geometry.fill.sizePx[0] > 0);
+      positionPart(element.children[2], geometry.delta, geometry.delta.sizePx[0] > 0);
     }
-    for (const [id, indexes] of healthBarSprites) {
+    for (const [id, element] of healthBarElements) {
       if (activeIds.has(id)) continue;
-      for (const index of indexes) updateSprite2DIndex(healthBarLayer, index, { visible: false });
+      element.remove();
+      healthBarElements.delete(id);
     }
     return states.length > 0;
   };
@@ -2093,6 +2111,66 @@ async function createGameSessionImplementation(container, initialPalette, initia
     return state;
   };
 
+  const renderParticleOverlay = (now = performance.now()) => {
+    if (!world || !pfxOverlay) return;
+    const canvasBounds = canvas.getBoundingClientRect();
+    const containerBounds = container.getBoundingClientRect();
+    const nextVisible = new Set();
+    for (const [id, current] of particleInstances) {
+      if (current.realm !== activeRealm) continue;
+      const advanced = advanceParticleInstance(current, now);
+      if (advanced.done) {
+        particleInstances.delete(id);
+        continue;
+      }
+      const instance = advanced.instance;
+      particleInstances.set(id, instance);
+      const localX = instance.cell.x - viewOrigin.x;
+      const localY = instance.cell.y - viewOrigin.y;
+      if (localX < 0 || localY < 0 || localX >= viewport.columns || localY >= viewport.rows) continue;
+      const effect = getParticleEffect(instance.name);
+      let element = pfxOverlay.querySelector(`[data-pfx-id="${id}"]`);
+      if (!element) {
+        element = document.createElement("img");
+        element.dataset.pfxId = id;
+        element.alt = "";
+        element.draggable = false;
+        pfxOverlay.append(element);
+      }
+      const center = getRenderedCellCenter({ x: localX, y: localY }, viewport, world);
+      const size = Math.max(viewport.gridWidth, viewport.gridHeight) * effect.scale;
+      element.src = effect.frameUrl(instance.frame);
+      element.style.left = `${canvasBounds.left - containerBounds.left + center.x - size / 2}px`;
+      element.style.top = `${canvasBounds.top - containerBounds.top + center.y - size / 2}px`;
+      element.style.width = `${size}px`;
+      element.style.height = `${size}px`;
+      element.style.display = "block";
+      nextVisible.add(id);
+    }
+    for (const element of [...pfxOverlay.children]) {
+      if (!nextVisible.has(element.dataset.pfxId)) element.style.display = "none";
+    }
+    if (particleInstances.size > 0 && particleAnimationFrame === null) {
+      particleAnimationFrame = window.requestAnimationFrame((timestamp) => {
+        particleAnimationFrame = null;
+        renderParticleOverlay(timestamp);
+        if (particleInstances.size > 0) schedulePresentation();
+      });
+    }
+  };
+
+  const placeParticleAtScreen = ({ clientX, clientY }) => {
+    if (!pfxSelection || !world) return false;
+    const cell = getMouseWorldCell({ clientX, clientY });
+    if (!cell) return false;
+    const instance = createParticleInstance(pfxSelection, activeRealm, cell);
+    if (!instance) return false;
+    particleInstances.set(instance.id, instance);
+    renderParticleOverlay(performance.now());
+    schedulePresentation();
+    return true;
+  };
+
   const hideGameCell = (slot) => {
     if (!spriteStates[slot]?.visible) return;
     updateSprite2DIndex(layer, spriteIndexes[slot], { visible: false });
@@ -2125,11 +2203,72 @@ async function createGameSessionImplementation(container, initialPalette, initia
     metrics.submittedCells += 1;
   };
 
+  const setHeroAnimation = (next, { restart = true } = {}) => {
+    const state = heroCorpse ? "death" : heroAnimationFrames[next] ? next : "idle";
+    if (!restart && state === heroAnimation) return;
+    heroAnimation = state;
+    heroAnimationFrame = 0;
+    heroAnimationStartedAt = performance.now();
+    if (heroAnimationRaf === null) {
+      heroAnimationRaf = window.requestAnimationFrame(() => {
+        heroAnimationRaf = null;
+        renderHeroOverlay(performance.now());
+      });
+    }
+  };
+
+  const renderHeroOverlay = (now = performance.now()) => {
+    if (!world || !playerCell || !heroOverlay) return;
+    const localX = playerCell.x - viewOrigin.x;
+    const localY = playerCell.y - viewOrigin.y;
+    const visible = localX >= 0 && localY >= 0 && localX < viewport.columns && localY < viewport.rows;
+    heroOverlay.hidden = !visible;
+    if (!visible) return;
+    const frames = heroAnimationFrames[heroAnimation];
+    const duration = heroAnimationDurations[heroAnimation];
+    const elapsed = Math.max(0, now - heroAnimationStartedAt);
+    if (heroAnimation === "attack" && elapsed >= frames.length * duration) {
+      setHeroAnimation("idle");
+      return renderHeroOverlay(now);
+    }
+    const nextFrame = heroAnimation === "death"
+      ? Math.min(frames.length - 1, Math.floor(elapsed / duration))
+      : Math.floor(elapsed / duration) % frames.length;
+    heroAnimationFrame = nextFrame;
+    const framePath = heroAnimation === "death"
+      ? `${heroAssetBase}/Death/${String(nextFrame).padStart(2, "0")}.png`
+      : `${heroAssetBase}/${heroAnimation === "run" ? "Run" : heroAnimation[0].toUpperCase() + heroAnimation.slice(1)}/Side/${String(nextFrame).padStart(2, "0")}.png`;
+    if (heroOverlay.src !== new URL(framePath, window.location.href).href) heroOverlay.src = framePath;
+    const canvasBounds = canvas.getBoundingClientRect();
+    const containerBounds = container.getBoundingClientRect();
+    const center = getRenderedCellCenter({ x: localX, y: localY }, viewport, world);
+    const width = viewport.gridWidth;
+    const height = viewport.gridHeight * 1.5;
+    heroOverlay.style.left = `${canvasBounds.left - containerBounds.left + center.x - width / 2}px`;
+    heroOverlay.style.top = `${canvasBounds.top - containerBounds.top + center.y + viewport.gridHeight / 2 - height}px`;
+    heroOverlay.style.width = `${width}px`;
+    heroOverlay.style.height = `${height}px`;
+    heroOverlay.style.transform = playerFacing === FACING_LEFT ? "scaleX(-1)" : "scaleX(1)";
+    heroOverlay.style.display = "block";
+    if (heroAnimation === "death" && nextFrame === frames.length - 1) deathPresentation.completeAnimation();
+    if (heroAnimation !== "death" || elapsed < (frames.length - 1) * duration) {
+      heroAnimationRaf = window.requestAnimationFrame((timestamp) => {
+        heroAnimationRaf = null;
+        renderHeroOverlay(timestamp);
+      });
+    }
+  };
+
   const renderCell = (region, x, y, frames, lightField, glyphOverride = null, visibility = 100) => {
     const slot = y * region.columns + x;
     const cell = { x: region.x + x, y: region.y + y };
-    const glyph = glyphOverride ?? getClientVisibleGlyph(world, cell);
-    const visualGlyph = getClientVisibleGlyphKey(world, cell);
+    const isPlayerCell = playerCell?.x === cell.x && playerCell?.y === cell.y;
+    // The hero test owns the player visual. Paint the underlying terrain here
+    // so the legacy player glyph cannot appear beneath the sprite overlay.
+    const glyph = isPlayerCell ? getVisibleGlyph(world, cell) : (glyphOverride ?? getClientVisibleGlyph(world, cell));
+    const visualGlyph = isPlayerCell
+      ? getTerrainArtKey(world, cell, getOffsetGlyphKey(getFacingGlyphKey(glyph), paletteOffsets.get(glyph)))
+      : getClientVisibleGlyphKey(world, cell);
     const terrainArt = parseTerrainArtKey(visualGlyph) !== null;
     const frame = frames.get(visualGlyph);
     if (frame === undefined) throw new Error(`Missing cached glyph frame: ${visualGlyph}`);
@@ -2235,6 +2374,8 @@ async function createGameSessionImplementation(container, initialPalette, initia
     renderGpuLightPass(region, lightField);
     renderHealthBars(region);
     renderFloatingTexts(region);
+    renderParticleOverlay(performance.now());
+    renderHeroOverlay(performance.now());
     updateMouseNavigationReticle();
     if (healthBarSystem.hasActive(performance.now())) scheduleHealthBarAnimation();
     if (floatingTextSystem.hasActive(performance.now())) scheduleFloatingTextAnimation();
@@ -2496,6 +2637,10 @@ async function createGameSessionImplementation(container, initialPalette, initia
       : manualDirection;
     const automatic = nextAutoCell !== null;
     if (direction.x === 0 && direction.y === 0) return exhaustedAtAttempt;
+    // Resolve facing immediately after input, before contact resolution or
+    // movement. This keeps blocked attacks facing left/right correctly while
+    // preserving the last horizontal heading for vertical movement.
+    setPlayerFacingFromDirection(direction);
     const attemptedCell = { x: playerCell.x + direction.x, y: playerCell.y + direction.y };
     const isAutomaticAction = automatic && mouseNavigationPlan?.kind === "action"
       && attemptedCell.x === mouseNavigationPlan.targetCell.x && attemptedCell.y === mouseNavigationPlan.targetCell.y;
@@ -2507,6 +2652,12 @@ async function createGameSessionImplementation(container, initialPalette, initia
     const target = cardinal && (occupant || object)
       ? createContactTarget({ kind: object?.type ?? occupant?.type, cell: attemptedCell, occupant, object })
       : null;
+    const attackableTarget = target && (occupant?.type === "enemy"
+      || occupant?.type === "enemy-spawner"
+      || occupant?.type === "mountain");
+    // A held input can generate repeated action attempts. Do not restart an
+    // attack that is already playing; let the current swing reach its end.
+    if (attackableTarget) setHeroAnimation("attack", { restart: false });
     const interactWithObject = () => objectSpawnerSystem?.interactAtCell(attemptedCell, {
       world,
       keyCount: characterKeys,
@@ -2627,6 +2778,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
     if (!nextOrigin) return exhaustedAtAttempt;
     if (getOccupancyForWorld()?.isOccupied(nextCell)) return exhaustedAtAttempt;
     const previousPlayerCell = { ...playerCell };
+    setHeroAnimation("run", { restart: false });
     let committed = false;
     // Movement advances authoritative time through timeSystem.advance(1, "movement").
     timeSystem.advance(1, "movement", {
@@ -2643,6 +2795,13 @@ async function createGameSessionImplementation(container, initialPalette, initia
     if (!committed) {
       if (playerLifecycle.isDead()) clearMovementInput();
       return exhaustedAtAttempt;
+    }
+    // Keep the run cycle alive across grid steps while movement remains held.
+    // The key/pointer release handlers transition back to idle.
+    if (!playerLifecycle.isDead()
+      && !hasHeldMovement()
+      && mouseNavigationPointerId === null) {
+      setHeroAnimation("idle", { restart: false });
     }
     if (playerLifecycle.isDead()) {
       clearMovementInput();
@@ -2776,7 +2935,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
     event.preventDefault();
     heldKeys.delete(movementKey);
     shiftHeld = heldModifierKeys.size > 0 || event.shiftKey;
-    if (!hasHeldMovement()) clearRepeat();
+    if (!hasHeldMovement()) { clearRepeat(); if (!heroCorpse) setHeroAnimation("idle", { restart: false }); }
   };
 
   const getMouseWorldCell = (event) => {
@@ -2791,7 +2950,8 @@ async function createGameSessionImplementation(container, initialPalette, initia
       x: Math.floor((x - offsetX) / viewport.gridWidth) + (viewport.columns >= world.columns ? 0 : viewOrigin.x),
       y: Math.floor((y - offsetY) / viewport.gridHeight) + (viewport.rows >= world.rows ? 0 : viewOrigin.y),
     };
-    return world.terrain?.[cell.y]?.[cell.x] ? cell : null;
+    if (cell.x < 0 || cell.y < 0 || cell.x >= world.columns || cell.y >= world.rows) return null;
+    return cell;
   };
 
   const updateMouseNavigationPointer = (event) => {
@@ -2930,7 +3090,10 @@ async function createGameSessionImplementation(container, initialPalette, initia
   try {
     // Sprite coordinates are CSS pixels in Babylon Lite; a DPR > 1 currently
     // halves their apparent footprint, leaving much of the canvas empty.
-    undergroundTerrainImage = await loadUndergroundTerrainImage(undergroundTerrainUrl);
+    const terrainSheet = await loadUndergroundTerrainImage(
+      `${import.meta.env.BASE_URL}assets/images/Dungeons-and-Pixels-v1.4/Tilesets/Tileset_Dungeon.png`, "wall",
+    );
+    undergroundTerrainImage = { dirt: terrainSheet, wall: terrainSheet };
     engine = await createEngine(canvas, { maxDevicePixelRatio: 1, msaaSamples: 1 });
     const lifecycleToken = rendererLifecycle.begin();
     glyphCache = createGameGlyphCache();
@@ -3327,6 +3490,10 @@ async function createGameSessionImplementation(container, initialPalette, initia
       const previousHealth = playerLifecycle.getHealth();
       const nextHealth = playerLifecycle.applyHealthDelta(delta);
       const appliedDelta = nextHealth - previousHealth;
+      if (playerLifecycle.isDead()) {
+        heroCorpse = true;
+        setHeroAnimation("death");
+      }
       if (appliedDelta !== 0) {
         recordVisibleFloatingTextDelta({
           entityId: "player",
@@ -3584,6 +3751,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
     document.removeEventListener("visibilitychange", handleVisibilityChange);
     window.removeEventListener("blur", handleWindowBlur);
     inputController?.dispose();
+    deathPresentation.dispose();
     browserZoomMediaQuery?.removeEventListener("change", handleResize);
     canvasResizeObserver?.disconnect();
     disposeHealthBarOverlay();
@@ -3716,6 +3884,8 @@ async function createGameSessionImplementation(container, initialPalette, initia
     },
     travelRealm() { travelToNearestStairs(); },
     getRealm() { return activeRealm; },
+    setPfxSelection(name) { pfxSelection = getParticleEffect(name)?.name ?? null; },
+    placeParticleAtScreen,
     getRealmDiscoverySnapshot,
     startQuest(id) {
       if (!questData.quests.some((definition) => definition.id === id)) return null;
@@ -3772,10 +3942,14 @@ async function createGameSessionImplementation(container, initialPalette, initia
     subscribeToPlayerDead(listener) {
       return playerLifecycle.subscribeToDeath(listener);
     },
+    getPlayerRecoveryReady() { return deathPresentation.isRecoveryReady(); },
+    subscribeToPlayerRecoveryReady(listener) {
+      return deathPresentation.subscribe(listener);
+    },
     getCheckpointSnapshot() { return checkpoint ?? Object.freeze({ realm: null, cell: null, revision: checkpointRevision }); },
     subscribeToCheckpoint(listener) { checkpointListeners.add(listener); return () => checkpointListeners.delete(listener); },
     restartFromCheckpoint() {
-      if (!playerLifecycle.isDead() || !checkpoint) return false;
+      if (!playerLifecycle.isDead() || !deathPresentation.isRecoveryReady() || !checkpoint) return false;
       clearMovementInput();
       if (checkpoint.realm !== activeRealm) activateRealm(checkpoint.realm, checkpoint.cell);
       else {
@@ -3786,12 +3960,17 @@ async function createGameSessionImplementation(container, initialPalette, initia
         refreshDiscovery({ immediate: true });
       }
       playerLifecycle.revive();
+      deathPresentation.reset();
+      heroCorpse = false;
+      setHeroAnimation("idle");
       scheduleMovementRender({ refreshLighting: true });
       scheduleMinimapRender();
       renderMapview();
       return true;
     },
     restartGame() {
+      if (!playerLifecycle.isDead() || !deathPresentation.isRecoveryReady()) return false;
+      deathPresentation.reset();
       const url = new URL(window.location.href);
       url.searchParams.set("randomSeed", sessionSeed);
       window.location.assign(url);
@@ -3975,6 +4154,10 @@ async function createGameSessionImplementation(container, initialPalette, initia
       if (typeof disposeGpuLightPass === "function") disposeGpuLightPass();
       disposeHealthBarOverlay();
       disposeFloatingTextOverlay();
+      deathPresentation.dispose();
+      if (particleAnimationFrame !== null) window.cancelAnimationFrame(particleAnimationFrame);
+      particleInstances.clear();
+      pfxOverlay.replaceChildren();
       disposeSpriteRenderer(renderer);
       glyphCache.dispose();
       minimapGlyphCache.dispose();

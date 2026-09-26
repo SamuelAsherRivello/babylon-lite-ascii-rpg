@@ -10,11 +10,11 @@
 
 - [x] 2.1 Extend world-view presentation so visible Underground logical `wall` and `dirt` cells use their approved fixed terrain-art frames while non-terrain overlays retain their existing glyph presentation; verify focused renderer tests pass.
 - [x] 2.2 Preserve game-view, mini-map, and mapview terrain-art parity at their destination scales, fog opacity, lighting order, and overlay order; verify focused world-view and minimap/mapview tests pass.
-- [x] 2.3 Verify the phase-one implementation with `npm.cmd run build` and a manual fixed-seed browser session in Underground, confirming movement, terrain blocking, fog, stairs, actors, and overlays remain correct.
+- [ ] 2.3 Verify the revised phase-one pair with `npm.cmd run build` and a manual fixed-seed browser session in Underground, confirming movement, terrain blocking, fog, stairs, actors, and overlays remain correct. Build and focused tests pass; fresh browser review is pending because in-app navigation was blocked.
 
 ## 3. Phase 1 human acceptance gate
 
-- [ ] 3.1 Present the verified phase-one fixed-seed playable result to a human and obtain explicit acceptance or revision direction; do not begin task group 4 until acceptance is recorded.
+- [ ] 3.1 Present the revised phase-one pair (Dungeons and Pixels wall 31 and floor 13) to a human and obtain explicit acceptance; the original pair was approved, but this replacement pair awaits review. Do not begin task group 4 until acceptance is recorded.
 
 ## 4. Phase 2 - deterministic wall autotiling
 

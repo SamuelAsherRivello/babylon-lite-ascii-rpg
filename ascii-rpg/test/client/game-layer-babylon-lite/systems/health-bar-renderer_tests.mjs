@@ -1,20 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import {
-  createSolidHealthBarFrame,
-  getHealthBarSpriteGeometry,
-  HEALTH_BAR_LAYER_ORDER,
-} from "../../../../src/client/game-layer-babylon-lite/systems/health-bar-renderer.js";
-
-test("creates an opaque white tintable atlas frame", () => {
-  const frame = createSolidHealthBarFrame(2);
-  assert.equal(frame.name, "health-bar-solid");
-  assert.equal(frame.width, 2);
-  assert.equal(frame.height, 2);
-  assert.deepEqual([...frame.pixels], Array(16).fill(255));
-  assert.equal(HEALTH_BAR_LAYER_ORDER, 2);
-});
+import { getHealthBarSpriteGeometry } from "../../../../src/client/game-layer-babylon-lite/systems/health-bar-renderer.js";
 
 test("centers a one-cell-wide quarter-cell-high bar above the entity", () => {
   const geometry = getHealthBarSpriteGeometry(
@@ -42,21 +29,26 @@ test("keeps a visible minimum fill for positive health and allows zero fill", ()
   assert.equal(empty.delta.sizePx[0], 0);
 });
 
-test("game integration reuses, hides, resizes, animates, and disposes overlay sprites", async () => {
+test("game integration renders health bars in the top world-space HUD layer", async () => {
   const source = await readFile(new URL("../../../../src/client/game-layer-babylon-lite/index.js", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../../../../src/client/ui-layer-react/floating-text.css", import.meta.url), "utf8");
   for (const fragment of [
-    "healthBarSprites.get(state.id)",
+    "healthBarElements.get(state.id)",
+    "healthBarOverlay.className = \"health_bar_overlay\"",
+    "healthBarOverlay.append(element)",
     "const entity = occupancy?.get(state.id)",
     "entity?.realm === activeRealm",
     "x: entity.cell.x - region.x",
     "y: entity.cell.y - region.y",
-    "updateSprite2DIndex(healthBarLayer, indexes[index]",
-    "updateSprite2DIndex(healthBarLayer, index, { visible: false })",
-    "HEALTH_BAR_DELTA_COLOR",
-    "states.length * 4",
+    "element.children[0]",
+    "element.children[1]",
+    "element.children[2]",
     "renderHealthBars(region)",
     "scheduleHealthBarAnimation()",
     "window.cancelAnimationFrame(healthBarAnimationFrame)",
     "disposeHealthBarOverlay()",
   ]) assert.ok(source.includes(fragment), `Missing health-bar overlay integration: ${fragment}`);
+  for (const fragment of [".health_bar_overlay", "z-index: 3", ".health_bar__track", ".health_bar__fill", ".health_bar__delta"]) {
+    assert.ok(styles.includes(fragment), `Missing top-layer health-bar presentation: ${fragment}`);
+  }
 });

@@ -32,6 +32,16 @@ Babylon Lite sprite-atlas/layer rendering for Tiled-authored assets.
 
 ## Decisions
 
+### New-art comparison (2026-09-26)
+
+The user's latest revision replaces both phase-one terrain types with the
+project-local Dungeons-and-Pixels-v1.4 sheet: wall ID 31 at `(224,64,32,32)`
+and floor ID 13 at `(32,32,32,32)`. Load the shared sheet once for both types.
+See [new-art-evaluation.md](new-art-evaluation.md)
+for folder selection and the four tile-count assessments. All supplied folders
+are preserved. Earlier source mappings and qualification below describe the
+original pack, not the new wall. No phase-two resolver is enabled by this revision.
+
 ### Phase-one human revision: reduce PNG grid seams (2026-09-26)
 
 At the user's request, PNG-based cells bypass per-cell lighting RGB/alpha
@@ -88,6 +98,61 @@ Alternative: introduce a random frame variation in phase 1. Rejected because
 it would make the human comparison and fixed-seed verification less clear.
 
 ### Phase 2 selects a method after qualifying the art
+
+#### Qualification result (2026-09-26): neither tier qualified
+
+Phase 1 was explicitly accepted, and the user authorized walls-only phase 2.
+The audit inspected every 16x16 slot in `walls_floor.png`, the supplemental
+`decorative_cracks_walls.png`, and the embedded `walls_floor` tileset in
+`Dungeon1.tmx`. The TMX supplies only dimensions/image metadata for that
+tileset, with no terrain/Wang mapping. Missing metadata alone is not a failure;
+the visual coverage gaps below are the reason neither tier is qualified.
+
+The most compact consistent face/perimeter candidate uses the following
+zero-based pixel coordinates (N=1, E=2, S=4, W=8, connected wall bits):
+
+| Mask | Candidate source x,y | Role |
+| --- | --- | --- |
+| 3 | 80,64 | bottom-left |
+| 6 | 80,16 | top-left |
+| 9 | 112,64 | bottom-right |
+| 12 | 112,16 | top-right |
+| 7 | 80,32 | left edge |
+| 11 | 96,64 | bottom edge |
+| 13 | 112,32 | right edge |
+| 14 | 96,16 | top edge |
+| 15 | 96,32 | face/interior |
+
+These are **audit candidates, not an approved runtime mapping**. A solid
+block can be assembled, but a 2x2 block collapses into a small stone detail
+surrounded by the family's dark cap area. The matching family has no qualified
+16x16 mappings for masks **0, 1, 2, 4, 5, 8, 10**: isolated wall, four directional
+ends, and the two straight single-cell strips. Other narrow architectural
+pieces exist at y=240..368, but use different face/cap widths and offsets;
+mixing them does not establish a consistent family with the nine candidates.
+
+The larger family at x=16..48, y=16..80 spans separate top, face, and bottom
+rows; it is not a complete one-frame-per-cell substitute either. The bordered
+single-block arrangement at x=80..112, y=112..144 places its surrounding trim
+in neighboring cells. Using that arrangement directly would extend onto
+walkable floor, outside the agreed wall-only substitution. Decorative crack
+pieces do not provide the missing matched silhouette forms. Rotating the
+directionally shaded faces is not an approved substitute for those forms.
+
+`audit-wall-art.ps1` reproducibly renders three coordinate contact sheets and
+a fixture sheet for solid blocks, 2x2 clusters, isolated walls, both strips,
+ends, T-junctions, concave corners, diagonal contacts, and world borders.
+Unresolved masks are red. The border fixture assumes out-of-world walls.
+The concave fixture also illustrates the expected cardinal-only ambiguity;
+that alone is not why 16-tile failed. No complete gated-diagonal corner family
+was established for 47-tile, which also lacks the qualified basic forms above.
+
+Consequently, the accepted phase-one renderer remains unchanged. Tasks 4.1–4.4
+and phase-two acceptance remain incomplete. A next approach needs explicit
+scope approval: derive a new compatible atlas by composing/adjusting the
+source pieces, or supply an already-compatible wall autotile family. A
+partial nine-piece mapping with repeated-tile fallbacks is not a qualified
+16-tile implementation.
 
 The source directory is `C:/Users/srive/Downloads/World_1_Realm_-1_TileSet/Tiled_files`.
 Inspection found a 272x464 `walls_floor.png` (17x29 slots at 16px), plus

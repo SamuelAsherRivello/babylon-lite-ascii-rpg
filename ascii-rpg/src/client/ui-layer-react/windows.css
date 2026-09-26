@@ -833,6 +833,15 @@ html[data-presentation-aspect="portrait"] .tutorial_window {
   box-shadow: 0 4px 16px #000;
 }
 
+.pfx_window {
+  width: 190px;
+  max-height: min(100vh, 420px);
+}
+
+.pfx_window_body { max-height: min(60vh, 360px); overflow: auto; padding: 5px; }
+.pfx_effect_option { display: block; width: 100%; text-align: left; }
+.pfx_effect_selected { color: #ffdf70; background: #454545; }
+
 .glyph_details_preview {
   display: flex;
   align-items: center;

@@ -1,6 +1,7 @@
 # Phase 1 verification — 2026-09-26
 
-Phase 1 is implemented. Human gate 3.1 remains open. Phase 2 has not started.
+Phase 1 is implemented and explicitly approved by the user on 2026-09-26.
+The user subsequently authorized phase 2, limited to Underground walls.
 
 ## Human-requested PNG seam revision
 

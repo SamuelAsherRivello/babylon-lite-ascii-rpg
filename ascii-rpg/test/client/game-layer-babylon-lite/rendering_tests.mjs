@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { rasterizeTerrainArt } from "../../../src/client/game-layer-babylon-lite/underground-terrain-art.js";
 import { compositeTerrainPixels, getTerrainArtBounds, getTerrainArtKey, parseTerrainArtKey, resolveUndergroundTerrainFrame, UNDERGROUND_TERRAIN_FRAMES } from "../../../src/client/game-layer-babylon-lite/underground-terrain-art.js";
 import { createWorldViewComposition, collectWorldViewGlyphs } from "../../../src/client/game-layer-babylon-lite/world-view.js";
 import { createGlyphRasterCanvas, createGlyphVisualCache, darkenGlyphColor, FACING_RIGHT, getFacingGlyphKey, getFacingGlyphOffsets, getGlyphOffsetKey, getGlyphOffsetsFromKey, getGlyphRasterSize, getOffsetGlyphKey, rasterizeSolidGlyph, tintGlyphRgb } from "../../../src/client/game-layer-babylon-lite/glyph-visual-cache.js";
@@ -44,9 +45,33 @@ test("Underground 1-tile selection is logical, deterministic, and does not mutat
   for (const frame of Object.values(UNDERGROUND_TERRAIN_FRAMES)) {
     assert.equal(frame.x % 16, 0);
     assert.equal(frame.y % 16, 0);
-    assert.equal(frame.width, 16);
-    assert.equal(frame.height, 16);
-    assert.ok(frame.x + 16 <= 272 && frame.y + 16 <= 464);
+    const expectedSize = 32;
+    assert.equal(frame.width, expectedSize);
+    assert.equal(frame.height, expectedSize);
+    assert.ok(frame.x + expectedSize <= 384);
+    assert.ok(frame.y + expectedSize <= 288);
+  }
+  assert.deepEqual(UNDERGROUND_TERRAIN_FRAMES.wall, { source: "wall", x: 224, y: 64, width: 32, height: 32 });
+});
+
+test("terrain rasterization selects matching wall and floor frames from the new sheet", () => {
+  const previous = globalThis.document;
+  const calls = [];
+  globalThis.document = { createElement: () => ({ getContext: () => ({
+    drawImage: (...args) => calls.push(args),
+    getImageData: () => ({ data: new Uint8ClampedArray(4 * 16 * 16) }),
+  }) }) };
+  try {
+    const sheet = { name: "new dungeon" };
+    const images = { wall: sheet, dirt: sheet };
+    for (const kind of ["wall", "dirt"]) {
+      rasterizeTerrainArt(`terrain-art:${JSON.stringify([kind, null])}`, images, "monospace", 16, new Map());
+    }
+    assert.deepEqual(calls[0], [images.wall, 224, 64, 32, 32, 0, 0, 16, 16]);
+    assert.deepEqual(calls[1], [images.dirt, 32, 32, 32, 32, 0, 0, 16, 16]);
+  } finally {
+    if (previous === undefined) delete globalThis.document;
+    else globalThis.document = previous;
   }
 });
 

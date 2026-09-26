@@ -3,10 +3,35 @@
 .floating_text_layer {
   position: absolute;
   inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* World-space HUD is above both the GPU world canvas and DOM character art. */
+.health_bar_overlay {
+  position: absolute;
+  inset: 0;
   z-index: 3;
   pointer-events: none;
   overflow: hidden;
 }
+
+.health_bar {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  background: rgb(217 224 235);
+  pointer-events: none;
+}
+
+.health_bar > div {
+  position: absolute;
+  transform: translate(-50%, -50%);
+}
+
+.health_bar__track { background: rgb(20 10 15); }
+.health_bar__fill { background: rgb(255 31 71); }
+.health_bar__delta { background: rgb(255 125 148); }
 
 .floating_text {
   position: absolute;
