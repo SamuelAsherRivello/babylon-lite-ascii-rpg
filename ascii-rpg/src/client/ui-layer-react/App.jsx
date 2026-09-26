@@ -72,8 +72,6 @@ import {
   sendRealmPreferenceSnapshot,
   sendCameraModeSnapshot,
   sendGpuLightPassSnapshot,
-  sendGlyphBackgroundSnapshot,
-  sendBackgroundDarknessSnapshot,
   sendMinimapZoomSnapshot,
   sendMapviewRealmToggle,
   sendMapviewSnapshot,
@@ -137,10 +135,9 @@ import {
   zoomStorageKey, zoomStorageVersionKey, overgroundAmbientStorageKey, undergroundAmbientStorageKey,
   realmStorageKey, torchLightingStorageKey, playerLightingStorageKey, torchShadowStorageKey,
   playerShadowStorageKey, gpuLightPassStorageKey, playerGpuShadowBleedRangeStorageKey,
-  glyphBackgroundStorageKey, backgroundDarknessStorageKey, minimapZoomStorageKey,
-  lightingWindowPositionStorageKey, tutorialSkipStorageKey, defaultQuestStorageKey,
-  minZoom, maxZoom, DEFAULT_BACKGROUND_DARKNESS, getStoredZoom, getStoredMinimapZoom,
-  getStoredBoolean, getStoredBackgroundDarkness, getStoredAmbientLight, getStoredSourceIndex,
+  minimapZoomStorageKey, lightingWindowPositionStorageKey, tutorialSkipStorageKey, defaultQuestStorageKey,
+  minZoom, maxZoom, getStoredZoom, getStoredMinimapZoom,
+  getStoredBoolean, getStoredAmbientLight, getStoredSourceIndex,
   getStoredPlayerGpuShadowBleedRange,
 } from "./stored-setting-helpers.js";
 import {
@@ -214,7 +211,6 @@ const glyphDetailsWindowMargin = 16;
 const lightingWindowMargin = 12;
 const defaultLightingWindowPosition = { left: 180, top: 410 };
 const defaultPfxWindowPosition = { left: 420, top: 180 };
-const DEFAULT_GLYPH_BACKGROUND = true;
 // The full character catalog is still available through the All filter, but
 // opening settings should not synchronously mount hundreds of controls while
 // the WebGPU game is rendering.
@@ -436,7 +432,7 @@ export class PromptWindow extends Component {
   };
 
   render() {
-    const { onClose, palette, viewState, fontId, glyphBackground, backgroundDarkness, onGlyphBackgroundChange, onBackgroundDarknessChange } = this.props;
+    const { onClose, palette, viewState, fontId } = this.props;
     const {
       selectedEntryId,
       draft,
@@ -499,16 +495,6 @@ export class PromptWindow extends Component {
                 onClick={() => this.selectTab("font")}
               >
                 Fonts
-              </button>
-              <span aria-hidden="true"> / </span>
-              <button
-                className="prompt_tab"
-                type="button"
-                role="tab"
-                aria-selected={activeTab === "layout"}
-                onClick={() => this.selectTab("layout")}
-              >
-                Layout
               </button>
             </div>
             <button
@@ -591,7 +577,7 @@ export class PromptWindow extends Component {
                   >
                     <span className="palette_index">{entry.code ?? entry.unicode}</span>
                     <span className="palette_glyph">
-                      <PaletteGlyph glyph={entry.glyph} color={displayColor} offsets={displayOffsets} backgroundDarkness={backgroundDarkness} fontFamily={getFontOption(fontId).family} />
+                      <PaletteGlyph glyph={entry.glyph} color={displayColor} offsets={displayOffsets} fontFamily={getFontOption(fontId).family} />
                     </span>
                   </button>
                 </Fragment>
@@ -607,7 +593,7 @@ export class PromptWindow extends Component {
               onClick={(event) => event.stopPropagation()}
             >
               <div className="glyph_details_preview">
-                <PaletteGlyph glyph={selectedEntry.glyph} color={draft.color} offsets={draft} backgroundDarkness={backgroundDarkness} fontFamily={getFontOption(fontId).family} />
+                <PaletteGlyph glyph={selectedEntry.glyph} color={draft.color} offsets={draft} fontFamily={getFontOption(fontId).family} />
               </div>
               <HexColorPicker color={draft.color} onChange={this.updateColor} />
               <div className="palette_offset_controls" aria-label="Glyph offsets">
@@ -657,39 +643,7 @@ export class PromptWindow extends Component {
                 <button type="button" onClick={this.cancelFontEdit}>Cancel</button>
               </div>
             </div>
-          ) : (
-            <div className="layout_editor_body">
-              <div className="layout_control_group" role="group" aria-labelledby="glyph_background_label">
-                <span id="glyph_background_label" className="layout_control_label">Glyph Background</span>
-                <div className="layout_choice_group">
-                  {[true, false].map((enabled) => (
-                    <button
-                      key={String(enabled)}
-                      className="content_option_button"
-                      type="button"
-                      aria-pressed={glyphBackground === enabled}
-                      onClick={() => onGlyphBackgroundChange(enabled)}
-                    >
-                      {enabled ? "On" : "Off"}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <label className="layout_control_group" htmlFor="background_darkness">
-                <span className="layout_control_label">Background Darkness</span>
-                <span className="layout_slider_value">{backgroundDarkness}</span>
-                <input
-                  id="background_darkness"
-                  type="range"
-                  min="0"
-                  max="100"
-                  step="1"
-                  value={backgroundDarkness}
-                  onChange={(event) => onBackgroundDarknessChange(Number(event.target.value))}
-                />
-              </label>
-            </div>
-          )}
+          ) : null}
           {warningVisible ? (
             <div className="palette_warning" role="alertdialog" aria-labelledby="palette_warning_title">
               <h2 id="palette_warning_title">Local palette change</h2>
@@ -1047,8 +1001,6 @@ function AppContent() {
   const [undergroundAmbient, setUndergroundAmbient] = useState(() => getStoredAmbientLight(undergroundAmbientStorageKey, 0.1));
   const [gpuLightPass, setGpuLightPass] = useState(() => getStoredBoolean(gpuLightPassStorageKey, true));
   const [playerGpuShadowBleedRange, setPlayerGpuShadowBleedRange] = useState(getStoredPlayerGpuShadowBleedRange);
-  const [glyphBackground, setGlyphBackground] = useState(() => getStoredBoolean(glyphBackgroundStorageKey, DEFAULT_GLYPH_BACKGROUND));
-  const [backgroundDarkness, setBackgroundDarkness] = useState(getStoredBackgroundDarkness);
   const [torchLightingIndex, setTorchLightingIndex] = useState(() => getStoredSourceIndex(torchLightingStorageKey, 1));
   const [playerLightingIndex, setPlayerLightingIndex] = useState(() => getStoredSourceIndex(playerLightingStorageKey, 4));
   const [torchShadowIndex, setTorchShadowIndex] = useState(() => getStoredSourceIndex(torchShadowStorageKey, 4));
@@ -1334,16 +1286,6 @@ function AppContent() {
     localStorage.setItem(playerGpuShadowBleedRangeStorageKey, String(playerGpuShadowBleedRange));
     sendPlayerGpuShadowBleedRangeSnapshot(playerGpuShadowBleedRange);
   }, [playerGpuShadowBleedRange]);
-
-  useEffect(() => {
-    localStorage.setItem(glyphBackgroundStorageKey, glyphBackground ? "true" : "false");
-    sendGlyphBackgroundSnapshot(glyphBackground);
-  }, [glyphBackground]);
-
-  useEffect(() => {
-    localStorage.setItem(backgroundDarknessStorageKey, String(backgroundDarkness));
-    sendBackgroundDarknessSnapshot(backgroundDarkness);
-  }, [backgroundDarkness]);
 
   useEffect(() => {
     localStorage.setItem(torchLightingStorageKey, String(torchLightingIndex));
@@ -1762,10 +1704,6 @@ function AppContent() {
           palette={palette}
           fontId={fontId}
           savedFontId={savedFontId}
-          glyphBackground={glyphBackground}
-          backgroundDarkness={backgroundDarkness}
-          onGlyphBackgroundChange={setGlyphBackground}
-          onBackgroundDarknessChange={setBackgroundDarkness}
           viewState={paletteViewState}
           onViewStateChange={setPaletteViewState}
           error={paletteError}

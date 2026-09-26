@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { getHealthBarSpriteGeometry } from "../../../../src/client/game-layer-babylon-lite/systems/health-bar-renderer.js";
 
-test("centers a one-cell-wide quarter-cell-high bar above the entity", () => {
+test("centers a one-cell-wide eighth-cell-high bar above the entity", () => {
   const geometry = getHealthBarSpriteGeometry(
     { x: 100, y: 80 },
     { gridWidth: 32, gridHeight: 40 },
@@ -11,13 +11,13 @@ test("centers a one-cell-wide quarter-cell-high bar above the entity", () => {
     { deltaStartRatio: 0.3, deltaWidthRatio: 0.2 },
   );
 
-  assert.deepEqual(geometry.outline.sizePx, [32, 10]);
+  assert.deepEqual(geometry.outline.sizePx, [32, 5]);
   assert.equal(geometry.outline.positionPx[0], 100);
   assert.ok(geometry.outline.positionPx[1] < 60);
-  assert.deepEqual(geometry.track.sizePx, [30, 8]);
-  assert.deepEqual(geometry.fill.sizePx, [9, 8]);
+  assert.deepEqual(geometry.track.sizePx, [30, 3]);
+  assert.deepEqual(geometry.fill.sizePx, [9, 3]);
   assert.equal(geometry.fill.positionPx[0], 89.5);
-  assert.deepEqual(geometry.delta.sizePx, [6, 8]);
+  assert.deepEqual(geometry.delta.sizePx, [6, 3]);
   assert.equal(geometry.delta.positionPx[0], 97);
 });
 

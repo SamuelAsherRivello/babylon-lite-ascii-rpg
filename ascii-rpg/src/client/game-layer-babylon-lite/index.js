@@ -71,11 +71,14 @@ import {
 } from "./world-state-facade.js";
 import { createTimeSystem } from "./systems/time-system.js";
 import { FACING_LEFT, FACING_RIGHT, createGlyphRasterCanvas, createGlyphVisualCache, getFacingGlyph, getFacingGlyphKey, getGlyphOffsetsFromKey, getGlyphOffsetKey, getOffsetGlyphKey, rasterizeGlyph, rasterizeSolidGlyph } from "./glyph-visual-cache.js";
-import { getStaticPropArtAspectRatio, getTerrainArtBounds, getTerrainArtKey, loadRasterImage, loadUndergroundTerrainImage, parseTerrainArtKey, rasterizeStaticPropArt, rasterizeTerrainArt } from "./underground-terrain-art.js";
+import { GOLD_COIN_ANIMATION_FRAME_DURATION, getGoldCoinAnimationFrame, getStaticPropArtAspectRatio, getTerrainArtBounds, getTerrainArtKey, getWaterAnimationFrame, loadRasterImage, loadUndergroundTerrainImage, parseTerrainArtKey, rasterizeStaticPropArt, rasterizeTerrainArt, WATER_ANIMATION_FRAME_DURATION } from "./underground-terrain-art.js";
 import { expandTerrainDirtyCells } from "./underground-wall-autotile.js";
 import { getVisibleRegion, getVisibleSlot, shouldUpdateVisibleSprite } from "./visible-region.js";
 import { collectVisibleTorchRecords, createVisibleTorchAnimator } from "./torch-presentation.js";
 import { collectVisibleTrapRecords, createVisibleTrapAnimator, getAnimatedTrapOverlayPlacement } from "./trap-presentation.js";
+import { createEnemySpritePresentation, getSpiderFramePath } from "./enemy-sprite-presentation.js";
+import { getCharacterDepthOrder } from "./character-depth-order.js";
+import { getVisibleNpcPresentationRecords } from "./npc-presentation.js";
 import { collectWorldViewGlyphs, createWorldViewComposition, renderWorldViewComposition, renderWorldViewCompositionCooperatively } from "./world-view.js";
 import { colorToLinearRgba, linearRgbaToRendererHex, reconcilePaletteColors } from "./palette-color-cache.js";
 import {
@@ -335,12 +338,20 @@ async function createGameSessionImplementation(container, initialPalette, initia
   pfxOverlay.id = "pfx_overlay";
   pfxOverlay.setAttribute("aria-hidden", "true");
   container.append(pfxOverlay);
+  // Keep character sprites above particle effects at the same stacking level.
+  // Before character depth ordering was introduced, the hero used z-index 3
+  // inside the PFX layer; placing this layer after it preserves that visibility
+  // guarantee while its children retain their per-character Y ordering.
+  const characterOverlay = document.createElement("div");
+  characterOverlay.id = "character_overlay";
+  characterOverlay.setAttribute("aria-hidden", "true");
+  container.append(characterOverlay);
   const heroOverlay = document.createElement("img");
   heroOverlay.id = "hero_sprite_overlay";
   heroOverlay.alt = "";
   heroOverlay.draggable = false;
   heroOverlay.setAttribute("aria-hidden", "true");
-  pfxOverlay.append(heroOverlay);
+  characterOverlay.append(heroOverlay);
 
   const heroAnimationFrames = Object.freeze({
     idle: Object.freeze([0, 1, 2, 3]),
@@ -361,8 +372,16 @@ async function createGameSessionImplementation(container, initialPalette, initia
     render: (entries) => renderTorchOverlayFrames(entries),
   });
   const trapAssetUrl = `${import.meta.env.BASE_URL}assets/images/Dungeons-and-Pixels-v1.4/Props/Animated/trap1_strip.png`;
+  const spiderAssetBase = `${import.meta.env.BASE_URL}assets/images/Dungeons-and-Pixels-v1.4/Enemies/Spider/Frames`;
   let trapArtworkReady = false;
+  let waterAnimationFrame = 0;
+  let goldCoinAnimationFrame = 0;
+  let waterAnimationTimer = null;
   const animatedTrapCellKeys = new Set();
+  const trapGlyphSuppressionKeys = new Set();
+  const animatedEnemyCellKeys = new Set();
+  const animatedNpcCellKeys = new Set();
+  const npcGlyphCanvases = new Map();
   const trapAnimator = createVisibleTrapAnimator({
     render: (entries) => renderTrapOverlayFrames(entries),
   });
@@ -376,6 +395,9 @@ async function createGameSessionImplementation(container, initialPalette, initia
     scheduleVisualRefresh();
   }, { once: true });
   trapArtwork.src = trapAssetUrl;
+  const enemySpritePresentation = createEnemySpritePresentation({
+    render: (entries) => renderEnemyOverlayFrames(entries),
+  });
 
   let engine;
   let renderer;
@@ -390,6 +412,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
   let frontDoorOpenImage;
   let sideDoorClosedImage;
   let sideDoorOpenImage;
+  let goldCoinImage;
   let minimapGlyphCache;
   let gpuLightAtlas;
   let gpuLightLayer;
@@ -650,7 +673,9 @@ async function createGameSessionImplementation(container, initialPalette, initia
   };
 
   const getOccupancyForWorld = (targetWorld = world) => dynamicOccupancies.get(targetWorld?.realmName) ?? null;
-  const getClientVisibleRecord = (targetWorld, cell) => getOccupancyForWorld(targetWorld)?.getAt(cell) ?? null;
+  const getClientVisibleRecord = (targetWorld, cell) => getOccupancyForWorld(targetWorld)?.getAt(cell)
+    ?? targetWorld?.objects?.find((object) => object.active !== false && object.cell?.x === cell.x && object.cell?.y === cell.y)
+    ?? null;
   const getBuildingOverlayGlyph = (targetWorld, cell) => getIndexedBuildingGlyph(targetWorld?.buildings, cell, targetWorld.playerCell ?? playerCell);
   const getExteriorBuildingOverlayGlyph = (targetWorld, cell) => {
     const glyph = getBuildingOverlayGlyph(targetWorld, cell);
@@ -673,13 +698,14 @@ async function createGameSessionImplementation(container, initialPalette, initia
     // The hero overlay owns the player's appearance. Cache the terrain beneath
     // it, rather than the stair/player record, so both cache lookup and draw
     // use the same frame after a realm handoff.
-    const glyph = isPlayerCell
+    const isAnimatedNpc = targetWorld === world && animatedNpcCellKeys.has(`${cell.x},${cell.y}`);
+    const glyph = isPlayerCell || isAnimatedNpc
       ? targetWorld.terrain?.[cell.y]?.[cell.x]?.glyph
       : record?.glyph ?? bombSystem?.getGlyphAt(targetWorld?.realmName, cell) ?? getExteriorBuildingOverlayGlyph(targetWorld, cell) ?? targetWorld?.characters?.[cell.y]?.[cell.x] ?? getBuildingOverlayGlyph(targetWorld, cell) ?? getVisibleGlyph(targetWorld, cell);
-    const doorArt = record?.type === "door" && record?.orientation
-      ? getCivilizationDoorArt(record.orientation, record.open)
+    const doorArt = record?.type === "door" && (record.orientation || record.buildingId)
+      ? getCivilizationDoorArt(record.orientation ?? "horizontal", record.open)
       : null;
-    return getTerrainArtKey(targetWorld, cell, doorArt ?? getOffsetGlyphKey(getFacingGlyphKey(glyph, record?.facing), paletteOffsets.get(glyph)));
+    return getTerrainArtKey(targetWorld, cell, doorArt ?? getOffsetGlyphKey(getFacingGlyphKey(glyph, record?.facing), paletteOffsets.get(glyph)), waterAnimationFrame, goldCoinAnimationFrame);
   };
   const setPlayerFacingFromDirection = (direction) => {
     if (direction.x === 0) return;
@@ -1501,6 +1527,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
 
   const activateRealm = (name, arrival = null) => {
     if (!worldRealms?.realms?.[name]) return;
+    if (name !== activeRealm) enemySpritePresentation.clearRealm(activeRealm);
     timeSystem.invalidatePending();
     const sourceScreenCell = playerCell
       ? { x: playerCell.x - viewOrigin.x, y: playerCell.y - viewOrigin.y }
@@ -2261,6 +2288,19 @@ async function createGameSessionImplementation(container, initialPalette, initia
     metrics.submittedCells += 1;
   };
 
+  const updateCharacterDepth = () => {
+    const records = [...characterOverlay.children].flatMap((element) => {
+      const y = Number.parseInt(element.dataset.characterY ?? "", 10);
+      const type = element.dataset.characterType;
+      if (!type || !Number.isInteger(y)) return [];
+      return [{ type, id: element.dataset.characterId, cell: { y } }];
+    });
+    for (const { id, zIndex } of getCharacterDepthOrder(records)) {
+      const element = characterOverlay.querySelector(`[data-character-presentation-id="${id}"]`);
+      if (element) element.style.zIndex = String(zIndex);
+    }
+  };
+
   const setHeroAnimation = (next, { restart = true } = {}) => {
     const state = heroCorpse ? "death" : heroAnimationFrames[next] ? next : "idle";
     if (!restart && state === heroAnimation) return;
@@ -2309,7 +2349,11 @@ async function createGameSessionImplementation(container, initialPalette, initia
     heroOverlay.style.width = `${width}px`;
     heroOverlay.style.height = `${height}px`;
     heroOverlay.style.transform = playerFacing === FACING_LEFT ? "scaleX(-1)" : "scaleX(1)";
+    heroOverlay.dataset.characterPresentationId = "player";
+    heroOverlay.dataset.characterType = "player";
+    heroOverlay.dataset.characterY = String(playerCell.y);
     heroOverlay.style.display = "block";
+    updateCharacterDepth();
     if (heroAnimation === "death" && nextFrame === frames.length - 1) deathPresentation.completeAnimation();
     if (heroAnimation !== "death" || elapsed < (frames.length - 1) * duration) {
       heroAnimationRaf = window.requestAnimationFrame((timestamp) => {
@@ -2399,16 +2443,137 @@ async function createGameSessionImplementation(container, initialPalette, initia
 
   const reconcileTrapOverlays = (region, now = performance.now()) => {
     animatedTrapCellKeys.clear();
-    if (!trapArtworkReady || !world || !objectSpawnerSystem) {
+    trapGlyphSuppressionKeys.clear();
+    if (!world || !objectSpawnerSystem) {
       trapAnimator.reconcile([], now);
       return;
     }
+    const activeObjects = objectSpawnerSystem.getActiveObjects(activeRealm);
+    for (const object of activeObjects) {
+      if (object.type === "trap") trapGlyphSuppressionKeys.add(`${object.cell.x},${object.cell.y}`);
+    }
     const records = collectVisibleTrapRecords({
-      objects: objectSpawnerSystem.getActiveObjects(activeRealm), realm: activeRealm,
+      objects: activeObjects, realm: activeRealm,
       region, fog: fogOfWar, world,
     });
     for (const record of records) animatedTrapCellKeys.add(`${record.cell.x},${record.cell.y}`);
-    trapAnimator.reconcile(records, now);
+    // Trap cells never fall back to the legacy glyph. If the strip is still
+    // loading or failed to load, keep the logical cell presentation clear and
+    // simply render no overlay until the artwork is available.
+    trapAnimator.reconcile(trapArtworkReady ? records : [], now);
+  };
+
+  const renderEnemyOverlayFrames = (entries) => {
+    const activeIds = new Set();
+    const canvasBounds = canvas.getBoundingClientRect();
+    const containerBounds = container.getBoundingClientRect();
+    for (const entry of entries) {
+      activeIds.add(entry.id);
+      let element = characterOverlay.querySelector(`[data-enemy-id="${entry.id}"]`);
+      if (!element) {
+        element = document.createElement("img");
+        element.className = "enemy_sprite_overlay__spider";
+        element.dataset.enemyId = entry.id;
+        element.alt = "";
+        element.draggable = false;
+        characterOverlay.append(element);
+      }
+      const center = getRenderedCellCenter({
+        x: entry.cell.x - viewOrigin.x,
+        y: entry.cell.y - viewOrigin.y,
+      }, viewport, world);
+      const width = viewport.gridWidth;
+      const height = viewport.gridHeight;
+      element.src = getSpiderFramePath(spiderAssetBase, entry.state, entry.frame);
+      element.style.left = `${canvasBounds.left - containerBounds.left + center.x - width / 2}px`;
+      element.style.top = `${canvasBounds.top - containerBounds.top + center.y - height / 2}px`;
+      element.style.width = `${width}px`;
+      element.style.height = `${height}px`;
+      element.style.transform = entry.facing === FACING_LEFT ? "scaleX(-1)" : "scaleX(1)";
+      element.dataset.characterPresentationId = `enemy:${entry.id}`;
+      element.dataset.characterType = "enemy";
+      element.dataset.characterId = entry.id;
+      element.dataset.characterY = String(entry.cell.y);
+    }
+    for (const element of [...characterOverlay.querySelectorAll("[data-enemy-id]")]) {
+      if (!activeIds.has(element.dataset.enemyId)) element.remove();
+    }
+    updateCharacterDepth();
+  };
+
+  const reconcileEnemyOverlays = (region, now = performance.now()) => {
+    animatedEnemyCellKeys.clear();
+    if (!world || !fogOfWar) {
+      enemySpritePresentation.reconcile({}, now);
+      return;
+    }
+    const enemies = getOccupancyForWorld()?.getAll("enemy") ?? [];
+    for (const enemy of enemies) animatedEnemyCellKeys.add(`${enemy.cell.x},${enemy.cell.y}`);
+    enemySpritePresentation.reconcile({ enemies, realm: activeRealm, region, fog: fogOfWar, world }, now);
+  };
+
+  const reconcileNpcOverlays = (region, lightField) => {
+    animatedNpcCellKeys.clear();
+    const activeIds = new Set();
+    if (!world || !fogOfWar || !lightField) {
+      for (const element of [...characterOverlay.querySelectorAll("[data-npc-id]")]) element.remove();
+      updateCharacterDepth();
+      return;
+    }
+    const npcs = getVisibleNpcPresentationRecords({
+      npcs: getOccupancyForWorld()?.getAll("npc") ?? [], realm: activeRealm, region, fog: fogOfWar, world,
+    });
+    const canvasBounds = canvas.getBoundingClientRect();
+    const containerBounds = container.getBoundingClientRect();
+    for (const npc of npcs) {
+      const visibility = getFogVisibility(fogOfWar, world, npc.cell);
+      activeIds.add(npc.id);
+      animatedNpcCellKeys.add(`${npc.cell.x},${npc.cell.y}`);
+      let element = characterOverlay.querySelector(`[data-npc-id="${npc.id}"]`);
+      if (!element) {
+        element = document.createElement("canvas");
+        element.className = "character_overlay__npc";
+        element.dataset.npcId = npc.id;
+        characterOverlay.append(element);
+      }
+      const visualGlyph = getOffsetGlyphKey(getFacingGlyphKey(npc.glyph, npc.facing), paletteOffsets.get(npc.glyph));
+      const lightingFactor = getBuildingPresentationLightingFactor(
+        world.buildings, npc.cell, playerCell, lighting.ambient, lightField.getFactor(npc.cell),
+      );
+      const baseColor = paletteColors.get(npc.glyph) ?? colorToLinearRgba(getPaletteStyle(palette, npc.glyph));
+      const color = linearRgbaToRendererHex(applyLightingToColor(baseColor, lightingFactor));
+      const cacheKey = `${fontId}:${visualGlyph}:${color}`;
+      let glyphCanvas = npcGlyphCanvases.get(cacheKey);
+      if (!glyphCanvas) {
+        const raster = rasterizeGlyph(visualGlyph, getFontOption(fontId).family, 128, "#ffffff", getGlyphOffsetsFromKey(visualGlyph));
+        glyphCanvas = createGlyphRasterCanvas(raster, color, { tint: true });
+        npcGlyphCanvases.set(cacheKey, glyphCanvas);
+      }
+      if (element.width !== glyphCanvas.width || element.height !== glyphCanvas.height) {
+        element.width = glyphCanvas.width;
+        element.height = glyphCanvas.height;
+      }
+      const context = element.getContext("2d");
+      context?.clearRect(0, 0, element.width, element.height);
+      context?.drawImage(glyphCanvas, 0, 0);
+      const center = getRenderedCellCenter({
+        x: npc.cell.x - viewOrigin.x,
+        y: npc.cell.y - viewOrigin.y,
+      }, viewport, world);
+      element.style.left = `${canvasBounds.left - containerBounds.left + center.x - viewport.gridWidth / 2}px`;
+      element.style.top = `${canvasBounds.top - containerBounds.top + center.y - viewport.gridHeight / 2}px`;
+      element.style.width = `${viewport.gridWidth}px`;
+      element.style.height = `${viewport.gridHeight}px`;
+      element.style.opacity = String(visibility / 100);
+      element.dataset.characterPresentationId = `npc:${npc.id}`;
+      element.dataset.characterType = "npc";
+      element.dataset.characterId = npc.id;
+      element.dataset.characterY = String(npc.cell.y);
+    }
+    for (const element of [...characterOverlay.querySelectorAll("[data-npc-id]")]) {
+      if (!activeIds.has(element.dataset.npcId)) element.remove();
+    }
+    updateCharacterDepth();
   };
 
   const renderCell = (region, x, y, frames, lightField, glyphOverride = null, visibility = 100) => {
@@ -2418,18 +2583,20 @@ async function createGameSessionImplementation(container, initialPalette, initia
     // The hero test owns the player visual. Paint the underlying terrain here
     // so the legacy player glyph cannot appear beneath the sprite overlay.
     const isAnimatedTorch = animatedTorchCellKeys.has(`${cell.x},${cell.y}`);
-    const isAnimatedTrap = animatedTrapCellKeys.has(`${cell.x},${cell.y}`);
-    const glyph = isPlayerCell || isAnimatedTorch || isAnimatedTrap
+    const isAnimatedTrap = trapGlyphSuppressionKeys.has(`${cell.x},${cell.y}`);
+    const isAnimatedEnemy = animatedEnemyCellKeys.has(`${cell.x},${cell.y}`);
+    const isAnimatedNpc = animatedNpcCellKeys.has(`${cell.x},${cell.y}`);
+    const glyph = isPlayerCell || isAnimatedTorch || isAnimatedTrap || isAnimatedEnemy || isAnimatedNpc
       ? world.terrain[cell.y][cell.x].glyph
       : (glyphOverride ?? getClientVisibleGlyph(world, cell));
-    const visualGlyph = isPlayerCell || isAnimatedTorch || isAnimatedTrap
-      ? getTerrainArtKey(world, cell, getOffsetGlyphKey(getFacingGlyphKey(glyph), paletteOffsets.get(glyph)))
+    const visualGlyph = isPlayerCell || isAnimatedTorch || isAnimatedTrap || isAnimatedEnemy || isAnimatedNpc
+      ? getTerrainArtKey(world, cell, getOffsetGlyphKey(getFacingGlyphKey(glyph), paletteOffsets.get(glyph)), waterAnimationFrame, goldCoinAnimationFrame)
       : getClientVisibleGlyphKey(world, cell);
     const terrainArt = parseTerrainArtKey(visualGlyph) !== null;
     const frame = frames.get(visualGlyph);
     if (frame === undefined) throw new Error(`Missing cached glyph frame: ${visualGlyph}`);
     const terrain = world.terrain[cell.y][cell.x];
-    const baseColor = terrain.depth === "deep" && glyph === terrain.glyph
+    const baseColor = terrain.depth === "water" && glyph === terrain.glyph
       ? colorToLinearRgba(terrain)
       : paletteColors.get(glyph) ?? colorToLinearRgba(getPaletteStyle(palette, glyph));
     const lightingFactor = getBuildingPresentationLightingFactor(
@@ -2484,8 +2651,11 @@ async function createGameSessionImplementation(container, initialPalette, initia
     const skippedBefore = metrics.skippedCells;
     const region = getVisibleRegion(viewport, world, viewOrigin);
     viewOrigin = { x: region.x, y: region.y };
+    const lightField = lightingFieldCache.get(world, region, objectSpawnerSystem?.getLightingSources(world) ?? world.torches, playerCell, lighting);
     reconcileTorchOverlays(region, performance.now());
     reconcileTrapOverlays(region, performance.now());
+    reconcileEnemyOverlays(region, performance.now());
+    reconcileNpcOverlays(region, lightField);
     if (refreshLighting) {
       // The player is a moving light source. Invalidate the cached lighting
       // value before repainting so the old source position cannot remain in a
@@ -2512,7 +2682,6 @@ async function createGameSessionImplementation(container, initialPalette, initia
     );
     metrics.glyphWarmupMs += visual.warmupMs;
     if (visual.atlas !== atlas) rebuildLayer(visual.atlas);
-    const lightField = lightingFieldCache.get(world, region, objectSpawnerSystem?.getLightingSources(world) ?? world.torches, playerCell, lighting);
     renderWorldViewComposition(composition, {
       drawCell: ({ localX, localY, slot, glyph, discovered, visibility }) => {
         if (!discovered) {
@@ -2658,15 +2827,17 @@ async function createGameSessionImplementation(container, initialPalette, initia
   const renderChangedWorldCells = (cells) => {
     if (!world || !renderer) return;
     const region = getVisibleRegion(viewport, world, viewOrigin);
+    const lightField = lightingFieldCache.get(world, region, objectSpawnerSystem?.getLightingSources(world) ?? world.torches, playerCell, lighting);
     reconcileTorchOverlays(region, performance.now());
     reconcileTrapOverlays(region, performance.now());
+    reconcileEnemyOverlays(region, performance.now());
+    reconcileNpcOverlays(region, lightField);
     const visibleCells = cells.filter((cell) => getVisibleSlot(region, cell) !== -1 &&
       isDiscovered(fogOfWar, world, cell));
     if (visibleCells.length === 0) return;
     const glyphs = visibleCells.map((cell) => getClientVisibleGlyphKey(world, cell));
     const visual = glyphCache.ensure(zoom, viewport.gridWidth, glyphs);
     metrics.glyphWarmupMs += visual.warmupMs;
-    const lightField = lightingFieldCache.get(world, region, objectSpawnerSystem?.getLightingSources(world) ?? world.torches, playerCell, lighting);
     for (const cell of visibleCells) {
       renderCell(
         region,
@@ -2688,6 +2859,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
     const region = getVisibleRegion(viewport, world, viewOrigin);
     reconcileTorchOverlays(region, performance.now());
     reconcileTrapOverlays(region, performance.now());
+    reconcileEnemyOverlays(region, performance.now());
     renderChangedWorldCells(cells);
     const lightField = lightingFieldCache.get(
       world,
@@ -2702,6 +2874,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
     // composition without rebuilding the world region or light pass.
     renderHealthBars(region);
     renderFloatingTexts(region);
+    renderHeroOverlay(performance.now());
     schedulePresentation();
     const renderMs = performance.now() - started;
     if (performanceMonitor.isActive()) {
@@ -3301,11 +3474,15 @@ async function createGameSessionImplementation(container, initialPalette, initia
     sideDoorOpenImage = await loadRasterImage(
       `${import.meta.env.BASE_URL}assets/images/Dungeons-and-Pixels-v1.4/Props/Static/Side_Door_Open.png`, { width: 64, height: 64 },
     );
+    goldCoinImage = await loadRasterImage(
+      `${import.meta.env.BASE_URL}assets/images/Dungeons-and-Pixels-v1.4/Items/Animated/gold_coin.png`, { width: 128, height: 32 },
+    );
     undergroundTerrainImage = {
-      dirt: terrainSheet, wall: terrainSheet, cobweb1: cobweb1Image,
+      dirt: terrainSheet, wall: terrainSheet, water: terrainSheet, cobweb1: cobweb1Image,
       silverChestClosed: silverChestClosedImage, silverChestOpen: silverChestOpenImage,
       frontDoorClosed: frontDoorClosedImage, frontDoorOpen: frontDoorOpenImage,
       sideDoorClosed: sideDoorClosedImage, sideDoorOpen: sideDoorOpenImage,
+      goldCoin: goldCoinImage,
     };
     engine = await createEngine(canvas, { maxDevicePixelRatio: 1, msaaSamples: 1 });
     const lifecycleToken = rendererLifecycle.begin();
@@ -3315,6 +3492,16 @@ async function createGameSessionImplementation(container, initialPalette, initia
     layer = createSprite2DLayer(atlas, { capacity: getInitialSpriteLayerCapacity(viewport) });
     renderer = createSpriteRenderer(engine, { layers: [layer], clearValue: { r: 0, g: 0, b: 0, a: 1 } });
     registerSpriteRenderer(renderer);
+    waterAnimationFrame = getWaterAnimationFrame(performance.now());
+    goldCoinAnimationFrame = getGoldCoinAnimationFrame(performance.now());
+    waterAnimationTimer = window.setInterval(() => {
+      const nextFrame = getWaterAnimationFrame(performance.now());
+      const nextGoldCoinFrame = getGoldCoinAnimationFrame(performance.now());
+      if (nextFrame === waterAnimationFrame && nextGoldCoinFrame === goldCoinAnimationFrame) return;
+      waterAnimationFrame = nextFrame;
+      goldCoinAnimationFrame = nextGoldCoinFrame;
+      scheduleVisualRefresh({ mapview: false });
+    }, Math.min(WATER_ANIMATION_FRAME_DURATION, GOLD_COIN_ANIMATION_FRAME_DURATION) / 2);
     await startEngine(engine);
     stopEngine(engine);
     // Preserve the Babylon Lite-only architecture on device loss: the client
@@ -3449,7 +3636,10 @@ async function createGameSessionImplementation(container, initialPalette, initia
     const addObjectToRealm = (realm, definition) => {
       const object = objectSpawnerSystem.addObject({ ...definition, realm });
       realm.objects.push(object);
-      realm.characters[object.cell.y][object.cell.x] = object.glyph;
+      // Trap art owns its visual presentation. Keep the logical object and
+      // collision contract, but never seed the legacy glyph into the canvas
+      // character layer where it could leak through before overlay reconcile.
+      realm.characters[object.cell.y][object.cell.x] = object.type === "trap" ? null : object.glyph;
       return object;
     };
     const applyHeartEffect = () => {
@@ -3799,6 +3989,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
       isStaticOccupiedIndex,
       log: (message) => logSystem.log({ message }),
       onDamage: recordEntityDamage,
+      onPresentation: (type, enemy, event) => enemySpritePresentation.present(type, enemy, event?.at ?? performance.now()),
       onChange: scheduleEntityRender,
     });
     enemySpawnerSystem = createEnemySpawnerSystem({
@@ -3888,11 +4079,19 @@ async function createGameSessionImplementation(container, initialPalette, initia
       worlds: worldRealms.realms,
       onChange: scheduleEntityRender,
       onPresentation: ({ type, name, realm, cell }) => {
-        const effectName = name === "BombExplosion" ? "SmokePoff" : name;
-        const instance = createParticleInstance(effectName, realm, cell);
+        const instance = createParticleInstance(name === "BombExplosion" ? "FirePlume" : name, realm, cell);
         if (!instance) return;
         instance.frozen = type === "preview";
         particleInstances.set(`bomb-pfx:${realm}:${cell.x},${cell.y}`, instance);
+        if (name === "BombExplosion") {
+          window.setTimeout(() => {
+            const smoke = createParticleInstance("SmokePoff", realm, cell);
+            if (!smoke || disposed) return;
+            particleInstances.set(`bomb-pfx:${realm}:${cell.x},${cell.y}:smoke`, smoke);
+            renderParticleOverlay(performance.now());
+            schedulePresentation();
+          }, (17 - 3) * 90);
+        }
         renderParticleOverlay(performance.now());
         schedulePresentation();
       },
@@ -4033,6 +4232,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
       const { colors, changed } = reconcilePaletteColors(paletteColors, palette);
       paletteColors = colors;
       paletteOffsets = new Map(palette.map((entry) => [entry.glyph, getPaletteEntryOffsets(entry)]));
+      npcGlyphCanvases.clear();
       // Terrain and overlay art bake palette colors into their rasters.
       if (offsetChanged.size > 0 || changed.size > 0) {
         rebuildGameGlyphCache();
@@ -4064,6 +4264,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
       glyphCache.dispose();
       minimapGlyphCache.dispose();
       minimapGlyphCanvases.clear();
+      npcGlyphCanvases.clear();
       fontId = nextFontId;
       glyphCache = createGameGlyphCache();
       rebuildMinimapGlyphCache();
@@ -4330,6 +4531,10 @@ async function createGameSessionImplementation(container, initialPalette, initia
       if (disposed) return;
       stopSprintDiagnostic?.();
       disposed = true;
+      if (waterAnimationTimer !== null) {
+        window.clearInterval(waterAnimationTimer);
+        waterAnimationTimer = null;
+      }
       rendererLifecycle.beginDisposal();
       clearMovementInput();
       generationController.abort();
@@ -4367,8 +4572,11 @@ async function createGameSessionImplementation(container, initialPalette, initia
       particleInstances.clear();
       torchAnimator.dispose();
       trapAnimator.dispose();
+      enemySpritePresentation.dispose();
       pfxOverlay.replaceChildren();
       trapOverlay.replaceChildren();
+      characterOverlay.replaceChildren();
+      npcGlyphCanvases.clear();
       disposeSpriteRenderer(renderer);
       glyphCache.dispose();
       minimapGlyphCache.dispose();

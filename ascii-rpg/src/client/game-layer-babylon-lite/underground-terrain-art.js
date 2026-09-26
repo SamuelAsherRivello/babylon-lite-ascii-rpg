@@ -1,17 +1,27 @@
 import { getFacingGlyph, getGlyphOffsetsFromKey, rasterizeGlyph } from "./glyph-visual-cache.js";
 import { getWallComposition, getWallMask } from "./underground-wall-autotile.js";
-import { CLOSED_CHEST_GLYPH, ENEMY_SPAWNER_GLYPH, OPEN_CHEST_GLYPH } from "./systems/world-system.js";
+import { CLOSED_CHEST_GLYPH, ENEMY_SPAWNER_GLYPH, GOLD_GLYPH, OPEN_CHEST_GLYPH } from "./systems/world-system.js";
 import { FRONT_DOOR_CLOSED_ART, FRONT_DOOR_OPEN_ART, SIDE_DOOR_CLOSED_ART, SIDE_DOOR_OPEN_ART } from "./systems/civilization-system.js";
 
 // Project-local source sheets; Tiled IDs are zero-based and never map IDs.
 export const UNDERGROUND_TERRAIN_SHEETS = Object.freeze({
   wall: Object.freeze({ width: 384, height: 288 }),
   dirt: Object.freeze({ width: 384, height: 288 }),
+  water: Object.freeze({ width: 384, height: 288 }),
 });
 export const UNDERGROUND_TERRAIN_FRAMES = Object.freeze({
   wall: Object.freeze({ source: "wall", x: 224, y: 64, width: 32, height: 32 }),
   dirt: Object.freeze({ source: "dirt", x: 32, y: 32, width: 32, height: 32 }),
 });
+export const WATER_ANIMATION_FRAME_DURATION = 400;
+export const GOLD_COIN_ANIMATION_FRAME_DURATION = 160;
+export const GOLD_COIN_FRAME_COUNT = 4;
+export const BLUE_WATER_TERRAIN_FRAMES = Object.freeze([
+  Object.freeze({ source: "water", x: 224, y: 192, width: 32, height: 32 }),
+  Object.freeze({ source: "water", x: 256, y: 192, width: 32, height: 32 }),
+  Object.freeze({ source: "water", x: 288, y: 192, width: 32, height: 32 }),
+  Object.freeze({ source: "water", x: 320, y: 192, width: 32, height: 32 }),
+]);
 const KEY_PREFIX = "terrain-art:";
 
 // Adjacent terrain tiles share exactly the same rounded edge. Glyph footprints
@@ -25,26 +35,50 @@ export function getTerrainArtBounds(cell, viewport, offset = { x: 0, y: 0 }) {
     size: { width: right - left, height: bottom - top } };
 }
 
-export function resolveUndergroundTerrainFrame(world, cell) {
+export function getWaterAnimationFrame(now = 0) {
+  return Math.floor(Math.max(0, now) / WATER_ANIMATION_FRAME_DURATION) % BLUE_WATER_TERRAIN_FRAMES.length;
+}
+
+export function getGoldCoinAnimationFrame(now = 0) {
+  return Math.floor(Math.max(0, now) / GOLD_COIN_ANIMATION_FRAME_DURATION) % GOLD_COIN_FRAME_COUNT;
+}
+
+function getGoldCoinFrame(glyph) {
+  const match = /^gold-coin:(\d+)$/.exec(getFacingGlyph(glyph));
+  return match ? Math.min(GOLD_COIN_FRAME_COUNT - 1, Number.parseInt(match[1], 10)) : null;
+}
+
+function getAnimatedOverlayGlyph(glyphKey, goldCoinFrame) {
+  return getFacingGlyph(glyphKey) === GOLD_GLYPH ? `gold-coin:${goldCoinFrame}` : glyphKey;
+}
+
+export function resolveUndergroundTerrainFrame(world, cell, waterFrame = 0) {
+  if (world.terrain?.[cell.y]?.[cell.x]?.kind === "water") {
+    return BLUE_WATER_TERRAIN_FRAMES[waterFrame] ?? BLUE_WATER_TERRAIN_FRAMES[0];
+  }
   if ((world?.realm ?? world?.realmName) !== "Underground") return null;
   return UNDERGROUND_TERRAIN_FRAMES[world.terrain?.[cell.y]?.[cell.x]?.kind] ?? null;
 }
 
-export function getTerrainArtKey(world, cell, glyphKey) {
-  if (!resolveUndergroundTerrainFrame(world, cell)) return glyphKey;
+export function getTerrainArtKey(world, cell, glyphKey, waterFrame = 0, goldCoinFrame = 0) {
+  const animatedGlyphKey = getAnimatedOverlayGlyph(glyphKey, goldCoinFrame);
+  const frame = resolveUndergroundTerrainFrame(world, cell, waterFrame);
+  if (!frame) return animatedGlyphKey;
   const terrain = world.terrain[cell.y][cell.x];
   // Only the terrain's own glyph disappears. Facing and offsets on overlays
   // remain part of the cache identity, independent of world coordinates.
-  const overlay = getFacingGlyph(glyphKey) === terrain.glyph ? null : glyphKey;
+  const overlay = getFacingGlyph(animatedGlyphKey) === terrain.glyph ? null : animatedGlyphKey;
   return KEY_PREFIX + JSON.stringify(terrain.kind === "wall"
-    ? [terrain.kind, overlay, getWallMask(world, cell)] : [terrain.kind, overlay]);
+    ? [terrain.kind, overlay, getWallMask(world, cell)]
+    : terrain.kind === "water" ? [terrain.kind, overlay, waterFrame] : [terrain.kind, overlay]);
 }
 
 export function parseTerrainArtKey(key) {
   if (typeof key !== "string" || !key.startsWith(KEY_PREFIX)) return null;
-  const [kind, overlay, mask] = JSON.parse(key.slice(KEY_PREFIX.length));
-  return { frame: UNDERGROUND_TERRAIN_FRAMES[kind], overlay,
-    ...(kind === "wall" && mask !== undefined ? { mask } : {}) };
+  const [kind, overlay, variant] = JSON.parse(key.slice(KEY_PREFIX.length));
+  return { frame: kind === "water" ? BLUE_WATER_TERRAIN_FRAMES[variant] : UNDERGROUND_TERRAIN_FRAMES[kind], overlay,
+    ...(kind === "wall" && variant !== undefined ? { mask: variant } : {}),
+    ...(kind === "water" ? { animationFrame: variant } : {}) };
 }
 
 export async function loadUndergroundTerrainImage(url, source = "dirt") {
@@ -68,16 +102,24 @@ export async function loadRasterImage(url, { width, height }) {
   return image;
 }
 
-function getStaticPropImage(glyph, images) {
+function getStaticPropSource(glyph, images) {
   switch (getFacingGlyph(glyph)) {
-    case CLOSED_CHEST_GLYPH: return images.silverChestClosed ?? null;
-    case OPEN_CHEST_GLYPH: return images.silverChestOpen ?? null;
-    case FRONT_DOOR_CLOSED_ART: return images.frontDoorClosed ?? null;
-    case FRONT_DOOR_OPEN_ART: return images.frontDoorOpen ?? null;
-    case SIDE_DOOR_CLOSED_ART: return images.sideDoorClosed ?? null;
-    case SIDE_DOOR_OPEN_ART: return images.sideDoorOpen ?? null;
+    case CLOSED_CHEST_GLYPH: return images.silverChestClosed ? { image: images.silverChestClosed } : null;
+    case OPEN_CHEST_GLYPH: return images.silverChestOpen ? { image: images.silverChestOpen } : null;
+    case FRONT_DOOR_CLOSED_ART: return images.frontDoorClosed ? { image: images.frontDoorClosed } : null;
+    case FRONT_DOOR_OPEN_ART: return images.frontDoorOpen ? { image: images.frontDoorOpen } : null;
+    case SIDE_DOOR_CLOSED_ART: return images.sideDoorClosed ? { image: images.sideDoorClosed } : null;
+    case SIDE_DOOR_OPEN_ART: return images.sideDoorOpen ? { image: images.sideDoorOpen } : null;
     default: return null;
   }
+}
+
+function getStaticPropSourceForFrame(glyph, images) {
+  const goldCoinFrame = getGoldCoinFrame(glyph);
+  if (goldCoinFrame !== null) {
+    return images.goldCoin ? { image: images.goldCoin, x: goldCoinFrame * 32, y: 0, width: 32, height: 32 } : null;
+  }
+  return getStaticPropSource(glyph, images);
 }
 
 // The open chest sheet is taller so its lid can rise above its cell. Keep that
@@ -90,8 +132,8 @@ export function getStaticPropArtAspectRatio(key) {
 }
 
 export function rasterizeStaticPropArt(key, images, size) {
-  const image = getStaticPropImage(key, images);
-  if (!image) return null;
+  const source = getStaticPropSourceForFrame(key, images);
+  if (!source) return null;
   const height = Math.round(size * getStaticPropArtAspectRatio(key));
   const canvas = document.createElement("canvas");
   canvas.width = size;
@@ -99,7 +141,8 @@ export function rasterizeStaticPropArt(key, images, size) {
   const context = canvas.getContext("2d", { willReadFrequently: true });
   if (!context) throw new Error("Static prop art needs a 2D canvas context.");
   context.imageSmoothingEnabled = false;
-  context.drawImage(image, 0, 0, size, height);
+  if (source.width) context.drawImage(source.image, source.x, source.y, source.width, source.height, 0, 0, size, height);
+  else context.drawImage(source.image, 0, 0, size, height);
   return { name: key, width: size, height, pixels: context.getImageData(0, 0, size, height).data };
 }
 
@@ -119,8 +162,8 @@ export function compositeTerrainPixels(terrainPixels, overlayRaster = null, colo
 export function rasterizeTerrainArt(key, images, family, size, paletteColors) {
   const visual = parseTerrainArtKey(key);
   if (!visual) return null;
-  const propImage = getStaticPropImage(visual.overlay, images);
-  const propHeight = propImage ? Math.round(size * getStaticPropArtAspectRatio(key)) : size;
+  const propSource = getStaticPropSourceForFrame(visual.overlay, images);
+  const propHeight = propSource ? Math.round(size * getStaticPropArtAspectRatio(key)) : size;
   const canvas = document.createElement("canvas");
   canvas.width = size;
   canvas.height = propHeight;
@@ -137,8 +180,9 @@ export function rasterizeTerrainArt(key, images, family, size, paletteColors) {
       context.drawImage(images.wall, sx, sy, sw, sh, left, top, right - left, bottom - top);
     }
   }
-  if (propImage) {
-    context.drawImage(propImage, 0, 0, size, propHeight);
+  if (propSource) {
+    if (propSource.width) context.drawImage(propSource.image, propSource.x, propSource.y, propSource.width, propSource.height, 0, 0, size, propHeight);
+    else context.drawImage(propSource.image, 0, 0, size, propHeight);
     return {
       name: key, width: size, height: propHeight, composite: true, terrainArt: true,
       pixels: context.getImageData(0, 0, size, propHeight).data,

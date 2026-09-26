@@ -94,16 +94,13 @@ test("a blocked cell lights up but casts a straight shadow behind it", () => {
   assert.equal(getSceneLightingFactor({ x: 4, y: 2 }, [torch], null, darkScene, terrain), 0);
 });
 
-test("every unwalkable water depth blocks source light", () => {
-  for (const kind of ["mediumWater", "deepWater"]) {
-    const terrain = makeTerrain();
-    terrain[2][3] = { walkable: false, kind };
-    assert.equal(
-      getSceneLightingFactor({ x: 4, y: 2 }, [{ x: 1, y: 2 }], null, darkScene, terrain),
-      0,
-      kind,
-    );
-  }
+test("canonical water blocks source light", () => {
+  const terrain = makeTerrain();
+  terrain[2][3] = { walkable: false, kind: "water" };
+  assert.equal(
+    getSceneLightingFactor({ x: 4, y: 2 }, [{ x: 1, y: 2 }], null, darkScene, terrain),
+    0,
+  );
 });
 
 test("light does not slip through a closed diagonal corner", () => {

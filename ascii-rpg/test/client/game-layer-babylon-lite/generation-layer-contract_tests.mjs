@@ -14,8 +14,8 @@ test("game-session factory preserves the disposable session contract", async () 
   assert.equal(disposed, true);
 });
 
-test("walkability layer keeps borders blocked and shallow water walkable", () => {
-  const result = createWalkabilityPass([["wall", "wall", "wall"], ["wall", "ground", "shallowWater"], ["wall", "wall", "wall"]], 3, 3);
+test("walkability layer keeps borders and water blocked", () => {
+  const result = createWalkabilityPass([["wall", "wall", "wall"], ["wall", "ground", "water"], ["wall", "wall", "wall"]], 3, 3);
   assert.deepEqual(result, [[false, false, false], [false, true, false], [false, false, false]]);
 });
 

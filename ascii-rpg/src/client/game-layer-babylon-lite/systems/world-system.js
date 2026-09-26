@@ -22,9 +22,7 @@ export const OPEN_VERTICAL_DOOR_GLYPH = "□";
 export const CLOSED_HORIZONTAL_DOOR_GLYPH = "█";
 export const OPEN_HORIZONTAL_DOOR_GLYPH = "□";
 export const MOUNTAIN_GLYPH = "△";
-export const SHALLOW_WATER_GLYPH = "~";
-export const MEDIUM_WATER_GLYPH = "≈";
-export const DEEP_WATER_GLYPH = "▓";
+export const WATER_GLYPH = "~";
 // The complete glyph inventory used by the generated overground and
 // underground maps, including terrain and map characters placed at client.
 export const PROJECT_MAP_GLYPHS = Object.freeze([
@@ -41,9 +39,7 @@ export const PROJECT_MAP_GLYPHS = Object.freeze([
   CAMP_FIRE_GLYPH,
   STAIR_GLYPH,
   GOLD_GLYPH,
-  SHALLOW_WATER_GLYPH,
-  MEDIUM_WATER_GLYPH,
-  DEEP_WATER_GLYPH,
+  WATER_GLYPH,
   HEALTH_GLYPH,
   TRAP_GLYPH,
   CLOSED_CHEST_GLYPH,
@@ -61,9 +57,6 @@ export const DEFAULT_SMOOTHING_ITERATIONS = 4;
 export const DEFAULT_MIN_WALKABLE_PERCENT = 0.3;
 // Normal worlds always include water; callers can still explicitly request a dry world.
 export const DEFAULT_WATER_FILL_PERCENT = 30;
-export const MIN_WATER_LAKE_SIZE = 50;
-export const MAX_WATER_LAKE_SIZE = 240;
-export const OCCASIONAL_LARGE_WATER_LAKE_SIZE = 480;
 export const MAX_GENERATION_ATTEMPTS = 64;
 export const OBJECT_DISTRIBUTION_RULES = Object.freeze({
   torch: Object.freeze({ minimumDistance: 25 }),
@@ -77,9 +70,7 @@ export const REALM_PROFILES = Object.freeze({
 const TERRAIN_COLORS = Object.freeze({
   wall: "#f5f5f5",
   ground: "#f5f5f5",
-  shallowWater: "#62c7ff",
-  mediumWater: "#247fc3",
-  deepWater: "#0b3d91",
+  water: "#247fc3",
 });
 
 export function getRandomSeedFromSearch(search) {
@@ -121,10 +112,6 @@ export function createRandom(seed) {
     value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
     return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
   };
-}
-
-function cellKey(cell) {
-  return `${cell.x},${cell.y}`;
 }
 
 function cellIndex(cell, columns) {
@@ -190,212 +177,16 @@ function getCellNeighbors(cell, rows, columns) {
     ));
 }
 
-function countSelectedNeighbors(key, selectedStamp, stamp, rows, columns) {
-  const x = key % columns;
-  const y = Math.floor(key / columns);
-  let count = 0;
-  if (y > 1 && selectedStamp[key - columns] === stamp) count += 1;
-  if (x < columns - 2 && selectedStamp[key + 1] === stamp) count += 1;
-  if (y < rows - 2 && selectedStamp[key + columns] === stamp) count += 1;
-  if (x > 1 && selectedStamp[key - 1] === stamp) count += 1;
-  return count;
-}
-
-function createLakeScratch(rows, columns) {
-  const count = rows * columns;
-  return {
-    reserved: new Uint8Array(count),
-    regionKeys: new Uint8Array(count),
-    selectedStamp: new Uint32Array(count),
-    frontierStamp: new Uint32Array(count),
-    stamp: 0,
-  };
-}
-
-function selectLakeCells(region, rows, columns, random, targetSize, scratch, preferredStart = null) {
-  const { reserved, regionKeys, selectedStamp, frontierStamp } = scratch;
-  let start = null;
-  if (preferredStart && regionKeys[cellIndex(preferredStart, columns)] && !reserved[cellIndex(preferredStart, columns)]) {
-    start = preferredStart;
-  } else {
-    for (let attempt = 0; attempt < 100; attempt += 1) {
-      const candidate = region[Math.floor(random() * region.length)];
-      if (!reserved[cellIndex(candidate, columns)]) {
-        start = candidate;
-        break;
-      }
-    }
-  }
-  if (!start) return [];
-
-  const stamp = ++scratch.stamp;
-  const selected = [cellIndex(start, columns)];
-  selectedStamp[selected[0]] = stamp;
-  const frontier = [];
-  const addFrontier = (key) => {
-    const x = key % columns;
-    const y = Math.floor(key / columns);
-    const neighbors = [
-      y > 1 ? key - columns : -1,
-      x < columns - 2 ? key + 1 : -1,
-      y < rows - 2 ? key + columns : -1,
-      x > 1 ? key - 1 : -1,
-    ];
-    for (const neighbor of neighbors) {
-      if (
-        neighbor >= 0 && regionKeys[neighbor] &&
-        selectedStamp[neighbor] !== stamp &&
-        !reserved[neighbor] &&
-        frontierStamp[neighbor] !== stamp
-      ) {
-        frontierStamp[neighbor] = stamp;
-        frontier.push(neighbor);
-      }
-    }
-  };
-  addFrontier(selected[0]);
-
-  while (selected.length < targetSize && frontier.length > 0) {
-    const sampleCount = Math.min(8, frontier.length);
-    let selectedIndex = Math.floor(random() * frontier.length);
-    let selectedScore = -1;
-    for (let sample = 0; sample < sampleCount; sample += 1) {
-      const candidateIndex = Math.floor(random() * frontier.length);
-      const candidate = frontier[candidateIndex];
-      const score = countSelectedNeighbors(candidate, selectedStamp, stamp, rows, columns) * 3 + random();
-      if (score > selectedScore) {
-        selectedScore = score;
-        selectedIndex = candidateIndex;
-      }
-    }
-
-    const next = frontier[selectedIndex];
-    const nextKey = next;
-    const last = frontier.pop();
-    frontierStamp[nextKey] = 0;
-    if (selectedIndex < frontier.length) {
-      frontier[selectedIndex] = last;
-    }
-    selectedStamp[nextKey] = stamp;
-    selected.push(nextKey);
-    addFrontier(nextKey);
-  }
-
-  return selected.map((key) => {
-    return { x: key % columns, y: Math.floor(key / columns) };
-  });
-}
-
-function reserveLakeCells(lake, reserved, columns) {
-  // Keep lakes independent in the data layer while allowing the aggregate
-  // target to fill the available cave instead of consuming a second cell
-  // for every water cell as a visual moat.
-  for (const cell of lake) reserved[cellIndex(cell, columns)] = 1;
-}
-
-function getInteriorNeighborIndexes(key, rows, columns) {
-  const x = key % columns;
-  const y = Math.floor(key / columns);
-  const neighbors = [];
-  if (y > 1) neighbors.push(key - columns);
-  if (x < columns - 2) neighbors.push(key + 1);
-  if (y < rows - 2) neighbors.push(key + columns);
-  if (x > 1) neighbors.push(key - 1);
-  return neighbors;
-}
-
-function assignWaterDepths(waterCells, rows, columns) {
-  if (waterCells.length === 0) return new Map();
-  const waterKeys = new Uint8Array(rows * columns);
-  const distances = new Int32Array(rows * columns);
-  distances.fill(-1);
-  const pending = new Uint32Array(waterCells.length);
-  let pendingLength = 0;
-  for (const cell of waterCells) waterKeys[cellIndex(cell, columns)] = 1;
-  for (const cell of waterCells) {
-    const key = cellIndex(cell, columns);
-    if (getInteriorNeighborIndexes(key, rows, columns).some((neighbor) => !waterKeys[neighbor])) {
-      distances[key] = 0;
-      pending[pendingLength] = key;
-      pendingLength += 1;
-    }
-  }
-  let pendingIndex = 0;
-  while (pendingIndex < pendingLength) {
-    const cellKeyIndex = pending[pendingIndex];
-    pendingIndex += 1;
-    const distance = distances[cellKeyIndex];
-    for (const key of getInteriorNeighborIndexes(cellKeyIndex, rows, columns)) {
-      if (waterKeys[key] && distances[key] < 0) {
-        distances[key] = distance + 1;
-        pending[pendingLength] = key;
-        pendingLength += 1;
-      }
-    }
-  }
-
-  const center = getCenterMostCell(waterCells, rows, columns);
-  let deepestDistance = 0;
-  for (const cell of waterCells) deepestDistance = Math.max(deepestDistance, distances[cellIndex(cell, columns)]);
-  const ordered = [...waterCells].sort((left, right) => {
-    const leftDepth = distances[cellIndex(left, columns)];
-    const rightDepth = distances[cellIndex(right, columns)];
-    const leftCenterDistance = Math.abs(left.x - center.x) + Math.abs(left.y - center.y);
-    const rightCenterDistance = Math.abs(right.x - center.x) + Math.abs(right.y - center.y);
-    return rightDepth - leftDepth
-      || leftCenterDistance - rightCenterDistance
-      || cellKey(left).localeCompare(cellKey(right));
-  });
-  const depths = new Map();
-  if (deepestDistance >= 2) {
-    ordered.forEach((cell) => {
-      const distance = distances[cellIndex(cell, columns)];
-      const depth = distance === deepestDistance
-        ? "deep"
-        : distance === deepestDistance - 1 ? "medium" : "shallow";
-      depths.set(cellKey(cell), depth);
-    });
-  } else {
-    // Very thin 5-20-cell lakes cannot express three literal graph-distance
-    // rings. Keep their center deepest, make its immediate lake neighbors
-    // middle depth, and leave any remaining boundary cells shallow.
-    const deepKeys = new Set([cellIndex(ordered[0], columns)]);
-    const mediumKeys = new Set(getInteriorNeighborIndexes(cellIndex(ordered[0], columns), rows, columns)
-      .filter((key) => waterKeys[key]));
-    ordered.forEach((cell) => {
-      const key = cellIndex(cell, columns);
-      const depth = deepKeys.has(key) ? "deep" : mediumKeys.has(key) ? "medium" : "shallow";
-      depths.set(cellKey(cell), depth);
-    });
-  }
-  return depths;
-}
-
-function getWaterLakeTargetSize(random, regionLength) {
-  const upperBound = random() < 0.12 ? OCCASIONAL_LARGE_WATER_LAKE_SIZE : MAX_WATER_LAKE_SIZE;
-  return Math.min(
-    regionLength,
-    MIN_WATER_LAKE_SIZE + Math.floor(random() * (upperBound - MIN_WATER_LAKE_SIZE + 1)),
-  );
-}
-
-function getCenterPreferredStart(region, rows, columns) {
-  if (region.length === 0) return null;
-  return getCenterMostCell(region, rows, columns);
-}
-
 function createTerrainCells(terrainKinds, walkability) {
   return terrainKinds.map((row, y) => row.map((kind, x) => {
     const glyph = {
       wall: WALL_GLYPH,
       ground: FLOOR_GLYPH,
-      shallowWater: SHALLOW_WATER_GLYPH,
-      mediumWater: MEDIUM_WATER_GLYPH,
-      deepWater: DEEP_WATER_GLYPH,
+      water: WATER_GLYPH,
     }[kind];
     return {
       kind,
-      depth: kind.endsWith("Water") ? kind.replace("Water", "").toLowerCase() : null,
+      depth: kind === "water" ? "water" : null,
       glyph,
       walkable: walkability[y][x],
       color: TERRAIN_COLORS[kind],
@@ -449,9 +240,9 @@ export function createWorld({
     const waterPass = waterEnabled
       ? createWaterPassLayer({ region, rows, columns, random, waterFillPercent, waterLakeCount })
       : { depths: new Map(), lakes: [] };
-    for (const [key, depth] of waterPass.depths) {
+    for (const [key] of waterPass.depths) {
       const [x, y] = key.split(",").map(Number);
-      terrainKinds[y][x] = `${depth}Water`;
+      terrainKinds[y][x] = "water";
     }
 
     const walkability = createWalkabilityPass(terrainKinds, rows, columns);
@@ -668,9 +459,9 @@ export async function createWorldCooperative({
       : { depths: new Map(), lakes: [] };
     markPhase("water");
     let depthIndex = 0;
-    for (const [key, depth] of waterPass.depths) {
+    for (const [key] of waterPass.depths) {
       const [x, y] = key.split(",").map(Number);
-      terrainKinds[y][x] = `${depth}Water`;
+      terrainKinds[y][x] = "water";
       depthIndex += 1;
       if ((depthIndex & 1023) === 0) {
         const pause = checkpoint();
@@ -682,7 +473,7 @@ export async function createWorldCooperative({
 
     const walkability = await createGridCooperative(rows, columns, (x, y) => (
       !isBorderCell(x, y, rows, columns) &&
-      (terrainKinds[y][x] === "ground" || terrainKinds[y][x] === "shallowWater")
+      terrainKinds[y][x] === "ground"
     ), checkpoint);
     const walkableRegion = await getLargestRegionCooperative(
       walkability, rows, columns, (cell) => !walkability[cell.y][cell.x], checkpoint,
@@ -712,10 +503,9 @@ export async function createWorldCooperative({
       const kind = terrainKinds[y][x];
       return {
         kind,
-        depth: kind.endsWith("Water") ? kind.replace("Water", "").toLowerCase() : null,
+        depth: kind === "water" ? "water" : null,
         glyph: {
-          wall: WALL_GLYPH, ground: FLOOR_GLYPH, shallowWater: SHALLOW_WATER_GLYPH,
-          mediumWater: MEDIUM_WATER_GLYPH, deepWater: DEEP_WATER_GLYPH,
+          wall: WALL_GLYPH, ground: FLOOR_GLYPH, water: WATER_GLYPH,
         }[kind],
         walkable: walkability[y][x], color: TERRAIN_COLORS[kind], alpha: 1,
       };

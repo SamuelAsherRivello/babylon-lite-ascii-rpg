@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { rasterizeTerrainArt } from "../../../src/client/game-layer-babylon-lite/underground-terrain-art.js";
 import { expandTerrainDirtyCells, getWallComposition, getWallMask } from "../../../src/client/game-layer-babylon-lite/underground-wall-autotile.js";
-import { compositeTerrainPixels, getTerrainArtBounds, getTerrainArtKey, parseTerrainArtKey, resolveUndergroundTerrainFrame, UNDERGROUND_TERRAIN_FRAMES } from "../../../src/client/game-layer-babylon-lite/underground-terrain-art.js";
+import { BLUE_WATER_TERRAIN_FRAMES, compositeTerrainPixels, GOLD_COIN_ANIMATION_FRAME_DURATION, getGoldCoinAnimationFrame, getTerrainArtBounds, getTerrainArtKey, getWaterAnimationFrame, parseTerrainArtKey, resolveUndergroundTerrainFrame, UNDERGROUND_TERRAIN_FRAMES, WATER_ANIMATION_FRAME_DURATION } from "../../../src/client/game-layer-babylon-lite/underground-terrain-art.js";
 import { createWorldViewComposition, collectWorldViewGlyphs } from "../../../src/client/game-layer-babylon-lite/world-view.js";
 import { createGlyphRasterCanvas, createGlyphVisualCache, darkenGlyphColor, FACING_RIGHT, getFacingGlyphKey, getFacingGlyphOffsets, getGlyphOffsetKey, getGlyphOffsetsFromKey, getGlyphRasterSize, getOffsetGlyphKey, rasterizeSolidGlyph, tintGlyphRgb } from "../../../src/client/game-layer-babylon-lite/glyph-visual-cache.js";
 import { collectVisibleGlyphs, getVisibleRegion, getVisibleSlot, shouldUpdateVisibleSprite } from "../../../src/client/game-layer-babylon-lite/visible-region.js";
@@ -105,20 +105,24 @@ test("wall compositions rasterize only exposed edges and reuse mask keys across 
   }
 });
 
-test("Underground 1-tile selection is logical, deterministic, and does not mutate gameplay", () => {
+test("terrain art selection includes synchronized blue water and does not mutate gameplay", () => {
   const world = { realm: "Underground", rows: 1, columns: 3, terrain: [[
     { kind: "wall", glyph: "▒", walkable: false },
     { kind: "dirt", glyph: "●", walkable: true },
-    { kind: "water", glyph: "~", walkable: true },
+    { kind: "water", glyph: "~", walkable: false },
   ]] };
   const before = structuredClone(world);
   const cell = { x: 0, y: 0 };
   assert.equal(resolveUndergroundTerrainFrame(world, cell), UNDERGROUND_TERRAIN_FRAMES.wall);
   assert.equal(resolveUndergroundTerrainFrame(world, { x: 1, y: 0 }), UNDERGROUND_TERRAIN_FRAMES.dirt);
-  assert.equal(resolveUndergroundTerrainFrame(world, { x: 2, y: 0 }), null);
+  assert.equal(resolveUndergroundTerrainFrame(world, { x: 2, y: 0 }), BLUE_WATER_TERRAIN_FRAMES[0]);
   assert.equal(resolveUndergroundTerrainFrame(world, { x: -1, y: 0 }), null);
   assert.equal(resolveUndergroundTerrainFrame({ ...world, realm: "Overground" }, cell), null);
-  assert.equal(getTerrainArtKey(world, { x: 2, y: 0 }, "~"), "~");
+  assert.equal(resolveUndergroundTerrainFrame({ ...world, realm: "Overground" }, { x: 2, y: 0 }), BLUE_WATER_TERRAIN_FRAMES[0]);
+  const waterFrame0 = getTerrainArtKey(world, { x: 2, y: 0 }, "~", 0);
+  const waterFrame1 = getTerrainArtKey(world, { x: 2, y: 0 }, "~", 1);
+  assert.notEqual(waterFrame0, waterFrame1);
+  assert.deepEqual(parseTerrainArtKey(waterFrame0), { frame: BLUE_WATER_TERRAIN_FRAMES[0], overlay: null, animationFrame: 0 });
   const key = getTerrainArtKey(world, cell, "▒");
   assert.equal(getTerrainArtKey(world, cell, "▒"), key);
   assert.deepEqual(parseTerrainArtKey(key), { frame: UNDERGROUND_TERRAIN_FRAMES.wall, overlay: null, mask: 13 });
@@ -134,6 +138,18 @@ test("Underground 1-tile selection is logical, deterministic, and does not mutat
     assert.ok(frame.y + expectedSize <= 288);
   }
   assert.deepEqual(UNDERGROUND_TERRAIN_FRAMES.wall, { source: "wall", x: 224, y: 64, width: 32, height: 32 });
+  assert.deepEqual(BLUE_WATER_TERRAIN_FRAMES[0], { source: "water", x: 224, y: 192, width: 32, height: 32 });
+  assert.equal(getWaterAnimationFrame(0), 0);
+  assert.equal(getWaterAnimationFrame(WATER_ANIMATION_FRAME_DURATION), 1);
+  assert.equal(getWaterAnimationFrame(WATER_ANIMATION_FRAME_DURATION * 4), 0);
+});
+
+test("gold uses each frame of the animated coin strip without changing its gameplay glyph", () => {
+  const world = { realm: "Overground", rows: 1, columns: 1, terrain: [[{ kind: "grass", glyph: "•" }]] };
+  assert.deepEqual([0, 1, 2, 3].map((frame) => getGoldCoinAnimationFrame(frame * GOLD_COIN_ANIMATION_FRAME_DURATION)), [0, 1, 2, 3]);
+  assert.equal(getTerrainArtKey(world, { x: 0, y: 0 }, "💰", 0, 0), "gold-coin:0");
+  assert.equal(getTerrainArtKey(world, { x: 0, y: 0 }, "💰", 0, 3), "gold-coin:3");
+  assert.equal(world.terrain[0][0].glyph, "•");
 });
 
 test("terrain rasterization selects matching wall and floor frames from the new sheet", () => {
@@ -145,12 +161,14 @@ test("terrain rasterization selects matching wall and floor frames from the new 
   }) }) };
   try {
     const sheet = { name: "new dungeon" };
-    const images = { wall: sheet, dirt: sheet };
+    const images = { wall: sheet, dirt: sheet, water: sheet };
     for (const kind of ["wall", "dirt"]) {
       rasterizeTerrainArt(`terrain-art:${JSON.stringify([kind, null])}`, images, "monospace", 16, new Map());
     }
     assert.deepEqual(calls[0], [images.wall, 224, 64, 32, 32, 0, 0, 16, 16]);
     assert.deepEqual(calls[1], [images.dirt, 32, 32, 32, 32, 0, 0, 16, 16]);
+    rasterizeTerrainArt(`terrain-art:${JSON.stringify(["water", null, 2])}`, images, "monospace", 16, new Map());
+    assert.deepEqual(calls[2], [images.water, 288, 192, 32, 32, 0, 0, 16, 16]);
   } finally {
     if (previous === undefined) delete globalThis.document;
     else globalThis.document = previous;
@@ -179,31 +197,36 @@ test("enemy spawners render with the cobweb prop while retaining their simulatio
   }
 });
 
-test("terrain art preserves glyph overlays and facing while fog culls before resolution", () => {
-  const world = { realm: "Underground", rows: 1, columns: 3,
-    terrain: [Array.from({ length: 3 }, () => ({ kind: "dirt", glyph: "●", walkable: true }))] };
-  const overlay = getOffsetGlyphKey(getFacingGlyphKey("@", FACING_RIGHT), { offsetX: 2 });
+test("animated water preserves actor, object, and particle overlays while fog culls before resolution", () => {
+  const world = { realm: "Overground", rows: 1, columns: 4,
+    terrain: [Array.from({ length: 4 }, () => ({ kind: "water", glyph: "~", walkable: false }))] };
+  const actorOverlay = getOffsetGlyphKey(getFacingGlyphKey("@", FACING_RIGHT), { offsetX: 2 });
+  const objectOverlay = "📦";
+  const particleOverlay = "✨";
   const resolved = [];
   const composition = createWorldViewComposition({
-    world, source: { x: 0, y: 0, width: 3, height: 1 },
-    getVisibility: (_fog, _world, cell) => [100, 50, 0][cell.x],
+    world, source: { x: 0, y: 0, width: 4, height: 1 },
+    getVisibility: (_fog, _world, cell) => [100, 50, 100, 0][cell.x],
     getGlyph: (target, cell) => {
       resolved.push(cell.x);
-      return getTerrainArtKey(target, cell, cell.x === 0 ? overlay : "●");
+      return getTerrainArtKey(target, cell, [actorOverlay, objectOverlay, particleOverlay, "~"][cell.x], 2);
     },
   });
-  assert.deepEqual(resolved, [0, 1]);
-  assert.deepEqual(composition.cells.map(({ visibility }) => visibility), [100, 50, 0]);
-  assert.equal(parseTerrainArtKey(composition.cells[0].glyph).overlay, overlay);
-  assert.equal(parseTerrainArtKey(composition.cells[1].glyph).overlay, null);
-  assert.equal(composition.cells[2].glyph, null);
-  assert.equal(collectWorldViewGlyphs(composition).size, 2);
-  const cache = createGlyphVisualCache({}, { glyphLimit: 2, atlasApi: fakeAtlasApi(),
+  assert.deepEqual(resolved, [0, 1, 2]);
+  assert.deepEqual(composition.cells.map(({ visibility }) => visibility), [100, 50, 100, 0]);
+  assert.deepEqual(composition.cells.slice(0, 3).map(({ glyph }) => parseTerrainArtKey(glyph)), [
+    { frame: BLUE_WATER_TERRAIN_FRAMES[2], overlay: actorOverlay, animationFrame: 2 },
+    { frame: BLUE_WATER_TERRAIN_FRAMES[2], overlay: objectOverlay, animationFrame: 2 },
+    { frame: BLUE_WATER_TERRAIN_FRAMES[2], overlay: particleOverlay, animationFrame: 2 },
+  ]);
+  assert.equal(composition.cells[3].glyph, null);
+  assert.equal(collectWorldViewGlyphs(composition).size, 3);
+  const cache = createGlyphVisualCache({}, { glyphLimit: 3, atlasApi: fakeAtlasApi(),
     rasterize: (name) => ({ name, width: 16, height: 16 }) });
   cache.ensure(5, 32, collectWorldViewGlyphs(composition));
   cache.ensure(5, 32, collectWorldViewGlyphs(composition));
-  assert.equal(cache.snapshot().misses, 2);
-  assert.equal(cache.snapshot().hits, 2);
+  assert.equal(cache.snapshot().misses, 3);
+  assert.equal(cache.snapshot().hits, 3);
   cache.dispose();
 });
 

@@ -114,7 +114,6 @@ export function createEnemySpritePresentation({
         });
         return;
       }
-      const prior = living.get(enemy.id);
       living.set(enemy.id, {
         id: enemy.id,
         realm: enemy.realm,
@@ -122,7 +121,6 @@ export function createEnemySpritePresentation({
         facing: enemy.facing,
         state: type === "move" || type === "attack" ? type : "idle",
         startedAt: at,
-        ...(prior ? {} : {}),
       });
     },
     clearRealm(realm) {

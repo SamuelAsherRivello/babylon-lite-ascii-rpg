@@ -180,6 +180,14 @@
   color: #f5c542;
 }
 
+.character_gold_coin_icon {
+  width: 1em;
+  height: 1em;
+  object-fit: cover;
+  object-position: left;
+  image-rendering: pixelated;
+}
+
 .character_resource[data-resource] {
   flex-direction: column;
   gap: 0.1rem;

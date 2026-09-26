@@ -44,6 +44,21 @@ test("bombs wait five later world ticks, then expose five rings in both realms",
   assert.equal(planted.fuseAt, 7);
 });
 
+test("bomb PFX starts at the first ring after five ticks and expands one ring per tick", () => {
+  const timeSystem = createTimeSystem();
+  const presentations = [];
+  const bombs = createBombSystem({ timeSystem, worlds: { Overground: world("Overground") }, onPresentation: (presentation) => presentations.push({ ...presentation, time: timeSystem.getTime() }) });
+  bombs.place("Overground", { x: 10, y: 10 });
+  assert.equal(presentations.length, 0);
+  timeSystem.advance(4);
+  assert.equal(presentations.length, 0);
+  timeSystem.advance();
+  assert.equal(presentations.length, 5);
+  assert.ok(presentations.every(({ name, time }) => name === "BombExplosion" && time === 6));
+  timeSystem.advance();
+  assert.equal(presentations.length, 13);
+});
+
 test("every active blast tick damages actors that enter an already-expanded circle", () => {
   const timeSystem = createTimeSystem();
   let playerCell = { x: 10, y: 10 };

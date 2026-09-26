@@ -7,9 +7,9 @@ import { generationFixture } from '../../performance/generation-fixtures.js';
 // these hashes together with the fixture seed so accidental world-generation
 // changes fail loudly instead of silently changing performance baselines.
 const references = {
-  'optimization-open': ['f2691397601fd0a15f8d2346feffd63a86dc05773a94a7ed3eb8f04d8e151df6', '4fbe547ce23b141f58087746666eb0997110c4c88ad9b0e0f1ab5e0097715f1c'],
-  'optimization-water': ['6de2a63f88df9c24646b9f2dae91301c9f9458ac9789f7885d439dd0b5546693', 'dbb669fb0a00f8322997e033c2c07dcb26725abe25f7c64b5d9025fb1b7a73fb'],
-  'optimization-obstructed': ['3ff5086a86b7227b1f34ab60f45c64c6a356c2e7b954c724db846b9775f1218e', '905c5c1344e296f2a7fad4cc5e9beb448b2abd6a7a6ab1bb2c6382536755e40a'],
+  'optimization-open': ['d0a328b57f09d36d98c3c1a19d63a1e125bf396af0518d8f0bfd6641080785ea', '8b2e8c6af10bd873418b139cfe3575fb7dc219e89ae629a83b8caff39e33d284'],
+  'optimization-water': ['7ef798455a08f7c8adf8fbfdf7c9695dcd0d3a9bff8184d08526e8ac27f90d99', 'a69b4f147717c0cec4d8575f6c58ffc6537cbdb925fbe40a6b4ba066a4f590cf'],
+  'optimization-obstructed': ['c93a950315926a32905c6052f6b5034a53c02d5e895b419f068c135e2e6ed458', '716a8a87a8cef472693842f17cc72bdf3cc637185540f3242de0ebe74b434977'],
 };
 for (const [seed, expected] of Object.entries(references)) test(`positive-count layers and patrol retain reference output: ${seed}`, async () => {
   const { output } = await generationFixture(seed, 128);

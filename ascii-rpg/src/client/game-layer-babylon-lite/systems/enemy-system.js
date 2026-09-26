@@ -47,6 +47,7 @@ export function createEnemySystem({
   isStaticOccupiedIndex = null,
   log = () => {},
   onDamage = () => {},
+  onPresentation = () => {},
   onChange = () => {},
   onDistanceFieldBuilt = () => {},
   navigationRadius = ENEMY_NAVIGATION_RADIUS,
@@ -112,6 +113,16 @@ export function createEnemySystem({
     return fieldCache.get(cacheKey);
   };
 
+  const turnTowardPlayerBeforeVerticalMove = (id, enemy, next, player, event) => {
+    if (next.x !== enemy.cell.x || next.y === enemy.cell.y || player.cell.x === enemy.cell.x) return false;
+    const facing = player.cell.x > enemy.cell.x ? "right" : "left";
+    if (enemy.facing === facing) return false;
+    occupancy.update(id, { facing });
+    onPresentation("turn", occupancy.get(id) ?? enemy, event);
+    onChange();
+    return true;
+  };
+
   const simulate = (id, event) => {
     const enemy = occupancy.get(id);
     if (!enemy) return;
@@ -138,12 +149,15 @@ export function createEnemySystem({
           damagePlayer(damage, { enemy, event, maximumDamage: ENEMY_ATTACK_DAMAGE, defense });
           log(`Enemy hit Player for -${damage} Health`);
         }
+        onPresentation("attack", occupancy.get(id) ?? enemy, event);
         onChange();
         return;
       }
       const next = selected.path[1];
+      if (target.type === "player" && next && turnTowardPlayerBeforeVerticalMove(id, enemy, next, player, event)) return;
       if (next && occupancy.move(id, next)) {
         if (next.x !== enemy.cell.x) occupancy.update(id, { facing: next.x > enemy.cell.x ? "right" : "left" });
+        onPresentation("move", occupancy.get(id) ?? enemy, event);
         onChange();
       }
       return;
@@ -156,6 +170,7 @@ export function createEnemySystem({
         : defense ? calculatePlayerDamageTaken(ENEMY_ATTACK_DAMAGE, defense.current, defense.maximum) : ENEMY_ATTACK_DAMAGE;
       damagePlayer(damage, { enemy, event, maximumDamage: ENEMY_ATTACK_DAMAGE, defense });
       log(`Enemy hit Player for -${damage} Health`);
+      onPresentation("attack", occupancy.get(id) ?? enemy, event);
       onChange();
       return;
     }
@@ -167,8 +182,10 @@ export function createEnemySystem({
         if (manhattanDistance(cell, player.cell) >= currentManhattanDistance
           || !isWalkable(cell, enemy.realm, player.world)
           || isStaticOccupied(cell, enemy.realm)) continue;
+        if (turnTowardPlayerBeforeVerticalMove(id, enemy, cell, player, event)) return;
         if (occupancy.move(id, cell)) {
           if (direction.x !== 0) occupancy.update(id, { facing: direction.x > 0 ? "right" : "left" });
+          onPresentation("move", occupancy.get(id) ?? enemy, event);
           onChange();
         }
         return;
@@ -197,9 +214,11 @@ export function createEnemySystem({
         routeCache.delete(id);
         return;
       }
+      if (cell && turnTowardPlayerBeforeVerticalMove(id, enemy, cell, player, event)) return;
       if (cell && occupancy.move(id, cell)) {
         cached.x = cell.x; cached.y = cell.y; cached.cursor += 1;
         if (cell.x !== enemy.cell.x) occupancy.update(id, { facing: cell.x > enemy.cell.x ? "right" : "left" });
+        onPresentation("move", occupancy.get(id) ?? enemy, event);
         onChange();
       }
       return;
@@ -216,8 +235,10 @@ export function createEnemySystem({
       const cell = { x: enemy.cell.x + direction.x, y: enemy.cell.y + direction.y };
       if (!isWalkable(cell, enemy.realm, player.world) || isStaticOccupied(cell, enemy.realm)
         || field.getDistance(cell) !== currentDistance - 1) continue;
+      if (turnTowardPlayerBeforeVerticalMove(id, enemy, cell, player, event)) return;
       if (occupancy.move(id, cell)) {
         if (direction.x !== 0) occupancy.update(id, { facing: direction.x > 0 ? "right" : "left" });
+        onPresentation("move", occupancy.get(id) ?? enemy, event);
         onChange();
       }
       return;
@@ -255,6 +276,7 @@ export function createEnemySystem({
     if (health === 0) {
       routeCache.delete(id);
       timeSystem.unregisterTickable(`enemy:${id}`);
+      onPresentation("death", enemy, { at });
       occupancy.remove(id);
       log("Enemy died");
       onChange();

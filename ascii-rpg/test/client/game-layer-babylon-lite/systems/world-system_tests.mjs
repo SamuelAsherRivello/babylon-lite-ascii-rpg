@@ -2,14 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import paletteData from "../../../../src/client/game-layer-babylon-lite/data/palette_data.json" with { type: "json" };
 import {
-  DEEP_WATER_GLYPH,
   FLOOR_GLYPH,
   HEALTH_GLYPH,
   UNDERGROUND_FLOOR_GLYPH,
   GOLD_GLYPH,
   GENERATION_PASSES,
   MOUNTAIN_GLYPH,
-  MEDIUM_WATER_GLYPH,
   OBJECT_DISTRIBUTION_RULES,
   PLAYER_GLYPH,
   ENEMY_GLYPH,
@@ -17,7 +15,7 @@ import {
   NPC_GLYPH,
   NPC_SPAWNER_GLYPH,
   PROJECT_MAP_GLYPHS,
-  SHALLOW_WATER_GLYPH,
+  WATER_GLYPH,
   TRAP_GLYPH,
   CLOSED_CHEST_GLYPH,
   OPEN_CHEST_GLYPH,
@@ -89,9 +87,7 @@ test("publishes every glyph used by the project maps", () => {
     CAMP_FIRE_GLYPH,
     STAIR_GLYPH,
     GOLD_GLYPH,
-    SHALLOW_WATER_GLYPH,
-    MEDIUM_WATER_GLYPH,
-    DEEP_WATER_GLYPH,
+    WATER_GLYPH,
     HEALTH_GLYPH,
     TRAP_GLYPH,
     CLOSED_CHEST_GLYPH,
@@ -126,66 +122,41 @@ test("creates a repeatable bordered world with layered terrain", () => {
   assert.ok(first.terrain.flat().some((cell) => cell.glyph === FLOOR_GLYPH));
 });
 
-test("runs ordered generation passes and creates nested deterministic water", () => {
+test("runs ordered generation passes and creates uniform deterministic blocked water", () => {
   const first = createWorld({ rows: 40, columns: 60, seed: "water-passes" });
   const second = createWorld({ rows: 40, columns: 60, seed: "water-passes" });
   const water = first.terrain.flat().filter((cell) => cell.depth !== null);
-  const shallow = water.filter((cell) => cell.depth === "shallow");
-  const medium = water.filter((cell) => cell.depth === "medium");
-  const deep = water.filter((cell) => cell.depth === "deep");
   const nonWalls = first.terrain.flat().filter((cell) => cell.glyph !== WALL_GLYPH);
 
   assert.deepEqual(first.generationPasses, GENERATION_PASSES);
   assert.deepEqual(first.terrain, second.terrain);
   assert.deepEqual(first.waterCells, second.waterCells);
   assert.deepEqual(first.waterLakes, second.waterLakes);
-  assert.ok(shallow.length > 0);
-  assert.ok(medium.length > 0);
-  assert.ok(deep.length > 0);
+  assert.ok(water.length > 0);
+  assert.ok(water.every((cell) => cell.depth === "water" && cell.kind === "water" && cell.walkable === false));
   assert.ok(water.length / nonWalls.length >= 0.05);
   assert.ok(water.length / nonWalls.length <= 0.5);
   assert.ok(first.waterLakes.length >= 1);
   assert.ok(first.waterLakes.length <= 2);
   assert.ok(first.waterLakes.every((lake) => lake.length >= 50 && lake.length <= 480));
-  for (const lake of first.waterLakes) {
-    const lakeKeys = new Set(lake.map((cell) => `${cell.x},${cell.y}`));
-    for (const cell of lake) {
-      if (first.terrain[cell.y][cell.x].depth !== "deep") continue;
-      const neighbors = [
-        { x: cell.x, y: cell.y - 1 },
-        { x: cell.x + 1, y: cell.y },
-        { x: cell.x, y: cell.y + 1 },
-        { x: cell.x - 1, y: cell.y },
-      ].filter((neighbor) => lakeKeys.has(`${neighbor.x},${neighbor.y}`));
-      assert.ok(neighbors.some((neighbor) => first.terrain[neighbor.y][neighbor.x].depth === "medium"));
-      assert.ok(neighbors.every((neighbor) => first.terrain[neighbor.y][neighbor.x].depth !== "shallow"));
-    }
-  }
-  assert.equal(shallow[0].color, "#62c7ff");
-  assert.equal(medium[0].color, "#247fc3");
-  assert.equal(deep[0].color, "#0b3d91");
-  assert.equal(DEEP_WATER_GLYPH, "▓");
-  assert.notEqual(DEEP_WATER_GLYPH, MEDIUM_WATER_GLYPH);
+  assert.ok(first.waterLakes.every((lake) => lake.every(({ x, y }) => first.terrain[y][x].depth === "water")));
+  assert.equal(water[0].color, "#247fc3");
+  assert.equal(WATER_GLYPH, "~");
   assert.equal(first.terrain[first.playerStart.y][first.playerStart.x].walkable, true);
-  assert.notEqual(first.terrain[first.playerStart.y][first.playerStart.x].glyph, MEDIUM_WATER_GLYPH);
-  assert.notEqual(first.terrain[first.playerStart.y][first.playerStart.x].glyph, DEEP_WATER_GLYPH);
+  assert.notEqual(first.terrain[first.playerStart.y][first.playerStart.x].glyph, WATER_GLYPH);
 });
 
-test("uses independent water coverage and depth walkability settings", () => {
-  const dry = createWorld({ rows: 20, columns: 30, waterFillPercent: 0, seed: "dry-cave" });
-  const wet = createWorld({ rows: 20, columns: 30, waterFillPercent: 100, seed: "wet-cave" });
+test("uses independent water coverage and blocked-water settings", () => {
+  const dry = createWorld({ rows: 40, columns: 60, waterFillPercent: 0, seed: "dry-cave" });
+  const wet = createWorld({ rows: 40, columns: 60, waterFillPercent: 100, seed: "wet-cave" });
 
   assert.equal(dry.options.waterFillPercent, 0);
   assert.equal(dry.waterCells.length, 0);
   assert.equal(wet.options.waterFillPercent, 100);
   assert.ok(wet.waterCells.length > 0);
-  const torchKeys = new Set(wet.torches.map((cell) => `${cell.x},${cell.y}`));
   for (let y = 0; y < wet.rows; y += 1) for (let x = 0; x < wet.columns; x += 1) {
     const cell = wet.terrain[y][x];
-    if (cell.depth === "shallow") assert.equal(cell.walkable, !torchKeys.has(`${x},${y}`));
-    if (cell.depth === "medium" || cell.depth === "deep") {
-      assert.equal(cell.walkable, false);
-    }
+    if (cell.depth === "water") assert.equal(cell.walkable, false);
   }
 });
 

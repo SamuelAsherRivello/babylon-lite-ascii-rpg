@@ -15,7 +15,7 @@ export function getHealthBarSpriteGeometry(center, viewport, fillRatio, {
   deltaWidthRatio = 0,
 } = {}) {
   const width = Math.max(1, viewport.gridWidth);
-  const height = Math.max(2, viewport.gridHeight * 0.25);
+  const height = Math.max(2, viewport.gridHeight * 0.125);
   const border = Math.max(1, Math.min(width, height) * 0.08);
   const gap = Math.max(1, viewport.gridHeight * 0.08);
   const innerWidth = Math.max(0, width - border * 2);

@@ -89,7 +89,6 @@ export function createBombSystem({ timeSystem, worlds, damageAt = () => {}, onCh
       if (!worlds?.[realm] || !cell || this.hasBombAt(realm, cell)) return null;
       const bomb = { id: `bomb-${++sequence}`, realm, cell: Object.freeze({ x: cell.x, y: cell.y }), fuseAt: timeSystem.getTime() + BOMB_FUSE_TICKS, chainAt: null, detonatedAt: null, radius: 0 };
       bombs.set(keyFor(realm, cell), bomb);
-      for (const previewCell of getBlastRingCells(bomb.cell, BOMB_BLAST_TICKS, 0, worlds[realm])) onPresentation({ type: "preview", name: "SmokePoff", realm, cell: previewCell, bombId: bomb.id });
       markChanged();
       return Object.freeze({ ...bomb });
     },

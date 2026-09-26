@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 import test from "node:test";
 import { createEnemySpritePresentation, getSpiderFramePath } from "../../../src/client/game-layer-babylon-lite/enemy-sprite-presentation.js";
 
@@ -8,10 +10,18 @@ const region = { x: 0, y: 0, columns: 4, rows: 4 };
 const enemy = { id: "enemy-1", type: "enemy", realm: "Underground", cell: { x: 1, y: 1 }, facing: "left" };
 
 test("Spider frame paths cover every checked-in animation state", () => {
-  assert.equal(getSpiderFramePath("/assets/Spider/Frames", "idle", 4), "/assets/Spider/Frames/Idle/04.png");
-  assert.equal(getSpiderFramePath("/assets/Spider/Frames", "move", 3), "/assets/Spider/Frames/Move/03.png");
-  assert.equal(getSpiderFramePath("/assets/Spider/Frames", "attack", 2), "/assets/Spider/Frames/Attack/02.png");
-  assert.equal(getSpiderFramePath("/assets/Spider/Frames", "death", 6), "/assets/Spider/Frames/Death/06.png");
+  const assetBase = "/assets/Spider/Frames";
+  const projectAssetBase = resolve(process.cwd(), "ascii-rpg/public/assets/images/Dungeons-and-Pixels-v1.4/Enemies/Spider/Frames");
+  const paths = [
+    ["idle", 4, "Idle/04.png"],
+    ["move", 3, "Move/03.png"],
+    ["attack", 2, "Attack/02.png"],
+    ["death", 6, "Death/06.png"],
+  ];
+  for (const [state, frame, relativePath] of paths) {
+    assert.equal(getSpiderFramePath(assetBase, state, frame), `${assetBase}/${relativePath}`);
+    assert.equal(existsSync(resolve(projectAssetBase, relativePath)), true);
+  }
 });
 
 test("living Spiders animate, then return to idle", () => {
@@ -28,7 +38,7 @@ test("living Spiders animate, then return to idle", () => {
 
 test("Spider corpses survive offscreen within a realm and clear on realm exit", () => {
   let time = 0;
-  const presentation = createEnemySpritePresentation({ now: () => time, requestFrame: () => 1 });
+  const presentation = createEnemySpritePresentation({ now: () => time, requestFrame: () => 1, cancelFrame: () => {} });
   presentation.present("death", enemy, time);
   presentation.reconcile({ enemies: [], realm: "Underground", region: { x: 0, y: 0, columns: 1, rows: 1 }, fog, world }, time);
   assert.equal(presentation.corpseCount, 1);

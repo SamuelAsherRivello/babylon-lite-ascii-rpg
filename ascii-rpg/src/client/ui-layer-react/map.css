@@ -32,6 +32,14 @@
   overflow: hidden;
 }
 
+#character_overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
 .torch_sprite_overlay__torch {
   position: absolute;
   image-rendering: pixelated;
@@ -46,6 +54,13 @@
   pointer-events: none;
 }
 
+.enemy_sprite_overlay__spider {
+  position: absolute;
+  image-rendering: pixelated;
+  object-fit: contain;
+  pointer-events: none;
+}
+
 #pfx_overlay img {
   position: absolute;
   image-rendering: pixelated;
@@ -53,8 +68,17 @@
   pointer-events: none;
 }
 
-#pfx_overlay #hero_sprite_overlay {
-  z-index: 3;
+#character_overlay > * {
+  position: absolute;
+}
+
+#character_overlay img,
+#character_overlay canvas {
+  image-rendering: pixelated;
+  object-fit: contain;
+}
+
+#character_overlay #hero_sprite_overlay {
   transform: translateZ(0);
 }
 

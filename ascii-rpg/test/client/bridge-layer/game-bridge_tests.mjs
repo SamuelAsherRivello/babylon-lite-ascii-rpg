@@ -7,8 +7,6 @@ import {
   sendRealmDiscoverySnapshot,
   sendCameraModeSnapshot,
   sendGpuLightPassSnapshot,
-  sendGlyphBackgroundSnapshot,
-  sendBackgroundDarknessSnapshot,
   sendMinimapZoomSnapshot,
   sendMapviewRealmToggle,
   sendMapviewSnapshot,
@@ -450,24 +448,6 @@ test("forwards GPU light pass state and reapplies it to a new controller", () =>
   let restored = null;
   setGameController({ setGpuLightPass(enabled) { restored = enabled; } });
   assert.equal(restored, true);
-});
-
-test("forwards glyph background preferences and reapplies the latest values", () => {
-  const received = {};
-  setGameController({
-    setGlyphBackground(value) { received.enabled = value; },
-    setBackgroundDarkness(value) { received.darkness = value; },
-  });
-  sendGlyphBackgroundSnapshot(false);
-  sendBackgroundDarknessSnapshot(75);
-  assert.deepEqual(received, { enabled: false, darkness: 75 });
-
-  const restored = {};
-  setGameController({
-    setGlyphBackground(value) { restored.enabled = value; },
-    setBackgroundDarkness(value) { restored.darkness = value; },
-  });
-  assert.deepEqual(restored, { enabled: false, darkness: 75 });
 });
 
 test("forwards realm ambient and independent source lighting and shadow profiles to the game layer", () => {

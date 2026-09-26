@@ -1,6 +1,7 @@
 const MIN_WATER_LAKE_SIZE = 50;
 const MAX_WATER_LAKE_SIZE = 240;
 const OCCASIONAL_LARGE_WATER_LAKE_SIZE = 480;
+export const CANONICAL_WATER_DEPTH = "water";
 
 function cellIndex(cell, columns) { return cell.y * columns + cell.x; }
 function cellKey(cell) { return `${cell.x},${cell.y}`; }
@@ -80,50 +81,7 @@ function selectLakeCells(region, rows, columns, random, targetSize, scratch, pre
 }
 
 function assignWaterDepths(waterCells, rows, columns) {
-  if (waterCells.length === 0) return new Map();
-  const waterKeys = new Uint8Array(rows * columns);
-  const distances = new Int32Array(rows * columns);
-  distances.fill(-1);
-  const pending = new Uint32Array(waterCells.length);
-  let pendingLength = 0;
-  for (const cell of waterCells) waterKeys[cellIndex(cell, columns)] = 1;
-  for (const cell of waterCells) {
-    const key = cellIndex(cell, columns);
-    if (neighborIndexes(key, rows, columns).some((neighbor) => !waterKeys[neighbor])) {
-      distances[key] = 0; pending[pendingLength] = key; pendingLength += 1;
-    }
-  }
-  let pendingIndex = 0;
-  while (pendingIndex < pendingLength) {
-    const key = pending[pendingIndex++];
-    for (const neighbor of neighborIndexes(key, rows, columns)) {
-      if (waterKeys[neighbor] && distances[neighbor] < 0) { distances[neighbor] = distances[key] + 1; pending[pendingLength] = neighbor; pendingLength += 1; }
-    }
-  }
-  const center = centerMostCell(waterCells, rows, columns);
-  let deepestDistance = 0;
-  for (const cell of waterCells) deepestDistance = Math.max(deepestDistance, distances[cellIndex(cell, columns)]);
-  const ordered = [...waterCells].sort((left, right) => {
-    const leftDepth = distances[cellIndex(left, columns)], rightDepth = distances[cellIndex(right, columns)];
-    const leftCenterDistance = Math.abs(left.x - center.x) + Math.abs(left.y - center.y);
-    const rightCenterDistance = Math.abs(right.x - center.x) + Math.abs(right.y - center.y);
-    return rightDepth - leftDepth || leftCenterDistance - rightCenterDistance || cellKey(left).localeCompare(cellKey(right));
-  });
-  const depths = new Map();
-  if (deepestDistance >= 2) {
-    for (const cell of ordered) {
-      const distance = distances[cellIndex(cell, columns)];
-      depths.set(cellKey(cell), distance === deepestDistance ? "deep" : distance === deepestDistance - 1 ? "medium" : "shallow");
-    }
-  } else {
-    const deepKey = cellIndex(ordered[0], columns);
-    const mediumKeys = new Set(neighborIndexes(deepKey, rows, columns).filter((key) => waterKeys[key]));
-    for (const cell of ordered) {
-      const key = cellIndex(cell, columns);
-      depths.set(cellKey(cell), key === deepKey ? "deep" : mediumKeys.has(key) ? "medium" : "shallow");
-    }
-  }
-  return depths;
+  return new Map(waterCells.map((cell) => [cellKey(cell), CANONICAL_WATER_DEPTH]));
 }
 
 export function createWaterPass({ region, rows, columns, random, waterFillPercent, waterLakeCount }) {

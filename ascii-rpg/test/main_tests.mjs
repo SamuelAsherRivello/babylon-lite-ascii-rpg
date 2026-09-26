@@ -551,8 +551,8 @@ test("documents the plain safe-area template", async () => {
   if (!app.includes("paletteViewState") || !app.includes("setPaletteViewState") || app.includes("sessionStorage")) {
     throw new Error("Palette filter and sort choices must last for the page session without surviving refresh.");
   }
-  if (!app.includes("HexColorPicker") || !app.includes("createGlyphRasterCanvas") || !app.includes("rasterizeCompositeGlyph(") || !app.includes("colorToLinearRgba({ color, alpha: 1 })") || !app.includes("backgroundDarkness={backgroundDarkness}") || !app.includes("const displayColor = entryId === selectedEntryId && draft ? draft.color : entry.color") || !app.includes("const displayOffsets = entryId === selectedEntryId && draft ? draft : getPaletteEntryOffsets(entry)") || !app.includes("<PaletteGlyph glyph={selectedEntry.glyph}") || !app.includes("offsets={draft}") || !app.includes("Offset X") || !app.includes("Offset Y") || !app.includes("Offset Scale") || app.includes("colorize fontFamily") || app.includes("palette_alpha_control") || !app.includes('aria-label="Glyph Details"') || !app.includes("Confirm") || !app.includes("Reset") || !app.includes("Cancel")) {
-    throw new Error("The Glyph Details window must use the shared composite glyph renderer, no alpha control, glyph offset sliders, Confirm, Reset, and Cancel controls.");
+  if (!app.includes("HexColorPicker") || !app.includes("createGlyphRasterCanvas") || !app.includes("rasterizeGlyph(") || !app.includes("const displayColor = entryId === selectedEntryId && draft ? draft.color : entry.color") || !app.includes("const displayOffsets = entryId === selectedEntryId && draft ? draft : getPaletteEntryOffsets(entry)") || !app.includes("<PaletteGlyph glyph={selectedEntry.glyph}") || !app.includes("offsets={draft}") || !app.includes("Offset X") || !app.includes("Offset Y") || !app.includes("Offset Scale") || app.includes("colorize fontFamily") || app.includes("palette_alpha_control") || !app.includes('aria-label="Glyph Details"') || !app.includes("Confirm") || !app.includes("Reset") || !app.includes("Cancel")) {
+    throw new Error("The Glyph Details window must use transparent glyph rasters, no alpha control, glyph offset sliders, Confirm, Reset, and Cancel controls.");
   }
   const confirmStart = app.indexOf("confirmEdit = async");
   const confirmEnd = app.indexOf("acknowledgeWarning", confirmStart);
@@ -568,11 +568,9 @@ test("documents the plain safe-area template", async () => {
   if (!app.includes('aria-label="Close Ascii Settings"') || !app.includes('className="prompt_button window_close"') || !app.includes("onClick={onClose}")) {
     throw new Error("The Ascii Settings overlay must provide an X close control.");
   }
-  if (!app.includes('this.selectTab("layout")') || !app.includes("Glyph Background") || !app.includes("Background Darkness")
-    || !app.includes('min="0"') || !app.includes('max="100"') || !app.includes('step="1"')
-    || !app.includes("DEFAULT_GLYPH_BACKGROUND") || !app.includes("DEFAULT_BACKGROUND_DARKNESS")
-    || !app.includes("glyphBackgroundStorageKey") || !app.includes("backgroundDarknessStorageKey")) {
-    throw new Error("The Ascii Settings Layout tab must expose persisted glyph background and darkness controls.");
+  if (app.includes("Glyph Background") || app.includes("Background Darkness")
+    || app.includes("glyphBackgroundStorageKey") || app.includes("backgroundDarknessStorageKey")) {
+    throw new Error("The Ascii Settings window must not expose solid glyph-background controls.");
   }
   if (!app.includes('className="window_backdrop" aria-hidden="true" onClick={onClose}') || !app.includes("event.stopPropagation()")) {
     throw new Error("Clicks outside the Ascii Palette window must close it without closing from inside the window.");
@@ -717,7 +715,7 @@ test("documents the plain safe-area template", async () => {
     || !gameLayer.includes("renderWorldViewComposition(composition")
     || !gameLayer.includes("fog: fogOfWar")
     || !gameLayer.includes("drawOverlay: () =>")
-    || !gameLayer.includes("rasterizeCompositeGlyph(glyph, family, size, paletteColors.get(getFacingGlyph(glyph))")
+    || gameLayer.includes("rasterizeCompositeGlyph(glyph, family, size, paletteColors.get(getFacingGlyph(glyph))")
     || !gameLayer.includes("buildGpuLightPassSamples(minimapRegion, minimapLightField, lighting.ambient")
     || !gameLayer.includes('context.globalCompositeOperation = "lighter"')
     || styles.includes("--minimap-zoom")
@@ -979,13 +977,13 @@ test("documents the Gameplay Settings quest selector and default persistence", a
   }
 });
 
-test("derives the character gold icon color from the shared palette", async () => {
+test("renders the first gold coin frame in the character HUD", async () => {
   const app = await readUiSource();
-  const palette = JSON.parse(await readFile(new URL("src/client/game-layer-babylon-lite/data/palette_data.json", appRoot), "utf8"));
-  if (!app.includes('getPaletteStyle(palette, "💰")') || !app.includes("style={{ color: goldStyle.color }}")) {
-    throw new Error("The character gold icon must resolve its color from the shared palette.");
+  const styles = await readFile(new URL("src/client/ui-layer-react/character.css", appRoot), "utf8");
+  if (!app.includes("Items/Animated/gold_coin.png") || !app.includes("character_gold_coin_icon")) {
+    throw new Error("The character HUD must use the gold coin sprite strip.");
   }
-  if (palette.entries.find((entry) => entry.glyph === "💰")?.color !== "#ffff00") {
-    throw new Error("The bundled gold glyph must default to yellow.");
+  if (!styles.includes("object-position: left")) {
+    throw new Error("The character HUD must crop the first gold coin frame.");
   }
 });

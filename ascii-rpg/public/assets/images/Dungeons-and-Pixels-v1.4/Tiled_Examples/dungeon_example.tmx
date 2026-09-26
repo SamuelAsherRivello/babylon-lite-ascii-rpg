@@ -1,12 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.0" orientation="orthogonal" renderorder="right-down" width="15" height="15" tilewidth="32" tileheight="32" infinite="0" nextlayerid="8" nextobjectid="113">
+<map version="1.10" tiledversion="1.12.2" orientation="orthogonal" renderorder="right-down" width="15" height="15" tilewidth="32" tileheight="32" infinite="0" nextlayerid="8" nextobjectid="113">
  <tileset firstgid="1" source="Tilesets/Tileset_Dungeon.tsx"/>
  <tileset firstgid="109" source="Tilesets/Props_Animated.tsx"/>
  <tileset firstgid="144" source="Tilesets/Objects_Overlay.tsx"/>
  <tileset firstgid="164" source="Tilesets/Items_Animated.tsx"/>
  <tileset firstgid="172" source="Tilesets/Items_Static.tsx"/>
  <tileset firstgid="181" source="Tilesets/Props_Static.tsx"/>
- <tileset firstgid="189" source="Tilesets/Tileset_Dungeon.tsx"/>
  <layer id="1" name="Base Layer" width="15" height="15">
   <data encoding="csv">
 20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,

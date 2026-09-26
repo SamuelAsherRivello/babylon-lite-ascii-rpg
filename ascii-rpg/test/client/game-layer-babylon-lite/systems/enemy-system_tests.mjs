@@ -30,6 +30,7 @@ function createHarness({ playerCell = { x: 6, y: 3 }, activeRealm = "Underground
   const logs = [];
   const attacks = [];
   const damageEvents = [];
+  const presentationEvents = [];
   let distanceFieldBuilds = 0;
   occupancy.claim({ id: "player", type: "player", glyph: "👤", cell: playerCell, realm: activeRealm });
   const system = createEnemySystem({
@@ -40,9 +41,10 @@ function createHarness({ playerCell = { x: 6, y: 3 }, activeRealm = "Underground
     damagePlayer: (amount) => attacks.push(amount),
     log: (message) => logs.push(message),
     onDamage: (entity, at) => damageEvents.push({ entity, at }),
+    onPresentation: (type, entity) => presentationEvents.push({ type, entity }),
     onDistanceFieldBuilt: () => { distanceFieldBuilds += 1; },
   });
-  return { timeSystem, occupancy, system, logs, attacks, damageEvents, getDistanceFieldBuilds: () => distanceFieldBuilds };
+  return { timeSystem, occupancy, system, logs, attacks, damageEvents, presentationEvents, getDistanceFieldBuilds: () => distanceFieldBuilds };
 }
 
 test("creates spider enemies with 40 health, default facing, and derived age", () => {
@@ -67,6 +69,7 @@ test("waits until age two and then acts on every even age", () => {
   harness.timeSystem.advance();
   assert.deepEqual(harness.occupancy.get("enemy-1").cell, { x: 3, y: 3 });
   assert.equal(harness.occupancy.get("enemy-1").facing, "right");
+  assert.equal(harness.presentationEvents.at(-1).type, "move");
   harness.timeSystem.advance();
   assert.deepEqual(harness.occupancy.get("enemy-1").cell, { x: 3, y: 3 });
   harness.timeSystem.advance();
@@ -211,7 +214,26 @@ test("routes around a closed barrier with deterministic cardinal tie-breaking", 
   harness.system.addEnemy({ id: "enemy-1", realm: "Underground", cell: { x: 2, y: 3 }, bornAtTime: 1 });
 
   harness.timeSystem.advance(2);
+  assert.deepEqual(harness.occupancy.get("enemy-1").cell, { x: 2, y: 3 });
+  assert.equal(harness.occupancy.get("enemy-1").facing, "right");
+  harness.timeSystem.advance(2);
   assert.deepEqual(harness.occupancy.get("enemy-1").cell, { x: 2, y: 2 });
+});
+
+test("turns toward a horizontally offset player before taking a vertical pursuit step", () => {
+  const world = createWorld();
+  world.terrain[3][3].walkable = false;
+  const harness = createHarness({ world, playerCell: { x: 4, y: 5 } });
+  harness.system.addEnemy({ id: "enemy-1", realm: "Underground", cell: { x: 2, y: 3 }, bornAtTime: 1 });
+
+  harness.timeSystem.advance(2);
+  assert.deepEqual(harness.occupancy.get("enemy-1").cell, { x: 2, y: 3 });
+  assert.equal(harness.occupancy.get("enemy-1").facing, "right");
+  assert.equal(harness.presentationEvents.at(-1).type, "turn");
+
+  harness.timeSystem.advance(2);
+  assert.deepEqual(harness.occupancy.get("enemy-1").cell, { x: 2, y: 4 });
+  assert.equal(harness.occupancy.get("enemy-1").facing, "right");
 });
 
 test("builds one field for multiple enemies in the same realm and tick", () => {
@@ -272,6 +294,16 @@ test("attacks a cardinally adjacent player for five without sharing the cell", (
   assert.deepEqual(harness.occupancy.get("enemy-1").cell, { x: 2, y: 3 });
   assert.deepEqual(harness.occupancy.get("player").cell, { x: 3, y: 3 });
   assert.deepEqual(harness.logs, ["Enemy hit Player for -5 Health"]);
+});
+
+test("emits attack and death presentation events without altering enemy lifecycle", () => {
+  const harness = createHarness({ playerCell: { x: 3, y: 3 } });
+  harness.system.addEnemy({ id: "enemy-1", realm: "Underground", cell: { x: 2, y: 3 }, bornAtTime: 1 });
+  harness.timeSystem.advance(2);
+  assert.equal(harness.presentationEvents.at(-1).type, "attack");
+  harness.system.damage("enemy-1", 40, { attacker: "player", at: 123 });
+  assert.equal(harness.presentationEvents.at(-1).type, "death");
+  assert.equal(harness.occupancy.get("enemy-1"), null);
 });
 
 test("pursues and attacks the nearest living NPC before the player", () => {
