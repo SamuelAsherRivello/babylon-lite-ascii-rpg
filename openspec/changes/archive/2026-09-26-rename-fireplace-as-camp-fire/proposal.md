@@ -8,7 +8,7 @@ The Underground checkpoint object currently permits movement onto its cell and c
 
 - Rename the active Fireplace object identity to `CampFire` in code and data, and present it as `Camp Fire` in all player-facing labels, descriptions, and dialog text.
 - Make each Camp Fire cell non-walkable; a cardinal bump keeps the player adjacent.
-- On a Camp Fire bump, save/replace the session checkpoint and open the existing dialog surface with a required `OK` acknowledgement. Remove the checkpoint-saved toast path.
+- On a Camp Fire bump, open the existing dialog surface with a required `OK` acknowledgement. The first save at each Camp Fire SHALL say `You saved a checkpoint.`; later bumps into that same Camp Fire SHALL say `You already saved this checkpoint.` Remove the checkpoint-saved toast path.
 - Preserve Camp Fire placement scope, density behavior, seeded determinism, glyph, and checkpoint restart semantics.
 
 ## Capabilities

@@ -26,13 +26,16 @@ import {
   sendQuestEvent,
   sendGoldSnapshot,
   sendPlayerDeadSnapshot,
+  sendPlayerRecoveryReadySnapshot,
   getQuestSnapshot,
   getGoldSnapshot,
   getPlayerDeadSnapshot,
+  getPlayerRecoveryReadySnapshot,
   subscribeToQuest,
   subscribeToQuestEvent,
   subscribeToGold,
   subscribeToPlayerDead,
+  subscribeToPlayerRecoveryReady,
   setGameController,
   subscribeToTime,
   subscribeToMinimapZoom,
@@ -328,6 +331,21 @@ test("publishes the terminal player-dead snapshot", () => {
   unsubscribe();
   sendPlayerDeadSnapshot(false);
   assert.deepEqual(received, [true]);
+});
+
+test("publishes delayed player recovery readiness independently from death", () => {
+  const received = [];
+  const unsubscribe = subscribeToPlayerRecoveryReady(() => received.push(getPlayerRecoveryReadySnapshot()));
+
+  sendPlayerRecoveryReadySnapshot(false);
+  sendPlayerRecoveryReadySnapshot(true);
+  assert.equal(getPlayerRecoveryReadySnapshot(), true);
+  assert.deepEqual(received, [false, true]);
+
+  unsubscribe();
+  sendPlayerRecoveryReadySnapshot(false);
+  assert.equal(getPlayerRecoveryReadySnapshot(), false);
+  assert.deepEqual(received, [false, true]);
 });
 
 test("freezes ordered quest steps at the bridge boundary", () => {

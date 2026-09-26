@@ -21,7 +21,7 @@ test("generation settings retain the ordered catalog and default malformed densi
   assert.equal(settings.passes.find((pass) => pass.id === "underground-caves").density, "High");
   assert.equal(settings.passes.find((pass) => pass.id === "enemy-spawner").density, "Med");
   assert.equal(settings.passes.find((pass) => pass.id === "npc-spawner").density, "Med");
-  assert.equal(settings.passes.find((pass) => pass.id === "object-fireplace").density, "Med");
+  assert.equal(settings.passes.find((pass) => pass.id === "object-CampFire").density, "Med");
   assert.equal(settings.passes.find((pass) => pass.id === "object-chest").density, "Med");
   assert.equal(settings.passes.find((pass) => pass.id === "civilization-stairs").density, "Med");
   assert.equal(settings.passes.find((pass) => pass.id === "civilization-homes").density, "Med");
@@ -173,8 +173,8 @@ test("keeps Object and Character Distribution in their separate procedural cards
   assert.ok(app.includes("10. {characterCard.title}"));
   assert.ok(app.includes("Realm: {GENERATION_PASS_REALMS[pass.id]}"));
   assert.ok(!app.includes("Low 4 · Med 8 · High 12 Overworld NPC spawners"));
-  assert.ok(gameLayer.includes('getObjectDistributionCount("fireplace", previewWorld.options.seed)'));
-  assert.ok(gameLayer.includes('randomObjectCount("fireplace", realm.options.seed)'));
+  assert.ok(gameLayer.includes('getObjectDistributionCount("CampFire", previewWorld.options.seed)'));
+  assert.ok(gameLayer.includes('randomObjectCount("CampFire", realm.options.seed)'));
   assert.ok(gameLayer.includes("const npcSpawnerMarkers = previewRealm === \"Overground\""));
   assert.ok(gameLayer.includes('glyph: "☺", color: "#48c774"'));
   assert.ok(gameLayer.includes("...npcSpawnerMarkers"));
@@ -223,10 +223,10 @@ test("keeps Object and Character Distribution in their separate procedural cards
   assert.ok(gameLayer.includes("featureEnabled(\"civilization-doors\") ? createCivilizationGroups"));
   assert.ok(gameLayer.includes("featureEnabled(\"enemy-spawner\") ? selectEnemySpawnerCells"));
 
-  const fireplaceCounts = ["Low", "Med", "High"].map((density) => resolveGenerationProfile({
-    passes: [{ id: "object-fireplace", density }],
-  }).objectCountMultipliers.fireplace);
-  assert.deepEqual(fireplaceCounts, [0.25, 0.5, 1]);
+  const CampFireCounts = ["Low", "Med", "High"].map((density) => resolveGenerationProfile({
+    passes: [{ id: "object-CampFire", density }],
+  }).objectCountMultipliers.CampFire);
+  assert.deepEqual(CampFireCounts, [0.25, 0.5, 1]);
 });
 
 test("applies Doors density to civilization placement", () => {

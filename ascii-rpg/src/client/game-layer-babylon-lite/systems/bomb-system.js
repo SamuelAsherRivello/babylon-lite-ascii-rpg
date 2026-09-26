@@ -1,5 +1,5 @@
 export const BOMB_GLYPH = "💣";
-export const BLAST_GLYPH = "✶";
+export const BLAST_GLYPH = null;
 export const BOMB_COUNT = 50;
 export const BOMB_FUSE_TICKS = 5;
 export const BOMB_BLAST_TICKS = 5;
@@ -18,12 +18,14 @@ export function getBlastRingCells(origin, radius, previousRadius = radius - 1, b
   return cells;
 }
 
-export function createBombSystem({ timeSystem, worlds, damageAt = () => {}, onChange = () => {} } = {}) {
+export function createBombSystem({ timeSystem, worlds, damageAt = () => {}, onChange = () => {}, onPresentation = () => {} } = {}) {
   const bombs = new Map();
   const blasts = new Map();
+  const activeCells = new Map();
   let sequence = 0;
   const keyFor = (realm, cell) => `${realm}:${cellKey(cell)}`;
   const markChanged = () => onChange();
+  const presentationKey = (realm, cell) => `${realm}:${cellKey(cell)}`;
 
   const removeBomb = (bomb) => {
     bombs.delete(keyFor(bomb.realm, bomb.cell));
@@ -39,6 +41,11 @@ export function createBombSystem({ timeSystem, worlds, damageAt = () => {}, onCh
     blast.radius = radius;
     bomb.radius = radius;
     blasts.set(blastKey, blast);
+    for (const cell of getBlastRingCells(bomb.cell, radius, previousRadius, world)) {
+      const key = presentationKey(bomb.realm, cell);
+      activeCells.set(key, { realm: bomb.realm, cell, bomb, blast });
+      onPresentation({ type: "compound", name: "BombExplosion", realm: bomb.realm, cell, bombId: bomb.id });
+    }
     for (const other of bombs.values()) {
       if (other === bomb || other.realm !== bomb.realm || other.chainAt !== null) continue;
       const distanceSquared = (other.cell.x - bomb.cell.x) ** 2 + (other.cell.y - bomb.cell.y) ** 2;
@@ -70,11 +77,8 @@ export function createBombSystem({ timeSystem, worlds, damageAt = () => {}, onCh
     }
     // The visible blast remains hazardous throughout its lifetime. Reapply damage
     // to every currently covered cell so actors that enter an existing ring are hit.
-    for (const blast of blasts.values()) {
-      const world = worlds[blast.realm];
-      for (const cell of getBlastRingCells(blast.cell, blast.radius, 0, world)) {
-        damageAt(blast.realm, cell, BOMB_BLAST_DAMAGE, { bomb: blast.bomb, blast, time });
-      }
+    for (const active of activeCells.values()) {
+      damageAt(active.realm, active.cell, BOMB_BLAST_DAMAGE, { bomb: active.bomb, blast: active.blast, time });
     }
     if (changed) markChanged();
   };
@@ -85,17 +89,18 @@ export function createBombSystem({ timeSystem, worlds, damageAt = () => {}, onCh
       if (!worlds?.[realm] || !cell || this.hasBombAt(realm, cell)) return null;
       const bomb = { id: `bomb-${++sequence}`, realm, cell: Object.freeze({ x: cell.x, y: cell.y }), fuseAt: timeSystem.getTime() + BOMB_FUSE_TICKS, chainAt: null, detonatedAt: null, radius: 0 };
       bombs.set(keyFor(realm, cell), bomb);
+      for (const previewCell of getBlastRingCells(bomb.cell, BOMB_BLAST_TICKS, 0, worlds[realm])) onPresentation({ type: "preview", name: "SmokePoff", realm, cell: previewCell, bombId: bomb.id });
       markChanged();
       return Object.freeze({ ...bomb });
     },
     hasBombAt(realm, cell) { return bombs.has(keyFor(realm, cell)); },
     getBombAt(realm, cell) { return bombs.get(keyFor(realm, cell)) ?? null; },
     getGlyphAt(realm, cell) {
-      if ([...blasts.values()].some((blast) => blast.realm === realm && (cell.x - blast.cell.x) ** 2 + (cell.y - blast.cell.y) ** 2 <= blast.radius * blast.radius)) return BLAST_GLYPH;
-      return this.hasBombAt(realm, cell) ? BOMB_GLYPH : null;
+      return this.getBombAt(realm, cell)?.detonatedAt === null ? BOMB_GLYPH : null;
     },
+    releasePresentation(realm, cell) { activeCells.delete(presentationKey(realm, cell)); },
     getBombs(realm = null) { return [...bombs.values()].filter((bomb) => !realm || bomb.realm === realm).map((bomb) => Object.freeze({ ...bomb })); },
     tick,
-    dispose() { if (registered) timeSystem.unregisterPreTickable("bomb-system"); bombs.clear(); blasts.clear(); },
+    dispose() { if (registered) timeSystem.unregisterPreTickable("bomb-system"); bombs.clear(); blasts.clear(); activeCells.clear(); },
   });
 }

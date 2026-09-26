@@ -1,4 +1,5 @@
 import { getFacingGlyph, getGlyphOffsetsFromKey, rasterizeGlyph } from "./glyph-visual-cache.js";
+import { getWallComposition, getWallMask } from "./underground-wall-autotile.js";
 
 // Project-local source sheets; Tiled IDs are zero-based and never map IDs.
 export const UNDERGROUND_TERRAIN_SHEETS = Object.freeze({
@@ -33,13 +34,15 @@ export function getTerrainArtKey(world, cell, glyphKey) {
   // Only the terrain's own glyph disappears. Facing and offsets on overlays
   // remain part of the cache identity, independent of world coordinates.
   const overlay = getFacingGlyph(glyphKey) === terrain.glyph ? null : glyphKey;
-  return KEY_PREFIX + JSON.stringify([terrain.kind, overlay]);
+  return KEY_PREFIX + JSON.stringify(terrain.kind === "wall"
+    ? [terrain.kind, overlay, getWallMask(world, cell)] : [terrain.kind, overlay]);
 }
 
 export function parseTerrainArtKey(key) {
   if (typeof key !== "string" || !key.startsWith(KEY_PREFIX)) return null;
-  const [kind, overlay] = JSON.parse(key.slice(KEY_PREFIX.length));
-  return { frame: UNDERGROUND_TERRAIN_FRAMES[kind], overlay };
+  const [kind, overlay, mask] = JSON.parse(key.slice(KEY_PREFIX.length));
+  return { frame: UNDERGROUND_TERRAIN_FRAMES[kind], overlay,
+    ...(kind === "wall" && mask !== undefined ? { mask } : {}) };
 }
 
 export async function loadUndergroundTerrainImage(url, source = "dirt") {
@@ -76,6 +79,13 @@ export function rasterizeTerrainArt(key, images, family, size, paletteColors) {
   context.imageSmoothingEnabled = false;
   const { x, y, width, height } = visual.frame;
   context.drawImage(images[visual.frame.source], x, y, width, height, 0, 0, size, size);
+  if (visual.mask !== undefined) {
+    for (const [sx, sy, sw, sh, dx, dy] of getWallComposition(visual.mask).slice(1)) {
+      const left = Math.round(dx * size / 32), top = Math.round(dy * size / 32);
+      const right = Math.round((dx + sw) * size / 32), bottom = Math.round((dy + sh) * size / 32);
+      context.drawImage(images.wall, sx, sy, sw, sh, left, top, right - left, bottom - top);
+    }
+  }
   const overlay = visual.overlay === null ? null : rasterizeGlyph(
     visual.overlay, family, size, "#ffffff", getGlyphOffsetsFromKey(visual.overlay),
   );

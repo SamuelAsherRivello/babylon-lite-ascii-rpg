@@ -36,24 +36,28 @@ test("the object catalog is palette-backed and declares pickup and level-spawn o
   assert.equal(validateObjectPalette(objectData.objects, paletteData.entries), true);
   assert.deepEqual(objectData.objects.map((object) => [object.type, object.IsPickup, object.IsLevelSpawned]), [
     ["welcome-sign", false, true], ["gold", true, false], ["heart", true, true], ["chest", false, true], ["torch", false, true], ["trap", false, true], ["stairs", false, true],
-    ["key", true, false], ["fence", false, false], ["door", false, false], ["fireplace", false, true],
+    ["key", true, false], ["fence", false, false], ["door", false, false], ["CampFire", false, true],
   ]);
   assert.equal(objectData.objects.find((object) => object.type === "torch").glyph, "🕯️");
+  assert.equal(objectData.objects.find((object) => object.type === "CampFire").name, "Camp Fire");
+  assert.equal(objectData.objects.find((object) => object.type === "CampFire").walkable, false);
   assert.equal(validateObjectPalette([{ type: "door", name: "Door", glyph: "█", openGlyph: "□", IsPickup: false, IsLevelSpawned: false }], paletteData.entries), true);
   assert.equal(objectData.objects.find((object) => object.type === "welcome-sign").glyph, "⚑");
 });
 
-test("a fireplace remains after collision and saves on every entry", () => {
+test("a CampFire remains blocking and delegates every bump to its dialog", () => {
   const world = createWorld();
-  const saves = [];
   const system = createObjectSpawnerSystem({ catalog: [
-    { type: "fireplace", name: "Fireplace", glyph: "🔥", IsPickup: false, IsLevelSpawned: false },
+    { type: "CampFire", name: "Camp Fire", glyph: "🔥", walkable: false, IsPickup: false, IsLevelSpawned: false },
   ] });
-  system.addObject({ id: "fireplace-1", type: "fireplace", cell: { x: 3, y: 3 }, realm: world, effect: () => saves.push("saved") });
-  system.collideAtCell({ x: 3, y: 3 }, { world });
-  system.collideAtCell({ x: 3, y: 3 }, { world });
-  assert.equal(system.getActiveObjects().some((object) => object.id === "fireplace-1"), true);
-  assert.deepEqual(saves, ["saved", "saved"]);
+  system.addObject({ id: "CampFire-1", type: "CampFire", cell: { x: 3, y: 3 }, realm: world });
+  const opened = [];
+  const first = system.interactAtCell({ x: 3, y: 3 }, { world, openDialog: (request) => { opened.push(request.object.id); return true; } });
+  const second = system.interactAtCell({ x: 3, y: 3 }, { world, openDialog: (request) => { opened.push(request.object.id); return true; } });
+  assert.equal(first.handled, true);
+  assert.equal(second.handled, true);
+  assert.equal(system.getActiveObjects().some((object) => object.id === "CampFire-1"), true);
+  assert.deepEqual(opened, ["CampFire-1", "CampFire-1"]);
 });
 
 test("Welcome Sign interaction remains active and delegates to a dialog", () => {

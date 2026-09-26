@@ -16,7 +16,7 @@ The game SHALL accept WASD and arrow keys as equivalent cardinal directions: `W`
 
 #### Scenario: Camp Fire collision
 - **WHEN** the player presses a mapped cardinal key whose destination cell is a Camp Fire
-- **THEN** the player SHALL remain in the current cell, a modal Camp Fire dialog with an `OK` choice SHALL block gameplay input, and world time and stamina SHALL remain unchanged
+- **THEN** the player SHALL remain in the current cell, a modal Camp Fire dialog with an `OK` choice SHALL block gameplay input, and world time and stamina SHALL remain unchanged; its text SHALL be `You saved a checkpoint.` on that Camp Fire's first session interaction and `You already saved this checkpoint.` thereafter
 
 #### Scenario: Wall collision
 - **WHEN** the player presses a mapped key whose destination cell is a wall
@@ -41,3 +41,7 @@ The game SHALL accept WASD and arrow keys as equivalent cardinal directions: `W`
 #### Scenario: Direction release
 - **WHEN** one key in a diagonal combination is released while the other key remains held
 - **THEN** subsequent movement triggers SHALL use the remaining cardinal direction without a stale diagonal component
+
+#### Scenario: Held movement repeat
+- **WHEN** a held mapped key or key combination produces multiple successful walking movement steps
+- **THEN** each successful step SHALL use the normal walking cadence, consume no stamina, and recover `10` on its movement T tick

@@ -114,15 +114,16 @@
       "distribution": {}
     },
     {
-      "type": "fireplace",
-      "name": "Fireplace",
+      "type": "CampFire",
+      "name": "Camp Fire",
       "glyph": "🔥",
+      "walkable": false,
       "IsPickup": false,
       "IsLevelSpawned": true,
       "consequence": { "id": "checkpoint" },
       "logText": null,
       "distribution": { "minCount": 10, "maxCount": 14, "minimumDistance": 3 },
-      "generation": { "passId": "object-fireplace", "realms": ["Underground"], "requires": ["civilization-doors"], "seedNamespace": "fireplace:placement" }
+      "generation": { "passId": "object-CampFire", "realms": ["Underground"], "requires": ["civilization-doors"], "seedNamespace": "CampFire:placement" }
     }
   ]
 }

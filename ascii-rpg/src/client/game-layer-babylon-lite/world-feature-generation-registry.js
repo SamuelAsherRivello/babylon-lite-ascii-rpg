@@ -12,7 +12,7 @@ export const GENERATION_DENSITY_DETAILS = Object.freeze({
   "object-chest": Object.freeze({ Low: "1 chest per realm", Med: "2 chests per realm", High: "3 chests per realm" }),
   "object-trap": Object.freeze({ Low: "Quarter trap count", Med: "Current trap count", High: "Triple trap count" }),
   "object-torch": Object.freeze({ Low: "Quarter torch count", Med: "Current torch count", High: "Triple torch count" }),
-  "object-fireplace": Object.freeze({ Low: "Quarter fireplace count", Med: "Half fireplace count", High: "Current fireplace count" }),
+  "object-CampFire": Object.freeze({ Low: "Quarter Camp Fire count", Med: "Half Camp Fire count", High: "Current Camp Fire count" }),
   "npc-spawner": Object.freeze({ Low: "4 Overworld NPC spawners", Med: "8 Overworld NPC spawners", High: "12 Overworld NPC spawners" }),
   "civilization-stairs": Object.freeze({ Low: "Quarter stair count", Med: "Current stair count", High: "Triple stair count" }),
   "civilization-doors": Object.freeze({ Low: "Quarter current door chance", Med: "Current door chance", High: "Double current door chance" }),
@@ -32,7 +32,7 @@ export const GENERATION_PASS_DESCRIPTIONS = Object.freeze({
   "object-chest": "Controls treasure chest placement within 50 cells of each realm start",
   "object-trap": "Controls trap placement density",
   "object-torch": "Controls torch placement density",
-  "object-fireplace": "Controls fireplace placement density",
+  "object-CampFire": "Controls Camp Fire placement density",
   "npc-spawner": "Controls Overworld NPC spawner count",
   "civilization-stairs": "Controls paired stair placement density",
   "civilization-doors": "Controls underground door placement chance",
@@ -43,7 +43,7 @@ export const GENERATION_PASS_DESCRIPTIONS = Object.freeze({
 
 export const GENERATION_PASS_REALMS = Object.freeze({
   ground: "All", "overground-walls": "Overworld", "underground-caves": "Underworld", water: "All", walkability: "All", "player-position": "All",
-  "object-heart": "All", "object-chest": "All", "object-trap": "All", "object-torch": "All", "object-fireplace": "Underworld",
+  "object-heart": "All", "object-chest": "All", "object-trap": "All", "object-torch": "All", "object-CampFire": "Underworld",
   "npc-spawner": "Overworld", "civilization-stairs": "All", "civilization-doors": "Underworld", "civilization-homes": "Overworld", "civilization-signs": "All", "enemy-spawner": "Underworld",
 });
 const declarations = new Map([
@@ -58,7 +58,7 @@ const declarations = new Map([
   ["object-trap", { owner: "objects", realms: ["Overground", "Underground"], requires: ["player-position"], objectType: "trap", seedNamespace: "trap:placement" }],
   ["object-torch", { owner: "objects", realms: ["Overground", "Underground"], requires: ["player-position"], objectType: "torch", seedNamespace: "torch:placement" }],
   ["npc-spawner", { owner: "dynamic", realms: ["Overground"], requires: ["player-position"], seedNamespace: "npc-spawner:placement" }],
-  ["object-fireplace", { owner: "objects", realms: ["Underground"], requires: ["civilization-doors"], objectType: "fireplace", seedNamespace: "fireplace:placement" }],
+  ["object-CampFire", { owner: "objects", realms: ["Underground"], requires: ["civilization-doors"], objectType: "CampFire", seedNamespace: "CampFire:placement" }],
   ["civilization-stairs", { owner: "civilization", realms: ["Overground", "Underground"], requires: ["player-position"], objectType: "stairs", seedNamespace: "stairs", pairedRealms: true }],
   ["civilization-doors", { owner: "civilization", realms: ["Underground"], requires: ["civilization-stairs"], seedNamespace: "civilization:placement" }],
   ["civilization-homes", { owner: "civilization", realms: ["Overground"], requires: ["civilization-stairs"], seedNamespace: "buildings:placement" }],
@@ -74,7 +74,7 @@ export const GENERATION_FEATURES = Object.freeze(bundledSettings.passes.map((pas
 
 export const GENERATION_SEMANTIC_CARDS = Object.freeze([
   ...GENERATION_FEATURES.filter((feature) => feature.order <= 6).map((feature) => Object.freeze({ id: feature.id, title: feature.title, featureIds: Object.freeze([feature.id]) })),
-  Object.freeze({ id: "object-distribution", title: "Object Distribution", featureIds: Object.freeze(["object-heart", "object-chest", "object-trap", "object-torch", "object-fireplace"]) }),
+  Object.freeze({ id: "object-distribution", title: "Object Distribution", featureIds: Object.freeze(["object-heart", "object-chest", "object-trap", "object-torch", "object-CampFire"]) }),
   Object.freeze({ id: "civilization-placement", title: "Civilization Placement", featureIds: Object.freeze(["civilization-stairs", "civilization-doors", "civilization-homes", "civilization-signs"]) }),
   Object.freeze({ id: "character-distribution", title: "Character Distribution", featureIds: Object.freeze(["enemy-spawner", "npc-spawner"]) }),
 ]);

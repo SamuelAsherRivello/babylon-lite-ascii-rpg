@@ -28,7 +28,7 @@ The Object Spawner System SHALL load a JSON object catalog whose entries define 
 
 ### Requirement: Pickup and persistent-object behavior
 
-The system SHALL treat `IsPickup: true` objects as one-time collectible objects that disappear after collision and apply their consequence. Objects with `IsPickup: false` SHALL remain in the world after collision; persistent fences, Camp Fires, and closed doors SHALL block movement, closed doors SHALL unlock only when a key is available, and open doors SHALL permit movement. Non-interactable objects SHALL not apply a collision consequence. A cardinal attempt to enter a Camp Fire SHALL retain the player in the adjacent cell, save or replace the session checkpoint at that Camp Fire, and request a modal `Camp Fire` dialog with exactly one `OK` acknowledgement; it SHALL not create a checkpoint toast.
+The system SHALL treat `IsPickup: true` objects as one-time collectible objects that disappear after collision and apply their consequence. Objects with `IsPickup: false` SHALL remain in the world after collision; persistent fences, Camp Fires, and closed doors SHALL block movement, closed doors SHALL unlock only when a key is available, and open doors SHALL permit movement. Non-interactable objects SHALL not apply a collision consequence. A cardinal attempt to enter a Camp Fire SHALL retain the player in the adjacent cell and request a modal `Camp Fire` dialog with exactly one `OK` acknowledgement; it SHALL not create a checkpoint toast. The first such interaction with a given Camp Fire in a game session SHALL save or replace the checkpoint and display `You saved a checkpoint.`. A later interaction with that same Camp Fire SHALL leave the checkpoint unchanged and display `You already saved this checkpoint.`.
 
 #### Scenario: Player collects a key pickup
 - **WHEN** the player enters a key cell
@@ -42,9 +42,13 @@ The system SHALL treat `IsPickup: true` objects as one-time collectible objects 
 - **WHEN** movement targets a fence
 - **THEN** the movement SHALL be blocked and the fence SHALL remain rendered
 
-#### Scenario: Player attempts a Camp Fire
-- **WHEN** a player attempts a cardinal move into a Camp Fire cell
-- **THEN** the Camp Fire SHALL remain rendered, the player SHALL remain adjacent, the checkpoint SHALL reference that Camp Fire, and a modal Camp Fire dialog with an `OK` choice SHALL be displayed without a toast
+#### Scenario: Player saves at a Camp Fire
+- **WHEN** a player first attempts a cardinal move into a Camp Fire cell in the game session
+- **THEN** the Camp Fire SHALL remain rendered, the player SHALL remain adjacent, the checkpoint SHALL reference that Camp Fire, and a modal Camp Fire dialog with an `OK` choice and text `You saved a checkpoint.` SHALL be displayed without a toast
+
+#### Scenario: Player revisits a saved Camp Fire
+- **WHEN** a player later attempts a cardinal move into the same Camp Fire cell in the game session
+- **THEN** the Camp Fire SHALL remain rendered, the player SHALL remain adjacent, the checkpoint SHALL remain unchanged, and a modal Camp Fire dialog with an `OK` choice and text `You already saved this checkpoint.` SHALL be displayed without a toast
 
 #### Scenario: Player acknowledges a Camp Fire dialog
 - **WHEN** the player clicks the Camp Fire dialog's `OK` choice

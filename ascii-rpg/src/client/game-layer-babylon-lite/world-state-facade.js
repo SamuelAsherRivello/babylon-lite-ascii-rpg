@@ -19,6 +19,6 @@ export {
   WALL_GLYPH,
   MOUNTAIN_GLYPH,
   TORCH_GLYPH,
-  FIREPLACE_GLYPH,
+  CAMP_FIRE_GLYPH,
   STAIR_GLYPH,
 } from "./systems/world-system.js";

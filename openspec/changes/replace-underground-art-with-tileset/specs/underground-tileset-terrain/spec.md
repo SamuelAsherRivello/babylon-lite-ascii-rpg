@@ -41,12 +41,12 @@ The implementation SHALL stop after phase-one verification and obtain explicit h
 - **THEN** phase two is not started until a human explicitly accepts or revises the phase-one result
 
 ### Requirement: Phase-two deterministic wall autotiling
-After phase-one human acceptance, phase two SHALL use the highest qualified
-art tier: 47-tile when all required blob forms are supported by the supplied
-art, otherwise 16-tile when all cardinal forms are supported. Qualification
-SHALL document frame mappings and visual seam checks, not rely on total sheet
-size. If neither qualifies, phase one SHALL remain available and phase two
-SHALL remain unfinished with the missing forms reported. Selection SHALL be
+After phase-one human acceptance, phase two SHALL use the authorized composed
+16-tile cardinal family from the project-local Dungeons and Pixels sheet.
+Qualification SHALL document source rectangles, composition order, all sixteen
+patterns, and visual seam checks, not rely on total sheet size. Original source
+images and folders SHALL remain unchanged. Floor SHALL retain fixed tile 13.
+Composition SHALL remain within each wall cell. Selection SHALL be
 deterministic for identical terrain input and SHALL not alter the logical
 terrain grid or gameplay semantics.
 
@@ -56,7 +56,13 @@ terrain grid or gameplay semantics.
 
 #### Scenario: Neither tier qualifies
 - **WHEN** the art audit cannot establish a complete compatible 16-tile or 47-tile family
-- **THEN** phase one is retained, missing forms are reported, and phase two is not marked complete
+- **THEN** missing forms are reported and phase two is not marked complete unless explicitly authorized composition supplies and verifies a complete family
+
+#### Scenario: Composed cardinal family
+- **WHEN** an Underground wall resolves any cardinal mask from 0 through 15
+- **THEN** its visual uses the documented brick base and only its exposed directional edge strips
+- **AND** identical cardinal masks produce identical artwork regardless of fog, occupants, diagonals, or viewport position
+- **AND** changed terrain invalidates the affected cell and its eight neighbors before bounded visible rendering
 
 #### Scenario: A wall edge differs from a wall center
 - **WHEN** a visible Underground wall has a cardinal neighbor pattern that represents an exposed edge and another wall has four cardinal wall neighbors
@@ -76,3 +82,14 @@ The implementation SHALL stop after phase-two verification and obtain explicit h
 #### Scenario: Phase two awaits human acceptance
 - **WHEN** phase-two checks and the fixed-seed browser review are complete
 - **THEN** the change remains incomplete until a human explicitly accepts or revises the autotiled result
+
+### Requirement: Phase-three art refactor planning
+Phase three SHALL deliver a plan covering all world-art categories, glyph fallback,
+asset ownership, composition caching and atlas scaling, migration order, and
+verification. This change SHALL NOT implement that broader refactor without
+separate user authorization.
+
+#### Scenario: Phase-three plan is delivered
+- **WHEN** the phase-two result is presented for human review
+- **THEN** a linked art-refactor plan explains how composition scales beyond this wall experiment
+- **AND** broader art migration remains unimplemented

@@ -108,7 +108,7 @@ import {
   restartFromCheckpoint,
   restartGame,
   sendPfxSelectionSnapshot,
-  sendPfxPlacement,
+  sendPfxPlacementEnabled,
 } from "../bridge-layer/game-bridge.js";
 import {
   CAMERA_MODE_LABELS,
@@ -1256,12 +1256,6 @@ function AppContent() {
     previousQuestRef.current = quest;
   }, [enqueueToast, quest]);
 
-  const checkpointToastRevision = useRef(0);
-  useEffect(() => {
-    if (checkpoint.revision > checkpointToastRevision.current) enqueueToast("You saved a checkpoint.");
-    checkpointToastRevision.current = checkpoint.revision;
-  }, [checkpoint, enqueueToast]);
-
   useEffect(() => {
     const uiLayer = document.getElementById("ui_layer");
     const syncUiMargin = () => {
@@ -1293,20 +1287,9 @@ function AppContent() {
   }, [pfxSelection]);
 
   useEffect(() => {
-    if (!pfxWindowOpen || !pfxSelection) return undefined;
-    const place = (event) => {
-      if (event.button !== 0) return;
-      const targetIsGameCanvas = event.target?.id === "game_canvas"
-        || event.target?.closest?.("#game_canvas")
-        || event.composedPath?.().some((node) => node?.id === "game_canvas");
-      if (!targetIsGameCanvas) return;
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      sendPfxPlacement(event.clientX, event.clientY);
-    };
-    document.addEventListener("pointerdown", place, true);
-    return () => document.removeEventListener("pointerdown", place, true);
-  }, [pfxWindowOpen, pfxSelection]);
+    sendPfxPlacementEnabled(pfxWindowOpen);
+    return () => sendPfxPlacementEnabled(false);
+  }, [pfxWindowOpen]);
 
   useEffect(() => {
     localStorage.setItem(logOpenStorageKey, logOpen ? "true" : "false");

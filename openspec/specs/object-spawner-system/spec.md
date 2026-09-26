@@ -12,7 +12,9 @@ an object glyph, name, `IsPickup`, `IsLevelSpawned`, consequence parameters,
 optional log text, and distribution rules. Key entries SHALL be one-time
 pickups. Fence and door entries SHALL identify their closed/open glyphs and
 stateful collision behavior. Every catalog glyph SHALL exist in the active
-palette with an editable color.
+palette with an editable color. The checkpoint object SHALL use `CampFire` as
+its code and data identity and `Camp Fire` as its catalog name and every
+player-facing label.
 
 #### Scenario: Civilization catalog entry has palette identity
 - **WHEN** a key, fence, or door catalog entry loads
@@ -22,6 +24,11 @@ palette with an editable color.
 - **WHEN** the object catalog loads an object entry
 - **THEN** its glyph SHALL resolve to a palette entry with a configured color
   before the object can be rendered
+
+#### Scenario: Camp Fire catalog identity
+- **WHEN** the checkpoint object catalog entry loads
+- **THEN** its code and data identity SHALL be `CampFire` and its player-facing
+  name SHALL be `Camp Fire`
 
 #### Scenario: Invalid civilization glyph is rejected
 - **WHEN** a civilization catalog entry references a glyph absent from the
@@ -37,9 +44,15 @@ palette with an editable color.
 The system SHALL treat `IsPickup: true` objects as one-time collectible
 objects that disappear after collision and apply their consequence. Objects
 with `IsPickup: false` SHALL remain in the world after collision; persistent
-fences SHALL block movement, closed doors SHALL unlock only when a key is
-available, and open doors SHALL permit movement. Non-interactable objects
-SHALL not apply a collision consequence.
+fences, Camp Fires, and closed doors SHALL block movement, closed doors SHALL
+unlock only when a key is available, and open doors SHALL permit movement.
+Non-interactable objects SHALL not apply a collision consequence. A cardinal
+attempt to enter a Camp Fire SHALL retain the player in the adjacent cell and
+request a modal `Camp Fire` dialog with exactly one `OK` acknowledgement; it
+SHALL not create a checkpoint toast. The first such interaction with a given
+Camp Fire in a game session SHALL save or replace the checkpoint and display
+`You saved a checkpoint.`. A later interaction with that same Camp Fire SHALL
+leave the checkpoint unchanged and display `You already saved this checkpoint.`.
 
 #### Scenario: Player collects a key pickup
 - **WHEN** the player enters a key cell
@@ -54,6 +67,18 @@ SHALL not apply a collision consequence.
 #### Scenario: Player enters a fence cell
 - **WHEN** movement targets a fence
 - **THEN** the movement SHALL be blocked and the fence SHALL remain rendered
+
+#### Scenario: Player saves at a Camp Fire
+- **WHEN** a player first attempts a cardinal move into a Camp Fire cell in the game session
+- **THEN** the Camp Fire SHALL remain rendered, the player SHALL remain adjacent, the checkpoint SHALL reference that Camp Fire, and a modal Camp Fire dialog with an `OK` choice and text `You saved a checkpoint.` SHALL be displayed without a toast
+
+#### Scenario: Player revisits a saved Camp Fire
+- **WHEN** a player later attempts a cardinal move into the same Camp Fire cell in the game session
+- **THEN** the Camp Fire SHALL remain rendered, the player SHALL remain adjacent, the checkpoint SHALL remain unchanged, and a modal Camp Fire dialog with an `OK` choice and text `You already saved this checkpoint.` SHALL be displayed without a toast
+
+#### Scenario: Player acknowledges a Camp Fire dialog
+- **WHEN** the player clicks the Camp Fire dialog's `OK` choice
+- **THEN** the dialog SHALL close and gameplay input SHALL resume
 
 #### Scenario: Player attempts a closed door
 - **WHEN** movement targets a closed door

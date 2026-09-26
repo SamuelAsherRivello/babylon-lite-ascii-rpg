@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "worldSize": "Med",
+  "worldSize": "Low",
   "passes": [
     {
       "id": "ground",
@@ -129,7 +129,7 @@
       "id": "object-trap",
       "title": "Trap Distribution",
       "order": 9,
-      "density": "Med",
+      "density": "High",
       "owner": "objects",
       "realms": [
         "Overground",
@@ -175,8 +175,8 @@
       "enabled": true
     },
     {
-      "id": "object-fireplace",
-      "title": "Fireplace Distribution",
+      "id": "object-CampFire",
+      "title": "Camp Fire Distribution",
       "order": 12,
       "density": "Med",
       "owner": "objects",
@@ -186,8 +186,8 @@
       "requires": [
         "civilization-doors"
       ],
-      "objectType": "fireplace",
-      "seedNamespace": "fireplace:placement",
+      "objectType": "CampFire",
+      "seedNamespace": "CampFire:placement",
       "enabled": true
     },
     {

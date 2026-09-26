@@ -33,10 +33,11 @@ test("bombs wait five later world ticks, then expose five rings in both realms",
   assert.equal(hits.filter(({ realm }) => realm === "Overground").length, 5);
   assert.equal(hits.filter(({ realm }) => realm === "Underground").length, 5);
   assert.equal(bombs.getBombs("Overground")[0].radius, 1);
-  assert.equal(bombs.getGlyphAt("Overground", { x: 10, y: 10 }), BLAST_GLYPH);
+  assert.equal(BLAST_GLYPH, null);
+  assert.equal(bombs.getGlyphAt("Overground", { x: 10, y: 10 }), null);
   assert.equal(bombs.getGlyphAt("Overground", { x: 11, y: 11 }), null);
   timeSystem.advance();
-  assert.equal(bombs.getGlyphAt("Overground", { x: 11, y: 11 }), BLAST_GLYPH);
+  assert.equal(bombs.getGlyphAt("Overground", { x: 11, y: 11 }), null);
   timeSystem.advance(3);
   assert.equal(bombs.getBombs().length, 0);
   assert.equal(hits.filter(({ realm }) => realm === "Overground").length, 177);

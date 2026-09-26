@@ -210,6 +210,9 @@ export function sendPfxSelectionSnapshot(name) {
 export function sendPfxPlacement(clientX, clientY) {
   return gameController?.placeParticleAtScreen?.({ clientX, clientY }) ?? false;
 }
+export function sendPfxPlacementEnabled(enabled) {
+  gameController?.setPfxPlacementEnabled?.(enabled === true);
+}
 
 export function sendMapviewRealmToggle() {
   gameController?.toggleMapviewRealm?.();

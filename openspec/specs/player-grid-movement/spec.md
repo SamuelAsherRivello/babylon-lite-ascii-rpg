@@ -65,13 +65,15 @@ The game SHALL accept WASD and arrow keys as equivalent cardinal directions:
 `W`/Up for north, `A`/Left for west, `S`/Down for south, and `D`/Right for
 east. A movement step SHALL advance one grid cell only when the destination is
 inside the world and walkable. Pressing or holding two orthogonal directions
-SHALL produce one diagonal grid-cell step in the combined direction. A fence
-or closed door SHALL be treated as non-walkable. An attempted move into a
-closed door SHALL resolve its lock interaction before any movement occurs.
+SHALL produce one diagonal grid-cell step in the combined direction. A fence,
+Camp Fire, or closed door SHALL be treated as non-walkable. An attempted move
+into a closed door SHALL resolve its lock interaction before any movement
+occurs. An attempted cardinal move into a Camp Fire SHALL resolve its
+checkpoint dialog interaction before any movement occurs.
 Walking and sprinting SHALL NOT consume stamina. Each successful movement SHALL
 advance a movement T tick that recovers `10` stamina, capped at the current
 maximum. Unsuccessful movement SHALL not advance world time or change stamina;
-unlocking a door SHALL also leave both unchanged.
+unlocking a door or opening a Camp Fire dialog SHALL also leave both unchanged.
 
 #### Scenario: Cardinal key press
 
@@ -86,6 +88,11 @@ unlocking a door SHALL also leave both unchanged.
 - **WHEN** the player presses a mapped key whose destination cell is a fence
 - **THEN** the player SHALL remain in the current cell, world time SHALL remain
   unchanged, and stamina SHALL remain unchanged
+
+#### Scenario: Camp Fire collision
+
+- **WHEN** the player presses a mapped cardinal key whose destination cell is a Camp Fire
+- **THEN** the player SHALL remain in the current cell, a modal Camp Fire dialog with an `OK` choice SHALL block gameplay input, and world time and stamina SHALL remain unchanged; its text SHALL be `You saved a checkpoint.` on that Camp Fire's first session interaction and `You already saved this checkpoint.` thereafter
 
 #### Scenario: Wall collision
 

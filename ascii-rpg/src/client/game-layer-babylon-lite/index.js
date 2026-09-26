@@ -62,7 +62,7 @@ import {
   WALL_GLYPH,
   MOUNTAIN_GLYPH,
   TORCH_GLYPH,
-  FIREPLACE_GLYPH,
+  CAMP_FIRE_GLYPH,
   STAIR_GLYPH,
   getRandomSeedFromSearch,
   getWorldGenerationLayersEnabledFromSearch,
@@ -72,6 +72,7 @@ import {
 import { createTimeSystem } from "./systems/time-system.js";
 import { FACING_LEFT, FACING_RIGHT, createGlyphRasterCanvas, createGlyphVisualCache, getFacingGlyph, getFacingGlyphKey, getGlyphOffsetsFromKey, getGlyphOffsetKey, getOffsetGlyphKey, rasterizeCompositeGlyph, rasterizeGlyph, rasterizeSolidGlyph } from "./glyph-visual-cache.js";
 import { getTerrainArtBounds, getTerrainArtKey, loadUndergroundTerrainImage, parseTerrainArtKey, rasterizeTerrainArt } from "./underground-terrain-art.js";
+import { expandTerrainDirtyCells } from "./underground-wall-autotile.js";
 import { getVisibleRegion, getVisibleSlot, shouldUpdateVisibleSprite } from "./visible-region.js";
 import { collectWorldViewGlyphs, createWorldViewComposition, renderWorldViewComposition, renderWorldViewCompositionCooperatively } from "./world-view.js";
 import { colorToLinearRgba, linearRgbaToRendererHex, reconcilePaletteColors } from "./palette-color-cache.js";
@@ -285,7 +286,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
     })),
   };
   const worldDimensions = getWorldSizeDimensions(runtimeGenerationSettings.worldSize);
-  const { caveWallFillPercents, caveSmoothingIterationsByRealm, walkabilityWallOffset, waterFillPercent, waterLakeCount, minWalkableMultiplier, objectCountMultipliers, chestCount, torchCountMultiplier, stairsCountMultiplier, fireplaceDensity, civilizationChanceMultiplier, homeChanceMultiplier, maxEnemySpawners, npcSpawnerCount, playerStartMode } = resolveGenerationProfile(runtimeGenerationSettings);
+  const { caveWallFillPercents, caveSmoothingIterationsByRealm, walkabilityWallOffset, waterFillPercent, waterLakeCount, minWalkableMultiplier, objectCountMultipliers, chestCount, torchCountMultiplier, stairsCountMultiplier, CampFireDensity, civilizationChanceMultiplier, homeChanceMultiplier, maxEnemySpawners, npcSpawnerCount, playerStartMode } = resolveGenerationProfile(runtimeGenerationSettings);
   const generationPlan = resolveGenerationPlan(runtimeGenerationSettings);
   const plannedFeature = (id) => generationPlan.find((feature) => feature.id === id);
   const featureEnabled = (id) => plannedFeature(id)?.enabled !== false;
@@ -472,6 +473,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
   let checkpoint = null;
   let checkpointRevision = 0;
   const checkpointListeners = new Set();
+  const reachedCampFireIds = new Set();
   let questManager = null;
   let objectSpawnerSystem = null;
   let enemySystem = null;
@@ -568,6 +570,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
   const floatingTextElements = new Map();
   const particleInstances = new Map();
   let pfxSelection = null;
+  let pfxPlacementEnabled = false;
   let particleAnimationFrame = null;
   let gpuLightActiveSlots = new Uint8Array(0);
   const metrics = {
@@ -627,8 +630,16 @@ async function createGameSessionImplementation(container, initialPalette, initia
     performanceMonitor.markPlayable();
   };
   const getClientVisibleGlyphKey = (targetWorld, cell) => {
+    const isPlayerCell = targetWorld === world
+      && playerCell?.x === cell.x
+      && playerCell?.y === cell.y;
     const record = getClientVisibleRecord(targetWorld, cell);
-    const glyph = record?.glyph ?? bombSystem?.getGlyphAt(targetWorld?.realmName, cell) ?? getExteriorBuildingOverlayGlyph(targetWorld, cell) ?? targetWorld?.characters?.[cell.y]?.[cell.x] ?? getBuildingOverlayGlyph(targetWorld, cell) ?? getVisibleGlyph(targetWorld, cell);
+    // The hero overlay owns the player's appearance. Cache the terrain beneath
+    // it, rather than the stair/player record, so both cache lookup and draw
+    // use the same frame after a realm handoff.
+    const glyph = isPlayerCell
+      ? targetWorld.terrain?.[cell.y]?.[cell.x]?.glyph
+      : record?.glyph ?? bombSystem?.getGlyphAt(targetWorld?.realmName, cell) ?? getExteriorBuildingOverlayGlyph(targetWorld, cell) ?? targetWorld?.characters?.[cell.y]?.[cell.x] ?? getBuildingOverlayGlyph(targetWorld, cell) ?? getVisibleGlyph(targetWorld, cell);
     return getTerrainArtKey(targetWorld, cell, getOffsetGlyphKey(getFacingGlyphKey(glyph, record?.facing), paletteOffsets.get(glyph)));
   };
   const setPlayerFacingFromDirection = (direction) => {
@@ -703,6 +714,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
   };
 
   const renderMinimap = ({ contentRevision = null, dirtyCells = [], forceFull = false } = {}) => {
+    dirtyCells = expandTerrainDirtyCells(world, dirtyCells);
     // The minimap must use the fog record owned by the exact world/realm it
     // is rendering. The variable fallback keeps startup compatible while the
     // generated realm world is being assigned.
@@ -956,6 +968,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
   const renderMapview = ({ contentRevision = null, dirtyCells = [], forceFull = false } = {}) => {
     if (!mapviewOpen || !world || !minimapGlyphCache) return;
     const mapviewWorld = worldRealms?.realms?.[mapviewRealm] ?? world;
+    dirtyCells = expandTerrainDirtyCells(mapviewWorld, dirtyCells);
     const started = performance.now();
     if (mapviewGlyphCanvases.size > 16384) mapviewGlyphCanvases.clear();
     mapviewCanvas.hidden = false;
@@ -1210,12 +1223,12 @@ async function createGameSessionImplementation(container, initialPalette, initia
       maximumDistance: 50,
       reserved: new Set([...heartCells, ...trapCells].map((cell) => `${cell.x},${cell.y}`)),
     });
-    const fireplaceCount = previewRealm === "Underground" && previewFeatureEnabled("object-fireplace")
-      ? Math.max(0, Math.round(getObjectDistributionCount("fireplace", previewWorld.options.seed) * profile.objectCountMultipliers.fireplace))
+    const CampFireCount = previewRealm === "Underground" && previewFeatureEnabled("object-CampFire")
+      ? Math.max(0, Math.round(getObjectDistributionCount("CampFire", previewWorld.options.seed) * profile.objectCountMultipliers.CampFire))
       : 0;
-    const fireplaceCells = selectObjectCells(previewWorld, previewWorld.playerStart,
-      fireplaceCount,
-      createRandom(`${previewWorld.options.seed}:${previewSeedNamespace("object-fireplace")}`), {
+    const CampFireCells = selectObjectCells(previewWorld, previewWorld.playerStart,
+      CampFireCount,
+      createRandom(`${previewWorld.options.seed}:${previewSeedNamespace("object-CampFire")}`), {
         minimumDistance: 3,
         reserved: new Set([...heartCells, ...trapCells].map((cell) => `${cell.x},${cell.y}`)),
       });
@@ -1229,7 +1242,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
       ...heartCells.map((cell) => ({ ...cell, kind: "heart", glyph: "♥", color: "#ff4f6d" })),
       ...chestCells.map((cell) => ({ ...cell, kind: "chest", glyph: CLOSED_CHEST_GLYPH, color: "#ffff00" })),
       ...trapCells.map((cell) => ({ ...cell, kind: "trap", glyph: "☠", color: "#ffd166" })),
-      ...fireplaceCells.map((cell) => ({ ...cell, kind: "fireplace", glyph: FIREPLACE_GLYPH, color: "#ff6b35" })),
+      ...CampFireCells.map((cell) => ({ ...cell, kind: "CampFire", glyph: CAMP_FIRE_GLYPH, color: "#ff6b35" })),
       ...(previewFeatureEnabled("object-torch") ? previewWorld.torches ?? [] : []).map((cell) => ({ ...cell, kind: "torch", glyph: "🕯", color: "#ffe066" })),
     ];
     if (targetCanvas.width !== width) targetCanvas.width = width;
@@ -1729,7 +1742,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
     if (["enemy", "enemy-spawner"].includes(target.kind) && hasItem("sword")) return "sword";
     if (target.kind === "mountain" && hasItem("pickaxe")) return "pickaxe";
     if (target.kind === "door" && characterKeys > 0) return "keys";
-    if (["chest", "npc", "welcome-sign"].includes(target.kind)) return "body";
+    if (["chest", "npc", "welcome-sign", "CampFire"].includes(target.kind)) return "body";
     return null;
   };
 
@@ -1822,7 +1835,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
   const createGameGlyphCache = () => createGlyphVisualCache(engine, {
     fontId,
     fontFamily: getFontOption(fontId).family,
-    glyphLimit: (GLYPHS.length + 3) * 3,
+    glyphLimit: (GLYPHS.length + 3) * 3 + 15 * 3,
     rasterize: (glyph, family, size) => glyph === FOG_BACKING_GLYPH
       ? rasterizeSolidGlyph(size)
       : rasterizeTerrainArt(glyph, undergroundTerrainImage, family, size, paletteColors) ?? (glyphBackgroundEnabled
@@ -1833,7 +1846,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
   const createMinimapGlyphCache = () => createGlyphVisualCache(engine, {
     fontId,
     fontFamily: getFontOption(fontId).family,
-    glyphLimit: (GLYPHS.length + 3) * 3,
+    glyphLimit: (GLYPHS.length + 3) * 3 + 15 * 3,
     // World-view canvases already paint each cell's terrain/background.  A
     // composite glyph adds a second, full-cell opaque backing behind emoji
     // such as the player and gold, making that backing larger than markers.
@@ -2265,7 +2278,9 @@ async function createGameSessionImplementation(container, initialPalette, initia
     const isPlayerCell = playerCell?.x === cell.x && playerCell?.y === cell.y;
     // The hero test owns the player visual. Paint the underlying terrain here
     // so the legacy player glyph cannot appear beneath the sprite overlay.
-    const glyph = isPlayerCell ? getVisibleGlyph(world, cell) : (glyphOverride ?? getClientVisibleGlyph(world, cell));
+    const glyph = isPlayerCell
+      ? world.terrain[cell.y][cell.x].glyph
+      : (glyphOverride ?? getClientVisibleGlyph(world, cell));
     const visualGlyph = isPlayerCell
       ? getTerrainArtKey(world, cell, getOffsetGlyphKey(getFacingGlyphKey(glyph), paletteOffsets.get(glyph)))
       : getClientVisibleGlyphKey(world, cell);
@@ -2434,6 +2449,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
     cancelFrame: (handle) => window.cancelAnimationFrame(handle),
     render: ({ refreshLighting = false, dirtyCells = [], revisions = {} } = {}, previous = {}) => {
       if (disposed) return;
+      const worldDirtyCells = expandTerrainDirtyCells(world, dirtyCells);
       // Advance recruited companions before composing world cells. Updating
       // them after renderWorld leaves their old glyph visible for one frame.
       npcSystem?.updateFollowers();
@@ -2443,7 +2459,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
           compatibilityKey: `${activeRealm}:${zoom}:${viewport.screenWidth}x${viewport.screenHeight}:${region?.x ?? 0},${region?.y ?? 0}:${region?.columns ?? 0}x${region?.rows ?? 0}`,
           contentKey: String(revisions.world),
           totalCells: region?.count ?? 0,
-          cells: dirtyCells,
+          cells: worldDirtyCells,
           forceFull: refreshLighting,
         });
         if (cacheDecision.mode === "full") renderWorld({ refreshLighting });
@@ -2671,14 +2687,31 @@ async function createGameSessionImplementation(container, initialPalette, initia
       playerCell,
       random: createRandom(`${world.options.seed}:${attemptedCell.x},${attemptedCell.y}:chest-reward`),
       createChestRewardEffect: (type) => type === "heart" ? applyHeartEffect : () => {},
-      openDialog: ({ object, cell }) => object.type === "welcome-sign" && openDialog({
-        id: "welcome-sign",
-        isModal: false,
-        speaker: "Welcome Sign",
-        text: `Welcome to town ${100 + Math.floor(createRandom(`${world.options.seed}:${object.id}`)() * 900)}`,
-        choices: [{ label: "OK", value: "dismiss" }],
-        anchor: cell,
-      }),
+      openDialog: ({ object, cell }) => {
+        if (object.type === "welcome-sign") return openDialog({
+          id: "welcome-sign",
+          isModal: false,
+          speaker: "Welcome Sign",
+          text: `Welcome to town ${100 + Math.floor(createRandom(`${world.options.seed}:${object.id}`)() * 900)}`,
+          choices: [{ label: "OK", value: "dismiss" }],
+          anchor: cell,
+        });
+        if (object.type !== "CampFire") return false;
+        const alreadySaved = reachedCampFireIds.has(object.id);
+        const opened = openDialog({
+          id: `CampFire:${object.id}`,
+          isModal: true,
+          speaker: "Camp Fire",
+          text: alreadySaved ? "You already saved this checkpoint." : "You saved a checkpoint.",
+          choices: [{ label: "OK", value: "dismiss" }],
+          anchor: cell,
+        });
+        if (opened && !alreadySaved) {
+          reachedCampFireIds.add(object.id);
+          object.effect?.();
+        }
+        return opened;
+      },
     });
     // A chest is an object interaction, not movement into an occupied tile.
     // Resolve a closed chest before the generic contact capability search so a
@@ -2965,6 +2998,11 @@ async function createGameSessionImplementation(container, initialPalette, initia
 
   const handlePointerDown = (event) => {
     if (event.pointerType === "mouse") {
+      if (pfxPlacementEnabled) {
+        if (event.button === 0) placeParticleAtScreen(event);
+        event.preventDefault();
+        return;
+      }
       if (playerLifecycle.isDead() || gameplayInputLocked || !event.isPrimary || mouseNavigationPointerId !== null || ![0, 2].includes(event.button)) return;
       event.preventDefault();
       mouseNavigationPointerId = event.pointerId;
@@ -3378,20 +3416,24 @@ async function createGameSessionImplementation(container, initialPalette, initia
             },
           }));
         });
-        const fireplaceCells = featureEnabled("object-fireplace") ? selectObjectCells(
+        const CampFireCells = featureEnabled("object-CampFire") ? selectObjectCells(
           realm,
           realm.playerStart,
-          randomObjectCount("fireplace", realm.options.seed),
-          createRandom(`${realm.options.seed}:${featureSeedNamespace("object-fireplace")}`),
+          randomObjectCount("CampFire", realm.options.seed),
+          createRandom(`${realm.options.seed}:${featureSeedNamespace("object-CampFire")}`),
           { minimumDistance: 3, reserved: new Set(realm.objects.map((object) => `${object.cell.x},${object.cell.y}`)) },
         ) : [];
-        fireplaceCells.forEach((cell, index) => addObjectToRealm(realm, {
-          id: `${realmName.toLowerCase()}-fireplace-${index + 1}`,
-          type: "fireplace",
+        CampFireCells.forEach((cell, index) => {
+          realm.terrain[cell.y][cell.x].naturalWalkable = realm.terrain[cell.y][cell.x].walkable;
+          realm.terrain[cell.y][cell.x].walkable = false;
+          addObjectToRealm(realm, {
+          id: `${realmName.toLowerCase()}-CampFire-${index + 1}`,
+          type: "CampFire",
           cell,
-          glyph: FIREPLACE_GLYPH,
+          glyph: CAMP_FIRE_GLYPH,
           effect: () => saveCheckpoint(realmName, cell),
-        }));
+          });
+        });
       } else {
         realm.civilizationGroups = [];
         realm.buildings = [];
@@ -3885,6 +3927,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
     travelRealm() { travelToNearestStairs(); },
     getRealm() { return activeRealm; },
     setPfxSelection(name) { pfxSelection = getParticleEffect(name)?.name ?? null; },
+    setPfxPlacementEnabled(enabled) { pfxPlacementEnabled = enabled === true; },
     placeParticleAtScreen,
     getRealmDiscoverySnapshot,
     startQuest(id) {

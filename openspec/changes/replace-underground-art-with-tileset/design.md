@@ -32,7 +32,47 @@ Babylon Lite sprite-atlas/layer rendering for Tiled-authored assets.
 
 ## Decisions
 
-### New-art comparison (2026-09-26)
+### Current phase-two decision: composed 16-tile walls (2026-09-26)
+
+The user authorized proceeding with the new art and explicitly composing needed
+pieces. This supersedes the earlier stop on incomplete unmodified tile families.
+The implementation uses `underground-wall-autotile.js`: N=1, E=2, S=4, W=8;
+outside-world neighbors connect as walls. Only logical wall terrain connects,
+independently of fog, occupants, or viewport boundaries. Floor remains tile 13.
+
+Source rectangles in `Tileset_Dungeon.png`, with destination coordinates in a
+32x32 output, are:
+
+| Piece | Source x,y,width,height | Destination x,y |
+| --- | --- | --- |
+| Brick base | 224,64,32,32 | 0,0 |
+| North cap | 224,0,32,8 | 0,0 |
+| East edge | 280,32,8,32 | 24,0 |
+| South cap | 32,132,32,8 | 0,24 |
+| West edge | 192,32,8,32 | 0,0 |
+
+Draw the full base, then exposed west/east strips, then exposed north/south
+caps. No rotation, flip, stretching, or drawing outside the wall cell is used.
+These five source pieces generate sixteen complete output patterns; this is
+**16-tile cardinal fidelity**, not the referenced five-tile dual-grid technique.
+Connected cells omit their shared trim. Diagonal-only differences and special
+concave inner-corner artwork are not represented; 47-tile remains unqualified.
+
+Recipes rasterize lazily into the existing shared terrain/overlay atlas cache,
+not on every cell submission. Wall keys include the mask; floor keys do not.
+Atlas capacity reserves 45 additional slots (15 variants times three typical
+presentations); existing zoom-cache limits remain. This is an experiment-sized
+bound, not a scalable arbitrary overlay cross-product solution. Phase three
+plans separate terrain, actor, and prop layers before wider art migration.
+
+Dirty cells expand to their eight neighbors before each view's bounded update;
+deduplication and world bounds prevent a full-world refresh. Existing viewport
+and discovery culling stay in place. PNG lighting/fog behavior is unchanged.
+See [phase-two-verification.md](phase-two-verification.md) for actual checks and
+remaining acceptance, and [phase-three-art-plan.md](phase-three-art-plan.md)
+for the plan-only next phase.
+
+### Historical new-art comparison (2026-09-26)
 
 The user's latest revision replaces both phase-one terrain types with the
 project-local Dungeons-and-Pixels-v1.4 sheet: wall ID 31 at `(224,64,32,32)`
@@ -99,7 +139,7 @@ it would make the human comparison and fixed-seed verification less clear.
 
 ### Phase 2 selects a method after qualifying the art
 
-#### Qualification result (2026-09-26): neither tier qualified
+#### Historical original-pack qualification: neither unmodified tier qualified
 
 Phase 1 was explicitly accepted, and the user authorized walls-only phase 2.
 The audit inspected every 16x16 slot in `walls_floor.png`, the supplemental

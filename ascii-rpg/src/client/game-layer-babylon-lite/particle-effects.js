@@ -27,8 +27,21 @@ const EFFECTS = [
 export const PARTICLE_EFFECTS = Object.freeze(EFFECTS);
 export const PARTICLE_EFFECT_BY_NAME = Object.freeze(Object.fromEntries(EFFECTS.map((effect) => [effect.name, effect])));
 
+export const COMPOUND_PARTICLE_EFFECTS = Object.freeze([
+  Object.freeze({
+    name: "BombExplosion",
+    effects: Object.freeze(["SmokePoff", "FirePlume"]),
+    crossfadeFrames: Object.freeze([3]),
+  }),
+]);
+export const COMPOUND_PARTICLE_EFFECT_BY_NAME = Object.freeze(Object.fromEntries(COMPOUND_PARTICLE_EFFECTS.map((effect) => [effect.name, effect])));
+
 export function getParticleEffect(name) {
   return PARTICLE_EFFECT_BY_NAME[name] ?? null;
+}
+
+export function getCompoundParticleEffect(name) {
+  return COMPOUND_PARTICLE_EFFECT_BY_NAME[name] ?? null;
 }
 
 export function createParticleInstance(name, realm, cell, at = performance.now()) {
@@ -55,4 +68,32 @@ export function advanceParticleInstance(instance, now) {
   }
   if (frame >= effect.frameCount) return { done: true, instance: { ...instance, frame: effect.frameCount - 1 } };
   return { done: false, instance: { ...instance, frame } };
+}
+
+export function createCompoundParticleInstance(name, realm, cell, at = performance.now()) {
+  const effect = getCompoundParticleEffect(name);
+  if (!effect || effect.effects.length < 2 || !cell || !Number.isFinite(cell.x) || !Number.isFinite(cell.y)) return null;
+  return { id: `${name}-${Math.random().toString(36).slice(2)}`, name, realm, cell: { x: Math.floor(cell.x), y: Math.floor(cell.y) }, startedAt: at };
+}
+
+export function advanceCompoundParticleInstance(instance, now) {
+  const compound = getCompoundParticleEffect(instance?.name);
+  if (!compound) return { done: true, instances: [] };
+  const instances = [];
+  let startAt = instance.startedAt;
+  for (let index = 0; index < compound.effects.length; index += 1) {
+    const effect = getParticleEffect(compound.effects[index]);
+    if (!effect) return { done: true, instances: [] };
+    if (index > 0) {
+      const previous = getParticleEffect(compound.effects[index - 1]);
+      const overlap = compound.crossfadeFrames[index - 1] ?? 0;
+      startAt += Math.max(0, previous.frameCount - overlap) * previous.frameDurationMs;
+    }
+    if (now < startAt) break;
+    const advanced = advanceParticleInstance({ id: `${instance.id}:${index}`, name: effect.name, realm: instance.realm, cell: instance.cell, frame: 0, startedAt: startAt, lastFrameAt: startAt }, now);
+    if (!advanced.done) instances.push(advanced.instance);
+  }
+  const finalEffect = getParticleEffect(compound.effects.at(-1));
+  const finalStartAt = startAt;
+  return { done: now >= finalStartAt + finalEffect.frameCount * finalEffect.frameDurationMs, instances };
 }

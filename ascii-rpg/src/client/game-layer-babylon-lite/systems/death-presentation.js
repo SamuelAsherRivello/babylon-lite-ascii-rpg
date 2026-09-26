@@ -18,6 +18,14 @@ export function createDeathPresentation({
     recoveryTimer = null;
   };
 
+  const reset = () => {
+    const changed = phase !== "alive" || recoveryTimer !== null;
+    cancelRecoveryTimer();
+    phase = "alive";
+    if (changed) notify();
+    return changed;
+  };
+
   return Object.freeze({
     getPhase() { return phase; },
     isRecoveryReady() { return phase === "recovery-ready"; },
@@ -37,15 +45,9 @@ export function createDeathPresentation({
       }, DEATH_RECOVERY_DELAY_MS);
       return true;
     },
-    reset() {
-      const changed = phase !== "alive" || recoveryTimer !== null;
-      cancelRecoveryTimer();
-      phase = "alive";
-      if (changed) notify();
-      return changed;
-    },
+    reset,
     dispose() {
-      this.reset();
+      reset();
       listeners.clear();
     },
     subscribe(listener) {

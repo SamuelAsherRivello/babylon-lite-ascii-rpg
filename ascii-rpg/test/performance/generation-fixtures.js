@@ -19,8 +19,8 @@ export async function generationFixture(seed, size = 64) {
   for (const [name, world] of Object.entries(realms.realms)) {
     const reserved = new Set();
     const objects = {};
-    for (const type of ['heart', 'chest', 'trap', 'fireplace']) {
-      if (type === 'fireplace' && name !== 'Underground') continue;
+    for (const type of ['heart', 'chest', 'trap', 'CampFire']) {
+      if (type === 'CampFire' && name !== 'Underground') continue;
       objects[type] = measure(`${name}:${type}`, () => selectObjectCells(world, world.playerStart, type === 'chest' ? 2 : 8,
         createRandom(`${seed}:${name}:${type}`), { reserved, maximumDistance: type === 'chest' ? 50 : Infinity }));
     }

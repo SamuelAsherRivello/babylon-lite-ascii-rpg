@@ -208,7 +208,7 @@ export function createObjectSpawnerSystem({ catalog = [], eventSystem = null } =
   } = {}) => {
     const object = getActiveObjectAtCell(cell, { world });
     if (!object) return null;
-    if (object.type === "welcome-sign") {
+    if (object.type === "welcome-sign" || object.type === "CampFire") {
       const opened = openDialog({ object, cell: { ...cell } });
       return { handled: opened, opened: false, object };
     }

@@ -28,7 +28,7 @@ Making the Camp Fire walkable and opening a dialog after entry was rejected beca
 
 ### Reuse the modal dialog bridge and remove only the checkpoint toast consumer
 
-The game layer will publish a modal, single-choice `Camp Fire` dialog and keep input locked until `OK` resolves it. The checkpoint snapshot remains necessary for restart availability, but the React effect that turns a checkpoint revision into `You saved a checkpoint.` will be removed so a successful interaction produces no toast.
+The game layer will retain a session-local set of reached Camp Fire identities. The first cardinal bump into a given Camp Fire saves/replaces the checkpoint and publishes a modal, single-choice `Camp Fire` dialog whose text is `You saved a checkpoint.`. A later bump into that same Camp Fire leaves the checkpoint unchanged and publishes the same required-acknowledgement dialog with `You already saved this checkpoint.`. The checkpoint snapshot remains necessary for restart availability, but the React effect that turns a checkpoint revision into a toast will be removed.
 
 Adding a second notification channel was rejected because the dialog contract and bridge already support acknowledgement without exposing game state to React.
 
@@ -41,7 +41,7 @@ Retaining `fireplace` in machine identifiers was rejected because it conflicts w
 ## Risks / Trade-offs
 
 - [Broad rename misses a generation or preview path] -> Search active source and focused tests for the legacy spelling, then prove the same seeded Camp Fire placement in runtime and preview paths.
-- [A collision updates the checkpoint but does not display the dialog] -> Cover the single cardinal interaction path with focused tests and manually confirm a blocking OK modal.
+- [A collision saves a Camp Fire twice or shows the wrong message] -> Cover first and repeat cardinal bumps with focused tests and manually confirm both blocking OK dialogs.
 - [Modal input lock lingers after acknowledgement] -> Exercise `OK` and verify normal movement resumes with no time/stamina mutation from the blocked bump.
 
 ## Migration Plan

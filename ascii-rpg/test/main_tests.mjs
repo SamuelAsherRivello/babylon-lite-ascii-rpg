@@ -889,12 +889,19 @@ test("documents the player death lifecycle and recovery prompt", async () => {
     || !bridge.includes("sendPlayerDeadSnapshot") || !main.includes("sendPlayerDeadSnapshot")) {
     throw new Error("The bridge must expose the immutable player-dead snapshot to React.");
   }
+  if (!bridge.includes("getPlayerRecoveryReadySnapshot") || !bridge.includes("subscribeToPlayerRecoveryReady")
+    || !bridge.includes("sendPlayerRecoveryReadySnapshot") || !main.includes("sendPlayerRecoveryReadySnapshot")
+    || !gameLayer.includes("deathPresentation.completeAnimation()")
+    || !app.includes("playerRecoveryReady ? <DeathWindow")) {
+    throw new Error("The recovery prompt must wait for the game-layer death presentation to become ready.");
+  }
   if (!app.includes("function DeathWindow") || !app.includes(">Adventure</div>")
     || !app.includes("You have died.") || !app.includes("<li>XP: 00</li>")
     || !app.includes("<li>Gold: 00</li>") || !app.includes("<li>Time: 00</li>")
     || !app.includes(">Restart from checkpoint</button>") || !app.includes(">Restart game</button>")
     || !app.includes("restartFromCheckpoint") || !app.includes("restartGame")
     || !app.includes("blockDeadRunInput")
+    || !app.includes("isGameplayKey") || !app.includes("isCanvasPointer")
     || !app.includes("disabled={!checkpointActive}")) {
     throw new Error("The death prompt must preserve the exact Adventure copy and restart behavior.");
   }

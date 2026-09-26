@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { rasterizeTerrainArt } from "../../../src/client/game-layer-babylon-lite/underground-terrain-art.js";
+import { expandTerrainDirtyCells, getWallComposition, getWallMask } from "../../../src/client/game-layer-babylon-lite/underground-wall-autotile.js";
 import { compositeTerrainPixels, getTerrainArtBounds, getTerrainArtKey, parseTerrainArtKey, resolveUndergroundTerrainFrame, UNDERGROUND_TERRAIN_FRAMES } from "../../../src/client/game-layer-babylon-lite/underground-terrain-art.js";
 import { createWorldViewComposition, collectWorldViewGlyphs } from "../../../src/client/game-layer-babylon-lite/world-view.js";
 import { createGlyphRasterCanvas, createGlyphVisualCache, darkenGlyphColor, FACING_RIGHT, getFacingGlyphKey, getFacingGlyphOffsets, getGlyphOffsetKey, getGlyphOffsetsFromKey, getGlyphRasterSize, getOffsetGlyphKey, rasterizeSolidGlyph, tintGlyphRgb } from "../../../src/client/game-layer-babylon-lite/glyph-visual-cache.js";
@@ -23,6 +24,87 @@ function fakeAtlasApi() {
   };
 }
 
+test("all 16 wall masks are complete, deterministic, logical, and viewport independent", () => {
+  const keys = new Set();
+  for (let mask = 0; mask < 16; mask += 1) {
+    const terrain = Array.from({ length: 3 }, () => Array.from({ length: 3 }, () => ({ kind: "dirt", glyph: "●" })));
+    terrain[1][1] = { kind: "wall", glyph: "▒", walkable: false };
+    for (const [bit, x, y] of [[1, 1, 0], [2, 2, 1], [4, 1, 2], [8, 0, 1]]) {
+      if (mask & bit) terrain[y][x] = { kind: "wall", glyph: "▒" };
+    }
+    const world = { realm: "Underground", rows: 3, columns: 3, terrain };
+    const before = structuredClone(world);
+    const cell = { x: 1, y: 1 };
+    assert.equal(getWallMask(world, cell), mask);
+    const key = getTerrainArtKey(world, cell, "▒");
+    assert.equal(parseTerrainArtKey(key).mask, mask);
+    keys.add(key);
+    const pieces = getWallComposition(mask);
+    assert.equal(pieces.length, 5 - [1, 2, 4, 8].filter((bit) => mask & bit).length);
+    for (const [sx, sy, w, h, dx, dy] of pieces) {
+      assert.ok(sx >= 0 && sy >= 0 && sx + w <= 384 && sy + h <= 288);
+      assert.ok(dx >= 0 && dy >= 0 && dx + w <= 32 && dy + h <= 32);
+    }
+    const composition = createWorldViewComposition({ world, source: { x: 1, y: 1, width: 1, height: 1 },
+      getVisibility: () => 100, getGlyph: (target, point) => getTerrainArtKey(target, point, "▒") });
+    assert.equal(composition.cells[0].glyph, key);
+    assert.deepEqual(world, before);
+    // Diagonal wall/fog/occupancy changes must not change this cardinal tier.
+    world.terrain[0][0] = { kind: "wall" };
+    world.fog = { hidden: true };
+    world.occupants = [{ cell }];
+    assert.equal(getTerrainArtKey(world, cell, "▒"), key);
+  }
+  assert.equal(keys.size, 16);
+  assert.throws(() => getWallComposition(16), RangeError);
+});
+
+test("wall borders connect outward and edits refresh adjacent visible wall keys", () => {
+  const world = { realmName: "Underground", rows: 3, columns: 3,
+    terrain: Array.from({ length: 3 }, () => Array.from({ length: 3 }, () => ({ kind: "wall", glyph: "▒" }))) };
+  assert.equal(getWallMask(world, { x: 0, y: 0 }), 15);
+  const before = getTerrainArtKey(world, { x: 1, y: 0 }, "▒");
+  world.terrain[1][1] = { kind: "dirt", glyph: "●" };
+  assert.notEqual(getTerrainArtKey(world, { x: 1, y: 0 }, "▒"), before);
+  const dirty = expandTerrainDirtyCells(world, [{ x: 1, y: 1 }, { x: 1, y: 1 }]);
+  assert.equal(dirty.length, 9);
+  assert.equal(expandTerrainDirtyCells(world, [{ x: 0, y: 0 }]).length, 4);
+  const viewport = getVisibleRegion({ screenWidth: 32, screenHeight: 32, gridWidth: 32, gridHeight: 32 }, world, { x: 1, y: 0 });
+  assert.ok(dirty.some((point) => point.x === 1 && point.y === 0 && getVisibleSlot(viewport, point) !== -1));
+  const cells = [{ x: 1, y: 1 }];
+  assert.equal(expandTerrainDirtyCells({ ...world, realmName: "Overground" }, cells), cells);
+});
+
+test("wall compositions rasterize only exposed edges and reuse mask keys across cells", () => {
+  const previous = globalThis.document;
+  const calls = [];
+  globalThis.document = { createElement: () => ({ getContext: () => ({
+    drawImage: (...args) => calls.push(args),
+    getImageData: () => ({ data: new Uint8ClampedArray(32 * 32 * 4) }),
+  }) }) };
+  try {
+    const image = {};
+    for (let mask = 0; mask < 16; mask += 1) {
+      calls.length = 0;
+      const key = `terrain-art:${JSON.stringify(["wall", null, mask])}`;
+      rasterizeTerrainArt(key, { wall: image }, "monospace", 32, new Map());
+      assert.deepEqual(calls, getWallComposition(mask).map(([x, y, w, h, dx, dy]) => [image, x, y, w, h, dx, dy, w, h]));
+    }
+    let rasterizations = 0;
+    const cache = createGlyphVisualCache({}, { glyphLimit: 16, atlasApi: fakeAtlasApi(), rasterize: (name) => {
+      rasterizations += 1; return { name, width: 32, height: 32 };
+    } });
+    const keys = Array.from({ length: 16 }, (_, mask) => `terrain-art:${JSON.stringify(["wall", null, mask])}`);
+    cache.ensure(5, 32, [...keys, ...keys]);
+    cache.ensure(5, 32, keys);
+    assert.equal(rasterizations, 16);
+    cache.dispose();
+  } finally {
+    if (previous === undefined) delete globalThis.document;
+    else globalThis.document = previous;
+  }
+});
+
 test("Underground 1-tile selection is logical, deterministic, and does not mutate gameplay", () => {
   const world = { realm: "Underground", rows: 1, columns: 3, terrain: [[
     { kind: "wall", glyph: "▒", walkable: false },
@@ -39,7 +121,7 @@ test("Underground 1-tile selection is logical, deterministic, and does not mutat
   assert.equal(getTerrainArtKey(world, { x: 2, y: 0 }, "~"), "~");
   const key = getTerrainArtKey(world, cell, "▒");
   assert.equal(getTerrainArtKey(world, cell, "▒"), key);
-  assert.deepEqual(parseTerrainArtKey(key), { frame: UNDERGROUND_TERRAIN_FRAMES.wall, overlay: null });
+  assert.deepEqual(parseTerrainArtKey(key), { frame: UNDERGROUND_TERRAIN_FRAMES.wall, overlay: null, mask: 13 });
   assert.deepEqual(world, before);
   assert.deepEqual(cell, { x: 0, y: 0 });
   for (const frame of Object.values(UNDERGROUND_TERRAIN_FRAMES)) {

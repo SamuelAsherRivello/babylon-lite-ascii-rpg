@@ -7,7 +7,7 @@ export const ENEMY_SPAWNER_GLYPH = "S";
 export const NPC_GLYPH = "☺";
 export const NPC_SPAWNER_GLYPH = "N";
 export const TORCH_GLYPH = "🕯️";
-export const FIREPLACE_GLYPH = "🔥";
+export const CAMP_FIRE_GLYPH = "🔥";
 export const GOLD_GLYPH = "💰";
 export const HEALTH_GLYPH = "♥";
 export const TRAP_GLYPH = "☠";
@@ -38,7 +38,7 @@ export const PROJECT_MAP_GLYPHS = Object.freeze([
   NPC_GLYPH,
   NPC_SPAWNER_GLYPH,
   TORCH_GLYPH,
-  FIREPLACE_GLYPH,
+  CAMP_FIRE_GLYPH,
   STAIR_GLYPH,
   GOLD_GLYPH,
   SHALLOW_WATER_GLYPH,
