@@ -10,13 +10,13 @@ long-distance travel.
 
 ## What Changes
 
-- Add a canvas-hover destination reticle made of four white, semi-transparent
-  corners, rendered in the resolved walkable grid cell.
+- Add a canvas-hover destination reticle made of four semi-transparent corners:
+  white on a directly valid cell and red on the exact unavailable pointer cell.
 - Add left-button held auto-walk and right-button held auto-sprint from the
   current player cell toward the reticle destination.
-- Resolve pointer targets through cardinal route reachability, including a
-  nearby fallback for a non-walkable pointer cell, and reject routes longer
-  than 50 movement steps.
+- Resolve pointer targets through cardinal route reachability, reject routes
+  longer than 50 movement steps, and reject both mouse buttons when the exact
+  pointed cell is unavailable.
 - Treat terrain, active static objects, buildings, and dynamic occupants as
   auto-navigation blockers; reroute while the pointer is held when a valid
   bounded route changes.
@@ -28,7 +28,7 @@ long-distance travel.
 ### New Capabilities
 
 - `mouse-auto-navigation`: bounded mouse-target reticle, automatic walking,
-  automatic sprinting, target fallback, and rerouting behavior.
+  automatic sprinting, invalid-target rejection, and rerouting behavior.
 
 ### Modified Capabilities
 

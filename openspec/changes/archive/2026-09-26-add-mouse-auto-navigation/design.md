@@ -43,11 +43,9 @@ would bypass or obscure the authoritative movement path.
 ### Bounded distance fields rather than full-route rejection
 
 Use an occupancy-aware cardinal distance field with a maximum distance of 50
-to establish whether an available target is reachable. Choose the resolved
-fallback by scanning reachable candidates and ranking them by cardinal distance
-from the pointer cell, then deterministic row and column ties. Build a bounded
-field from the resolved target to select the next lower-distance cardinal
-neighbor for each automatic movement attempt.
+to establish whether the exact pointer cell is available and reachable. Do not
+select a fallback cell. Build a bounded field from that valid target to select
+the next lower-distance cardinal neighbor for each automatic movement attempt.
 
 This provides a shortest bounded route without first constructing an
 unrestricted world-scale route and rejecting it afterward. The existing full
@@ -61,13 +59,14 @@ source cell. It excludes contact targets instead of reusing ordinary player
 contact dispatch. This preserves manual attack/interact behavior while making
 mouse movement safely movement-only.
 
-### Presentation-only marker layer
+### Validity-aware marker layer
 
-Render the four-corner white reticle in a small dedicated game-layer sprite or
-overlay resource aligned to the resolved visible cell. Its state changes only
-when pointer resolution changes; it has no occupancy, collision, minimap, or
-React representation. The resource follows the existing renderer lifecycle
-and is disposed with the game session.
+Render the four-corner reticle in a small dedicated game-layer overlay aligned
+to the exact visible pointer cell. White means that the cell is available and
+has a route of at most 50 steps; red means that it is unavailable or has no
+such route. A red reticle has no navigation target, so either mouse button is
+ignored. The marker has no occupancy, collision, minimap, or React
+representation and follows the existing renderer lifecycle.
 
 ### Invalidation and rerouting
 

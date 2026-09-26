@@ -1,24 +1,21 @@
-# Spec Delta
+# mouse-auto-navigation Specification
 
 ## Purpose
 
 Provides bounded mouse-driven destination selection and automatic cardinal
 navigation while preserving the game's existing manual movement controls.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Canvas pointer shows a resolved navigation reticle
 
 When a mouse pointer is over an unobstructed playable canvas location, the
-game SHALL resolve one visible grid-cell destination without exposing world
-data to React. The game SHALL render a single reticle inside that destination
-as four white corner marks at 50 percent opacity and no fill or extra
-coloration. If the pointer cell is unavailable, the resolved destination SHALL
-be the reachable available cell with the smallest cardinal grid distance from
-the pointer cell. Ties SHALL use deterministic row then column ordering. If no
-available destination is reachable within 50 cardinal movement steps, the game
-SHALL render no navigation reticle. Pointer activity handled by HUD or UI
-controls SHALL not create or update a navigation target.
+game SHALL render one reticle inside that exact visible grid cell without
+exposing world data to React. The reticle SHALL use four corner marks at 50
+percent opacity and no fill or extra coloration: white when the exact cell is
+available and reachable within 50 cardinal steps, red otherwise. Pointer
+activity handled by HUD or UI controls SHALL not create or update a navigation
+target.
 
 #### Scenario: Pointer selects a walkable canvas cell
 - **WHEN** the mouse moves over an available visible canvas cell that is
@@ -26,16 +23,17 @@ controls SHALL not create or update a navigation target.
 - **THEN** the four-corner reticle renders inside that cell at 50 percent
   white opacity
 
-#### Scenario: Pointer falls on unavailable terrain
+#### Scenario: Pointer falls on an unavailable cell
 - **WHEN** the mouse points at terrain, an occupied cell, or a static cell
   that is unavailable for automatic navigation
-- **THEN** the reticle renders on the nearest reachable available cell by
-  cardinal distance from the pointer cell
+- **THEN** the reticle renders red on that exact pointer cell and creates no
+  navigation target
 
-#### Scenario: Pointer has no bounded destination
-- **WHEN** no available cell can be reached from the player in 50 or fewer
-  cardinal steps
-- **THEN** no navigation reticle renders and mouse navigation remains idle
+#### Scenario: Pointer has no bounded route
+- **WHEN** the exact available pointer cell cannot be reached from the player
+  in 50 or fewer cardinal steps
+- **THEN** the reticle renders red on that exact pointer cell and mouse
+  navigation remains idle
 
 #### Scenario: HUD control receives the pointer
 - **WHEN** the player moves or presses the mouse on a HUD or UI control
@@ -44,7 +42,7 @@ controls SHALL not create or update a navigation target.
 
 ### Requirement: Held mouse buttons perform bounded automatic navigation
 
-While a resolved destination exists, holding the primary mouse button SHALL
+While a valid white destination exists, holding the primary mouse button SHALL
 automatically walk toward it and holding the secondary mouse button SHALL
 automatically sprint toward it. Automatic navigation SHALL use only cardinal
 steps, accept a route only when it contains at most 50 movement steps, and
@@ -71,6 +69,11 @@ press on the playable canvas SHALL not open the browser context menu.
 - **WHEN** a player uses keyboard, WASD, or canvas-swipe movement
 - **THEN** those inputs retain their existing manual direction, collision,
   contact, time, and stamina behavior
+
+#### Scenario: Invalid reticle rejects either mouse button
+- **WHEN** the reticle is red
+- **THEN** holding either the primary or secondary mouse button performs no
+  movement or automatic route resolution
 
 ### Requirement: Automatic routes avoid unavailable cells and reroute
 

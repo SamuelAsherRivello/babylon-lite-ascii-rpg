@@ -1705,25 +1705,31 @@ async function createGameSessionImplementation(container, initialPalette, initia
   const isSprintMovement = () => shiftHeld || mouseNavigationSprint;
 
   const updateMouseNavigationReticle = () => {
-    if (!mouseNavigationTargetCell || !world) {
+    const reticleCell = mouseNavigationPointerCell ?? mouseNavigationTargetCell;
+    if (!reticleCell || !world) {
       mouseNavigationReticle.hidden = true;
       return;
     }
-    const localCell = { x: mouseNavigationTargetCell.x - viewOrigin.x, y: mouseNavigationTargetCell.y - viewOrigin.y };
+    const localCell = { x: reticleCell.x - viewOrigin.x, y: reticleCell.y - viewOrigin.y };
     if (localCell.x < 0 || localCell.y < 0 || localCell.x >= viewport.columns || localCell.y >= viewport.rows) {
       mouseNavigationReticle.hidden = true;
       return;
     }
     const bounds = getRenderedCellSpriteBounds(localCell, viewport, world);
     mouseNavigationReticle.hidden = false;
-    mouseNavigationReticle.style.left = `${bounds.x}px`;
-    mouseNavigationReticle.style.top = `${bounds.y}px`;
-    mouseNavigationReticle.style.width = `${bounds.width}px`;
-    mouseNavigationReticle.style.height = `${bounds.height}px`;
+    mouseNavigationReticle.classList.toggle("mouse_navigation_reticle--invalid", mouseNavigationTargetCell === null);
+    mouseNavigationReticle.style.left = `${bounds.center.x - bounds.size.width / 2}px`;
+    mouseNavigationReticle.style.top = `${bounds.center.y - bounds.size.height / 2}px`;
+    mouseNavigationReticle.style.width = `${bounds.size.width}px`;
+    mouseNavigationReticle.style.height = `${bounds.size.height}px`;
   };
 
-  const clearMouseNavigationInput = () => {
-    mouseNavigationPointerCell = null;
+  const clearMouseNavigationInput = ({ clearPointer = false } = {}) => {
+    if (clearPointer) {
+      mouseNavigationPointerCell = null;
+      mouseNavigationTargetCell = null;
+      updateMouseNavigationReticle();
+    }
     mouseNavigationPointerId = null;
     mouseNavigationSprint = false;
     if (!hasHeldMovement()) clearRepeat();
@@ -1747,7 +1753,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
   const clearMovementInput = () => {
     clearKeyboardInput();
     clearTouchInput();
-    clearMouseNavigationInput();
+    clearMouseNavigationInput({ clearPointer: true });
     clearRepeat();
   };
 
@@ -3732,6 +3738,24 @@ async function createGameSessionImplementation(container, initialPalette, initia
       url.searchParams.set("randomSeed", sessionSeed);
       window.location.assign(url);
       return true;
+    },
+    // This intentionally exposes only a serializable read model.  The seeded
+    // browser acceptance check uses it to select a generated chest, while the
+    // interaction itself still travels through real keyboard input.
+    getChestAndHeartTestSnapshot() {
+      return Object.freeze({
+        realm: activeRealm,
+        playerCell: playerCell ? Object.freeze({ ...playerCell }) : null,
+        terrain: Object.freeze((world?.terrain ?? []).map((row) => Object.freeze(row.map((cell) => cell?.walkable === true)))),
+        objects: Object.freeze((objectSpawnerSystem?.getActiveObjects(world) ?? []).map((object) => Object.freeze({
+          id: object.id,
+          type: object.type,
+          glyph: object.glyph,
+          open: object.open,
+          cell: Object.freeze({ ...object.cell }),
+        }))),
+        log: logSystem.getSnapshot(),
+      });
     },
     getLogSnapshot() { return logSystem.getSnapshot(); },
     subscribeToLog(listener) {

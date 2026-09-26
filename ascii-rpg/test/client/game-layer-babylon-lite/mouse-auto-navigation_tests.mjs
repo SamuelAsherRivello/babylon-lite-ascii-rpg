@@ -23,13 +23,13 @@ test("automatic navigation excludes terrain, static objects, and dynamic occupan
   assert.equal(isMouseAutoNavigationCellAvailable({ world: map, cell: { x: 2, y: 0 }, playerCell: { x: 1, y: 0 }, isDynamicallyOccupied: () => true }), false);
 });
 
-test("mouse navigation falls back to the closest reachable available cell with deterministic row-column ties", () => {
+test("mouse navigation rejects an unavailable exact cursor cell instead of choosing a fallback", () => {
   const map = world(5, 5);
   const blocked = (cell) => (cell.x === 2 && cell.y === 2)
     || (cell.x === 2 && cell.y === 1) || (cell.x === 1 && cell.y === 2)
     || (cell.x === 3 && cell.y === 2) || (cell.x === 2 && cell.y === 3);
   const target = resolveMouseAutoNavigationTarget({ world: map, playerCell: { x: 0, y: 0 }, pointerCell: { x: 2, y: 2 }, isBlocked: blocked });
-  assert.deepEqual(target, { x: 2, y: 0 });
+  assert.equal(target, null);
 });
 
 test("mouse navigation refuses a walkable direct target beyond the bounded route", () => {
