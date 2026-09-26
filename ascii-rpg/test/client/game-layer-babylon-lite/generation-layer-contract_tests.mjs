@@ -40,13 +40,13 @@ test("input controller binds and disposes the session input boundary", () => {
     removeEventListener(type, handler) { this.removed.push([type, handler]); },
   }));
   const handlers = {
-    keyDown() {}, keyUp() {}, resize() {}, pointerDown() {}, pointerMove() {}, pointerStop() {}, minimapClick() {},
+    keyDown() {}, keyUp() {}, resize() {}, pointerDown() {}, pointerMove() {}, pointerStop() {}, contextMenu() {}, minimapClick() {},
   };
   const controller = createInputController({ windowTarget: targets[0], canvas: targets[1], minimapCanvas: targets[2], handlers });
-  assert.equal(targets.reduce((count, target) => count + target.added.length, 0), 10);
+  assert.equal(targets.reduce((count, target) => count + target.added.length, 0), 11);
   controller.dispose();
   controller.dispose();
-  assert.equal(targets.reduce((count, target) => count + target.removed.length, 0), 10);
+  assert.equal(targets.reduce((count, target) => count + target.removed.length, 0), 11);
 });
 
 test("render controllers share a disposable renderer boundary", async () => {

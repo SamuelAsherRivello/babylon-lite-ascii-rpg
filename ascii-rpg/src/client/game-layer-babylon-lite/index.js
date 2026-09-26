@@ -71,6 +71,8 @@ import {
 } from "./world-state-facade.js";
 import { createTimeSystem } from "./systems/time-system.js";
 import { FACING_LEFT, FACING_RIGHT, createGlyphRasterCanvas, createGlyphVisualCache, getFacingGlyph, getFacingGlyphKey, getGlyphOffsetsFromKey, getGlyphOffsetKey, getOffsetGlyphKey, rasterizeCompositeGlyph, rasterizeGlyph, rasterizeSolidGlyph } from "./glyph-visual-cache.js";
+import undergroundTerrainUrl from "../../assets/underground/walls_floor.png";
+import { getTerrainArtKey, loadUndergroundTerrainImage, parseTerrainArtKey, rasterizeTerrainArt } from "./underground-terrain-art.js";
 import { getVisibleRegion, getVisibleSlot, shouldUpdateVisibleSprite } from "./visible-region.js";
 import { collectWorldViewGlyphs, createWorldViewComposition, renderWorldViewComposition, renderWorldViewCompositionCooperatively } from "./world-view.js";
 import { colorToLinearRgba, linearRgbaToRendererHex, reconcilePaletteColors } from "./palette-color-cache.js";
@@ -96,6 +98,7 @@ import {
 } from "./systems/fog-of-war-system.js";
 import { findNearestNavigationTarget, getMinimapEdgeIndicators, getMinimapIndicatorSafeArea, getMinimapMarkers, getMinimapWorldCellGraphic, MINIMAP_INDICATOR_MIN_SIZE, MINIMAP_INDICATOR_SAFE_INSET } from "./systems/minimap-renderer.js";
 import { AStarUtility } from "./utilities/a-star-utility.js";
+import { getMouseAutoNavigationNextCell, isMouseAutoNavigationCellAvailable, MAX_MOUSE_AUTO_NAVIGATION_STEPS, resolveMouseAutoNavigationTarget } from "./mouse-auto-navigation.js";
 import { canHandleMinimapScale, getMinimapCellLayout, getMinimapCellSize, getNextMinimapScale, MINIMAP_SCALE_LEVELS } from "./systems/minimap-zoom.js";
 import { createTransitionSystem, TRANSITION_PHASES } from "./systems/transition-system.js";
 import questData from "./data/quest_data.json";
@@ -187,6 +190,7 @@ export function startGameLayer(...args) {
 }
 
 function getMinimapGlyphBounds(glyph, x, y, cellWidth, cellHeight) {
+  if (parseTerrainArtKey(glyph)) return { x, y, width: cellWidth, height: cellHeight };
   const displayGlyph = getFacingGlyph(glyph);
   const isEmoji = EMOJI_PRESENTATION_PATTERN.test(displayGlyph)
     || displayGlyph.includes(EMOJI_VARIATION_SELECTOR);
@@ -310,13 +314,23 @@ async function createGameSessionImplementation(container, initialPalette, initia
   const floatingTextLayer = document.createElement("div");
   floatingTextLayer.className = "floating_text_layer";
   floatingTextLayer.setAttribute("aria-hidden", "true");
-  container.replaceChildren(canvas, minimapCanvas, mapviewCanvas, transitionMask, floatingTextLayer);
+  const mouseNavigationReticle = document.createElement("div");
+  mouseNavigationReticle.className = "mouse_navigation_reticle";
+  mouseNavigationReticle.setAttribute("aria-hidden", "true");
+  mouseNavigationReticle.hidden = true;
+  for (let index = 0; index < 4; index += 1) {
+    const corner = document.createElement("span");
+    corner.className = "mouse_navigation_reticle__corner";
+    mouseNavigationReticle.append(corner);
+  }
+  container.replaceChildren(canvas, minimapCanvas, mapviewCanvas, transitionMask, floatingTextLayer, mouseNavigationReticle);
 
   let engine;
   let renderer;
   let atlas;
   let layer;
   let glyphCache;
+  let undergroundTerrainImage;
   let minimapGlyphCache;
   let gpuLightAtlas;
   let gpuLightLayer;
@@ -365,6 +379,10 @@ async function createGameSessionImplementation(container, initialPalette, initia
   let touchDirection = null;
   let activePointerId = null;
   let touchStart = null;
+  let mouseNavigationPointerCell = null;
+  let mouseNavigationTargetCell = null;
+  let mouseNavigationPointerId = null;
+  let mouseNavigationSprint = false;
   let transitionActive = false;
   let initialRevealActive = false;
   let gameplayInputLocked = true;
@@ -584,7 +602,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
   const getClientVisibleGlyphKey = (targetWorld, cell) => {
     const record = getClientVisibleRecord(targetWorld, cell);
     const glyph = record?.glyph ?? bombSystem?.getGlyphAt(targetWorld?.realmName, cell) ?? getExteriorBuildingOverlayGlyph(targetWorld, cell) ?? targetWorld?.characters?.[cell.y]?.[cell.x] ?? getBuildingOverlayGlyph(targetWorld, cell) ?? getVisibleGlyph(targetWorld, cell);
-    return getOffsetGlyphKey(getFacingGlyphKey(glyph, record?.facing), paletteOffsets.get(glyph));
+    return getTerrainArtKey(targetWorld, cell, getOffsetGlyphKey(getFacingGlyphKey(glyph, record?.facing), paletteOffsets.get(glyph)));
   };
   const setPlayerFacingFromDirection = (direction) => {
     if (direction.x === 0) return;
@@ -800,20 +818,21 @@ async function createGameSessionImplementation(container, initialPalette, initia
           world.buildings, worldCell, playerCell, lighting.ambient, minimapLightField.getFactor(worldCell),
         );
         const fogOpacity = visibility / 100;
-        const baseGlyph = getFacingGlyph(graphic.glyph);
+        const baseGlyph = getFacingGlyph(getClientVisibleGlyph(world, worldCell));
         const baseColor = paletteColors.get(baseGlyph) ?? colorToLinearRgba(getPaletteStyle(palette, baseGlyph));
         const litColor = linearRgbaToRendererHex(applyLightingToColor(baseColor, lightingFactor));
         // The raster depends on the final tint and fog alpha, not the
         // unrounded light factor which produced that same tint.
-        const cacheKey = `${glyph}:${litColor}:${fogOpacity.toFixed(2)}:${raster.width}`;
+        const artLighting = raster.terrainArt ? lightingFactor : 1;
+        const cacheKey = `${glyph}:${litColor}:${fogOpacity.toFixed(2)}:${raster.width}:${artLighting}`;
         let glyphCanvas = minimapGlyphCanvases.get(cacheKey);
         if (!glyphCanvas) {
           glyphCanvas = createGlyphRasterCanvas(raster, litColor, {
             // `litColor` already contains the complete game lighting result.
             // Applying lighting again through alpha or color scaling makes
             // the minimap differ from the game view.
-            alphaScale: fogOpacity,
-            colorScale: 1,
+            alphaScale: fogOpacity * artLighting,
+            colorScale: artLighting,
             tint: true,
           });
           minimapGlyphCanvases.set(cacheKey, glyphCanvas);
@@ -975,10 +994,11 @@ async function createGameSessionImplementation(container, initialPalette, initia
         const baseGlyph = getFacingGlyph(getClientVisibleGlyph(mapviewWorld, cell));
         const baseColor = paletteColors.get(baseGlyph) ?? colorToLinearRgba(getPaletteStyle(palette, baseGlyph));
         const litColor = linearRgbaToRendererHex(applyLightingToColor(baseColor, getMapviewLightingFactor()));
-        const cacheKey = `${glyph}:${litColor}:1:${raster.width}`;
+        const artLighting = raster.terrainArt ? getMapviewLightingFactor() : 1;
+        const cacheKey = `${glyph}:${litColor}:1:${raster.width}:${artLighting}`;
         let glyphCanvas = mapviewGlyphCanvases.get(cacheKey);
         if (!glyphCanvas) {
-          glyphCanvas = createGlyphRasterCanvas(raster, litColor, { alphaScale: 1, colorScale: 1, tint: true });
+          glyphCanvas = createGlyphRasterCanvas(raster, litColor, { alphaScale: artLighting, colorScale: artLighting, tint: true });
           mapviewGlyphCanvases.set(cacheKey, glyphCanvas);
         }
         const glyphBounds = getMinimapGlyphBounds(
@@ -1655,7 +1675,59 @@ async function createGameSessionImplementation(container, initialPalette, initia
     };
   };
 
-  const hasHeldMovement = () => heldKeys.size > 0 || touchDirection !== null;
+  const isAutoNavigationCellBlocked = (cell) => {
+    return !isMouseAutoNavigationCellAvailable({
+      world,
+      cell,
+      playerCell,
+      isStaticOccupied: (candidate) => staticOccupancyIndexes.get(activeRealm)?.has(candidate.y * world.columns + candidate.x) === true,
+      isDynamicallyOccupied: (candidate) => getOccupancyForWorld()?.isOccupied(candidate) === true,
+    });
+  };
+
+  const resolveMouseNavigationTarget = (pointerCell) => resolveMouseAutoNavigationTarget({
+    world,
+    playerCell,
+    pointerCell,
+    isBlocked: isAutoNavigationCellBlocked,
+    maxSteps: MAX_MOUSE_AUTO_NAVIGATION_STEPS,
+  });
+
+  const getMouseNavigationNextCell = () => getMouseAutoNavigationNextCell({
+    world,
+    playerCell,
+    targetCell: mouseNavigationTargetCell,
+    isBlocked: isAutoNavigationCellBlocked,
+    maxSteps: MAX_MOUSE_AUTO_NAVIGATION_STEPS,
+  });
+
+  const hasHeldMovement = () => heldKeys.size > 0 || touchDirection !== null || mouseNavigationPointerId !== null;
+  const isSprintMovement = () => shiftHeld || mouseNavigationSprint;
+
+  const updateMouseNavigationReticle = () => {
+    if (!mouseNavigationTargetCell || !world) {
+      mouseNavigationReticle.hidden = true;
+      return;
+    }
+    const localCell = { x: mouseNavigationTargetCell.x - viewOrigin.x, y: mouseNavigationTargetCell.y - viewOrigin.y };
+    if (localCell.x < 0 || localCell.y < 0 || localCell.x >= viewport.columns || localCell.y >= viewport.rows) {
+      mouseNavigationReticle.hidden = true;
+      return;
+    }
+    const bounds = getRenderedCellSpriteBounds(localCell, viewport, world);
+    mouseNavigationReticle.hidden = false;
+    mouseNavigationReticle.style.left = `${bounds.x}px`;
+    mouseNavigationReticle.style.top = `${bounds.y}px`;
+    mouseNavigationReticle.style.width = `${bounds.width}px`;
+    mouseNavigationReticle.style.height = `${bounds.height}px`;
+  };
+
+  const clearMouseNavigationInput = () => {
+    mouseNavigationPointerCell = null;
+    mouseNavigationPointerId = null;
+    mouseNavigationSprint = false;
+    if (!hasHeldMovement()) clearRepeat();
+  };
 
   const clearTouchInput = () => {
     activePointerId = null;
@@ -1675,6 +1747,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
   const clearMovementInput = () => {
     clearKeyboardInput();
     clearTouchInput();
+    clearMouseNavigationInput();
     clearRepeat();
   };
 
@@ -1685,18 +1758,18 @@ async function createGameSessionImplementation(container, initialPalette, initia
   const createGameGlyphCache = () => createGlyphVisualCache(engine, {
     fontId,
     fontFamily: getFontOption(fontId).family,
-    glyphLimit: GLYPHS.length + 3,
+    glyphLimit: (GLYPHS.length + 3) * 3,
     rasterize: (glyph, family, size) => glyph === FOG_BACKING_GLYPH
       ? rasterizeSolidGlyph(size)
-      : glyphBackgroundEnabled
+      : rasterizeTerrainArt(glyph, undergroundTerrainImage, family, size, paletteColors) ?? (glyphBackgroundEnabled
       ? rasterizeCompositeGlyph(glyph, family, size, paletteColors.get(getFacingGlyph(glyph)) ?? [1, 1, 1], backgroundDarkness, getGlyphOffsetsFromKey(glyph))
-      : rasterizeGlyph(glyph, family, size, "#ffffff", getGlyphOffsetsFromKey(glyph)),
+      : rasterizeGlyph(glyph, family, size, "#ffffff", getGlyphOffsetsFromKey(glyph))),
   });
 
   const createMinimapGlyphCache = () => createGlyphVisualCache(engine, {
     fontId,
     fontFamily: getFontOption(fontId).family,
-    glyphLimit: GLYPHS.length + 2,
+    glyphLimit: (GLYPHS.length + 3) * 3,
     // World-view canvases already paint each cell's terrain/background.  A
     // composite glyph adds a second, full-cell opaque backing behind emoji
     // such as the player and gold, making that backing larger than markers.
@@ -1704,7 +1777,8 @@ async function createGameSessionImplementation(container, initialPalette, initia
     // need the glyph's transparent raster, with its palette scale and offset.
     rasterize: (glyph, family, size) => glyph === FOG_BACKING_GLYPH
       ? rasterizeSolidGlyph(size)
-      : rasterizeGlyph(glyph, family, size, "#ffffff", getGlyphOffsetsFromKey(glyph)),
+      : rasterizeTerrainArt(glyph, undergroundTerrainImage, family, size, paletteColors)
+        ?? rasterizeGlyph(glyph, family, size, "#ffffff", getGlyphOffsetsFromKey(glyph)),
   });
 
   const collectChangedOffsetGlyphs = (previousPalette, nextPalette) => {
@@ -2037,7 +2111,8 @@ async function createGameSessionImplementation(container, initialPalette, initia
       return;
     }
     const fogOpacity = visibility / 100;
-    const litColor = glyphBackgroundEnabled
+    const terrainArt = parseTerrainArtKey(visualGlyph) !== null;
+    const litColor = glyphBackgroundEnabled || terrainArt
       ? [lightingFactor, lightingFactor, lightingFactor, lightingFactor]
       : applyLightingToColor(baseColor, lightingFactor);
     const color = [...litColor.slice(0, 3), litColor[3] * fogOpacity];
@@ -2045,7 +2120,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
     // nominal grid positions, but give each glyph a small screen-space
     // footprint so the explored area at the farthest zoom remains inspectable
     // instead of collapsing into an effectively invisible sub-pixel cluster.
-    const farZoomFootprint = zoom === MIN_ZOOM ? 4 : 0;
+    const farZoomFootprint = zoom === MIN_ZOOM && !terrainArt ? 4 : 0;
     const renderWidth = Math.max(farZoomFootprint, spriteBounds.size.width);
     const renderHeight = Math.max(farZoomFootprint, spriteBounds.size.height);
     const props = {
@@ -2120,6 +2195,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
     renderGpuLightPass(region, lightField);
     renderHealthBars(region);
     renderFloatingTexts(region);
+    updateMouseNavigationReticle();
     if (healthBarSystem.hasActive(performance.now())) scheduleHealthBarAnimation();
     if (floatingTextSystem.hasActive(performance.now())) scheduleFloatingTextAnimation();
     schedulePresentation();
@@ -2351,13 +2427,29 @@ async function createGameSessionImplementation(container, initialPalette, initia
       return exhaustedAtAttempt;
     }
     if (!world || !playerCell) return exhaustedAtAttempt;
-    const direction = getHeldDirection();
+    if (mouseNavigationPointerId !== null && mouseNavigationPointerCell) {
+      mouseNavigationTargetCell = resolveMouseNavigationTarget(mouseNavigationPointerCell);
+      updateMouseNavigationReticle();
+    }
+    const manualDirection = getHeldDirection();
+    const nextAutoCell = manualDirection.x === 0 && manualDirection.y === 0 && mouseNavigationPointerId !== null
+      ? getMouseNavigationNextCell()
+      : null;
+    if (mouseNavigationPointerId !== null && !nextAutoCell && manualDirection.x === 0 && manualDirection.y === 0) {
+      clearMouseNavigationInput();
+      return exhaustedAtAttempt;
+    }
+    const direction = nextAutoCell
+      ? { x: nextAutoCell.x - playerCell.x, y: nextAutoCell.y - playerCell.y }
+      : manualDirection;
+    const automatic = nextAutoCell !== null;
     if (direction.x === 0 && direction.y === 0) return exhaustedAtAttempt;
     const attemptedCell = { x: playerCell.x + direction.x, y: playerCell.y + direction.y };
-    const occupant = getOccupancyForWorld()?.getAt(attemptedCell)
+    if (automatic && isAutoNavigationCellBlocked(attemptedCell)) return exhaustedAtAttempt;
+    const occupant = automatic ? null : getOccupancyForWorld()?.getAt(attemptedCell)
       ?? getDiggableMountainTarget(world, activeRealm, attemptedCell);
     const cardinal = isCardinalDirection(direction);
-    const object = cardinal ? objectSpawnerSystem?.getActiveObjectAtCell(attemptedCell, { world }) : null;
+    const object = automatic ? null : cardinal ? objectSpawnerSystem?.getActiveObjectAtCell(attemptedCell, { world }) : null;
     const target = cardinal && (occupant || object)
       ? createContactTarget({ kind: object?.type ?? occupant?.type, cell: attemptedCell, occupant, object })
       : null;
@@ -2543,7 +2635,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
       repeatTimer = null;
       if (playerLifecycle.isDead() || !hasHeldMovement()) return;
       const exhaustedAtAttempt = movePlayer();
-      scheduleRepeat(getRepeatInterval(shiftHeld, exhaustedAtAttempt));
+      scheduleRepeat(getRepeatInterval(isSprintMovement(), exhaustedAtAttempt));
     }, delay);
   };
 
@@ -2599,7 +2691,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
     if (wasHeld || event.repeat) return;
     const exhaustedAtAttempt = movePlayer();
     scheduleRepeat(exhaustedAtAttempt
-      ? getRepeatInterval(shiftHeld, true)
+      ? getRepeatInterval(isSprintMovement(), true)
       : INITIAL_REPEAT_DELAY_MS);
   };
 
@@ -2624,8 +2716,44 @@ async function createGameSessionImplementation(container, initialPalette, initia
     if (!hasHeldMovement()) clearRepeat();
   };
 
+  const getMouseWorldCell = (event) => {
+    if (!world) return null;
+    const bounds = canvas.getBoundingClientRect();
+    if (event.clientX < bounds.left || event.clientX >= bounds.right || event.clientY < bounds.top || event.clientY >= bounds.bottom) return null;
+    const x = (event.clientX - bounds.left) * viewport.screenWidth / Math.max(1, bounds.width);
+    const y = (event.clientY - bounds.top) * viewport.screenHeight / Math.max(1, bounds.height);
+    const offsetX = viewport.columns >= world.columns ? Math.max(0, (viewport.screenWidth - world.columns * viewport.gridWidth) / 2) : 0;
+    const offsetY = viewport.rows >= world.rows ? Math.max(0, (viewport.screenHeight - world.rows * viewport.gridHeight) / 2) : 0;
+    const cell = {
+      x: Math.floor((x - offsetX) / viewport.gridWidth) + (viewport.columns >= world.columns ? 0 : viewOrigin.x),
+      y: Math.floor((y - offsetY) / viewport.gridHeight) + (viewport.rows >= world.rows ? 0 : viewOrigin.y),
+    };
+    return world.terrain?.[cell.y]?.[cell.x] ? cell : null;
+  };
+
+  const updateMouseNavigationPointer = (event) => {
+    const pointerCell = getMouseWorldCell(event);
+    mouseNavigationPointerCell = pointerCell;
+    mouseNavigationTargetCell = pointerCell ? resolveMouseNavigationTarget(pointerCell) : null;
+    updateMouseNavigationReticle();
+    return mouseNavigationTargetCell;
+  };
+
   const handlePointerDown = (event) => {
-    if (playerLifecycle.isDead() || gameplayInputLocked || !event.isPrimary || activePointerId !== null || (event.pointerType === "mouse" && event.button !== 0)) return;
+    if (event.pointerType === "mouse") {
+      if (playerLifecycle.isDead() || gameplayInputLocked || !event.isPrimary || mouseNavigationPointerId !== null || ![0, 2].includes(event.button)) return;
+      event.preventDefault();
+      mouseNavigationPointerId = event.pointerId;
+      mouseNavigationSprint = event.button === 2;
+      canvas.setPointerCapture(event.pointerId);
+      if (!updateMouseNavigationPointer(event)) clearMouseNavigationInput();
+      else {
+        const exhaustedAtAttempt = movePlayer();
+        scheduleRepeat(exhaustedAtAttempt ? getRepeatInterval(isSprintMovement(), true) : INITIAL_REPEAT_DELAY_MS);
+      }
+      return;
+    }
+    if (playerLifecycle.isDead() || gameplayInputLocked || !event.isPrimary || activePointerId !== null) return;
     event.preventDefault();
     activePointerId = event.pointerId;
     touchStart = { x: event.clientX, y: event.clientY };
@@ -2633,6 +2761,10 @@ async function createGameSessionImplementation(container, initialPalette, initia
   };
 
   const handlePointerMove = (event) => {
+    if (event.pointerType === "mouse") {
+      updateMouseNavigationPointer(event);
+      return;
+    }
     if (playerLifecycle.isDead() || gameplayInputLocked || event.pointerId !== activePointerId || !touchStart) return;
     const nextDirection = getDirectionForSwipe(
       event.clientX - touchStart.x,
@@ -2645,14 +2777,20 @@ async function createGameSessionImplementation(container, initialPalette, initia
     if (wasMoving) return;
     const exhaustedAtAttempt = movePlayer();
     scheduleRepeat(exhaustedAtAttempt
-      ? getRepeatInterval(shiftHeld, true)
+      ? getRepeatInterval(isSprintMovement(), true)
       : INITIAL_REPEAT_DELAY_MS);
   };
 
   const handlePointerStop = (event) => {
+    if (event.pointerId === mouseNavigationPointerId) {
+      clearMouseNavigationInput();
+      return;
+    }
     if (event.pointerId !== activePointerId) return;
     clearTouchInput();
   };
+
+  const handleCanvasContextMenu = (event) => event.preventDefault();
 
   const handleResize = () => {
     const nextCanvasSize = {
@@ -2728,6 +2866,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
   try {
     // Sprite coordinates are CSS pixels in Babylon Lite; a DPR > 1 currently
     // halves their apparent footprint, leaving much of the canvas empty.
+    undergroundTerrainImage = await loadUndergroundTerrainImage(undergroundTerrainUrl);
     engine = await createEngine(canvas, { maxDevicePixelRatio: 1, msaaSamples: 1 });
     const lifecycleToken = rendererLifecycle.begin();
     glyphCache = createGameGlyphCache();
@@ -2752,22 +2891,17 @@ async function createGameSessionImplementation(container, initialPalette, initia
         pointerDown: handlePointerDown,
         pointerMove: handlePointerMove,
         pointerStop: handlePointerStop,
+        contextMenu: handleCanvasContextMenu,
         minimapClick: handleMinimapClick,
       },
     });
     // The controller owns the legacy input contract formerly expressed by
     // window.addEventListener("orientationchange", handleResize) and its
     // matching window.removeEventListener("orientationchange", handleResize)
-    // cleanup, along with the canvas pointer listeners.
+    // cleanup, along with all playable-canvas pointer listeners.
     watchBrowserZoom();
     canvasResizeObserver = new ResizeObserver(handleResize);
     canvasResizeObserver.observe(canvas);
-    canvas.addEventListener("pointerdown", handlePointerDown);
-    canvas.addEventListener("pointermove", handlePointerMove);
-    canvas.addEventListener("pointerup", handlePointerStop);
-    canvas.addEventListener("pointercancel", handlePointerStop);
-    canvas.addEventListener("lostpointercapture", handlePointerStop);
-    minimapCanvas.addEventListener("click", handleMinimapClick);
     generating = true;
     let generationStarted;
     let lastGenerationPhaseAt;
@@ -3441,7 +3575,8 @@ async function createGameSessionImplementation(container, initialPalette, initia
       const { colors, changed } = reconcilePaletteColors(paletteColors, palette);
       paletteColors = colors;
       paletteOffsets = new Map(palette.map((entry) => [entry.glyph, getPaletteEntryOffsets(entry)]));
-      if (glyphBackgroundEnabled || offsetChanged.size > 0) {
+      // Terrain/overlay composites bake palette colors even with glyph backgrounds off.
+      if (glyphBackgroundEnabled || offsetChanged.size > 0 || changed.size > 0) {
         rebuildGameGlyphCache();
         rebuildMinimapGlyphCache();
         scheduleVisualRefresh();
@@ -3747,12 +3882,6 @@ async function createGameSessionImplementation(container, initialPalette, initia
       window.removeEventListener("orientationchange", handleResize);
       browserZoomMediaQuery?.removeEventListener("change", handleResize);
       canvasResizeObserver?.disconnect();
-      canvas.removeEventListener("pointerdown", handlePointerDown);
-      canvas.removeEventListener("pointermove", handlePointerMove);
-      canvas.removeEventListener("pointerup", handlePointerStop);
-      canvas.removeEventListener("pointercancel", handlePointerStop);
-      canvas.removeEventListener("lostpointercapture", handlePointerStop);
-      minimapCanvas.removeEventListener("click", handleMinimapClick);
       cancelScheduledRenders();
       cancelMapviewRender();
       npcSystem?.dispose();

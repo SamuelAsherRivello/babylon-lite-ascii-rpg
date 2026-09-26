@@ -4,6 +4,7 @@
 node_modules/
 /ascii-rpg/dist/
 .npm-cache/
+/output/
 
 # Local configuration. Commit examples only, never credentials.
 .env

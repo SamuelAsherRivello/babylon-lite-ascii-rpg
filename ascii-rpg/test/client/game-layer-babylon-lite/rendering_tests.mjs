@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { compositeTerrainPixels, getTerrainArtKey, parseTerrainArtKey, resolveUndergroundTerrainFrame, UNDERGROUND_TERRAIN_FRAMES } from "../../../src/client/game-layer-babylon-lite/underground-terrain-art.js";
+import { createWorldViewComposition, collectWorldViewGlyphs } from "../../../src/client/game-layer-babylon-lite/world-view.js";
 import { createGlyphVisualCache, darkenGlyphColor, FACING_RIGHT, getFacingGlyphKey, getFacingGlyphOffsets, getGlyphOffsetKey, getGlyphOffsetsFromKey, getGlyphRasterSize, getOffsetGlyphKey, rasterizeSolidGlyph, tintGlyphRgb } from "../../../src/client/game-layer-babylon-lite/glyph-visual-cache.js";
 import { collectVisibleGlyphs, getVisibleRegion, getVisibleSlot, shouldUpdateVisibleSprite } from "../../../src/client/game-layer-babylon-lite/visible-region.js";
 import { createFrameCheckpoint, getVisibleGlyph } from "../../../src/client/game-layer-babylon-lite/systems/world-system.js";
@@ -19,6 +21,70 @@ function fakeAtlasApi() {
     dispose: (atlas) => disposed.push(atlas.id),
   };
 }
+
+test("Underground 1-tile selection is logical, deterministic, and does not mutate gameplay", () => {
+  const world = { realm: "Underground", rows: 1, columns: 3, terrain: [[
+    { kind: "wall", glyph: "▒", walkable: false },
+    { kind: "dirt", glyph: "●", walkable: true },
+    { kind: "water", glyph: "~", walkable: true },
+  ]] };
+  const before = structuredClone(world);
+  const cell = { x: 0, y: 0 };
+  assert.equal(resolveUndergroundTerrainFrame(world, cell), UNDERGROUND_TERRAIN_FRAMES.wall);
+  assert.equal(resolveUndergroundTerrainFrame(world, { x: 1, y: 0 }), UNDERGROUND_TERRAIN_FRAMES.dirt);
+  assert.equal(resolveUndergroundTerrainFrame(world, { x: 2, y: 0 }), null);
+  assert.equal(resolveUndergroundTerrainFrame(world, { x: -1, y: 0 }), null);
+  assert.equal(resolveUndergroundTerrainFrame({ ...world, realm: "Overground" }, cell), null);
+  assert.equal(getTerrainArtKey(world, { x: 2, y: 0 }, "~"), "~");
+  const key = getTerrainArtKey(world, cell, "▒");
+  assert.equal(getTerrainArtKey(world, cell, "▒"), key);
+  assert.deepEqual(parseTerrainArtKey(key), { frame: UNDERGROUND_TERRAIN_FRAMES.wall, overlay: null });
+  assert.deepEqual(world, before);
+  assert.deepEqual(cell, { x: 0, y: 0 });
+  for (const frame of Object.values(UNDERGROUND_TERRAIN_FRAMES)) {
+    assert.equal(frame.x % 16, 0);
+    assert.equal(frame.y % 16, 0);
+    assert.equal(frame.width, 16);
+    assert.equal(frame.height, 16);
+    assert.ok(frame.x + 16 <= 272 && frame.y + 16 <= 464);
+  }
+});
+
+test("terrain art preserves glyph overlays and facing while fog culls before resolution", () => {
+  const world = { realm: "Underground", rows: 1, columns: 3,
+    terrain: [Array.from({ length: 3 }, () => ({ kind: "dirt", glyph: "●", walkable: true }))] };
+  const overlay = getOffsetGlyphKey(getFacingGlyphKey("@", FACING_RIGHT), { offsetX: 2 });
+  const resolved = [];
+  const composition = createWorldViewComposition({
+    world, source: { x: 0, y: 0, width: 3, height: 1 },
+    getVisibility: (_fog, _world, cell) => [100, 50, 0][cell.x],
+    getGlyph: (target, cell) => {
+      resolved.push(cell.x);
+      return getTerrainArtKey(target, cell, cell.x === 0 ? overlay : "●");
+    },
+  });
+  assert.deepEqual(resolved, [0, 1]);
+  assert.deepEqual(composition.cells.map(({ visibility }) => visibility), [100, 50, 0]);
+  assert.equal(parseTerrainArtKey(composition.cells[0].glyph).overlay, overlay);
+  assert.equal(parseTerrainArtKey(composition.cells[1].glyph).overlay, null);
+  assert.equal(composition.cells[2].glyph, null);
+  assert.equal(collectWorldViewGlyphs(composition).size, 2);
+  const cache = createGlyphVisualCache({}, { glyphLimit: 2, atlasApi: fakeAtlasApi(),
+    rasterize: (name) => ({ name, width: 16, height: 16 }) });
+  cache.ensure(5, 32, collectWorldViewGlyphs(composition));
+  cache.ensure(5, 32, collectWorldViewGlyphs(composition));
+  assert.equal(cache.snapshot().misses, 2);
+  assert.equal(cache.snapshot().hits, 2);
+  cache.dispose();
+});
+
+test("terrain pixels remain opaque and overlay tint composes above, without changing sources", () => {
+  const terrain = new Uint8ClampedArray([40, 60, 80, 255, 80, 100, 120, 255]);
+  const overlay = { pixels: new Uint8ClampedArray([200, 100, 50, 255, 200, 100, 50, 0]) };
+  assert.deepEqual([...compositeTerrainPixels(terrain)], [...terrain]);
+  assert.deepEqual([...compositeTerrainPixels(terrain, overlay, [0.5, 1, 1])], [100, 100, 50, 255, 80, 100, 120, 255]);
+  assert.deepEqual([...terrain], [40, 60, 80, 255, 80, 100, 120, 255]);
+});
 
 test("glyph visuals are lazy, reusable by zoom and font, tint-independent, and bounded", () => {
   const api = fakeAtlasApi();

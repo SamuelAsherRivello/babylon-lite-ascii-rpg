@@ -310,7 +310,7 @@ test("documents the plain safe-area template", async () => {
     "staminaSystem,",
     'event?.cause === "movement"',
     'timeSystem.advance(1, "movement")',
-    "getRepeatInterval(shiftHeld, exhaustedAtAttempt)",
+    "getRepeatInterval(isSprintMovement(), exhaustedAtAttempt)",
     "getStaminaSnapshot() { return staminaSystem.getSnapshot(); }",
   ]) {
     if (!gameLayer.includes(requiredFragment)) {
@@ -699,9 +699,9 @@ test("documents the plain safe-area template", async () => {
   if (initialRealmState < 0 || initialRealmLog < 0 || objectSpawnerSetup < 0 || initialRealmLog > objectSpawnerSetup) {
     throw new Error("The initial realm must be logged as soon as the player enters it during game startup.");
   }
-  if (!gameLayer.includes('minimapCanvas.addEventListener("click", handleMinimapClick)')
+  if (!gameLayer.includes('minimapClick: handleMinimapClick')
     || !gameLayer.includes("canHandleMinimapScale()")
-    || !gameLayer.includes('minimapCanvas.removeEventListener("click", handleMinimapClick)')
+    || !gameLayer.includes("inputController = createInputController")
     || !gameLayer.includes("subscribeToMinimapZoom(listener)")
     || !main.includes("controller.subscribeToMinimapZoom(sendMinimapZoomSnapshot)")
     || !gameBridge.includes("export function subscribeToMinimapZoom(listener)")
@@ -777,11 +777,10 @@ test("documents the plain safe-area template", async () => {
   for (const requiredSourceFragment of [
     "touch-action: none",
     "getDirectionForSwipe",
-    "canvas.addEventListener(\"pointerdown\"",
-    "canvas.addEventListener(\"pointerup\"",
-    "canvas.addEventListener(\"pointercancel\"",
-    "canvas.addEventListener(\"lostpointercapture\"",
-    "window.addEventListener(\"orientationchange\"",
+    "pointerDown: handlePointerDown",
+    "pointerMove: handlePointerMove",
+    "pointerStop: handlePointerStop",
+    "contextMenu: handleCanvasContextMenu",
     "const handlePageHide = () => {",
     "const clearKeyboardInput = () => {",
     "const heldModifierKeys = new Set();",

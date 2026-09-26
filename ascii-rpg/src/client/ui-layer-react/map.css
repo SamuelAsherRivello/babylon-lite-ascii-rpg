@@ -6,6 +6,32 @@
   background: #000;
 }
 
+.mouse_navigation_reticle {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  pointer-events: none;
+}
+
+.mouse_navigation_reticle[hidden] {
+  display: none;
+}
+
+.mouse_navigation_reticle__corner {
+  width: 30%;
+  height: 30%;
+  border-color: rgb(255 255 255 / 50%);
+  border-style: solid;
+  border-width: 0;
+}
+
+.mouse_navigation_reticle__corner:nth-child(1) { border-top-width: 2px; border-left-width: 2px; }
+.mouse_navigation_reticle__corner:nth-child(2) { justify-self: end; border-top-width: 2px; border-right-width: 2px; }
+.mouse_navigation_reticle__corner:nth-child(3) { align-self: end; border-bottom-width: 2px; border-left-width: 2px; }
+.mouse_navigation_reticle__corner:nth-child(4) { align-self: end; justify-self: end; border-right-width: 2px; border-bottom-width: 2px; }
+
 #letterbox_presentation {
   --letterbox-rail-width: clamp(1.8rem, 2.45vw, 2.9rem);
   position: fixed;

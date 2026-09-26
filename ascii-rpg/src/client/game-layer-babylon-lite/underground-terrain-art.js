@@ -1,0 +1,71 @@
+import { getFacingGlyph, getGlyphOffsetsFromKey, rasterizeGlyph } from "./glyph-visual-cache.js";
+
+// Zero-based pixel coordinates in the copied 272 x 464 Tiled_files sheet.
+export const UNDERGROUND_TERRAIN_FRAMES = Object.freeze({
+  wall: Object.freeze({ x: 32, y: 64, width: 16, height: 16 }),
+  dirt: Object.freeze({ x: 128, y: 224, width: 16, height: 16 }),
+});
+const KEY_PREFIX = "terrain-art:";
+
+export function resolveUndergroundTerrainFrame(world, cell) {
+  if ((world?.realm ?? world?.realmName) !== "Underground") return null;
+  return UNDERGROUND_TERRAIN_FRAMES[world.terrain?.[cell.y]?.[cell.x]?.kind] ?? null;
+}
+
+export function getTerrainArtKey(world, cell, glyphKey) {
+  if (!resolveUndergroundTerrainFrame(world, cell)) return glyphKey;
+  const terrain = world.terrain[cell.y][cell.x];
+  // Only the terrain's own glyph disappears. Facing and offsets on overlays
+  // remain part of the cache identity, independent of world coordinates.
+  const overlay = getFacingGlyph(glyphKey) === terrain.glyph ? null : glyphKey;
+  return KEY_PREFIX + JSON.stringify([terrain.kind, overlay]);
+}
+
+export function parseTerrainArtKey(key) {
+  if (typeof key !== "string" || !key.startsWith(KEY_PREFIX)) return null;
+  const [kind, overlay] = JSON.parse(key.slice(KEY_PREFIX.length));
+  return { frame: UNDERGROUND_TERRAIN_FRAMES[kind], overlay };
+}
+
+export async function loadUndergroundTerrainImage(url) {
+  const image = new Image();
+  image.src = url;
+  await image.decode();
+  if (image.naturalWidth !== 272 || image.naturalHeight !== 464) {
+    throw new Error("Unexpected Underground terrain sheet dimensions.");
+  }
+  return image;
+}
+
+export function compositeTerrainPixels(terrainPixels, overlayRaster = null, color = [1, 1, 1]) {
+  const pixels = new Uint8ClampedArray(terrainPixels);
+  for (let i = 0; i < pixels.length; i += 4) {
+    const alpha = overlayRaster ? overlayRaster.pixels[i + 3] / 255 : 0;
+    for (let channel = 0; channel < 3; channel += 1) {
+      pixels[i + channel] = Math.round(pixels[i + channel] * (1 - alpha)
+        + (overlayRaster?.pixels[i + channel] ?? 0) * color[channel] * alpha);
+    }
+    pixels[i + 3] = 255;
+  }
+  return pixels;
+}
+
+export function rasterizeTerrainArt(key, image, family, size, paletteColors) {
+  const visual = parseTerrainArtKey(key);
+  if (!visual) return null;
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = size;
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+  if (!context) throw new Error("Terrain art needs a 2D canvas context.");
+  context.imageSmoothingEnabled = false;
+  const { x, y, width, height } = visual.frame;
+  context.drawImage(image, x, y, width, height, 0, 0, size, size);
+  const overlay = visual.overlay === null ? null : rasterizeGlyph(
+    visual.overlay, family, size, "#ffffff", getGlyphOffsetsFromKey(visual.overlay),
+  );
+  const color = paletteColors.get(getFacingGlyph(visual.overlay)) ?? [1, 1, 1];
+  return {
+    name: key, width: size, height: size, composite: true, terrainArt: true,
+    pixels: compositeTerrainPixels(context.getImageData(0, 0, size, size).data, overlay, color),
+  };
+}

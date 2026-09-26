@@ -25,6 +25,7 @@ export function createInputController({
     addListener(canvas, "pointerup", handlers.pointerStop),
     addListener(canvas, "pointercancel", handlers.pointerStop),
     addListener(canvas, "lostpointercapture", handlers.pointerStop),
+    addListener(canvas, "contextmenu", handlers.contextMenu),
     addListener(minimapCanvas, "click", handlers.minimapClick),
   ];
   let disposed = false;
