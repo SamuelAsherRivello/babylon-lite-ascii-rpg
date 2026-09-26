@@ -117,6 +117,30 @@ export function rasterizeSolidGlyph(size, color = [255, 255, 255, 255]) {
   return { pixels, width: size, height: size, name: "solid" };
 }
 
+// Props use their authored colors, unlike text glyphs which are tinted later
+// by the renderer. Keep the source proportions so tall front doors do not
+// become square when packed into a cell-sized atlas frame.
+export function rasterizeImageGlyph(glyph, image, size) {
+  if (!image?.naturalWidth || !image?.naturalHeight) throw new TypeError("Image glyph needs a decoded image.");
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+  if (!context) throw new Error("Image glyph rasterization needs a 2D canvas context.");
+  const scale = Math.min(size / image.naturalWidth, size / image.naturalHeight);
+  const width = image.naturalWidth * scale;
+  const height = image.naturalHeight * scale;
+  context.imageSmoothingEnabled = false;
+  context.drawImage(image, (size - width) / 2, size - height, width, height);
+  return {
+    pixels: context.getImageData(0, 0, size, size).data,
+    width: size,
+    height: size,
+    name: glyph,
+    composite: true,
+  };
+}
+
 export function darkenGlyphColor(color, darkness = 50) {
   if (!Array.isArray(color) || color.length < 3 || color.some((channel) => !Number.isFinite(channel))) {
     throw new TypeError("Glyph color must contain finite RGB channels.");

@@ -157,6 +157,28 @@ test("terrain rasterization selects matching wall and floor frames from the new 
   }
 });
 
+test("enemy spawners render with the cobweb prop while retaining their simulation glyph", () => {
+  const previous = globalThis.document;
+  const calls = [];
+  globalThis.document = { createElement: () => ({ getContext: () => ({
+    drawImage: (...args) => calls.push(args),
+    getImageData: () => ({ data: new Uint8ClampedArray(4 * 16 * 16) }),
+  }) }) };
+  try {
+    const terrain = { name: "terrain" };
+    const cobweb1 = { name: "cobweb1" };
+    const key = `terrain-art:${JSON.stringify(["dirt", "S"])}`;
+    rasterizeTerrainArt(key, { dirt: terrain, cobweb1 }, "monospace", 16, new Map());
+    assert.deepEqual(calls, [
+      [terrain, 32, 32, 32, 32, 0, 0, 16, 16],
+      [cobweb1, 0, 0, 16, 16],
+    ]);
+  } finally {
+    if (previous === undefined) delete globalThis.document;
+    else globalThis.document = previous;
+  }
+});
+
 test("terrain art preserves glyph overlays and facing while fog culls before resolution", () => {
   const world = { realm: "Underground", rows: 1, columns: 3,
     terrain: [Array.from({ length: 3 }, () => ({ kind: "dirt", glyph: "●", walkable: true }))] };

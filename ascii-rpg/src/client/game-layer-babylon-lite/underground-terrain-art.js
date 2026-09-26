@@ -1,5 +1,6 @@
 import { getFacingGlyph, getGlyphOffsetsFromKey, rasterizeGlyph } from "./glyph-visual-cache.js";
 import { getWallComposition, getWallMask } from "./underground-wall-autotile.js";
+import { CLOSED_CHEST_GLYPH, ENEMY_SPAWNER_GLYPH, OPEN_CHEST_GLYPH } from "./systems/world-system.js";
 
 // Project-local source sheets; Tiled IDs are zero-based and never map IDs.
 export const UNDERGROUND_TERRAIN_SHEETS = Object.freeze({
@@ -56,6 +57,47 @@ export async function loadUndergroundTerrainImage(url, source = "dirt") {
   return image;
 }
 
+export async function loadRasterImage(url, { width, height }) {
+  const image = new Image();
+  image.src = url;
+  await image.decode();
+  if (image.naturalWidth !== width || image.naturalHeight !== height) {
+    throw new Error("Unexpected raster image dimensions.");
+  }
+  return image;
+}
+
+function getStaticPropImage(glyph, images) {
+  switch (getFacingGlyph(glyph)) {
+    case CLOSED_CHEST_GLYPH: return images.silverChestClosed ?? null;
+    case OPEN_CHEST_GLYPH: return images.silverChestOpen ?? null;
+    default: return null;
+  }
+}
+
+// The open chest sheet is taller so its lid can rise above its cell. Keep that
+// source aspect ratio through the game renderer rather than squeezing it into
+// a square glyph raster.
+export function getStaticPropArtAspectRatio(key) {
+  const visual = parseTerrainArtKey(key);
+  const glyph = visual?.overlay ?? key;
+  return getFacingGlyph(glyph) === OPEN_CHEST_GLYPH ? 1.5 : 1;
+}
+
+export function rasterizeStaticPropArt(key, images, size) {
+  const image = getStaticPropImage(key, images);
+  if (!image) return null;
+  const height = Math.round(size * getStaticPropArtAspectRatio(key));
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = height;
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+  if (!context) throw new Error("Static prop art needs a 2D canvas context.");
+  context.imageSmoothingEnabled = false;
+  context.drawImage(image, 0, 0, size, height);
+  return { name: key, width: size, height, pixels: context.getImageData(0, 0, size, height).data };
+}
+
 export function compositeTerrainPixels(terrainPixels, overlayRaster = null, color = [1, 1, 1]) {
   const pixels = new Uint8ClampedArray(terrainPixels);
   for (let i = 0; i < pixels.length; i += 4) {
@@ -72,19 +114,39 @@ export function compositeTerrainPixels(terrainPixels, overlayRaster = null, colo
 export function rasterizeTerrainArt(key, images, family, size, paletteColors) {
   const visual = parseTerrainArtKey(key);
   if (!visual) return null;
+  const propImage = getStaticPropImage(visual.overlay, images);
+  const propHeight = propImage ? Math.round(size * getStaticPropArtAspectRatio(key)) : size;
   const canvas = document.createElement("canvas");
-  canvas.width = canvas.height = size;
+  canvas.width = size;
+  canvas.height = propHeight;
   const context = canvas.getContext("2d", { willReadFrequently: true });
   if (!context) throw new Error("Terrain art needs a 2D canvas context.");
   context.imageSmoothingEnabled = false;
   const { x, y, width, height } = visual.frame;
-  context.drawImage(images[visual.frame.source], x, y, width, height, 0, 0, size, size);
+  const terrainTop = propHeight - size;
+  context.drawImage(images[visual.frame.source], x, y, width, height, 0, terrainTop, size, size);
   if (visual.mask !== undefined) {
     for (const [sx, sy, sw, sh, dx, dy] of getWallComposition(visual.mask).slice(1)) {
-      const left = Math.round(dx * size / 32), top = Math.round(dy * size / 32);
+      const left = Math.round(dx * size / 32), top = terrainTop + Math.round(dy * size / 32);
       const right = Math.round((dx + sw) * size / 32), bottom = Math.round((dy + sh) * size / 32);
       context.drawImage(images.wall, sx, sy, sw, sh, left, top, right - left, bottom - top);
     }
+  }
+  if (propImage) {
+    context.drawImage(propImage, 0, 0, size, propHeight);
+    return {
+      name: key, width: size, height: propHeight, composite: true, terrainArt: true,
+      pixels: context.getImageData(0, 0, size, propHeight).data,
+    };
+  }
+  // Enemy spawners retain their simulation glyph for occupancy and combat, but
+  // use the supplied dungeon prop in every terrain-backed renderer.
+  if (getFacingGlyph(visual.overlay) === ENEMY_SPAWNER_GLYPH && images.cobweb1) {
+    context.drawImage(images.cobweb1, 0, 0, size, size);
+    return {
+      name: key, width: size, height: size, composite: true, terrainArt: true,
+      pixels: context.getImageData(0, 0, size, size).data,
+    };
   }
   const overlay = visual.overlay === null ? null : rasterizeGlyph(
     visual.overlay, family, size, "#ffffff", getGlyphOffsetsFromKey(visual.overlay),

@@ -4,6 +4,10 @@ export const CLOSED_VERTICAL_DOOR_GLYPH = "█";
 export const OPEN_VERTICAL_DOOR_GLYPH = "□";
 export const CLOSED_HORIZONTAL_DOOR_GLYPH = "█";
 export const OPEN_HORIZONTAL_DOOR_GLYPH = "□";
+export const FRONT_DOOR_CLOSED_ART = "civilization-door:front-closed";
+export const FRONT_DOOR_OPEN_ART = "civilization-door:front-open";
+export const SIDE_DOOR_CLOSED_ART = "civilization-door:side-closed";
+export const SIDE_DOOR_OPEN_ART = "civilization-door:side-open";
 export const KEY_GLYPH = "⚿";
 export const PLAYER_GLYPH = "👤";
 export const CIVILIZATION_SCREEN_COLUMNS = 64;
@@ -192,6 +196,11 @@ export function getCivilizationGlyph(type, orientation, open = false) {
   if (type === "fence") return orientation === "horizontal" ? HORIZONTAL_FENCE_GLYPH : VERTICAL_FENCE_GLYPH;
   if (orientation === "horizontal") return open ? OPEN_HORIZONTAL_DOOR_GLYPH : CLOSED_HORIZONTAL_DOOR_GLYPH;
   return open ? OPEN_VERTICAL_DOOR_GLYPH : CLOSED_VERTICAL_DOOR_GLYPH;
+}
+
+export function getCivilizationDoorArt(orientation, open = false) {
+  if (orientation === "horizontal") return open ? FRONT_DOOR_OPEN_ART : FRONT_DOOR_CLOSED_ART;
+  return open ? SIDE_DOOR_OPEN_ART : SIDE_DOOR_CLOSED_ART;
 }
 
 export function getCivilizationDirections() {

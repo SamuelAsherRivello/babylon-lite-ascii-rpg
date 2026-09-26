@@ -71,9 +71,10 @@ import {
 } from "./world-state-facade.js";
 import { createTimeSystem } from "./systems/time-system.js";
 import { FACING_LEFT, FACING_RIGHT, createGlyphRasterCanvas, createGlyphVisualCache, getFacingGlyph, getFacingGlyphKey, getGlyphOffsetsFromKey, getGlyphOffsetKey, getOffsetGlyphKey, rasterizeCompositeGlyph, rasterizeGlyph, rasterizeSolidGlyph } from "./glyph-visual-cache.js";
-import { getTerrainArtBounds, getTerrainArtKey, loadUndergroundTerrainImage, parseTerrainArtKey, rasterizeTerrainArt } from "./underground-terrain-art.js";
+import { getStaticPropArtAspectRatio, getTerrainArtBounds, getTerrainArtKey, loadRasterImage, loadUndergroundTerrainImage, parseTerrainArtKey, rasterizeStaticPropArt, rasterizeTerrainArt } from "./underground-terrain-art.js";
 import { expandTerrainDirtyCells } from "./underground-wall-autotile.js";
 import { getVisibleRegion, getVisibleSlot, shouldUpdateVisibleSprite } from "./visible-region.js";
+import { collectVisibleTorchRecords, createVisibleTorchAnimator } from "./torch-presentation.js";
 import { collectWorldViewGlyphs, createWorldViewComposition, renderWorldViewComposition, renderWorldViewCompositionCooperatively } from "./world-view.js";
 import { colorToLinearRgba, linearRgbaToRendererHex, reconcilePaletteColors } from "./palette-color-cache.js";
 import {
@@ -321,6 +322,10 @@ async function createGameSessionImplementation(container, initialPalette, initia
     mouseNavigationReticle.append(corner);
   }
   container.replaceChildren(canvas, minimapCanvas, mapviewCanvas, transitionMask, floatingTextLayer, mouseNavigationReticle, healthBarOverlay);
+  const torchOverlay = document.createElement("div");
+  torchOverlay.id = "torch_sprite_overlay";
+  torchOverlay.setAttribute("aria-hidden", "true");
+  container.append(torchOverlay);
   const pfxOverlay = document.createElement("div");
   pfxOverlay.id = "pfx_overlay";
   pfxOverlay.setAttribute("aria-hidden", "true");
@@ -345,6 +350,22 @@ async function createGameSessionImplementation(container, initialPalette, initia
   let heroAnimationStartedAt = performance.now();
   let heroAnimationRaf = null;
   let heroCorpse = false;
+  const torchAssetUrl = `${import.meta.env.BASE_URL}assets/images/Dungeons-and-Pixels-v1.4/Props/Animated/torch_strip.png`;
+  let torchArtworkReady = false;
+  const animatedTorchCellKeys = new Set();
+  const torchAnimator = createVisibleTorchAnimator({
+    render: (entries) => renderTorchOverlayFrames(entries),
+  });
+  const torchArtwork = new Image();
+  torchArtwork.addEventListener("load", () => {
+    torchArtworkReady = true;
+    scheduleVisualRefresh();
+  }, { once: true });
+  torchArtwork.addEventListener("error", () => {
+    torchArtworkReady = false;
+    scheduleVisualRefresh();
+  }, { once: true });
+  torchArtwork.src = torchAssetUrl;
 
   let engine;
   let renderer;
@@ -352,6 +373,9 @@ async function createGameSessionImplementation(container, initialPalette, initia
   let layer;
   let glyphCache;
   let undergroundTerrainImage;
+  let cobweb1Image;
+  let silverChestClosedImage;
+  let silverChestOpenImage;
   let minimapGlyphCache;
   let gpuLightAtlas;
   let gpuLightLayer;
@@ -1309,9 +1333,14 @@ async function createGameSessionImplementation(container, initialPalette, initia
           const centerX = mapDestination.x + (marker.x - region.x + 0.5) * mapDestination.cellWidth;
           const centerY = mapDestination.y + (marker.y - region.y + 0.5) * mapDestination.cellHeight;
           if (marker.kind === "enemy-spawner") {
-            context.fillStyle = "#e63946";
-            context.fillRect(centerX - markerSize / 2, centerY - markerSize / 2, markerSize, markerSize);
-            context.strokeRect(centerX - markerSize / 2, centerY - markerSize / 2, markerSize, markerSize);
+            if (cobweb1Image) {
+              context.imageSmoothingEnabled = false;
+              context.drawImage(cobweb1Image, centerX - markerSize / 2, centerY - markerSize / 2, markerSize, markerSize);
+            } else {
+              context.fillStyle = "#e63946";
+              context.fillRect(centerX - markerSize / 2, centerY - markerSize / 2, markerSize, markerSize);
+              context.strokeRect(centerX - markerSize / 2, centerY - markerSize / 2, markerSize, markerSize);
+            }
             continue;
           }
           context.fillStyle = marker.color;
@@ -1838,7 +1867,8 @@ async function createGameSessionImplementation(container, initialPalette, initia
     glyphLimit: (GLYPHS.length + 3) * 3 + 15 * 3,
     rasterize: (glyph, family, size) => glyph === FOG_BACKING_GLYPH
       ? rasterizeSolidGlyph(size)
-      : rasterizeTerrainArt(glyph, undergroundTerrainImage, family, size, paletteColors) ?? (glyphBackgroundEnabled
+      : rasterizeStaticPropArt(glyph, undergroundTerrainImage, size)
+        ?? rasterizeTerrainArt(glyph, undergroundTerrainImage, family, size, paletteColors) ?? (glyphBackgroundEnabled
       ? rasterizeCompositeGlyph(glyph, family, size, paletteColors.get(getFacingGlyph(glyph)) ?? [1, 1, 1], backgroundDarkness, getGlyphOffsetsFromKey(glyph))
       : rasterizeGlyph(glyph, family, size, "#ffffff", getGlyphOffsetsFromKey(glyph))),
   });
@@ -1854,7 +1884,8 @@ async function createGameSessionImplementation(container, initialPalette, initia
     // need the glyph's transparent raster, with its palette scale and offset.
     rasterize: (glyph, family, size) => glyph === FOG_BACKING_GLYPH
       ? rasterizeSolidGlyph(size)
-      : rasterizeTerrainArt(glyph, undergroundTerrainImage, family, size, paletteColors)
+      : rasterizeStaticPropArt(glyph, undergroundTerrainImage, size)
+        ?? rasterizeTerrainArt(glyph, undergroundTerrainImage, family, size, paletteColors)
         ?? rasterizeGlyph(glyph, family, size, "#ffffff", getGlyphOffsetsFromKey(glyph)),
   });
 
@@ -2272,16 +2303,61 @@ async function createGameSessionImplementation(container, initialPalette, initia
     }
   };
 
+  const renderTorchOverlayFrames = (entries) => {
+    const activeIds = new Set();
+    const canvasBounds = canvas.getBoundingClientRect();
+    const containerBounds = container.getBoundingClientRect();
+    for (const entry of entries) {
+      activeIds.add(entry.id);
+      let element = torchOverlay.querySelector(`[data-torch-id="${entry.id}"]`);
+      if (!element) {
+        element = document.createElement("div");
+        element.className = "torch_sprite_overlay__torch";
+        element.dataset.torchId = entry.id;
+        element.style.backgroundImage = `url("${torchAssetUrl}")`;
+        element.style.backgroundSize = "300% 100%";
+        torchOverlay.append(element);
+      }
+      const center = getRenderedCellCenter({
+        x: entry.cell.x - viewOrigin.x,
+        y: entry.cell.y - viewOrigin.y,
+      }, viewport, world);
+      element.style.left = `${canvasBounds.left - containerBounds.left + center.x - viewport.gridWidth / 2}px`;
+      element.style.top = `${canvasBounds.top - containerBounds.top + center.y - viewport.gridHeight / 2}px`;
+      element.style.width = `${viewport.gridWidth}px`;
+      element.style.height = `${viewport.gridHeight}px`;
+      element.style.backgroundPosition = `${entry.frame * 50}% 0`;
+    }
+    for (const element of [...torchOverlay.children]) {
+      if (!activeIds.has(element.dataset.torchId)) element.remove();
+    }
+  };
+
+  const reconcileTorchOverlays = (region, now = performance.now()) => {
+    animatedTorchCellKeys.clear();
+    if (!torchArtworkReady || !world || !objectSpawnerSystem) {
+      torchAnimator.reconcile([], now);
+      return;
+    }
+    const records = collectVisibleTorchRecords({
+      objects: objectSpawnerSystem.getActiveObjects(activeRealm), realm: activeRealm,
+      region, fog: fogOfWar, world,
+    });
+    for (const record of records) animatedTorchCellKeys.add(`${record.cell.x},${record.cell.y}`);
+    torchAnimator.reconcile(records, now);
+  };
+
   const renderCell = (region, x, y, frames, lightField, glyphOverride = null, visibility = 100) => {
     const slot = y * region.columns + x;
     const cell = { x: region.x + x, y: region.y + y };
     const isPlayerCell = playerCell?.x === cell.x && playerCell?.y === cell.y;
     // The hero test owns the player visual. Paint the underlying terrain here
     // so the legacy player glyph cannot appear beneath the sprite overlay.
-    const glyph = isPlayerCell
+    const isAnimatedTorch = animatedTorchCellKeys.has(`${cell.x},${cell.y}`);
+    const glyph = isPlayerCell || isAnimatedTorch
       ? world.terrain[cell.y][cell.x].glyph
       : (glyphOverride ?? getClientVisibleGlyph(world, cell));
-    const visualGlyph = isPlayerCell
+    const visualGlyph = isPlayerCell || isAnimatedTorch
       ? getTerrainArtKey(world, cell, getOffsetGlyphKey(getFacingGlyphKey(glyph), paletteOffsets.get(glyph)))
       : getClientVisibleGlyphKey(world, cell);
     const terrainArt = parseTerrainArtKey(visualGlyph) !== null;
@@ -2296,7 +2372,11 @@ async function createGameSessionImplementation(container, initialPalette, initia
     );
     const previous = spriteStates[slot];
     const spriteBounds = getRenderedCellSpriteBounds({ x, y }, viewport, world, terrainArt);
-    const center = spriteBounds.center;
+    const artAspectRatio = getStaticPropArtAspectRatio(visualGlyph);
+    const center = artAspectRatio === 1 ? spriteBounds.center : {
+      x: spriteBounds.center.x,
+      y: spriteBounds.center.y - (spriteBounds.size.height * (artAspectRatio - 1)) / 2,
+    };
     if (playerCell && cell.x === playerCell.x && cell.y === playerCell.y) {
       playerRenderCenter = center;
     }
@@ -2316,7 +2396,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
     // instead of collapsing into an effectively invisible sub-pixel cluster.
     const farZoomFootprint = zoom === MIN_ZOOM && !terrainArt ? 4 : 0;
     const renderWidth = Math.max(farZoomFootprint, spriteBounds.size.width);
-    const renderHeight = Math.max(farZoomFootprint, spriteBounds.size.height);
+    const renderHeight = Math.max(farZoomFootprint, spriteBounds.size.height * artAspectRatio);
     const props = {
       positionPx: [center.x, center.y],
       sizePx: [renderWidth, renderHeight],
@@ -2341,6 +2421,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
     const skippedBefore = metrics.skippedCells;
     const region = getVisibleRegion(viewport, world, viewOrigin);
     viewOrigin = { x: region.x, y: region.y };
+    reconcileTorchOverlays(region, performance.now());
     if (refreshLighting) {
       // The player is a moving light source. Invalidate the cached lighting
       // value before repainting so the old source position cannot remain in a
@@ -2513,6 +2594,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
   const renderChangedWorldCells = (cells) => {
     if (!world || !renderer) return;
     const region = getVisibleRegion(viewport, world, viewOrigin);
+    reconcileTorchOverlays(region, performance.now());
     const visibleCells = cells.filter((cell) => getVisibleSlot(region, cell) !== -1 &&
       isDiscovered(fogOfWar, world, cell));
     if (visibleCells.length === 0) return;
@@ -2539,6 +2621,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
     const submittedBefore = metrics.submittedCells;
     const skippedBefore = metrics.skippedCells;
     const region = getVisibleRegion(viewport, world, viewOrigin);
+    reconcileTorchOverlays(region, performance.now());
     renderChangedWorldCells(cells);
     const lightField = lightingFieldCache.get(
       world,
@@ -3131,7 +3214,19 @@ async function createGameSessionImplementation(container, initialPalette, initia
     const terrainSheet = await loadUndergroundTerrainImage(
       `${import.meta.env.BASE_URL}assets/images/Dungeons-and-Pixels-v1.4/Tilesets/Tileset_Dungeon.png`, "wall",
     );
-    undergroundTerrainImage = { dirt: terrainSheet, wall: terrainSheet };
+    cobweb1Image = await loadRasterImage(
+      `${import.meta.env.BASE_URL}assets/images/Dungeons-and-Pixels-v1.4/Props/Static/cobweb1.png`, { width: 32, height: 32 },
+    );
+    silverChestClosedImage = await loadRasterImage(
+      `${import.meta.env.BASE_URL}assets/images/Dungeons-and-Pixels-v1.4/Props/Static/silver_chest_closed.png`, { width: 32, height: 32 },
+    );
+    silverChestOpenImage = await loadRasterImage(
+      `${import.meta.env.BASE_URL}assets/images/Dungeons-and-Pixels-v1.4/Props/Static/silver_chest_open.png`, { width: 32, height: 48 },
+    );
+    undergroundTerrainImage = {
+      dirt: terrainSheet, wall: terrainSheet, cobweb1: cobweb1Image,
+      silverChestClosed: silverChestClosedImage, silverChestOpen: silverChestOpenImage,
+    };
     engine = await createEngine(canvas, { maxDevicePixelRatio: 1, msaaSamples: 1 });
     const lifecycleToken = rendererLifecycle.begin();
     glyphCache = createGameGlyphCache();
@@ -4200,6 +4295,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
       deathPresentation.dispose();
       if (particleAnimationFrame !== null) window.cancelAnimationFrame(particleAnimationFrame);
       particleInstances.clear();
+      torchAnimator.dispose();
       pfxOverlay.replaceChildren();
       disposeSpriteRenderer(renderer);
       glyphCache.dispose();
