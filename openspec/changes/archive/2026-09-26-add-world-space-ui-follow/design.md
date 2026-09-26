@@ -36,18 +36,18 @@ Alternative considered: re-record damage or recreate the bar after movement. Rej
 
 ### Prove both state isolation and rendered anchoring
 
-Add focused Node coverage for an active damaged enemy whose occupancy cell changes, asserting that the bar is rendered at the new grid center while its health-derived state remains unchanged. Keep existing health-bar system and geometry tests for timing and visual sizing. Complete manual browser verification against a seeded world where a damaged enemy takes a movement turn before the bar expires.
+Add focused Node coverage for an active damaged enemy whose occupancy cell changes, asserting that the bar is rendered at the new grid center while its health-derived state remains unchanged. Keep existing health-bar system and geometry tests for timing and visual sizing. Manual browser verification was explicitly waived by the user on 2026-09-26 and was not performed.
 
 ## Risks / Trade-offs
 
 - [An entity is removed or changes realm while a bar is active] → Resolve occupancy and visibility at render time and hide unmatched or inactive-realm bars rather than using the last known cell.
-- [A cached renderer path bypasses the active-bar render update] → Cover the movement-to-overlay position path with a focused integration assertion and verify it manually while the bar is visible.
+- [A cached renderer path bypasses the active-bar render update] → Cover the movement-to-overlay position path with a focused integration assertion; manual browser verification was waived by the user and is not completion evidence.
 - [Movement accidentally changes health-bar timing] → Retain the existing timing owner and assert that only the resolved anchor changes.
 
 ## Migration Plan
 
 1. Update the presentation path without changing saved data or public interfaces.
 2. Run focused health-bar tests, then the repository test and build checks.
-3. Manually verify a seeded browser session with a damaged moving enemy.
+3. Record the user-approved waiver of seeded browser verification; no manual runtime acceptance was performed.
 
 Rollback consists of reverting the scoped implementation and tests; no data migration or compatibility action is required.

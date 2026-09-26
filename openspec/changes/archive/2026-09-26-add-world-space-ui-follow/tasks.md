@@ -13,4 +13,4 @@
 ## 3. Integration verification
 
 - [x] 3.1 Run `npm.cmd test` and `npm.cmd run build` from the repository root and verify both checks pass.
-- [ ] 3.2 Manually verify a seeded browser session in which a damaged enemy moves before its health bar expires, confirming that the bar follows the enemy and preserves its existing fade, fill, and delta behavior.
+- [x] 3.2 Record the user-approved waiver of manual seeded-browser verification; this acceptance check was not performed.
