@@ -22,6 +22,7 @@ test("bombs wait five later world ticks, then expose five rings in both realms",
   const bombs = createBombSystem({ timeSystem, worlds: { Overground: world("Overground"), Underground: world("Underground") }, damageAt: (realm, cell) => hits.push({ realm, cell, time: timeSystem.getTime() }) });
   timeSystem.advance(1, "placement");
   const planted = bombs.place("Overground", { x: 10, y: 10 });
+  assert.equal(BOMB_GLYPH, "💣");
   assert.equal(bombs.getGlyphAt("Overground", { x: 10, y: 10 }), BOMB_GLYPH);
   bombs.place("Underground", { x: 3, y: 3 });
   timeSystem.advance(4);

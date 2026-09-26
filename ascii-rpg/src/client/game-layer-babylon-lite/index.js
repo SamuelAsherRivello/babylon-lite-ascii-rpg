@@ -36,6 +36,8 @@ import {
   getCombinedDirection,
   getDirectionForKey,
   getDirectionForSwipe,
+  getHeadingDirectionAfterMovement,
+  getHeadingLocation,
   getRepeatInterval,
   getInitialViewOriginForCamera,
   getViewOriginForPreservedPlayerPosition,
@@ -419,6 +421,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
   let activeRealm = initialRealm === "Underground" ? "Underground" : "Overground";
   mapviewRealm = activeRealm;
   let playerCell = null;
+  let playerHeading = null;
   let playerFacing = FACING_LEFT;
   let characterGold = 0;
   let characterKeys = 0;
@@ -588,6 +591,10 @@ async function createGameSessionImplementation(container, initialPalette, initia
     playerFacing = direction.x > 0 ? FACING_RIGHT : FACING_LEFT;
     getOccupancyForWorld()?.update("player", { facing: playerFacing });
   };
+  const setPlayerHeadingFromDirection = (direction) => {
+    playerHeading = getHeadingDirectionAfterMovement(playerHeading, direction);
+  };
+  const getPlayerHeadingLocation = () => getHeadingLocation(playerCell, playerHeading);
 
   const notifyQuest = (snapshot) => {
     for (const listener of questListeners) listener(snapshot);
@@ -1600,6 +1607,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
           setPlayerFacingFromDirection(direction);
           playerCell = { ...nextCell };
           world.playerCell = playerCell;
+          setPlayerHeadingFromDirection(direction);
         },
       });
       if (!moved || playerLifecycle.isDead()) break;
@@ -2483,6 +2491,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
         setPlayerFacingFromDirection(direction);
         playerCell = { ...nextCell };
         world.playerCell = playerCell;
+        setPlayerHeadingFromDirection(direction);
       },
     });
     if (!committed) {
@@ -2540,9 +2549,11 @@ async function createGameSessionImplementation(container, initialPalette, initia
 
   const placeBomb = () => {
     if (playerLifecycle.isDead() || gameplayInputLocked || !bombSystem || !world || !playerCell) return false;
+    const targetCell = getPlayerHeadingLocation();
+    if (!targetCell || !world.terrain?.[targetCell.y]?.[targetCell.x]) return false;
     characterState = createCharacterState({ ...characterState, gold: characterGold, keys: characterKeys });
     let planted = null;
-    const action = resolveCharacterAction(characterState, "bomb", { kind: "bomb", realm: activeRealm, cell: playerCell }, {
+    const action = resolveCharacterAction(characterState, "bomb", { kind: "bomb", realm: activeRealm, cell: targetCell }, {
       bomb: {
         canHandle: (target) => target.kind === "bomb" && !bombSystem.hasBombAt(target.realm, target.cell),
         handle: (target) => {
@@ -2568,7 +2579,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
       shiftHeld = true;
       return;
     }
-    if (event.code === "Space" || event.key === " ") {
+    if (getActionForKey(event.key) === "set-bomb") {
       event.preventDefault();
       if (!shouldPlaceBombForKeydown(event, { locked: gameplayInputLocked, held: bombKeyHeld })) return;
       bombKeyHeld = true;

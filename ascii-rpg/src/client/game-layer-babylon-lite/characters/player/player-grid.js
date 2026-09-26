@@ -29,11 +29,22 @@ export function getDirectionForKey(key) {
 
 export function getActionForKey(key) {
   const normalizedKey = key.toLowerCase();
+  if (normalizedKey === " ") return "set-bomb";
   if (normalizedKey === "w" || normalizedKey === "arrowup") return "up";
   if (normalizedKey === "a" || normalizedKey === "arrowleft") return "left";
   if (normalizedKey === "s" || normalizedKey === "arrowdown") return "down";
   if (normalizedKey === "d" || normalizedKey === "arrowright") return "right";
   return null;
+}
+
+export function getHeadingLocation(cell, direction) {
+  if (!cell || !direction || Math.abs(direction.x) + Math.abs(direction.y) !== 1) return null;
+  return Object.freeze({ x: cell.x + direction.x, y: cell.y + direction.y });
+}
+
+export function getHeadingDirectionAfterMovement(heading, direction) {
+  if (!direction || Math.abs(direction.x) + Math.abs(direction.y) !== 1) return heading ?? null;
+  return Object.freeze({ x: direction.x, y: direction.y });
 }
 
 export function getRepeatInterval(isShiftHeld, isExhausted = false) {

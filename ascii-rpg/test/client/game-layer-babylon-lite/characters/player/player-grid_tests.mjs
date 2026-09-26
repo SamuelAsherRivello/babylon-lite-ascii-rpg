@@ -20,6 +20,8 @@ import {
   getCombinedDirection,
   getDirectionForKey,
   getDirectionForSwipe,
+  getHeadingDirectionAfterMovement,
+  getHeadingLocation,
   getInitialViewOriginForCamera,
   getPlayerScreenCenter,
   getRepeatInterval,
@@ -40,7 +42,27 @@ test("normalizes WASD and arrows into the same semantic actions", () => {
   assert.equal(getActionForKey("ArrowDown"), "down");
   assert.equal(getActionForKey("d"), "right");
   assert.equal(getActionForKey("ArrowRight"), "right");
+  assert.equal(getActionForKey(" "), "set-bomb");
   assert.equal(getActionForKey("Enter"), null);
+});
+
+test("derives a reusable heading location from a cardinal direction", () => {
+  const cell = { x: 10, y: 20 };
+  assert.deepEqual(getHeadingLocation(cell, { x: 0, y: -1 }), { x: 10, y: 19 });
+  assert.deepEqual(getHeadingLocation(cell, { x: 0, y: 1 }), { x: 10, y: 21 });
+  assert.deepEqual(getHeadingLocation(cell, { x: -1, y: 0 }), { x: 9, y: 20 });
+  assert.deepEqual(getHeadingLocation(cell, { x: 1, y: 0 }), { x: 11, y: 20 });
+  assert.equal(getHeadingLocation(cell, null), null);
+  assert.equal(getHeadingLocation(cell, { x: 1, y: 1 }), null);
+});
+
+test("retains cardinal heading across diagonal and failed movement", () => {
+  const up = getHeadingDirectionAfterMovement(null, { x: 0, y: -1 });
+  assert.deepEqual(up, { x: 0, y: -1 });
+  assert.equal(getHeadingDirectionAfterMovement(null, { x: 1, y: 1 }), null);
+  assert.equal(getHeadingDirectionAfterMovement(up, { x: 1, y: 1 }), up);
+  assert.equal(getHeadingDirectionAfterMovement(up, { x: 0, y: 0 }), up);
+  assert.deepEqual(getHeadingDirectionAfterMovement(up, { x: -1, y: 0 }), { x: -1, y: 0 });
 });
 
 test("creates remapped and upscaled logical viewports", () => {

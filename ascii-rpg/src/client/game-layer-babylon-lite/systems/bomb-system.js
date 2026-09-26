@@ -1,4 +1,4 @@
-export const BOMB_GLYPH = "●";
+export const BOMB_GLYPH = "💣";
 export const BLAST_GLYPH = "✶";
 export const BOMB_COUNT = 50;
 export const BOMB_FUSE_TICKS = 5;
