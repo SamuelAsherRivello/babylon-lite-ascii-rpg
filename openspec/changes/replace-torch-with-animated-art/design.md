@@ -15,8 +15,8 @@ presentation.
 
 - Render `torch_strip.png` as an anchored three-frame loop only where a Torch
   is eligible for the active game view.
-- Make pause/resume explicit and renderer-owned so tests and future lifecycle
-  work can stop animation without changing gameplay.
+- Keep the visible-set animator continuously looping whenever eligible Torches
+  are present.
 - Reconcile overlays on world render, camera movement, zoom, resize, fog, realm
   transition, and disposal without stale Torch artwork.
 
@@ -51,7 +51,7 @@ animation updates for offscreen entries.
 Each active overlay uses `torch_strip.png` as a three-frame horizontal strip,
 with frame selection by background offset. A single game-layer animation clock
 advances the visible set rather than a requestAnimationFrame callback per
-Torch. The clock is scheduled only while the set is nonempty and unpaused.
+Torch. The clock is scheduled only while the set is nonempty.
 
 On re-entry, a Torch derives its frame from the shared elapsed clock rather
 than restarting at frame zero. This prevents camera movement from synchronizing
@@ -59,31 +59,22 @@ or visibly restarting all Torches. Pre-sliced frame files were considered but
 rejected because the strip is the requested supplied artwork and direct strip
 use avoids a separate asset mapping.
 
-### Preserve raster fallback and existing cell responsibilities
+### Always use authored artwork and preserve existing cell responsibilities
 
 The normal cell renderer continues to resolve Torch identity, terrain, fog,
-lighting, and gameplay state. When an eligible raster overlay is available, it
-suppresses only the main game-view Torch glyph beneath the overlay; when the
-asset fails, it leaves the static glyph path intact. Minimap and mapview keep
-their existing catalog-glyph/marker paths.
-
-### Pause is an internal presentation control
-
-The animator owns an explicit paused flag or equivalent lifecycle operation.
-Pausing cancels the shared scheduling work and freezes displayed frames;
-resuming advances from the preserved timing state. It is not exposed as a
-player UI setting, so localStorage and Reset Settings remain unchanged.
+lighting, and gameplay state. It suppresses the main game-view Torch glyph
+beneath the overlay for every eligible Torch, with no static-glyph fallback.
+Minimap and mapview keep their existing catalog-glyph/marker paths.
 
 ## Risks / Trade-offs
 
 - [Risk] A viewport, fog, or realm transition leaves a stale overlay at an old
   screen position. -> Reconcile against the current source region after every
   relevant game-view render and clear all records during disposal.
-- [Risk] The underlying glyph shows below the raster or the raster renders when
-  loading fails. -> Make the overlay eligibility and glyph suppression use the
-  same asset-readiness state; preserve the glyph until readiness is confirmed.
+- [Risk] The underlying glyph shows below the raster. -> Suppress the glyph
+  whenever a Torch belongs to the eligible overlay set.
 - [Risk] Many independent callbacks cause avoidable frame work. -> Use one
-  visible-set clock and schedule it only for nonempty, unpaused records.
+  visible-set clock and schedule it only for nonempty records.
 - [Risk] The animated visual obscures cell semantics at small zooms. -> Keep
   dimensions tied to current grid geometry and include manual fixed-seed
   verification at zooms 1, 5, and 10.

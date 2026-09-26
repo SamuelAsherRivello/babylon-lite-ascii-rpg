@@ -892,6 +892,7 @@ test("documents the player death lifecycle and recovery prompt", async () => {
   if (!bridge.includes("getPlayerRecoveryReadySnapshot") || !bridge.includes("subscribeToPlayerRecoveryReady")
     || !bridge.includes("sendPlayerRecoveryReadySnapshot") || !main.includes("sendPlayerRecoveryReadySnapshot")
     || !gameLayer.includes("deathPresentation.completeAnimation()")
+    || !gameLayer.includes('const width = viewport.gridWidth * (heroAnimation === "death" ? 1.5 : 1);')
     || !app.includes("playerRecoveryReady ? <DeathWindow")) {
     throw new Error("The recovery prompt must wait for the game-layer death presentation to become ready.");
   }

@@ -98,9 +98,9 @@ export function createBombSystem({ timeSystem, worlds, damageAt = () => {}, onCh
     getGlyphAt(realm, cell) {
       return this.getBombAt(realm, cell)?.detonatedAt === null ? BOMB_GLYPH : null;
     },
+    releasePresentation(realm, cell) { activeCells.delete(presentationKey(realm, cell)); },
     getBombs(realm = null) { return [...bombs.values()].filter((bomb) => !realm || bomb.realm === realm).map((bomb) => Object.freeze({ ...bomb })); },
     tick,
     dispose() { if (registered) timeSystem.unregisterPreTickable("bomb-system"); bombs.clear(); blasts.clear(); activeCells.clear(); },
   });
 }
-    releasePresentation(realm, cell) { activeCells.delete(presentationKey(realm, cell)); },

@@ -20,12 +20,12 @@ test("invalid particle names and cells are rejected", () => {
   assert.equal(createParticleInstance("Smoke", "Underground", null), null);
 });
 
-test("BombExplosion crossfades FirePlume above SmokePoff for three smoke frames", () => {
+test("BombExplosion crossfades SmokePoff above FirePlume for three fire frames", () => {
   assert.deepEqual(COMPOUND_PARTICLE_EFFECTS.map(({ name }) => name), ["BombExplosion"]);
   const instance = createCompoundParticleInstance("BombExplosion", "Underground", { x: 2, y: 3 }, 0);
-  const duringCrossfade = advanceCompoundParticleInstance(instance, 6 * 80);
-  assert.deepEqual(duringCrossfade.instances.map(({ name }) => name), ["SmokePoff", "FirePlume"]);
-  assert.equal(duringCrossfade.instances[0].frame, 6);
+  const duringCrossfade = advanceCompoundParticleInstance(instance, 14 * 90);
+  assert.deepEqual(duringCrossfade.instances.map(({ name }) => name), ["FirePlume", "SmokePoff"]);
+  assert.equal(duringCrossfade.instances[0].frame, 14);
   assert.equal(duringCrossfade.instances[1].frame, 0);
   assert.equal(advanceCompoundParticleInstance(instance, 3_000).done, true);
 });

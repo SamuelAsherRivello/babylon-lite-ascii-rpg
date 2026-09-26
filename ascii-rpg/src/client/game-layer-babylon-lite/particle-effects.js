@@ -30,7 +30,7 @@ export const PARTICLE_EFFECT_BY_NAME = Object.freeze(Object.fromEntries(EFFECTS.
 export const COMPOUND_PARTICLE_EFFECTS = Object.freeze([
   Object.freeze({
     name: "BombExplosion",
-    effects: Object.freeze(["SmokePoff", "FirePlume"]),
+    effects: Object.freeze(["FirePlume", "SmokePoff"]),
     crossfadeFrames: Object.freeze([3]),
   }),
 ]);

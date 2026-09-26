@@ -15,4 +15,4 @@
 ## 3. Integration verification
 
 - [x] 3.1 Run the affected Node test files and `npm.cmd run build` from the repository root; verify both succeed without adding or running Playwright tests.
-- [ ] 3.2 Manually verify a seeded browser run with an intentional lethal event: game input stops immediately, the full death animation remains visible, the menu appears 500 ms after its final frame, ordinary UI controls remain usable, and both available restart choices work only after the menu appears.
+- [x] 3.2 Manually verify a seeded browser run with an intentional lethal event: game input stops immediately, the full death animation remains visible, the menu appears 500 ms after its final frame, ordinary UI controls remain usable, and both available restart choices work only after the menu appears.

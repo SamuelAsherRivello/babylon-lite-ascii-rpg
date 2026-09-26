@@ -18,18 +18,17 @@ stable torch world state used by generation and lighting.
 - Reconcile animated Torch presentation to the active game-view visible region:
   only active-realm, fog-eligible, visible Torches have renderer resources or
   animation updates.
-- Provide a game-layer-owned pause/resume capability for the visible Torch
-  animator. This change does not add a player-facing setting or persisted
-  preference.
-- Preserve the existing static glyph path as a fallback if the raster asset
-  cannot be loaded.
+- Keep the visible Torch animator continuously looping while its active set is
+  nonempty; it does not expose a pause state or player-facing setting.
+- Suppress the static main-view Torch glyph for eligible Torches, without a
+  fallback presentation path.
 
 ## Capabilities
 
 ### New Capabilities
 
-- `animated-torch-presentation`: Defines animated Torch artwork, its visible
-  game-view lifecycle, pause behavior, and fallback presentation.
+- `animated-torch-presentation`: Defines animated Torch artwork and its
+  continuously looping visible game-view lifecycle.
 
 ### Modified Capabilities
 

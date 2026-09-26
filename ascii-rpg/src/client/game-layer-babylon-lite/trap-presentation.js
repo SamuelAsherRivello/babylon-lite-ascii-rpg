@@ -1,41 +1,42 @@
 import { getFogVisibility } from "./systems/fog-of-war-system.js";
 import { getVisibleSlot } from "./visible-region.js";
 
-export const TORCH_FRAME_COUNT = 3;
-export const TORCH_FRAME_DURATION_MS = 160;
+export const TRAP_FRAME_COUNT = 7;
+export const TRAP_FRAME_DURATION_MS = 120;
 
-export function collectVisibleTorchRecords({ objects = [], realm, region, fog, torches = [], world } = {}) {
+export function collectVisibleTrapRecords({ objects = [], realm, region, fog, world } = {}) {
   if (!region || !world || !fog) return [];
-  const recordsByCell = new Map();
-  for (const object of objects) {
-    if (!object?.active || object.type !== "torch" || (object.realm !== undefined && object.realm !== realm)) continue;
-    recordsByCell.set(`${object.cell.x},${object.cell.y}`, { id: object.id, cell: object.cell });
-  }
-  for (const cell of torches) {
-    const key = `${cell.x},${cell.y}`;
-    if (!recordsByCell.has(key)) recordsByCell.set(key, { id: `${realm}-torch-${key}`, cell });
-  }
-  return [...recordsByCell.values()]
-    .filter((record) => getVisibleSlot(region, record.cell) !== -1 && getFogVisibility(fog, world, record.cell) > 0)
-    .map((record) => Object.freeze({ id: record.id, cell: Object.freeze({ ...record.cell }) }));
+  return objects.filter((object) => object?.active && object.type === "trap"
+    && (object.realm === undefined || object.realm === realm))
+    .filter((object) => getVisibleSlot(region, object.cell) !== -1 && getFogVisibility(fog, world, object.cell) > 0)
+    .map((object) => Object.freeze({ id: object.id, cell: Object.freeze({ ...object.cell }) }));
 }
 
-export function createVisibleTorchAnimator({
-  frameDurationMs = TORCH_FRAME_DURATION_MS,
+export function getAnimatedTrapOverlayPlacement(center, viewport, canvasOffset = { x: 0, y: 0 }) {
+  const width = viewport.gridWidth;
+  const height = viewport.gridHeight;
+  return Object.freeze({
+    left: canvasOffset.x + center.x - width / 2,
+    top: canvasOffset.y + center.y + viewport.gridHeight / 2 - height,
+    width,
+    height,
+  });
+}
+
+export function createVisibleTrapAnimator({
+  frameDurationMs = TRAP_FRAME_DURATION_MS,
   now = () => performance.now(),
   requestFrame = (callback) => window.requestAnimationFrame(callback),
   cancelFrame = (handle) => window.cancelAnimationFrame(handle),
   render = () => {},
 } = {}) {
   let entries = new Map();
-  let startedAt = now();
   let frameHandle = null;
   let disposed = false;
-
-  const elapsedAt = (at) => Math.max(0, at - startedAt);
+  const startedAt = now();
   const snapshot = (at) => [...entries.values()].map((entry) => Object.freeze({
     ...entry,
-    frame: Math.floor(elapsedAt(at) / frameDurationMs) % TORCH_FRAME_COUNT,
+    frame: Math.floor(Math.max(0, at - startedAt) / frameDurationMs) % TRAP_FRAME_COUNT,
   }));
   const draw = (at) => render(snapshot(at));
   const schedule = () => {

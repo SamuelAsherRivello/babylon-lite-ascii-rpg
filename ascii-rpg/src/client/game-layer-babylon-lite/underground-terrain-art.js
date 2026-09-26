@@ -1,6 +1,7 @@
 import { getFacingGlyph, getGlyphOffsetsFromKey, rasterizeGlyph } from "./glyph-visual-cache.js";
 import { getWallComposition, getWallMask } from "./underground-wall-autotile.js";
 import { CLOSED_CHEST_GLYPH, ENEMY_SPAWNER_GLYPH, OPEN_CHEST_GLYPH } from "./systems/world-system.js";
+import { FRONT_DOOR_CLOSED_ART, FRONT_DOOR_OPEN_ART, SIDE_DOOR_CLOSED_ART, SIDE_DOOR_OPEN_ART } from "./systems/civilization-system.js";
 
 // Project-local source sheets; Tiled IDs are zero-based and never map IDs.
 export const UNDERGROUND_TERRAIN_SHEETS = Object.freeze({
@@ -71,6 +72,10 @@ function getStaticPropImage(glyph, images) {
   switch (getFacingGlyph(glyph)) {
     case CLOSED_CHEST_GLYPH: return images.silverChestClosed ?? null;
     case OPEN_CHEST_GLYPH: return images.silverChestOpen ?? null;
+    case FRONT_DOOR_CLOSED_ART: return images.frontDoorClosed ?? null;
+    case FRONT_DOOR_OPEN_ART: return images.frontDoorOpen ?? null;
+    case SIDE_DOOR_CLOSED_ART: return images.sideDoorClosed ?? null;
+    case SIDE_DOOR_OPEN_ART: return images.sideDoorOpen ?? null;
     default: return null;
   }
 }
@@ -81,7 +86,7 @@ function getStaticPropImage(glyph, images) {
 export function getStaticPropArtAspectRatio(key) {
   const visual = parseTerrainArtKey(key);
   const glyph = visual?.overlay ?? key;
-  return getFacingGlyph(glyph) === OPEN_CHEST_GLYPH ? 1.5 : 1;
+  return [OPEN_CHEST_GLYPH, FRONT_DOOR_CLOSED_ART, FRONT_DOOR_OPEN_ART].includes(getFacingGlyph(glyph)) ? 1.5 : 1;
 }
 
 export function rasterizeStaticPropArt(key, images, size) {

@@ -24,7 +24,22 @@
   overflow: hidden;
 }
 
+#trap_sprite_overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
 .torch_sprite_overlay__torch {
+  position: absolute;
+  image-rendering: pixelated;
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
+
+.trap_sprite_overlay__trap {
   position: absolute;
   image-rendering: pixelated;
   background-repeat: no-repeat;

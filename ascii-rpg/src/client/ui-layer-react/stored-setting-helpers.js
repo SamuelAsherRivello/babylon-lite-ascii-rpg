@@ -18,15 +18,12 @@ export const torchShadowStorageKey = "babylon-lite-ascii-rpg.torch-shadow";
 export const playerShadowStorageKey = "babylon-lite-ascii-rpg.player-shadow";
 export const gpuLightPassStorageKey = "babylon-lite-ascii-rpg.gpu-light-pass";
 export const playerGpuShadowBleedRangeStorageKey = "babylon-lite-ascii-rpg.player-gpu-shadow-bleed-range";
-export const glyphBackgroundStorageKey = "babylon-lite-ascii-rpg.glyph-background";
-export const backgroundDarknessStorageKey = "babylon-lite-ascii-rpg.background-darkness";
 export const minimapZoomStorageKey = "babylon-lite-ascii-rpg.minimap-zoom";
 export const lightingWindowPositionStorageKey = "babylon-lite-ascii-rpg.lighting-window-position";
 export const tutorialSkipStorageKey = "babylon-lite-ascii-rpg.tutorial-skip";
 export const defaultQuestStorageKey = "babylon-lite-ascii-rpg.default-quest";
 export const minZoom = MIN_ZOOM;
 export const maxZoom = MAX_ZOOM;
-export const DEFAULT_BACKGROUND_DARKNESS = 50;
 
 export function getStoredZoom() {
   return getStoredInitialZoom();
@@ -38,13 +35,6 @@ export function getStoredMinimapZoom() {
 
 export function getStoredBoolean(storageKey, defaultValue) {
   return getStoredBooleanValue(localStorage.getItem(storageKey), defaultValue);
-}
-
-export function getStoredBackgroundDarkness() {
-  const storedValue = localStorage.getItem(backgroundDarknessStorageKey);
-  if (storedValue === null || storedValue.trim() === "") return DEFAULT_BACKGROUND_DARKNESS;
-  const stored = Number(storedValue);
-  return Number.isInteger(stored) && stored >= 0 && stored <= 100 ? stored : DEFAULT_BACKGROUND_DARKNESS;
 }
 
 export function getStoredAmbientLight(storageKey, fallback) {

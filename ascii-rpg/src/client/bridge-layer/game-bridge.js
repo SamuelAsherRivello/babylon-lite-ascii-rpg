@@ -13,8 +13,6 @@ let torchShadowSnapshot = "X High";
 let playerShadowSnapshot = "High";
 let gpuLightPassSnapshot = false;
 let playerGpuShadowBleedRangeSnapshot = 2;
-let glyphBackgroundSnapshot = true;
-let backgroundDarknessSnapshot = 50;
 let minimapZoomSnapshot = 1;
 let mapviewOpenSnapshot = false;
 let aspectSnapshot = typeof localStorage !== "undefined" && localStorage.getItem("babylon-lite-ascii-rpg.aspect") === "portrait"
@@ -104,8 +102,6 @@ export function setGameController(controller) {
   gameController?.setPlayerShadow?.(playerShadowSnapshot);
   gameController?.setGpuLightPass?.(gpuLightPassSnapshot);
   gameController?.setPlayerGpuShadowBleedRange?.(playerGpuShadowBleedRangeSnapshot);
-  gameController?.setGlyphBackground?.(glyphBackgroundSnapshot);
-  gameController?.setBackgroundDarkness?.(backgroundDarknessSnapshot);
   gameController?.setMinimapZoom?.(minimapZoomSnapshot);
   gameController?.setMapviewOpen?.(mapviewOpenSnapshot);
   gameController?.setAspectMode?.(aspectSnapshot);
@@ -290,18 +286,6 @@ export function sendGpuLightPassSnapshot(enabled) {
 export function sendPlayerGpuShadowBleedRangeSnapshot(range) {
   playerGpuShadowBleedRangeSnapshot = range;
   gameController?.setPlayerGpuShadowBleedRange?.(range);
-}
-
-export function sendGlyphBackgroundSnapshot(enabled) {
-  glyphBackgroundSnapshot = enabled === true;
-  gameController?.setGlyphBackground?.(glyphBackgroundSnapshot);
-}
-
-export function sendBackgroundDarknessSnapshot(darkness) {
-  const value = Number(darkness);
-  if (!Number.isInteger(value)) return;
-  backgroundDarknessSnapshot = Math.min(100, Math.max(0, value));
-  gameController?.setBackgroundDarkness?.(backgroundDarknessSnapshot);
 }
 
 export function getQuestSnapshot() { return questSnapshot; }

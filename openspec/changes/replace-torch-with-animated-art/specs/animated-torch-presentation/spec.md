@@ -49,27 +49,16 @@ restore its presentation without changing authoritative Torch state.
 - **THEN** the animated Torch artwork is not rendered or advanced until the cell
   becomes fog-eligible again
 
-### Requirement: Torch animation can be paused by the game layer
+### Requirement: Eligible Torches always use authored animation
 
-The game layer SHALL provide a game-layer-owned capability to pause and resume
-the current visible Torch animation set without changing Torch world state or
-requiring a React control, persisted user setting, or bridge snapshot. A paused
-Torch presentation SHALL retain its currently displayed frame until resumed.
+The game view SHALL suppress the static main-view Torch glyph for every
+fog-eligible, active-realm Torch in the visible region and render the authored
+three-frame `torch_strip.png` artwork instead. The visible-set animation clock
+SHALL loop continuously while at least one eligible Torch is present; it SHALL
+not expose a pause state or static-glyph fallback.
 
-#### Scenario: Paused visible Torches hold their frame
+#### Scenario: Authored asset is requested
 
-- **WHEN** the game layer pauses the visible Torch animator
-- **THEN** each currently rendered Torch retains its current frame and no visible
-  Torch frame advances until the animator resumes
-
-### Requirement: Torch artwork failure preserves a static presentation
-
-The game view SHALL retain a static Torch glyph fallback if the authored raster
-asset cannot be loaded, so a generated, fog-eligible Torch remains identifiable
-without changing its world state or lighting behavior.
-
-#### Scenario: Raster artwork is unavailable
-
-- **WHEN** the authored Torch artwork cannot be loaded
-- **THEN** the game view renders the existing static Torch glyph for each eligible Torch
-
+- **WHEN** an eligible Torch is rendered in the game view
+- **THEN** its static main-view glyph remains suppressed and the authored strip
+  is the only Torch presentation requested for that cell

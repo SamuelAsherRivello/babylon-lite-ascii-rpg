@@ -4,20 +4,26 @@ import { collectVisibleTorchRecords, createVisibleTorchAnimator } from "../../..
 
 test("visible Torch records are realm, fog, and viewport bounded", () => {
   const world = { columns: 4, rows: 3 };
-  const fog = { visibility: Uint8Array.from([100, 0, 0, 0, 0, 100, 0, 0, 0, 0, 0, 0]) };
+  const fog = { visibility: Uint8Array.from([100, 0, 0, 0, 0, 100, 100, 0, 0, 0, 0, 0]) };
   const records = collectVisibleTorchRecords({
-    world, fog, realm: "Overground", region: { x: 0, y: 0, columns: 2, rows: 2 },
+    world, fog, realm: "Overground", region: { x: 0, y: 0, columns: 3, rows: 2 },
     objects: [
       { id: "visible", type: "torch", active: true, realm: "Overground", cell: { x: 0, y: 0 } },
+      { id: "realm-scoped", type: "torch", active: true, cell: { x: 1, y: 1 } },
       { id: "fogged", type: "torch", active: true, realm: "Overground", cell: { x: 1, y: 0 } },
       { id: "offscreen", type: "torch", active: true, realm: "Overground", cell: { x: 3, y: 0 } },
       { id: "other-realm", type: "torch", active: true, realm: "Underground", cell: { x: 1, y: 1 } },
     ],
+    torches: [{ x: 1, y: 1 }, { x: 2, y: 1 }],
   });
-  assert.deepEqual(records, [{ id: "visible", cell: { x: 0, y: 0 } }]);
+  assert.deepEqual(records, [
+    { id: "visible", cell: { x: 0, y: 0 } },
+    { id: "realm-scoped", cell: { x: 1, y: 1 } },
+    { id: "Overground-torch-2,1", cell: { x: 2, y: 1 } },
+  ]);
 });
 
-test("one visible-set animator loops, pauses, resumes, and stops empty work", () => {
+test("one visible-set animator loops continuously and stops empty work", () => {
   let time = 0;
   let callback = null;
   const frames = [];
@@ -33,12 +39,7 @@ test("one visible-set animator loops, pauses, resumes, and stops empty work", ()
   time = 320;
   callback(time);
   assert.deepEqual(frames.at(-1), [2]);
-  animator.pause(time);
-  assert.equal(animator.scheduled, false);
-  time = 960;
-  assert.deepEqual(animator.snapshot().map((entry) => entry.frame), [2]);
-  animator.resume(time);
-  time = 1120;
+  time = 480;
   callback(time);
   assert.deepEqual(frames.at(-1), [0]);
   animator.reconcile([], time);
