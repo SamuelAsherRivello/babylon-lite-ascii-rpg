@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { getMouseAutoNavigationNextCell, isMouseAutoNavigationCellAvailable, resolveMouseAutoNavigationTarget } from "../../../src/client/game-layer-babylon-lite/mouse-auto-navigation.js";
+import { getMouseAutoNavigationNextCell, isMouseAutoNavigationCellAvailable, resolveMouseAutoNavigationPlan, resolveMouseAutoNavigationTarget } from "../../../src/client/game-layer-babylon-lite/mouse-auto-navigation.js";
 
 function world(columns = 8, rows = 8) {
   return { columns, rows, terrain: Array.from({ length: rows }, () => Array.from({ length: columns }, () => ({ walkable: true }))) };
@@ -47,4 +47,36 @@ test("mouse navigation re-routes around changed blockers without stepping into t
     isBlocked: (cell) => cell.x === 1 && cell.y === 1,
   });
   assert.deepEqual(next, { x: 0, y: 0 });
+});
+
+test("mouse navigation resolves an actionable target through a reachable cardinal approach cell", () => {
+  const map = world(5, 3);
+  map.terrain[1][4].walkable = false;
+  const plan = resolveMouseAutoNavigationPlan({
+    world: map,
+    playerCell: { x: 0, y: 1 },
+    pointerCell: { x: 4, y: 1 },
+    isTravelCell: (cell) => Boolean(map.terrain[cell.y]?.[cell.x]?.walkable),
+    isActionableCell: (cell) => cell.x === 4 && cell.y === 1,
+    isBlocked: (cell) => cell.x === 4 && cell.y === 1,
+  });
+  assert.equal(plan.kind, "action");
+  assert.deepEqual(plan.approachCell, { x: 3, y: 1 });
+  assert.deepEqual(plan.finalDirection, { x: 1, y: 0 });
+  assert.equal(plan.distance, 3);
+});
+
+test("mouse navigation refuses an actionable target without a cardinal approach route", () => {
+  const map = world(5, 5);
+  const target = { x: 2, y: 2 };
+  map.terrain[target.y][target.x].walkable = false;
+  const blocked = (cell) => cell.x >= 1 && cell.x <= 3;
+  assert.equal(resolveMouseAutoNavigationPlan({
+    world: map,
+    playerCell: { x: 0, y: 0 },
+    pointerCell: target,
+    isTravelCell: (cell) => Boolean(map.terrain[cell.y]?.[cell.x]?.walkable),
+    isActionableCell: (cell) => cell.x === target.x && cell.y === target.y,
+    isBlocked: blocked,
+  }), null);
 });

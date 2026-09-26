@@ -46,6 +46,10 @@ test("game integration reuses, hides, resizes, animates, and disposes overlay sp
   const source = await readFile(new URL("../../../../src/client/game-layer-babylon-lite/index.js", import.meta.url), "utf8");
   for (const fragment of [
     "healthBarSprites.get(state.id)",
+    "const entity = occupancy?.get(state.id)",
+    "entity?.realm === activeRealm",
+    "x: entity.cell.x - region.x",
+    "y: entity.cell.y - region.y",
     "updateSprite2DIndex(healthBarLayer, indexes[index]",
     "updateSprite2DIndex(healthBarLayer, index, { visible: false })",
     "HEALTH_BAR_DELTA_COLOR",

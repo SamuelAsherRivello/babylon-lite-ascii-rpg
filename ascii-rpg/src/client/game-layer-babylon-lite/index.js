@@ -98,7 +98,7 @@ import {
 } from "./systems/fog-of-war-system.js";
 import { findNearestNavigationTarget, getMinimapEdgeIndicators, getMinimapIndicatorSafeArea, getMinimapMarkers, getMinimapWorldCellGraphic, MINIMAP_INDICATOR_MIN_SIZE, MINIMAP_INDICATOR_SAFE_INSET } from "./systems/minimap-renderer.js";
 import { AStarUtility } from "./utilities/a-star-utility.js";
-import { getMouseAutoNavigationNextCell, isMouseAutoNavigationCellAvailable, MAX_MOUSE_AUTO_NAVIGATION_STEPS, resolveMouseAutoNavigationTarget } from "./mouse-auto-navigation.js";
+import { getMouseAutoNavigationNextCell, isMouseAutoNavigationCellAvailable, MAX_MOUSE_AUTO_NAVIGATION_STEPS, resolveMouseAutoNavigationPlan } from "./mouse-auto-navigation.js";
 import { canHandleMinimapScale, getMinimapCellLayout, getMinimapCellSize, getNextMinimapScale, MINIMAP_SCALE_LEVELS } from "./systems/minimap-zoom.js";
 import { createTransitionSystem, TRANSITION_PHASES } from "./systems/transition-system.js";
 import questData from "./data/quest_data.json";
@@ -381,6 +381,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
   let touchStart = null;
   let mouseNavigationPointerCell = null;
   let mouseNavigationTargetCell = null;
+  let mouseNavigationPlan = null;
   let mouseNavigationPointerId = null;
   let mouseNavigationSprint = false;
   let transitionActive = false;
@@ -1686,10 +1687,36 @@ async function createGameSessionImplementation(container, initialPalette, initia
     });
   };
 
-  const resolveMouseNavigationTarget = (pointerCell) => resolveMouseAutoNavigationTarget({
+  const getMouseContactTarget = (cell) => {
+    const occupant = getOccupancyForWorld()?.getAt(cell) ?? getDiggableMountainTarget(world, activeRealm, cell);
+    const object = objectSpawnerSystem?.getActiveObjectAtCell(cell, { world });
+    if (!occupant && !object) return null;
+    return createContactTarget({ kind: object?.type ?? occupant?.type, cell, occupant, object });
+  };
+
+  const getMouseActionCapability = (cell) => {
+    const target = getMouseContactTarget(cell);
+    if (!target) return null;
+    const hasItem = (id) => characterState?.slots?.some((item) => item?.id === id) === true;
+    if (["enemy", "enemy-spawner"].includes(target.kind) && hasItem("sword")) return "sword";
+    if (target.kind === "mountain" && hasItem("pickaxe")) return "pickaxe";
+    if (target.kind === "door" && characterKeys > 0) return "keys";
+    if (["chest", "npc", "welcome-sign"].includes(target.kind)) return "body";
+    return null;
+  };
+
+  const resolveMouseNavigationPlan = (pointerCell) => resolveMouseAutoNavigationPlan({
     world,
     playerCell,
     pointerCell,
+    isTravelCell: (cell) => isMouseAutoNavigationCellAvailable({
+      world,
+      cell,
+      playerCell,
+      isStaticOccupied: (candidate) => staticOccupancyIndexes.get(activeRealm)?.has(candidate.y * world.columns + candidate.x) === true,
+      isDynamicallyOccupied: (candidate) => getOccupancyForWorld()?.isOccupied(candidate) === true,
+    }),
+    isActionableCell: (cell) => getMouseActionCapability(cell) !== null,
     isBlocked: isAutoNavigationCellBlocked,
     maxSteps: MAX_MOUSE_AUTO_NAVIGATION_STEPS,
   });
@@ -1697,7 +1724,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
   const getMouseNavigationNextCell = () => getMouseAutoNavigationNextCell({
     world,
     playerCell,
-    targetCell: mouseNavigationTargetCell,
+    targetCell: mouseNavigationPlan?.approachCell,
     isBlocked: isAutoNavigationCellBlocked,
     maxSteps: MAX_MOUSE_AUTO_NAVIGATION_STEPS,
   });
@@ -1718,7 +1745,8 @@ async function createGameSessionImplementation(container, initialPalette, initia
     }
     const bounds = getRenderedCellSpriteBounds(localCell, viewport, world);
     mouseNavigationReticle.hidden = false;
-    mouseNavigationReticle.classList.toggle("mouse_navigation_reticle--invalid", mouseNavigationTargetCell === null);
+    mouseNavigationReticle.classList.toggle("mouse_navigation_reticle--invalid", mouseNavigationPlan === null);
+    mouseNavigationReticle.classList.toggle("mouse_navigation_reticle--action", mouseNavigationPlan?.kind === "action");
     mouseNavigationReticle.style.left = `${bounds.center.x - bounds.size.width / 2}px`;
     mouseNavigationReticle.style.top = `${bounds.center.y - bounds.size.height / 2}px`;
     mouseNavigationReticle.style.width = `${bounds.size.width}px`;
@@ -1729,6 +1757,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
     if (clearPointer) {
       mouseNavigationPointerCell = null;
       mouseNavigationTargetCell = null;
+      mouseNavigationPlan = null;
       updateMouseNavigationReticle();
     }
     mouseNavigationPointerId = null;
@@ -1931,7 +1960,10 @@ async function createGameSessionImplementation(container, initialPalette, initia
     const states = healthBarSystem.getVisible(now, {
       realm: activeRealm,
       isCellVisible: () => true,
-    }).map((state) => ({ state, entity: occupancy?.get(state.id) ?? state }))
+    }).map((state) => {
+      const entity = occupancy?.get(state.id);
+      return entity?.realm === activeRealm ? { state, entity } : null;
+    }).filter(Boolean)
       .filter(({ entity }) => getVisibleSlot(region, entity.cell) !== -1
         && isDiscovered(fogOfWar, world, entity.cell));
 
@@ -1940,8 +1972,8 @@ async function createGameSessionImplementation(container, initialPalette, initia
     for (const { state, entity } of states) {
       activeIds.add(state.id);
       const center = getRenderedCellCenter({
-        x: state.cell.x - region.x,
-        y: state.cell.y - region.y,
+        x: entity.cell.x - region.x,
+        y: entity.cell.y - region.y,
       }, viewport, world);
       const geometry = getHealthBarSpriteGeometry(center, viewport, state.fillRatio, {
         deltaStartRatio: state.deltaStartRatio,
@@ -2436,13 +2468,25 @@ async function createGameSessionImplementation(container, initialPalette, initia
     }
     if (!world || !playerCell) return exhaustedAtAttempt;
     if (mouseNavigationPointerId !== null && mouseNavigationPointerCell) {
-      mouseNavigationTargetCell = resolveMouseNavigationTarget(mouseNavigationPointerCell);
+      mouseNavigationPlan = resolveMouseNavigationPlan(mouseNavigationPointerCell);
+      mouseNavigationTargetCell = mouseNavigationPlan?.targetCell ?? null;
       updateMouseNavigationReticle();
     }
     const manualDirection = getHeldDirection();
-    const nextAutoCell = manualDirection.x === 0 && manualDirection.y === 0 && mouseNavigationPointerId !== null
-      ? getMouseNavigationNextCell()
-      : null;
+    let nextAutoCell = null;
+    if (manualDirection.x === 0 && manualDirection.y === 0 && mouseNavigationPointerId !== null) {
+      if (!mouseNavigationPlan) {
+        clearMouseNavigationInput();
+        return exhaustedAtAttempt;
+      }
+      if (mouseNavigationPlan.kind === "action" && mouseNavigationPlan.approachCell.x === playerCell.x
+        && mouseNavigationPlan.approachCell.y === playerCell.y) {
+        nextAutoCell = mouseNavigationPlan.targetCell;
+      } else if (mouseNavigationPlan.approachCell.x !== playerCell.x
+        || mouseNavigationPlan.approachCell.y !== playerCell.y) {
+        nextAutoCell = getMouseNavigationNextCell();
+      }
+    }
     if (mouseNavigationPointerId !== null && !nextAutoCell && manualDirection.x === 0 && manualDirection.y === 0) {
       clearMouseNavigationInput();
       return exhaustedAtAttempt;
@@ -2453,11 +2497,13 @@ async function createGameSessionImplementation(container, initialPalette, initia
     const automatic = nextAutoCell !== null;
     if (direction.x === 0 && direction.y === 0) return exhaustedAtAttempt;
     const attemptedCell = { x: playerCell.x + direction.x, y: playerCell.y + direction.y };
-    if (automatic && isAutoNavigationCellBlocked(attemptedCell)) return exhaustedAtAttempt;
-    const occupant = automatic ? null : getOccupancyForWorld()?.getAt(attemptedCell)
+    const isAutomaticAction = automatic && mouseNavigationPlan?.kind === "action"
+      && attemptedCell.x === mouseNavigationPlan.targetCell.x && attemptedCell.y === mouseNavigationPlan.targetCell.y;
+    if (automatic && !isAutomaticAction && isAutoNavigationCellBlocked(attemptedCell)) return exhaustedAtAttempt;
+    const occupant = getOccupancyForWorld()?.getAt(attemptedCell)
       ?? getDiggableMountainTarget(world, activeRealm, attemptedCell);
     const cardinal = isCardinalDirection(direction);
-    const object = automatic ? null : cardinal ? objectSpawnerSystem?.getActiveObjectAtCell(attemptedCell, { world }) : null;
+    const object = cardinal ? objectSpawnerSystem?.getActiveObjectAtCell(attemptedCell, { world }) : null;
     const target = cardinal && (occupant || object)
       ? createContactTarget({ kind: object?.type ?? occupant?.type, cell: attemptedCell, occupant, object })
       : null;
@@ -2642,7 +2688,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
     repeatTimer = window.setTimeout(() => {
       repeatTimer = null;
       if (playerLifecycle.isDead() || !hasHeldMovement()) return;
-      const exhaustedAtAttempt = movePlayer();
+      const exhaustedAtAttempt = resolvePlayerActionIntent({ type: "direction" });
       scheduleRepeat(getRepeatInterval(isSprintMovement(), exhaustedAtAttempt));
     }, delay);
   };
@@ -2671,6 +2717,15 @@ async function createGameSessionImplementation(container, initialPalette, initia
     return Boolean(action.handled && action.outcome);
   };
 
+  // Every gameplay input enters through this boundary. Directional intents
+  // share the movement/contact resolver; bombs retain their heading target but
+  // use the same centralized action dispatch point.
+  const resolvePlayerActionIntent = (intent) => {
+    if (intent?.type === "bomb") return placeBomb();
+    if (intent?.type === "direction") return movePlayer();
+    return false;
+  };
+
   const handleKeyDown = (event) => {
     if (playerLifecycle.isDead()) return;
     const isShiftKey = event.key === "Shift" || event.code === "ShiftLeft" || event.code === "ShiftRight";
@@ -2683,7 +2738,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
       event.preventDefault();
       if (!shouldPlaceBombForKeydown(event, { locked: gameplayInputLocked, held: bombKeyHeld })) return;
       bombKeyHeld = true;
-      placeBomb();
+      resolvePlayerActionIntent({ type: "bomb" });
       return;
     }
     const movementKey = event.key.toLowerCase();
@@ -2697,7 +2752,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
     const wasHeld = heldKeys.has(movementKey);
     heldKeys.add(movementKey);
     if (wasHeld || event.repeat) return;
-    const exhaustedAtAttempt = movePlayer();
+    const exhaustedAtAttempt = resolvePlayerActionIntent({ type: "direction" });
     scheduleRepeat(exhaustedAtAttempt
       ? getRepeatInterval(isSprintMovement(), true)
       : INITIAL_REPEAT_DELAY_MS);
@@ -2742,7 +2797,8 @@ async function createGameSessionImplementation(container, initialPalette, initia
   const updateMouseNavigationPointer = (event) => {
     const pointerCell = getMouseWorldCell(event);
     mouseNavigationPointerCell = pointerCell;
-    mouseNavigationTargetCell = pointerCell ? resolveMouseNavigationTarget(pointerCell) : null;
+    mouseNavigationPlan = pointerCell ? resolveMouseNavigationPlan(pointerCell) : null;
+    mouseNavigationTargetCell = mouseNavigationPlan?.targetCell ?? null;
     updateMouseNavigationReticle();
     return mouseNavigationTargetCell;
   };
@@ -2756,7 +2812,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
       canvas.setPointerCapture(event.pointerId);
       if (!updateMouseNavigationPointer(event)) clearMouseNavigationInput();
       else {
-        const exhaustedAtAttempt = movePlayer();
+        const exhaustedAtAttempt = resolvePlayerActionIntent({ type: "direction" });
         scheduleRepeat(exhaustedAtAttempt ? getRepeatInterval(isSprintMovement(), true) : INITIAL_REPEAT_DELAY_MS);
       }
       return;
@@ -2783,7 +2839,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
     const wasMoving = touchDirection !== null;
     touchDirection = nextDirection;
     if (wasMoving) return;
-    const exhaustedAtAttempt = movePlayer();
+    const exhaustedAtAttempt = resolvePlayerActionIntent({ type: "direction" });
     scheduleRepeat(exhaustedAtAttempt
       ? getRepeatInterval(isSprintMovement(), true)
       : INITIAL_REPEAT_DELAY_MS);

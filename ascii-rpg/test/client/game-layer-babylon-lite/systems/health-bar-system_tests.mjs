@@ -79,3 +79,19 @@ test("filters active bars by realm and onscreen cell without losing offscreen ti
     isCellVisible: () => true,
   })[0].id, "enemy-1");
 });
+
+test("retains damage presentation state after the enemy moves", () => {
+  const bars = createHealthBarSystem();
+  bars.recordDamage({ ...enemy, previousHealth: 100 }, 1_000);
+
+  const beforeMove = bars.getState("enemy-1", 1_100);
+  const movedEnemy = { ...enemy, cell: { x: 9, y: 8 } };
+  const afterMove = bars.getState("enemy-1", 1_100);
+
+  assert.deepEqual(beforeMove.cell, { x: 4, y: 5 });
+  assert.deepEqual(afterMove.cell, { x: 4, y: 5 });
+  assert.equal(afterMove.fillRatio, beforeMove.fillRatio);
+  assert.equal(afterMove.deltaWidthRatio, beforeMove.deltaWidthRatio);
+  assert.equal(afterMove.alpha, beforeMove.alpha);
+  assert.deepEqual(movedEnemy.cell, { x: 9, y: 8 });
+});
