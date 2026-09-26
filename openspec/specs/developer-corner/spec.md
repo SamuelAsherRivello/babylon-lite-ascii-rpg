@@ -50,3 +50,10 @@ the Dev panel.
 #### Scenario: Dev typography does not affect other HUD text
 - **WHEN** Dev is open
 - **THEN** its titles and body text render at 8pt while Log and other HUD regions retain their existing font sizes
+
+### Requirement: PFX Windows launcher
+The Windows developer tools SHALL include a `PFX` launcher alongside the existing Lighting launcher.
+
+#### Scenario: Windows tools expose PFX
+- **WHEN** the developer opens the Dev panel and views Windows tools
+- **THEN** a `PFX` control is available without removing the existing Windows controls
