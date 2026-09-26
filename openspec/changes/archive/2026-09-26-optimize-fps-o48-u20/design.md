@@ -4,7 +4,9 @@ Layer ablation identified the enemy layer as the dominant source of deferred sim
 
 ## Goals / Non-Goals
 
-Goals: sustain 50 sampled FPS during real medium-world sprinting in both realms; keep all layers and Med densities; prevent accumulating tick lag; provide reproducible evidence.
+Goals: sustain 48 sampled FPS in Overground and 20 sampled FPS in Underground
+during real medium-world sprinting; keep all layers and Med densities; prevent
+accumulating tick lag; provide reproducible evidence.
 
 Non-goals: changing movement cadence, weakening enemies, reducing density, adding autonomous ticks, replacing the renderer, new dependencies, deployment, or unrelated cleanup.
 
