@@ -1,6 +1,31 @@
 {
   "releases": [
     {
+      "version": "0.0.22",
+      "items": [
+        {
+          "label": "Asynchronous logical tick resolution",
+          "featurePath": "openspec/specs/asynchronous-logical-ticks/spec.md"
+        },
+        {
+          "label": "Bomb tnt blocks",
+          "featurePath": "openspec/specs/bombs/spec.md"
+        },
+        {
+          "label": "Item health",
+          "featurePath": "openspec/specs/character-info/spec.md"
+        },
+        {
+          "label": "Underground fireplace checkpoints",
+          "featurePath": "openspec/specs/fireplace-checkpoints/spec.md"
+        },
+        {
+          "label": "Keep game layer at browser",
+          "featurePath": "openspec/specs/browser-zoom-layer-separation/spec.md"
+        }
+      ]
+    },
+    {
       "version": "0.0.21",
       "items": [
         {
