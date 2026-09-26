@@ -11,6 +11,30 @@ const MAX_PATROL_DISTANCE = 20;
 const MAX_PATROL_DESTINATION_ATTEMPTS = 32;
 const PATROL_SEARCH_NODES_PER_SLICE = 64;
 
+function sameCell(left, right) {
+  return left?.x === right?.x && left?.y === right?.y;
+}
+
+function isDoorwayCell(world, cell) {
+  return (world?.objects ?? []).some((object) => object?.type === "door" && sameCell(object.cell, cell));
+}
+
+function interiorBuildingAt(world, cell) {
+  return (world?.buildings ?? []).find((building) => building?.interior?.some((interior) => sameCell(interior, cell))) ?? null;
+}
+
+function transitionTargetPredicate(world, npc, player) {
+  const playerBuilding = interiorBuildingAt(world, player.cell);
+  const npcBuilding = interiorBuildingAt(world, npc.cell);
+  if (playerBuilding && npcBuilding !== playerBuilding) {
+    return (cell) => playerBuilding.interior.some((interior) => sameCell(interior, cell));
+  }
+  if (npcBuilding && npcBuilding !== playerBuilding) {
+    return (cell) => !npcBuilding.interior.some((interior) => sameCell(interior, cell)) && !sameCell(npcBuilding.door, cell);
+  }
+  return null;
+}
+
 export function createNpcSystem({ timeSystem, occupancy, occupancyFor = () => occupancy, worldFor, isWalkable, isStaticOccupied = () => false, randomFor = () => Math.random, getPlayerState = null, resolvePlayerContact = null, onDamage = () => {}, onChange = () => {}, deferredScheduler = null, isActive = () => true, isRealmActive = () => true } = {}) {
   const getOccupancies = () => {
     const value = occupancyFor();
@@ -18,7 +42,7 @@ export function createNpcSystem({ timeSystem, occupancy, occupancyFor = () => oc
   };
   const getFollowPeers = (npc) => getOccupancies().flatMap((candidate) => candidate?.getAll?.("npc") ?? [])
     .filter((peer) => peer.id !== npc.id && peer.recruited && !peer.dead && peer.realm === npc.realm);
-  const getFollowTargets = (npc, player, world) => {
+  const getFollowTargets = (npc, player, world, targetPredicate = null) => {
     const behind = player.facing === "left" ? { x: 1, y: 0 } : { x: -1, y: 0 };
     const targets = [];
     for (let distance = NPC_FOLLOW_DISTANCE; distance <= NPC_FOLLOW_MAX_DISTANCE; distance += 1) {
@@ -28,7 +52,8 @@ export function createNpcSystem({ timeSystem, occupancy, occupancyFor = () => oc
     }
     const peers = getFollowPeers(npc);
     const legal = targets.filter((target) => world?.terrain?.[target.y]?.[target.x]?.walkable
-      && !isStaticOccupied(target, npc.realm));
+      && !isStaticOccupied(target, npc.realm)
+      && (!targetPredicate || targetPredicate(target)));
     if (!peers.length) return legal;
     const separated = legal.filter((target) => peers.every((peer) => Math.abs(target.x - peer.cell.x) + Math.abs(target.y - peer.cell.y) >= 2));
     return separated.length ? separated : legal;
@@ -51,6 +76,11 @@ export function createNpcSystem({ timeSystem, occupancy, occupancyFor = () => oc
   // Keep the synchronous path for systems that do not opt into game-owned
   // deferred work (including deterministic fixture callers).
   const createPatrol = (npc, world, random) => {
+    if (npc.patrolAnchor) {
+      const path = AStarUtility.findPath(world, npc.home, npc.patrolAnchor, { isBlocked: (cell) => isStaticOccupied(cell, npc.realm) });
+      const route = path?.slice(1, -1).map((cell) => Object.freeze({ ...cell })) ?? [];
+      return route.length ? Object.freeze({ destination: route.at(-1), route: Object.freeze(route) }) : null;
+    }
     const destinations = patrolDestinations(npc, world);
     for (let attempt = 0; attempt < MAX_PATROL_DESTINATION_ATTEMPTS && destinations.length; attempt += 1) {
       const index = Math.min(destinations.length - 1, Math.floor(random() * destinations.length));
@@ -63,6 +93,17 @@ export function createNpcSystem({ timeSystem, occupancy, occupancyFor = () => oc
     return null;
   };
   const createPatrolPreparation = (npc, world, random) => {
+    if (npc.patrolAnchor) {
+      const search = AStarUtility.createResumablePathSearch(world, npc.home, npc.patrolAnchor, { isBlocked: (cell) => isStaticOccupied(cell, npc.realm) });
+      return Object.freeze({
+        step() {
+          const progress = search.step(PATROL_SEARCH_NODES_PER_SLICE);
+          if (!progress.done) return Object.freeze({ done: false, patrol: null });
+          const route = progress.path?.slice(1, -1).map((cell) => Object.freeze({ ...cell })) ?? [];
+          return Object.freeze({ done: true, patrol: route.length ? Object.freeze({ destination: route.at(-1), route: Object.freeze(route) }) : null });
+        },
+      });
+    }
     const destinations = patrolDestinations(npc, world);
     let attempts = 0;
     let destination = null;
@@ -94,14 +135,24 @@ export function createNpcSystem({ timeSystem, occupancy, occupancyFor = () => oc
     if (!player?.alive) return false;
     const world = worldFor(npc.realm);
     const distance = Math.abs(npc.cell.x - player.cell.x) + Math.abs(npc.cell.y - player.cell.y);
-    if (distance <= NPC_FOLLOW_MAX_DISTANCE) return false;
+    const mustClearDoorway = isDoorwayCell(world, player.cell) && distance === 1;
+    const transitionTarget = transitionTargetPredicate(world, npc, player);
+    const mustCompleteTransition = distance < NPC_FOLLOW_DISTANCE
+      || (transitionTarget && (!transitionTarget(npc.cell) || distance > NPC_FOLLOW_MAX_DISTANCE));
+    if (distance >= NPC_FOLLOW_DISTANCE && distance <= NPC_FOLLOW_MAX_DISTANCE && !mustClearDoorway && !mustCompleteTransition) return false;
     const peers = getFollowPeers(npc);
-    const targets = getFollowTargets(npc, player, world);
+    const targets = getFollowTargets(npc, player, world, transitionTarget);
     let next = null;
     for (const target of targets) {
-      const path = AStarUtility.findPath(world, npc.cell, target, { isBlocked: (cell) => isStaticOccupied(cell, npc.realm) });
+      const path = AStarUtility.findPath(world, npc.cell, target, {
+        isBlocked: (cell) => isStaticOccupied(cell, npc.realm) || (!sameCell(cell, npc.cell) && currentOccupancy.isOccupied(cell)),
+      });
       const candidate = path?.[1];
-      if (!candidate || peers.some((peer) => Math.abs(candidate.x - peer.cell.x) + Math.abs(candidate.y - peer.cell.y) < 2)) continue;
+      const candidateDistance = candidate && Math.abs(candidate.x - player.cell.x) + Math.abs(candidate.y - player.cell.y);
+      if (!candidate
+        || currentOccupancy.isOccupied(candidate)
+        || (mustClearDoorway && candidateDistance === 1)
+        || peers.some((peer) => Math.abs(candidate.x - peer.cell.x) + Math.abs(candidate.y - peer.cell.y) < 2)) continue;
       next = candidate;
       break;
     }
@@ -140,12 +191,12 @@ export function createNpcSystem({ timeSystem, occupancy, occupancyFor = () => oc
       onChange();
     }
   };
-  const addNpc = ({ id, realm, cell, bornAtTime = timeSystem.getTime(), home = cell }) => {
+  const addNpc = ({ id, realm, cell, bornAtTime = timeSystem.getTime(), home = cell, spawnerId = null, patrolAnchor = null }) => {
     const world = worldFor(realm);
-    const draft = { id, realm, home: Object.freeze({ ...home }) };
+    const draft = { id, realm, home: Object.freeze({ ...home }), patrolAnchor: patrolAnchor && Object.freeze({ ...patrolAnchor }) };
     const random = randomFor(draft, bornAtTime);
     const patrol = deferredScheduler || !world ? null : createPatrol(draft, world, random);
-    const npc = occupancy.claim({ id, type: "npc", glyph: NPC_GLYPH, realm, cell, home: Object.freeze({ ...home }), bornAtTime, destination: patrol?.destination ?? null, route: patrol?.route ?? Object.freeze([]), routeIndex: 0, returning: false, recruited: false, dead: false, health: NPC_HEALTH, maxHealth: NPC_HEALTH, ...(deferredScheduler ? { patrolState: "pending", pendingActionAt: null } : {}) });
+    const npc = occupancy.claim({ id, type: "npc", glyph: NPC_GLYPH, realm, cell, home: Object.freeze({ ...home }), spawnerId, patrolAnchor: draft.patrolAnchor, bornAtTime, destination: patrol?.destination ?? null, route: patrol?.route ?? Object.freeze([]), routeIndex: 0, returning: false, recruited: false, dead: false, health: NPC_HEALTH, maxHealth: NPC_HEALTH, ...(deferredScheduler ? { patrolState: "pending", pendingActionAt: null } : {}) });
     if (!npc) return null;
     if (!timeSystem.registerTickable(`npc:${id}`, (time, deltaTimeInMilliseconds) => simulate(id, { time, deltaTimeInMilliseconds }))) { occupancy.remove(id); return null; }
     if (deferredScheduler && world) {
@@ -195,23 +246,6 @@ export function createNpcSystem({ timeSystem, occupancy, occupancyFor = () => oc
     onChange();
     return true;
   };
-  const damageNpc = (id, amount, { at = globalThis.performance?.now?.() ?? Date.now() } = {}) => {
-    const currentOccupancy = getOccupancies().find((candidate) => candidate?.get(id)) ?? occupancy;
-    const npc = currentOccupancy.get(id);
-    if (!npc || npc.type !== "npc" || npc.dead || amount <= 0) return npc;
-    const applied = Math.min(npc.health, amount);
-    const health = npc.health - applied;
-    onDamage({ ...npc, health, previousHealth: npc.health }, at);
-    if (health <= 0) {
-      timeSystem.unregisterTickable(`npc:${id}`);
-      const dead = currentOccupancy.update(id, { health: 0, dead: true, glyph: NPC_DEAD_GLYPH });
-      onChange();
-      return dead;
-    }
-    const updated = currentOccupancy.update(id, { health });
-    onChange();
-    return updated;
-  };
   const removeNpc = (id) => {
     const currentOccupancy = getOccupancies().find((candidate) => candidate?.get(id)) ?? occupancy;
     const removed = currentOccupancy.get(id);
@@ -257,15 +291,19 @@ export function createNpcSystem({ timeSystem, occupancy, occupancyFor = () => oc
     return moved;
   };
   const damage = (id, amount, { at = globalThis.performance?.now?.() ?? Date.now() } = {}) => {
-    const npc = occupancy.get(id);
-    if (!npc || npc.type !== "npc" || amount <= 0) return npc;
+    const currentOccupancy = getOccupancies().find((candidate) => candidate?.get(id)) ?? occupancy;
+    const npc = currentOccupancy.get(id);
+    if (!npc || npc.type !== "npc" || npc.dead || amount <= 0) return npc;
     const appliedDamage = Math.min(npc.health, Math.max(0, Number(amount) || 0));
     const health = npc.health - appliedDamage;
     onDamage({ ...npc, health, previousHealth: npc.health }, at);
     if (health === 0) { removeNpc(id); onChange(); return null; }
-    const updated = occupancy.update(id, { health });
+    const updated = currentOccupancy.update(id, { health });
     onChange();
     return updated;
   };
+  // Preserve the enemy callback's established name while sharing the Bomb
+  // damage path, including removal from occupancy at zero health.
+  const damageNpc = (id, amount, options) => damage(id, amount, options);
   return Object.freeze({ addNpc, recruitNpc, transferParty, updateFollowers, damage, damageNpc, removeNpc, dispose() { for (const id of deferredJobs) deferredScheduler?.cancel(id); deferredJobs.clear(); } });
 }

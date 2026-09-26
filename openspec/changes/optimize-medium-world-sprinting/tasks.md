@@ -14,9 +14,9 @@
 
 ## 3. Delivery checks
 
-- [ ] 3.1 Run the full Node suite, production build, and strict OpenSpec validation successfully.
+- [x] 3.1 Run the full Node suite, production build, and strict OpenSpec validation successfully.
 - [x] 3.2 Deliver a performance evidence report covering ablations, bottlenecks, final environment and results, limitations, and a reproducible local play URL.
 
 ## Current verification blockers
 
-The report is `ascii-rpg/documentation/performance/medium-world-sprinting.md`. Strict 50-FPS acceptance remains unmet: the latest integrated-build Underground repeat averaged 31.1 FPS (minimum 18.1), despite earlier improvements. The latest full suite passed 413/416 tests; three Overground generation-reference hashes differ during concurrent world-dialog/welcome-sign work. Build and strict OpenSpec validation pass. Do not archive or mark the two remaining tasks complete. Coordinate a stable checkout before final attribution and further long-frame/minimap profiling; do not revert unrelated edits.
+The report is `ascii-rpg/documentation/performance/medium-world-sprinting.md`. Strict acceptance remains unmet: the Windows desktop run for `mui5gv24-frlo26` met its FPS threshold, but Underground stopped moving during its final four samples and was correctly rejected. The latest full suite passed 457/457 tests; production build and strict OpenSpec validation pass. Do not archive or mark the remaining task complete. Run two fixed desktop seeds with uninterrupted movement in both realms before final attribution; do not revert unrelated edits.

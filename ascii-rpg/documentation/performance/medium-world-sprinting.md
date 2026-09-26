@@ -64,6 +64,14 @@ After near-field reuse and further concurrent gameplay changes, build `index-C5D
 
 Average minimap presentation increased to 8.40 ms Overground and 5.53 ms Underground; main-world averages were 0.97 and 0.67 ms. The Underground scheduler's longest slice reached 10.5 ms. These results remain failures. They cannot establish whether host load, concurrent gameplay changes or the optimization caused the regression; a stable-checkout comparison and further minimap/long-frame profiling are required. Do not substitute the earlier better averages for this latest evidence.
 
+### Containerized Chrome comparison (rejected)
+
+On 2026-09-26, the current integrated build was run in Chrome 143.0.7499.169 inside a Selenium Docker container with its natural 937x895 CSS-pixel viewport and DPR 1. The container has no hardware WebGPU device, so Chrome was started with SwiftShader and `--enable-unsafe-webgpu`. The Overground run for `codex-sprint-layers` completed with sustained movement but did not meet acceptance: 24.93 average FPS, 14.29 minimum one-second FPS, 510 moves / 508 unique cells, 66.7 ms p95 and 83.4 ms worst frame, and 294 pending callbacks with 86.5 ms oldest age at completion. The WebGPU device was then lost during the realm transition, preventing Underground from starting. This is rejected evidence: it is a software-rendered Linux container rather than the documented desktop benchmark and does not provide both realms or the second seed.
+
+### Windows desktop run: `mui5gv24-frlo26` (rejected)
+
+Chrome 154 on Windows, natural 1647x743 CSS-pixel viewport, DPR 1.167, Zoom 8, completed both 256x256 Med worlds with all layers enabled. Overground passed the strict sampling criterion: 59.90 average FPS, 59.01 minimum one-second FPS, 670 moves / 663 unique cells, 16.9 ms p95 and 33.3 ms worst frame, with no pending callbacks at completion. Underground maintained 58.07 average FPS and a 53.99 minimum one-second FPS, but its final four complete one-second samples recorded zero moves. It therefore reported `sustainedMovement: false` and is rejected under the movement-validity requirement. Underground recorded 494 moves / 488 unique cells before the stall, a 16.8 ms p95 and 116.6 ms worst frame, and no pending callbacks at completion. Repeat the desktop diagnostic with uninterrupted movement, then run a second fixed seed.
+
 ## Reproduction
 
 From the repository root, run `npm.cmd run build`, then `npm.cmd run preview -- --host 127.0.0.1 --port 4178 --strictPort`. Use the normal browser viewport, Camera Center and Zoom 5. Diagnostic settings are session-isolated and do not change saved procedural defaults.
@@ -79,5 +87,5 @@ Read console messages prefixed `ASCII RPG sprint diagnostic`. Check `sustainedMo
 - Focused scheduler, pathfinding, lighting/source identity, route caching and diagnostic tests pass.
 - Production build passes (existing >500 kB bundle warning).
 - Strict validation of this OpenSpec change passes.
-- Latest full-suite run: **413/416 passed**, with three failures in `generation-reference_tests.mjs` (`optimization-open`, `optimization-water`, `optimization-obstructed`). These are Overground reference-hash mismatches during concurrent `add-world-dialog-system`/welcome-sign changes; Underground hashes match. Earlier catalog and layer-registry failures disappeared as that work progressed. These unrelated files/expectations were not reverted or silently updated by this optimization to make the suite pass.
-- Remaining acceptance: repeat stable, uninterrupted all-layer medium-world sprinting after checkout integration settles; all complete one-second samples must reach 50 FPS in both realms for both seeds. Keep the OpenSpec verification tasks open until that evidence and the full-suite pass exist.
+- Latest full-suite run: **457/457 passed** under Node 24 on 2026-09-26. The production build and strict OpenSpec validation also pass.
+- Remaining acceptance: run stable, uninterrupted all-layer medium-world sprinting on the documented desktop benchmark in both realms for two fixed seeds; all complete one-second samples must reach 50 FPS. The `mui5gv24-frlo26` desktop run meets the FPS threshold but is rejected because Underground stalls during its final four samples. Keep task 2.2 open until valid evidence exists.

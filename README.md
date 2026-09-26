@@ -35,20 +35,32 @@ preference, version display, and GitHub Pages deployment path.
 ## Getting Started
 
 <!-- AI: Update this getting-started summary when the template is used. -->
-Install Node.js 24, or use the repository Dockerfile, then run these commands
-from the repository root. The Docker image explicitly provides
+Install Node.js 24 (the shared major is pinned in [`.nvmrc`](.nvmrc)), or use
+the repository Dockerfile, then run these commands from the repository root.
+The Docker image explicitly provides
 `/usr/bin/bash`, which is required by Docker Desktop's Codex CLI agent
 environment.
 
+Commit `package.json` and `package-lock.json`, but never commit or copy
+`node_modules` between Windows and Linux. Each checkout or container must
+install its own dependencies with the committed lockfile.
+
 ### 🛠 Build Project
 
-1. Run `npm install`.
+1. Run `npm ci` (`npm.cmd ci` on Windows).
 2. Run `npm run build`.
 
 ### 🛠 Run Project
 
-1. Run `npm run dev` and open the localhost URL Vite prints.
+1. Run `npm run dev` (`npm.cmd run dev` on Windows) and open the localhost URL
+   Vite prints.
 2. Run `npm test` to execute the focused source checks.
+
+For Docker Sandbox work, use a mountless Linux checkout/clone so its Linux
+`node_modules` stays separate from a Windows checkout. Transfer source changes
+between checkouts through Git. When a bind-mounted Windows checkout is needed
+for live editing, mount a named Docker volume at `/app/node_modules` so the
+container retains its own Linux dependency tree.
 
 ### 🛠 Release Version
 

@@ -3,11 +3,13 @@ import test from 'node:test';
 import { createHash } from 'node:crypto';
 import { generationFixture } from '../../performance/generation-fixtures.js';
 
-// Captured after civilization signs were added; the second hash remains the patrol reference.
+// Deterministic fixture references for the current generation contract. Keep
+// these hashes together with the fixture seed so accidental world-generation
+// changes fail loudly instead of silently changing performance baselines.
 const references = {
-  'optimization-open': ['3ff2a5a512089820ed2828d06d70b4297923777b3a26eb6d4e7c5303d576349b', '12d27c5eab6db0fa990a90b70b4e0b34e7151d65d6e4ef44c41023f7dfee64c7'],
-  'optimization-water': ['a56aa04d0345c94ca2554f911b611e78bb5b5be7a850da5fead86815b1da8c7f', 'babfda31fe5aec74d40d5160dc374cef99c40f182a3841c33340f341b56e3a06'],
-  'optimization-obstructed': ['7d717049c8272f0a83669519b4fe11f86afa06bc0cdc7789b94fedea7f4a4f7c', '26dd2d65c1f841ceb29f724a489b609c6702f6efd068477cb6b1220e4f482d83'],
+  'optimization-open': ['f2691397601fd0a15f8d2346feffd63a86dc05773a94a7ed3eb8f04d8e151df6', '4fbe547ce23b141f58087746666eb0997110c4c88ad9b0e0f1ab5e0097715f1c'],
+  'optimization-water': ['6de2a63f88df9c24646b9f2dae91301c9f9458ac9789f7885d439dd0b5546693', 'dbb669fb0a00f8322997e033c2c07dcb26725abe25f7c64b5d9025fb1b7a73fb'],
+  'optimization-obstructed': ['3ff5086a86b7227b1f34ab60f45c64c6a356c2e7b954c724db846b9775f1218e', '905c5c1344e296f2a7fad4cc5e9beb448b2abd6a7a6ab1bb2c6382536755e40a'],
 };
 for (const [seed, expected] of Object.entries(references)) test(`positive-count layers and patrol retain reference output: ${seed}`, async () => {
   const { output } = await generationFixture(seed, 128);

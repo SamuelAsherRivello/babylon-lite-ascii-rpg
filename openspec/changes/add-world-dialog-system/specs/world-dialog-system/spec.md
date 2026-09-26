@@ -32,11 +32,27 @@ When `isModal` is true, the dialog SHALL use the existing window presentation, r
 
 ### Requirement: Non-modal dialogs float without blocking gameplay
 
-When `isModal` is false, the dialog SHALL render as a floating world overlay, SHALL not pause gameplay, and SHALL choose a visible placement that avoids covering the player and the nearest active enemy when a suitable placement is available.
+When `isModal` is false, the dialog SHALL render as a floating world overlay, SHALL not pause gameplay, and SHALL use the current available UI space chosen for that dialog.
 
 #### Scenario: Welcome Sign displays as a floating overlay
 - **WHEN** the player triggers a Welcome Sign
-- **THEN** the sign message SHALL appear over the world without a backdrop, without blocking movement, and without covering the player or nearest active enemy when an alternate visible placement exists
+- **THEN** the sign message SHALL appear over the world without a backdrop, without blocking movement, and in the best current available UI space
+
+### Requirement: Dialog placement uses current available UI spaces
+
+The dialog presentation SHALL derive ranked available UI spaces from the current visible HUD bounds and presentation-only exclusion bounds for the player and active enemies. Both Welcome Sign dialogs and NPC dialogs SHALL use the highest-ranked visible space that fits the dialog; when no fully clear space exists, they SHALL use a readable in-viewport fallback. React SHALL consume published presentation bounds and SHALL NOT inspect NPC or world records to determine placement.
+
+#### Scenario: Dialog avoids current HUD and world exclusions
+- **WHEN** a visible HUD element, the player, or an active enemy occupies a candidate dialog area
+- **THEN** the evaluator SHALL prefer another visible candidate area when one is available
+
+#### Scenario: NPC dialog uses the shared placement result
+- **WHEN** the player opens an NPC party-recruitment dialog
+- **THEN** the modal dialog SHALL use the current available UI space while retaining its backdrop and gameplay input lock
+
+#### Scenario: Crowded view has a readable fallback
+- **WHEN** no candidate area avoids every visible exclusion
+- **THEN** the dialog SHALL remain fully within the viewport at a readable constrained placement
 
 ### Requirement: Dialog choices support pointer and directional input
 

@@ -91,6 +91,15 @@ existing Node tests, build checks, and manual browser verification only when
 the user explicitly requests Playwright test work or when a later request
 explicitly overrides this policy.
 
+## OpenSpec playable-result priority
+
+During `$openspec-apply-change`, prioritize delivering a playable, scoped
+implementation before running time-consuming tool-driven testing such as the
+Playwright Agent CLI. Run fast, focused checks needed to diagnose or prevent a
+blocking regression as implementation proceeds; defer full browser and other
+expensive acceptance checks until the playable result is ready or the user
+explicitly asks for earlier verification.
+
 For repeatable agent-driven browser runs, include an explicit `randomSeed` URL
 argument (for example, `?randomSeed=codex-cache-check`) whenever comparing
 reloads or diagnosing world-generation-dependent behavior. Omit or vary the

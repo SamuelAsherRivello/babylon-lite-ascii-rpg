@@ -14,6 +14,6 @@
 - [x] 2.1 Add or update focused Node tests covering recruitment, per-frame catch-up, facing-relative following, blocked targets, no movement inside the 3–5-gridspot band, and no overlap; verify the focused test command passes
 - [x] 2.2 Add focused Node tests covering stair transitions, identity/recruited-state preservation, nearest-to-stairs placement, blocked candidate retry, and distinct cells for multiple party NPCs; verify the focused test command passes
 - [x] 2.6 Add focused portable behavior tests covering peer spacing, deterministic candidate ranking, and legal fallback when one-cell separation is impossible
-- [ ] 2.3 Run the repository test suite and production build from the repository root; verify `npm.cmd test` and `npm.cmd run build` pass
+- [x] 2.3 Run the repository test suite and production build from the repository root; verify `npm.cmd test` and `npm.cmd run build` pass
 - [ ] 2.4 Manually verify the live browser party dialog flow with an explicit `randomSeed`, enter stairs, confirm the same party NPCs appear randomly 3–5 cells around the player in the next realm, then move and turn the player and confirm they follow without overlap
 - [x] 2.5 Validate the completed OpenSpec change strictly; verify `openspec validate fix-party-npc-follow --type change --strict` passes

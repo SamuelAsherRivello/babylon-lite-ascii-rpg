@@ -53,3 +53,14 @@ test("GPU light samples can reuse caller-owned sample objects", () => {
     { slot: 1, x: 1, y: 0, intensity: 0.375 },
   ]);
 });
+
+test("GPU light samples omit a concealed roof but retain revealed interior light", () => {
+  const region = { rows: 1, columns: 2 };
+  const field = { torchContributions: new Float64Array([1, 1]) };
+  const concealed = buildGpuLightPassSamples(region, field, 0, [], (x) => x === 0);
+  assert.deepEqual(concealed, [{ slot: 1, x: 1, y: 0, intensity: 1 }]);
+  assert.deepEqual(buildGpuLightPassSamples(region, field, 0), [
+    { slot: 0, x: 0, y: 0, intensity: 1 },
+    { slot: 1, x: 1, y: 0, intensity: 1 },
+  ]);
+});

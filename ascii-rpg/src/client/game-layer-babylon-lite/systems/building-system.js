@@ -199,3 +199,11 @@ export function getIndexedBuildingGlyph(buildings, cell, playerCell) {
   if (!index.inside.has(record.building)) index.inside.set(record.building, containsBuildingCell(record.building, playerCell));
   return index.inside.get(record.building) ? record.building.interiorGlyph : record.building.exteriorGlyph;
 }
+
+export function isConcealedBuildingRoof(buildings, cell, playerCell) {
+  return getIndexedBuildingGlyph(buildings, cell, playerCell) === HOME_ROOF_GLYPH;
+}
+
+export function getBuildingPresentationLightingFactor(buildings, cell, playerCell, ambient, sourceFactor) {
+  return isConcealedBuildingRoof(buildings, cell, playerCell) ? ambient : sourceFactor;
+}

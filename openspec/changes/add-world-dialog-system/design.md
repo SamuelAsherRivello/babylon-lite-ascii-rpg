@@ -11,7 +11,7 @@ The game layer owns world cells, occupancy, collision, NPC runtime state, and pl
 - Add one event-driven dialog contract usable by both signs and NPCs.
 - Keep gameplay state authoritative in the Babylon Lite layer.
 - Reuse the existing React window system for modal dialogs.
-- Provide a world overlay path for non-modal messages.
+- Provide a shared available-UI-spaces placement path for non-modal and modal dialogs.
 - Preserve cardinal collision semantics and player-driven ticks.
 
 **Non-Goals:**
@@ -27,9 +27,11 @@ The game layer owns world cells, occupancy, collision, NPC runtime state, and pl
 
 The game layer will emit immutable dialog snapshots or requests containing the dialog identity, presentation mode, speaker/text, choices, and world anchor. React will render the snapshot and emit a selected choice through the existing bridge. React will not inspect NPC objects, occupancy, world cells, or recruitment state.
 
-### Modal and floating are presentation modes
+### Available UI spaces are a presentation contract
 
-`isModal=true` selects the existing window system, backdrop, input lock, and no-close-button behavior. `isModal=false` selects a game-view overlay anchored to the triggering world cell, with placement scoring that avoids the player and nearest enemy where possible. The two modes share the same choice and result contract.
+The UI layer will measure the current visible HUD bounds and combine them with immutable presentation-only player and active-enemy exclusion bounds published through the bridge. A shared evaluator will rank in-viewport rectangles for a requested dialog size, preferring areas that do not overlap those exclusions. This retains gameplay-layer ownership of NPC and world records while exposing only the data needed for presentation.
+
+Both presentation modes consume the evaluator result. `isModal=true` still selects the existing window system, backdrop, input lock, and no-close-button behavior; `isModal=false` still selects a non-blocking world overlay. The evaluator supplies placement only and does not alter dialog state or input semantics.
 
 ### Recruitment is an NPC state transition
 
@@ -49,7 +51,7 @@ The dialog controller will maintain the highlighted choice index. Up and Down ch
 
 ## Risks / Trade-offs
 
-- [Risk] A floating overlay can overlap important world content in a crowded scene → score candidate placements around the anchor and prefer positions that avoid the player and nearest enemy; retain a readable fallback when no candidate is clear.
+- [Risk] A dialog can overlap changing HUD or world content in a crowded scene → recalculate ranked available spaces from current HUD and presentation exclusions, then retain a readable in-viewport fallback when no candidate is clear.
 - [Risk] Input can be consumed by both the game controller and dialog UI → give active modal dialogs first refusal of keyboard input and return handled status through the bridge.
 - [Risk] NPC patrol movement can conflict with interaction state → keep recruitment changes in occupancy/gameplay state and preserve the existing player-driven tick model; do not add a dialog timer or autonomous dialog tick.
 - [Risk] Existing unrelated worktree changes may overlap integration files → inspect and preserve those changes, stage only dialog-related files during implementation.

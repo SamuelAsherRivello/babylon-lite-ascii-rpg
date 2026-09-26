@@ -24,7 +24,7 @@ function createWorld(rows = 7, columns = 9) {
   };
 }
 
-function createHarness({ playerCell = { x: 6, y: 3 }, activeRealm = "Underground", world = createWorld() } = {}) {
+function createHarness({ playerCell = { x: 6, y: 3 }, activeRealm = "Underground", world = createWorld(), npcTargets = [] } = {}) {
   const timeSystem = createTimeSystem();
   const occupancy = createDynamicOccupancy();
   const logs = [];
@@ -35,6 +35,7 @@ function createHarness({ playerCell = { x: 6, y: 3 }, activeRealm = "Underground
   const system = createEnemySystem({
     timeSystem,
     occupancy,
+    getNpcTargets: () => npcTargets,
     getPlayerState: (realm) => realm === activeRealm ? { realm, cell: playerCell, world, alive: true } : null,
     damagePlayer: (amount) => attacks.push(amount),
     log: (message) => logs.push(message),
@@ -271,6 +272,46 @@ test("attacks a cardinally adjacent player for five without sharing the cell", (
   assert.deepEqual(harness.occupancy.get("enemy-1").cell, { x: 2, y: 3 });
   assert.deepEqual(harness.occupancy.get("player").cell, { x: 3, y: 3 });
   assert.deepEqual(harness.logs, ["Enemy hit Player for -5 Health"]);
+});
+
+test("pursues and attacks the nearest living NPC before the player", () => {
+  const npc = { id: "npc-near", type: "npc", realm: "Underground", cell: { x: 4, y: 3 }, health: 100, dead: false };
+  const harness = createHarness({ playerCell: { x: 6, y: 3 }, npcTargets: [npc] });
+  const npcDamage = [];
+  const system = createEnemySystem({
+    timeSystem: harness.timeSystem,
+    occupancy: harness.occupancy,
+    getPlayerState: () => ({ realm: "Underground", cell: { x: 6, y: 3 }, world: createWorld(), alive: true }),
+    getNpcTargets: () => [npc],
+    damageNpc: (id, amount) => npcDamage.push({ id, amount }),
+  });
+  system.addEnemy({ id: "enemy-npc", realm: "Underground", cell: { x: 2, y: 3 }, bornAtTime: 1 });
+
+  harness.timeSystem.advance(2);
+  assert.deepEqual(harness.occupancy.get("enemy-npc").cell, { x: 3, y: 3 });
+  harness.timeSystem.advance(2);
+  assert.deepEqual(npcDamage, [{ id: "npc-near", amount: 5 }]);
+  assert.deepEqual(harness.occupancy.get("enemy-npc").cell, { x: 3, y: 3 });
+});
+
+test("prefers the player when NPC and player are equally distant", () => {
+  const npc = { id: "npc-tie", type: "npc", realm: "Underground", cell: { x: 4, y: 3 }, health: 100, dead: false };
+  const harness = createHarness({ playerCell: { x: 2, y: 3 }, npcTargets: [npc] });
+  const playerDamage = [];
+  const npcDamage = [];
+  const system = createEnemySystem({
+    timeSystem: harness.timeSystem,
+    occupancy: harness.occupancy,
+    getPlayerState: () => ({ realm: "Underground", cell: { x: 2, y: 3 }, world: createWorld(), alive: true }),
+    getNpcTargets: () => [npc],
+    damagePlayer: amount => playerDamage.push(amount),
+    damageNpc: (id, amount) => npcDamage.push({ id, amount }),
+  });
+  system.addEnemy({ id: "enemy-tie", realm: "Underground", cell: { x: 3, y: 3 }, bornAtTime: 1 });
+
+  harness.timeSystem.advance(2);
+  assert.deepEqual(playerDamage, [5]);
+  assert.deepEqual(npcDamage, []);
 });
 
 test("applies defense mitigation to an adjacent enemy attack", () => {

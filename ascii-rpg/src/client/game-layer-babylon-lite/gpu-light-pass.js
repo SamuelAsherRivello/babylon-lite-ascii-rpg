@@ -11,12 +11,13 @@ export function getGpuLightPassAlpha(distanceRatio) {
  * emission samples. It deliberately reads only the cached field: the visual
  * pass cannot change simulation, terrain, palette, or base glyph lighting.
  */
-export function buildGpuLightPassSamples(region, lightField, ambient = 0, samples = []) {
+export function buildGpuLightPassSamples(region, lightField, ambient = 0, samples = [], isMasked = () => false) {
   const headroom = Math.max(0, Math.min(1, 1 - ambient));
   let sampleCount = 0;
   for (let y = 0; y < region.rows; y += 1) {
     for (let x = 0; x < region.columns; x += 1) {
       const slot = y * region.columns + x;
+      if (isMasked(x, y)) continue;
       const torch = lightField.torchContributions?.[slot] ?? 0;
       const player = lightField.playerGpuDirectContributions?.[slot] ?? lightField.playerContributions?.[slot] ?? 0;
       const penumbra = lightField.playerGpuPenumbraContributions?.[slot] ?? 0;

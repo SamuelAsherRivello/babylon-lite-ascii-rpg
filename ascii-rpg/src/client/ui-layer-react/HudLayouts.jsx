@@ -13,6 +13,7 @@ export function CornerLayout({ position, className, children, ...props }) {
   return (
     <div
       {...props}
+      data-ui-space-exclusion="true"
       className={joinClassNames("corner", cornerPositions[position], className)}
     >
       {children}

@@ -1,11 +1,27 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { sendDialogResult, subscribeToInputAction } from "../bridge-layer/game-bridge.js";
+import { getAvailableUiSpaces, getCurrentUiExclusions } from "./available-ui-spaces.js";
 
 export function DialogWindow({ dialog }) {
   const [selected, setSelected] = useState(0);
+  const [position, setPosition] = useState(null);
+  const windowRef = useRef(null);
   const choices = dialog?.choices ?? [];
 
   useEffect(() => setSelected(0), [dialog?.id]);
+  useLayoutEffect(() => {
+    if (!dialog) return undefined;
+    const update = () => {
+      const rect = windowRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const exclusions = getCurrentUiExclusions().filter((item) => item !== rect);
+      const [best] = getAvailableUiSpaces({ viewport: { width: window.innerWidth, height: window.innerHeight }, size: rect, exclusions: [...exclusions, ...(dialog.exclusions ?? [])] });
+      setPosition(best ? { left: `${best.left}px`, top: `${best.top}px` } : null);
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, [dialog]);
 
   useEffect(() => {
     if (!dialog) return undefined;
@@ -31,7 +47,7 @@ export function DialogWindow({ dialog }) {
   return (
     <>
       {modal ? <div className="window_backdrop dialog_backdrop" aria-hidden="true" /> : null}
-      <section className={`dialog_window ${modal ? "dialog_window_modal window" : "dialog_window_floating"}`} role="dialog" aria-modal={modal} aria-labelledby="dialog_title">
+      <section ref={windowRef} style={position} className={`dialog_window ${modal ? "dialog_window_modal window" : "dialog_window_floating"}`} role="dialog" aria-modal={modal} aria-labelledby="dialog_title">
         <div className="dialog_title" id="dialog_title">{dialog.speaker}</div>
         <p className="dialog_text">{dialog.text}</p>
         <div className="dialog_choices" role="group" aria-label="Dialog choices">

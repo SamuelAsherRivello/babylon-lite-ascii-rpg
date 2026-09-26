@@ -108,7 +108,7 @@ import { createStaminaSystem } from "./systems/stamina-system.js";
 import { createExperienceSystem } from "./systems/experience-system.js";
 import { calculatePlayerDamageTaken, createCombatStatsSystem } from "./systems/combat-stats-system.js";
 import { createCivilizationGroups, isCardinalDirection } from "./systems/civilization-system.js";
-import { createOverworldBuildings, getIndexedBuildingGlyph, getBuildingPresentationDirtyCells, HOME_ROOF_GLYPH } from "./systems/building-system.js";
+import { createOverworldBuildings, getBuildingPresentationLightingFactor, getIndexedBuildingGlyph, getBuildingPresentationDirtyCells, HOME_ROOF_GLYPH, isConcealedBuildingRoof } from "./systems/building-system.js";
 import { createDynamicOccupancy, getDynamicVisibleGlyph } from "./systems/dynamic-occupancy.js";
 import { createEnemySystem } from "./systems/enemy-system.js";
 import { createEnemySpawnerSystem, selectEnemySpawnerCells } from "./systems/enemy-spawner-system.js";
@@ -459,9 +459,22 @@ async function createGameSessionImplementation(container, initialPalette, initia
   });
   const logSystem = createLogSystem();
   const gameplayEvents = createGameplayEventSystem();
+  const getDialogExclusions = () => {
+    if (!world || !playerCell) return [];
+    const canvasBounds = canvas.getBoundingClientRect();
+    const offset = { x: canvasBounds.left - viewOrigin.x * viewport.gridWidth, y: canvasBounds.top - viewOrigin.y * viewport.gridHeight };
+    const toRect = (cell) => {
+      const bounds = getPixelSnappedCellBounds(cell, viewport, offset);
+      return { left: bounds.x, top: bounds.y, width: bounds.width, height: bounds.height };
+    };
+    const enemies = getOccupancyForWorld()?.getAll("enemy") ?? [];
+    const nearestEnemy = enemies.sort((left, right) => Math.hypot(left.cell.x - playerCell.x, left.cell.y - playerCell.y) - Math.hypot(right.cell.x - playerCell.x, right.cell.y - playerCell.y))[0];
+    return [toRect(playerCell), ...(nearestEnemy?.cell ? [toRect(nearestEnemy.cell)] : [])];
+  };
   const publishDialog = (next) => {
     dialogSnapshot = next ? Object.freeze({
       ...next,
+      exclusions: Object.freeze((next.exclusions ?? getDialogExclusions()).map((rect) => Object.freeze({ ...rect }))),
       anchor: next.anchor ? Object.freeze({ ...next.anchor }) : null,
       choices: Object.freeze((next.choices ?? []).map((choice) => Object.freeze({ ...choice }))),
     }) : null;
@@ -470,7 +483,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
   const openDialog = ({ id, isModal, speaker, text, choices, anchor, onResult }) => {
     if (dialogSnapshot) return false;
     dialogResolver = onResult;
-    publishDialog({ id, isModal, speaker, text, choices, anchor });
+    publishDialog({ id, isModal, speaker, text, choices, anchor, exclusions: getDialogExclusions() });
     if (isModal) gameplayInputLocked = true;
     return true;
   };
@@ -738,7 +751,8 @@ async function createGameSessionImplementation(container, initialPalette, initia
     );
     minimapGpuLightSamples.length = 0;
     if (gpuLightPassEnabled) {
-      const samples = buildGpuLightPassSamples(minimapRegion, minimapLightField, lighting.ambient, gpuLightSamples);
+      const samples = buildGpuLightPassSamples(minimapRegion, minimapLightField, lighting.ambient, gpuLightSamples,
+        (x, y) => isConcealedBuildingRoof(world.buildings, { x: minimapRegion.x + x, y: minimapRegion.y + y }, playerCell));
       for (const sample of samples) {
         if (isDiscovered(activeFog, world, {
           x: sourceX + sample.x,
@@ -775,7 +789,9 @@ async function createGameSessionImplementation(container, initialPalette, initia
         if (!graphic) return;
         const raster = visual.rasters.get(glyph);
         if (!raster) return;
-        const lightingFactor = minimapLightField.getFactor({ x: sourceX + localX, y: sourceY + localY });
+        const lightingFactor = getBuildingPresentationLightingFactor(
+          world.buildings, worldCell, playerCell, lighting.ambient, minimapLightField.getFactor(worldCell),
+        );
         const fogOpacity = visibility / 100;
         const baseGlyph = getFacingGlyph(graphic.glyph);
         const baseColor = paletteColors.get(baseGlyph) ?? colorToLinearRgba(getPaletteStyle(palette, baseGlyph));
@@ -1769,7 +1785,8 @@ async function createGameSessionImplementation(container, initialPalette, initia
     ensureGpuLightPass(region.count);
     gpuLightLayer.visible = true;
     if (gpuLightActiveSlots.length < region.count) gpuLightActiveSlots = new Uint8Array(region.count);
-    const samples = buildGpuLightPassSamples(region, lightField, lighting.ambient, gpuLightSamples);
+    const samples = buildGpuLightPassSamples(region, lightField, lighting.ambient, gpuLightSamples,
+      (x, y) => isConcealedBuildingRoof(world.buildings, { x: region.x + x, y: region.y + y }, playerCell));
     for (const sample of samples) {
       const visibility = getFogVisibility(fogOfWar, world, {
         x: region.x + sample.x,
@@ -1998,7 +2015,9 @@ async function createGameSessionImplementation(container, initialPalette, initia
     const baseColor = terrain.depth === "deep" && glyph === terrain.glyph
       ? colorToLinearRgba(terrain)
       : paletteColors.get(glyph) ?? colorToLinearRgba(getPaletteStyle(palette, glyph));
-    const lightingFactor = lightField.getFactor(cell);
+    const lightingFactor = getBuildingPresentationLightingFactor(
+      world.buildings, cell, playerCell, lighting.ambient, lightField.getFactor(cell),
+    );
     const previous = spriteStates[slot];
     const spriteBounds = getRenderedCellSpriteBounds({ x, y }, viewport, world);
     const center = spriteBounds.center;
@@ -2356,7 +2375,40 @@ async function createGameSessionImplementation(container, initialPalette, initia
         anchor: cell,
       }),
     });
+    // A chest is an object interaction, not movement into an occupied tile.
+    // Resolve a closed chest before the generic contact capability search so a
+    // single cardinal keyboard press or swipe always opens it in this frame.
+    // This also keeps house-owned chests on the exact same path as standalone
+    // ones, because both are registered in the active object spawner.
+    const completeObjectInteraction = (interaction) => {
+      if (!interaction?.handled) return false;
+      if (interaction.opened && interaction.object.type === "door") {
+        lightingFieldCache.invalidate();
+        world.navigationRevision = (world.navigationRevision ?? 0) + 1;
+        staticOccupancyIndexes.get(activeRealm)?.delete(attemptedCell.y * world.columns + attemptedCell.x);
+      }
+      const dirtyCells = [attemptedCell];
+      if (interaction.reward?.cell) {
+        world.navigationRevision = (world.navigationRevision ?? 0) + 1;
+        dirtyCells.push(interaction.reward.cell);
+        staticOccupancyIndexes.get(activeRealm)?.add(
+          interaction.reward.cell.y * world.columns + interaction.reward.cell.x,
+        );
+      }
+      scheduleMovementRender({
+        player: true,
+        refreshLighting: interaction.opened && interaction.object.type === "chest",
+        dirtyCells,
+        force: true,
+      });
+      scheduleMinimapRender({ dirtyCells, forceFull: interaction.opened && interaction.object.type === "chest" });
+      scheduleMapviewRender({ dirtyCells });
+      return true;
+    };
     characterState = createCharacterState({ ...characterState, gold: characterGold, keys: characterKeys });
+    if (cardinal && object?.type === "chest" && !object.open && !occupant) {
+      if (completeObjectInteraction(interactWithObject())) return exhaustedAtAttempt;
+    }
     const contact = target ? resolveCharacterContact(characterState, target, {
           sword: {
         canHandle: (candidate) => ["enemy", "enemy-spawner"].includes(candidate.kind),
@@ -2405,20 +2457,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
       if (contact.outcome?.handled) {
         if (contact.capability === "sword") wearCharacterItem("sword", contact.outcome.appliedDamage);
         if (contact.capability === "pickaxe") wearCharacterItem("pickaxe", contact.outcome.appliedDamage);
-        const doorInteraction = contact.outcome;
-        if (doorInteraction.opened && doorInteraction.object.type === "door") {
-          lightingFieldCache.invalidate();
-          world.navigationRevision = (world.navigationRevision ?? 0) + 1;
-          staticOccupancyIndexes.get(activeRealm)?.delete(attemptedCell.y * world.columns + attemptedCell.x);
-        }
-        const dirtyCells = [attemptedCell];
-        if (doorInteraction.reward?.cell) {
-          world.navigationRevision = (world.navigationRevision ?? 0) + 1;
-          dirtyCells.push(doorInteraction.reward.cell);
-          staticOccupancyIndexes.get(activeRealm)?.add(doorInteraction.reward.cell.y * world.columns + doorInteraction.reward.cell.x);
-        }
-        scheduleMovementRender({ player: true, refreshLighting: doorInteraction.opened && doorInteraction.object.type === "chest", dirtyCells, force: true });
-        scheduleMapviewRender({ dirtyCells });
+        completeObjectInteraction(contact.outcome);
       }
       scheduleMovementRender({ player: true, dirtyCells: occupant?.cell ? [occupant.cell] : [] });
       scheduleMinimapRender();
@@ -2426,33 +2465,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
     }
     if (isCardinalDirection(direction)) {
       const doorInteraction = interactWithObject();
-      if (doorInteraction?.handled) {
-        if (doorInteraction.opened && doorInteraction.object.type === "door") {
-          lightingFieldCache.invalidate();
-          world.navigationRevision = (world.navigationRevision ?? 0) + 1;
-          staticOccupancyIndexes.get(activeRealm)?.delete(attemptedCell.y * world.columns + attemptedCell.x);
-        }
-        // A chest mutates two static cells at once: its own glyph and the
-        // reward's chosen neighboring cell. Include both in the partial render
-        // request. A first-ever Heart also needs a full one-time redraw so its
-        // glyph is initialized even when the Heart generation pass is off.
-         const dirtyCells = [attemptedCell];
-         if (doorInteraction.reward?.cell) {
-           world.navigationRevision = (world.navigationRevision ?? 0) + 1;
-           dirtyCells.push(doorInteraction.reward.cell);
-           staticOccupancyIndexes.get(activeRealm)?.add(
-             doorInteraction.reward.cell.y * world.columns + doorInteraction.reward.cell.x,
-           );
-         }
-         scheduleMovementRender({
-           player: true,
-           refreshLighting: doorInteraction.opened && doorInteraction.object.type === "chest",
-           dirtyCells,
-           force: true,
-         });
-        scheduleMapviewRender({ dirtyCells });
-        return exhaustedAtAttempt;
-      }
+      if (completeObjectInteraction(doorInteraction)) return exhaustedAtAttempt;
     }
     const nextCell = moveWorldCell(playerCell, direction, world);
     if (nextCell.x === playerCell.x && nextCell.y === playerCell.y) return exhaustedAtAttempt;
@@ -3151,6 +3164,8 @@ async function createGameSessionImplementation(container, initialPalette, initia
       timeSystem,
       getNavigationRevision: (realmName) => worldRealms.realms[realmName].navigationRevision ?? 0,
       occupancy: undergroundOccupancy,
+      getNpcTargets: (realmName) => dynamicOccupancies.get(realmName)?.getAll("npc") ?? [],
+      damageNpc: (id, amount, options) => npcSystem?.damage(id, amount, options),
       getPlayerState: (realmName) => activeRealm === realmName ? {
         realm: realmName,
         cell: playerCell,

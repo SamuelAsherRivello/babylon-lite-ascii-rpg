@@ -243,13 +243,18 @@ export function createObjectSpawnerSystem({ catalog = [], eventSystem = null } =
       const reward = rewardType && rewardCell
         ? addObject({ type: rewardType, cell: rewardCell, realm: world, effect: createChestRewardEffect(rewardType) })
         : null;
-      if (reward && rewardCell && world?.characters?.[rewardCell.y]) {
-        if (Array.isArray(world.objects)) world.objects.push(reward);
-        if (Array.isArray(world.pickups) && world.pickups !== world.objects) world.pickups.push(reward);
-        world.characters[rewardCell.y][rewardCell.x] = reward.glyph;
+      if (reward && rewardCell && world) {
+        // The system map makes the Heart collectible; the active realm arrays
+        // make it authoritative for world views and minimap/map consumers.
+        // Initialize both collections defensively because chest rewards can be
+        // the first pickup created in a realm with Heart generation disabled.
+        world.objects = Array.isArray(world.objects) ? world.objects : [];
+        world.pickups = Array.isArray(world.pickups) ? world.pickups : world.objects;
+        if (!world.objects.includes(reward)) world.objects.push(reward);
+        if (world.pickups !== world.objects && !world.pickups.includes(reward)) world.pickups.push(reward);
+        if (world.characters?.[rewardCell.y]) world.characters[rewardCell.y][rewardCell.x] = reward.glyph;
       }
       log("Chest was opened");
-      log("Chest contained heart");
       emit({ type: "chest-opened", objectId: object.id, objectType: object.type, cell: { ...object.cell }, rewardType: reward?.type ?? null, rewardCell });
       return { handled: true, opened: true, object, reward };
     }

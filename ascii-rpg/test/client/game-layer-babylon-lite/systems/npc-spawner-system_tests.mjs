@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createDynamicOccupancy } from "../../../../src/client/game-layer-babylon-lite/systems/dynamic-occupancy.js";
-import { createNpcSystem, NPC_ACTION_INTERVAL, NPC_DEAD_GLYPH, NPC_FOLLOW_DISTANCE, NPC_FOLLOW_MAX_DISTANCE, NPC_GLYPH, NPC_HEALTH } from "../../../../src/client/game-layer-babylon-lite/systems/npc-system.js";
+import { createNpcSystem, NPC_ACTION_INTERVAL, NPC_FOLLOW_DISTANCE, NPC_FOLLOW_MAX_DISTANCE, NPC_GLYPH, NPC_HEALTH } from "../../../../src/client/game-layer-babylon-lite/systems/npc-system.js";
+import { createEnemySystem } from "../../../../src/client/game-layer-babylon-lite/systems/enemy-system.js";
 import { createNpcSpawnerSystem, selectNpcSpawnerCells } from "../../../../src/client/game-layer-babylon-lite/systems/npc-spawner-system.js";
 import { createTimeSystem } from "../../../../src/client/game-layer-babylon-lite/systems/time-system.js";
 import { createDeferredWorkScheduler } from "../../../../src/client/game-layer-babylon-lite/deferred-work-scheduler.js";
+import { AStarUtility } from "../../../../src/client/game-layer-babylon-lite/utilities/a-star-utility.js";
 
 function world(size = 40) {
   return { rows: size, columns: size, playerStart: { x: 20, y: 20 }, objects: [], terrain: Array.from({ length: size }, (_, y) => Array.from({ length: size }, (_, x) => ({ walkable: x > 0 && y > 0 && x < size - 1 && y < size - 1 }))) };
@@ -48,17 +50,19 @@ test("excludes player, object, character, civilization, and Building cells", () 
 });
 
 test("spawners create exactly once during setup and never repeat on later ticks", () => {
-  const timeSystem = createTimeSystem(); const occupancy = createDynamicOccupancy(); const spawned = [];
-  const spawners = createNpcSpawnerSystem({ timeSystem, occupancy, spawnNpc: (request) => { spawned.push(request); return request; }, isWalkable: () => true, randomFor: () => () => 0 });
+  const map = world(); const timeSystem = createTimeSystem(); const occupancy = createDynamicOccupancy(); const spawned = [];
+  const spawners = createNpcSpawnerSystem({ timeSystem, occupancy, spawnNpc: (request) => { spawned.push(request); return request; }, worldFor: () => map, isWalkable: (cell) => Boolean(map.terrain[cell.y]?.[cell.x]?.walkable), randomFor: () => () => 0 });
   spawners.addSpawner({ id: "npc-spawner-1", realm: "Overground", cell: { x: 10, y: 10 } });
   assert.equal(spawned.length, 1);
+  assert.equal(spawned[0].spawnerId, "npc-spawner-1");
+  assert.deepEqual(spawned[0].patrolAnchor, { x: 10, y: 10 });
   timeSystem.dispatchCurrent(); timeSystem.advance(200); assert.equal(spawned.length, 1);
 });
 
 test("bomb damage removes an NPC spawner while its already-created NPC survives", () => {
-  const timeSystem = createTimeSystem(); const occupancy = createDynamicOccupancy();
-  const npcSystem = createNpcSystem({ timeSystem, occupancy, worldFor: () => null, isWalkable: () => true });
-  const spawners = createNpcSpawnerSystem({ timeSystem, occupancy, spawnNpc: (request) => npcSystem.addNpc(request), isWalkable: () => true, isStaticOccupied: () => false, randomFor: () => () => 0 });
+  const map = world(); const timeSystem = createTimeSystem(); const occupancy = createDynamicOccupancy();
+  const npcSystem = createNpcSystem({ timeSystem, occupancy, worldFor: () => map, isWalkable: (cell) => Boolean(map.terrain[cell.y]?.[cell.x]?.walkable) });
+  const spawners = createNpcSpawnerSystem({ timeSystem, occupancy, spawnNpc: (request) => npcSystem.addNpc(request), worldFor: () => map, isWalkable: (cell) => Boolean(map.terrain[cell.y]?.[cell.x]?.walkable), isStaticOccupied: () => false, randomFor: () => () => 0 });
   spawners.addSpawner({ id: "npc-spawner-1", realm: "Overground", cell: { x: 10, y: 10 } });
   assert.equal(occupancy.get("npc-1").health, 100);
   assert.equal(occupancy.get("npc-spawner-1").health, 100);
@@ -67,6 +71,35 @@ test("bomb damage removes an NPC spawner while its already-created NPC survives"
   assert.equal(occupancy.get("npc-1").type, "npc");
   assert.equal(npcSystem.damage("npc-1", 100), null);
   assert.equal(occupancy.get("npc-1"), null);
+});
+
+test("an NPC wakes 10 to 15 path cells from its spawner, patrols to its approach, and repeats", () => {
+  const map = world(); const timeSystem = createTimeSystem(); const occupancy = createDynamicOccupancy();
+  const npcSystem = createNpcSystem({ timeSystem, occupancy, worldFor: () => map, isWalkable: (cell) => Boolean(map.terrain[cell.y]?.[cell.x]?.walkable) });
+  const spawners = createNpcSpawnerSystem({ timeSystem, occupancy, spawnNpc: (request) => npcSystem.addNpc(request), worldFor: () => map, isWalkable: (cell) => Boolean(map.terrain[cell.y]?.[cell.x]?.walkable), randomFor: () => () => 0 });
+  const spawnerCell = { x: 20, y: 20 };
+  spawners.addSpawner({ id: "npc-spawner-route", realm: "Overground", cell: spawnerCell });
+  const npc = occupancy.get("npc-1");
+  const distance = AStarUtility.createDistanceField(map, spawnerCell, { maxDistance: 15 }).getDistance(npc.cell);
+  assert.ok(distance >= 10 && distance <= 15);
+  assert.deepEqual(npc.home, npc.cell);
+  assert.deepEqual(npc.patrolAnchor, spawnerCell);
+  const initialEndpoint = npc.home;
+  const firstStep = npc.route[0];
+  occupancy.claim({ id: "temporary-blocker", type: "player", cell: firstStep });
+  timeSystem.advance(NPC_ACTION_INTERVAL);
+  assert.deepEqual(occupancy.get(npc.id).cell, initialEndpoint);
+  occupancy.remove("temporary-blocker");
+  timeSystem.advance(NPC_ACTION_INTERVAL);
+  assert.deepEqual(occupancy.get(npc.id).cell, firstStep);
+  timeSystem.advance(NPC_ACTION_INTERVAL * (npc.route.length - 1));
+  assert.deepEqual(occupancy.get(npc.id).cell, npc.destination);
+  assert.equal(occupancy.get(npc.id).returning, true);
+  timeSystem.advance(NPC_ACTION_INTERVAL * npc.route.length);
+  assert.deepEqual(occupancy.get(npc.id).cell, initialEndpoint);
+  assert.equal(occupancy.get(npc.id).returning, false);
+  timeSystem.advance(NPC_ACTION_INTERVAL);
+  assert.deepEqual(occupancy.get(npc.id).cell, firstStep);
 });
 
 test("NPCs start unrecruited and can be removed to become passable", () => {
@@ -79,7 +112,7 @@ test("NPCs start unrecruited and can be removed to become passable", () => {
   assert.equal(occupancy.get("npc-recruit"), null);
 });
 
-test("recruited NPCs follow three cells behind the player and die as blocking corpses", () => {
+test("recruited NPCs follow three cells behind the player and are removed at zero health", () => {
   const map = world(); const timeSystem = createTimeSystem(); const occupancy = createDynamicOccupancy();
   let playerCell = { x: 20, y: 10 };
   const system = createNpcSystem({
@@ -95,12 +128,45 @@ test("recruited NPCs follow three cells behind the player and die as blocking co
   for (let step = 0; step < 7; step += 1) timeSystem.advance(NPC_ACTION_INTERVAL);
   const followDistance = Math.abs(occupancy.get("npc-follow").cell.x - playerCell.x);
   assert.ok(followDistance >= NPC_FOLLOW_DISTANCE && followDistance <= NPC_FOLLOW_MAX_DISTANCE);
-  assert.equal(system.damageNpc("npc-follow", NPC_HEALTH), occupancy.get("npc-follow"));
-  const dead = occupancy.get("npc-follow");
-  assert.equal(dead.health, 0);
-  assert.equal(dead.glyph, NPC_DEAD_GLYPH);
-  assert.equal(dead.dead, true);
-  assert.equal(occupancy.isOccupied(dead.cell), true);
+  const npcCell = occupancy.get("npc-follow").cell;
+  assert.equal(system.damageNpc("npc-follow", NPC_HEALTH), null);
+  assert.equal(occupancy.get("npc-follow"), null);
+  assert.equal(occupancy.isOccupied(npcCell), false);
+});
+
+test("enemy damage updates ambient and recruited NPC health through shared realm occupancy", () => {
+  const map = world(); const timeSystem = createTimeSystem();
+  const overgroundOccupancy = createDynamicOccupancy(); const undergroundOccupancy = createDynamicOccupancy();
+  const occupancies = new Map([["Overground", overgroundOccupancy], ["Underground", undergroundOccupancy]]);
+  const npcSystem = createNpcSystem({
+    timeSystem,
+    occupancy: overgroundOccupancy,
+    occupancyFor: (realm = null) => realm ? occupancies.get(realm) : occupancies.values(),
+    worldFor: () => map,
+    isWalkable: () => true,
+  });
+  const createEnemy = (occupancy, realm, playerCell) => createEnemySystem({
+    timeSystem,
+    occupancy,
+    getPlayerState: () => ({ realm, cell: playerCell, world: map, alive: true }),
+    getNpcTargets: () => occupancy.getAll("npc"),
+    damageNpc: (id, amount, options) => npcSystem.damage(id, amount, options),
+  });
+
+  npcSystem.addNpc({ id: "npc-ambient", realm: "Overground", cell: { x: 3, y: 3 }, bornAtTime: 1 });
+  const overgroundEnemy = createEnemy(overgroundOccupancy, "Overground", { x: 7, y: 3 });
+  overgroundEnemy.addEnemy({ id: "enemy-ambient", realm: "Overground", cell: { x: 2, y: 3 }, bornAtTime: 1 });
+  timeSystem.advance(2);
+  assert.equal(overgroundOccupancy.get("npc-ambient").health, 95);
+
+  npcSystem.addNpc({ id: "npc-party", realm: "Overground", cell: { x: 10, y: 10 }, bornAtTime: 3 });
+  npcSystem.recruitNpc("npc-party");
+  assert.equal(npcSystem.transferParty("Underground", { x: 6, y: 3 }), true);
+  const partyNpc = undergroundOccupancy.get("npc-party");
+  const undergroundEnemy = createEnemy(undergroundOccupancy, "Underground", { x: 9, y: 3 });
+  undergroundEnemy.addEnemy({ id: "enemy-party", realm: "Underground", cell: { x: partyNpc.cell.x - 1, y: partyNpc.cell.y }, bornAtTime: 3 });
+  timeSystem.advance(2);
+  assert.equal(undergroundOccupancy.get("npc-party").health, 95);
 });
 
 test("recruited NPCs catch up one step per frame only while farther than five cells", () => {
@@ -141,8 +207,55 @@ test("recruited NPC followers accept adjacent legal cells when one-space separat
   const first = system.addNpc({ id: "npc-constrained-1", realm: "Overground", cell: { x: 20, y: 10 } });
   const second = system.addNpc({ id: "npc-constrained-2", realm: "Overground", cell: { x: 20, y: 11 } });
   system.recruitNpc(first.id); system.recruitNpc(second.id);
-  for (let frame = 0; frame < 12; frame += 1) system.updateFollowers();
+  for (let frame = 0; frame < 16; frame += 1) system.updateFollowers();
   assert.notDeepEqual(occupancy.get(first.id).cell, occupancy.get(second.id).cell);
+});
+
+test("a recruited NPC waits clear of a doorway while the player occupies it", () => {
+  const map = world(); const timeSystem = createTimeSystem(); const occupancy = createDynamicOccupancy();
+  const doorway = { x: 20, y: 20 };
+  map.objects.push({ type: "door", cell: doorway });
+  occupancy.claim({ id: "player", type: "player", cell: doorway });
+  const system = createNpcSystem({
+    timeSystem,
+    occupancy,
+    worldFor: () => map,
+    getPlayerState: () => ({ cell: doorway, facing: "right", alive: true }),
+    isWalkable: (cell) => Boolean(map.terrain[cell.y]?.[cell.x]?.walkable),
+  });
+  system.addNpc({ id: "npc-doorway-clearance", realm: "Overground", cell: { x: 20, y: 21 } });
+  system.recruitNpc("npc-doorway-clearance");
+
+  assert.equal(system.updateFollowers(), true);
+  const npc = occupancy.get("npc-doorway-clearance");
+  assert.notEqual(Math.abs(npc.cell.x - doorway.x) + Math.abs(npc.cell.y - doorway.y), 1);
+  assert.notDeepEqual(npc.cell, doorway);
+});
+
+test("a recruited NPC follows through an open doorway after the player clears it", () => {
+  const map = world(); const timeSystem = createTimeSystem(); const occupancy = createDynamicOccupancy();
+  const doorway = { x: 20, y: 20 };
+  map.objects.push({ type: "door", cell: doorway, open: true });
+  map.buildings = [{ doorway, door: doorway, interior: Array.from({ length: 3 }, (_, y) => Array.from({ length: 7 }, (_, x) => ({ x: 17 + x, y: 17 + y }))).flat() }];
+  for (let y = 1; y < map.rows - 1; y += 1) for (let x = 1; x < map.columns - 1; x += 1) {
+    map.terrain[y][x].walkable = x === 20 || (y >= 17 && y <= 19 && x >= 17 && x <= 23);
+  }
+  let playerCell = { x: 20, y: 17 };
+  occupancy.claim({ id: "player", type: "player", cell: playerCell });
+  const system = createNpcSystem({
+    timeSystem,
+    occupancy,
+    worldFor: () => map,
+    getPlayerState: () => ({ cell: playerCell, facing: "right", alive: true }),
+    isWalkable: (cell) => Boolean(map.terrain[cell.y]?.[cell.x]?.walkable),
+  });
+  system.addNpc({ id: "npc-doorway-follow", realm: "Overground", cell: { x: 20, y: 28 } });
+  system.recruitNpc("npc-doorway-follow");
+
+  for (let frame = 0; frame < 12; frame += 1) system.updateFollowers();
+  const npc = occupancy.get("npc-doorway-follow");
+  assert.ok(npc.cell.y < doorway.y);
+  assert.ok(Math.abs(npc.cell.x - playerCell.x) + Math.abs(npc.cell.y - playerCell.y) >= NPC_FOLLOW_DISTANCE);
 });
 
 test("recruited NPCs transfer across realms with identity and recruited state intact", () => {
@@ -263,6 +376,20 @@ test("deferred NPC patrol planning preserves immediate placement and executes on
   assert.equal(Math.abs(npc.cell.x - 20) + Math.abs(npc.cell.y - 20), 1);
   timeSystem.advance();
   assert.deepEqual(occupancy.get("npc-1").cell, npc.cell);
+});
+
+test("deferred spawner patrol preparation preserves its selected endpoint and spawner approach", () => {
+  const map = world(); const timeSystem = createTimeSystem(); const occupancy = createDynamicOccupancy(); const deferred = createControlledDeferredScheduler();
+  let randomCalls = 0;
+  const system = createNpcSystem({ timeSystem, occupancy, worldFor: () => map, isWalkable: (cell) => Boolean(map.terrain[cell.y]?.[cell.x]?.walkable), randomFor: () => () => { randomCalls += 1; return 0; }, deferredScheduler: deferred.scheduler });
+  system.addNpc({ id: "npc-spawner-pending", realm: "Overground", cell: { x: 20, y: 5 }, home: { x: 20, y: 5 }, patrolAnchor: { x: 20, y: 20 } });
+  deferred.flush();
+  const npc = occupancy.get("npc-spawner-pending");
+  assert.equal(randomCalls, 0);
+  assert.equal(npc.patrolState, "ready");
+  assert.deepEqual(npc.home, { x: 20, y: 5 });
+  assert.deepEqual(npc.destination, { x: 20, y: 19 });
+  assert.equal(npc.route.length, 14);
 });
 
 test("disposing an NPC system cancels its deferred patrol before it can mutate occupancy", () => {

@@ -4,6 +4,7 @@ import objectData from "../../../../src/client/game-layer-babylon-lite/data/obje
 import paletteData from "../../../../src/client/game-layer-babylon-lite/data/palette_data.json" with { type: "json" };
 import { createObjectSpawnerSystem, placeDeclaredLevelObjects, selectObjectCells, validateObjectPalette } from "../../../../src/client/game-layer-babylon-lite/systems/object-spawner-system.js";
 import { createGameplayEventSystem } from "../../../../src/client/game-layer-babylon-lite/systems/gameplay-event-system.js";
+import { createLogSystem } from "../../../../src/client/game-layer-babylon-lite/systems/log-system.js";
 
 function createWorld(size = 24) {
   return {
@@ -176,10 +177,10 @@ test("a cardinal chest bump spawns a Heart even without pre-generated Hearts", (
   assert.equal(world.characters[5][5], "◇");
   system.collideAtCell({ x: 5, y: 4 }, { world });
   assert.equal(collectedHearts, 1);
-  assert.deepEqual(messages, ["Chest was opened", "Chest contained heart"]);
+  assert.deepEqual(messages, ["Chest was opened"]);
   assert.deepEqual(system.interactAtCell({ x: 5, y: 5 }, { world }), { handled: true, opened: false, object: chest });
   assert.equal(world.objects.length, 2);
-  assert.deepEqual(messages, ["Chest was opened", "Chest contained heart"]);
+  assert.deepEqual(messages, ["Chest was opened"]);
   assert.equal(system.collideAtCell({ x: 5, y: 5 }, { world }), null);
 });
 
@@ -201,7 +202,7 @@ test("a player bump on a treasure chest logs the opening and places its Heart pr
   });
 
   assert.equal(result.opened, true);
-  assert.deepEqual(logs, ["Chest was opened", "Chest contained heart"]);
+  assert.deepEqual(logs, ["Chest was opened"]);
   assert.deepEqual(result.reward.cell, { x: 5, y: 4 });
   assert.equal(world.characters[4][5], "♥");
 });
@@ -223,7 +224,60 @@ test("house-owned chests use the same reward and logging lifecycle", () => {
   });
   assert.equal(result.object, chest);
   assert.equal(result.reward.type, "heart");
-  assert.deepEqual(messages, ["Chest was opened", "Chest contained heart"]);
+  assert.deepEqual(messages, ["Chest was opened"]);
+});
+
+test("a chest registers one Heart in the active realm and the normal pickup path logs once", () => {
+  const world = createWorld();
+  const logSystem = createLogSystem();
+  const system = createObjectSpawnerSystem({ catalog: [
+    { type: "heart", name: "Heart", glyph: "♥", IsPickup: true, IsLevelSpawned: true },
+    { type: "chest", name: "Treasure Chest", glyph: "◆", openGlyph: "◇", IsPickup: false, IsLevelSpawned: true, rewards: [{ type: "heart", weight: 100 }] },
+  ] });
+  system.addObject({ id: "chest-1", type: "chest", cell: { x: 5, y: 5 }, realm: world });
+  world.characters[5][5] = "◆";
+  let healthEffects = 0;
+
+  const opened = system.interactAtCell({ x: 5, y: 5 }, {
+    world,
+    playerCell: { x: 5, y: 6 },
+    random: () => 0,
+    log: (message) => logSystem.log({ message }),
+    createChestRewardEffect: () => () => {
+      healthEffects += 1;
+      logSystem.log({ message: "Collected +2 Health from Heart" });
+    },
+  });
+
+  assert.equal(world.objects.filter((object) => object.type === "heart").length, 1);
+  assert.equal(world.pickups.filter((object) => object.type === "heart").length, 1);
+  assert.equal(world.characters[opened.reward.cell.y][opened.reward.cell.x], "♥");
+  system.collideAtCell(opened.reward.cell, { world });
+  system.collideAtCell(opened.reward.cell, { world });
+  assert.equal(healthEffects, 1);
+  assert.deepEqual(logSystem.getSnapshot(), ["Chest was opened", "Collected +2 Health from Heart"]);
+});
+
+test("a blocked chest neighborhood opens without creating an invalid Heart", () => {
+  const world = createWorld();
+  const system = createObjectSpawnerSystem({ catalog: [
+    { type: "heart", name: "Heart", glyph: "♥", IsPickup: true, IsLevelSpawned: true },
+    { type: "chest", name: "Treasure Chest", glyph: "◆", openGlyph: "◇", IsPickup: false, IsLevelSpawned: true, rewards: [{ type: "heart", weight: 100 }] },
+  ] });
+  system.addObject({ id: "chest-1", type: "chest", cell: { x: 5, y: 5 }, realm: world });
+  world.characters[5][5] = "◆";
+  for (let y = 4; y <= 6; y += 1) for (let x = 4; x <= 6; x += 1) {
+    if (x !== 5 || y !== 5) world.terrain[y][x].walkable = false;
+  }
+  const messages = [];
+  const opened = system.interactAtCell({ x: 5, y: 5 }, {
+    world, playerCell: { x: 5, y: 6 }, log: (message) => messages.push(message),
+  });
+
+  assert.equal(opened.opened, true);
+  assert.equal(opened.reward, null);
+  assert.equal(system.getActiveObjects(world).filter((object) => object.type === "heart").length, 0);
+  assert.deepEqual(messages, ["Chest was opened"]);
 });
 
 test("key collection is applied once and emits its exact collection log", () => {

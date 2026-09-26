@@ -36,6 +36,7 @@ export function createEnemySystem({
   timeSystem,
   occupancy,
   getPlayerState,
+  getNpcTargets = () => [],
   getNpcTarget = () => null,
   damageNpc = () => {},
   damagePlayer = () => {},
@@ -59,6 +60,33 @@ export function createEnemySystem({
   const getAge = (id, time = timeSystem.getTime()) => {
     const enemy = occupancy.get(id);
     return enemy?.type === "enemy" ? Math.max(0, time - enemy.bornAtTime) : null;
+  };
+
+  const getLivingNpcTargets = (realm) => {
+    const targets = getNpcTargets(realm) ?? [];
+    const legacyTarget = getNpcTarget(realm);
+    const candidates = Array.isArray(targets) ? targets : [targets];
+    if (legacyTarget) candidates.push(legacyTarget);
+    return candidates
+      .filter((target) => target?.id && target?.cell && target.type === "npc" && !target.dead && target.health > 0)
+      .sort((left, right) => String(left.id).localeCompare(String(right.id)));
+  };
+
+  const findNearestTargetRoute = (enemy, player, npcTargets) => {
+    const candidates = [{ id: "player", type: "player", cell: player.cell, priority: 0 }, ...npcTargets.map((target) => ({ ...target, priority: 1 }))];
+    const reachable = candidates.map((target) => ({
+      target,
+      path: AStarUtility.findPath(player.world, enemy.cell, target.cell, {
+        isBlocked: (cell) => isStaticOccupied(cell, enemy.realm),
+        isBlockedIndex: isStaticOccupiedIndex
+          ? (x, y) => isStaticOccupiedIndex(x, y, enemy.realm)
+          : null,
+      }),
+    })).filter(({ path }) => path?.length);
+    reachable.sort((left, right) => left.path.length - right.path.length
+      || left.target.priority - right.target.priority
+      || String(left.target.id).localeCompare(String(right.target.id)));
+    return reachable[0] ?? null;
   };
 
   const getDistanceField = (enemy, event, player) => {
@@ -92,11 +120,32 @@ export function createEnemySystem({
 
     const player = getPlayerState(enemy.realm);
     if (!player?.alive || player.realm !== enemy.realm) return;
-    const npcTarget = getNpcTarget(enemy.realm, enemy.cell);
-    if (npcTarget?.cell && manhattanDistance(enemy.cell, npcTarget.cell) === 1) {
-      damageNpc(npcTarget.id, ENEMY_ATTACK_DAMAGE, { enemy, event });
-      log(`Enemy hit NPC for -${ENEMY_ATTACK_DAMAGE} Health`);
-      onChange();
+    const npcTargets = getLivingNpcTargets(enemy.realm);
+    if (npcTargets.length) {
+      const selected = findNearestTargetRoute(enemy, player, npcTargets);
+      if (!selected) return;
+      const target = selected.target;
+      if (selected.path.length === 2) {
+        if (target.type === "npc") {
+          damageNpc(target.id, ENEMY_ATTACK_DAMAGE, { enemy, event });
+          log(`Enemy hit NPC for -${ENEMY_ATTACK_DAMAGE} Health`);
+        } else {
+          const defense = combatStatsSystem?.getDefenseSnapshot?.();
+          const resolved = resolveIncomingContact?.({ enemy, event, maximumDamage: ENEMY_ATTACK_DAMAGE });
+          const damage = resolved?.handled
+            ? resolved.damage
+            : defense ? calculatePlayerDamageTaken(ENEMY_ATTACK_DAMAGE, defense.current, defense.maximum) : ENEMY_ATTACK_DAMAGE;
+          damagePlayer(damage, { enemy, event, maximumDamage: ENEMY_ATTACK_DAMAGE, defense });
+          log(`Enemy hit Player for -${damage} Health`);
+        }
+        onChange();
+        return;
+      }
+      const next = selected.path[1];
+      if (next && occupancy.move(id, next)) {
+        if (next.x !== enemy.cell.x) occupancy.update(id, { facing: next.x > enemy.cell.x ? "right" : "left" });
+        onChange();
+      }
       return;
     }
     if (manhattanDistance(enemy.cell, player.cell) === 1) {

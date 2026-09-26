@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createHomeAt, createOverworldBuildings, findHomeCandidates, getBuildingGlyph, getIndexedBuildingGlyph, getBuildingPresentationDirtyCells, getHomeInteriorCorners, HOME_HEIGHT, HOME_WIDTH, HOME_SIZE_SMALL, HOME_SIZE_MED, HOME_SIZE_HIGH } from "../../../../src/client/game-layer-babylon-lite/systems/building-system.js";
+import { getSceneLightingFactor } from "../../../../src/client/game-layer-babylon-lite/lighting.js";
+import { createHomeAt, createOverworldBuildings, findHomeCandidates, getBuildingGlyph, getBuildingPresentationLightingFactor, getIndexedBuildingGlyph, getBuildingPresentationDirtyCells, getHomeInteriorCorners, HOME_HEIGHT, HOME_WIDTH, HOME_SIZE_SMALL, HOME_SIZE_MED, HOME_SIZE_HIGH, isConcealedBuildingRoof } from "../../../../src/client/game-layer-babylon-lite/systems/building-system.js";
 
 function world(size = 96) {
   return { rows: size, columns: size, playerStart: { x: 70, y: 70 }, terrain: Array.from({ length: size }, (_, y) => Array.from({ length: size }, (_, x) => ({ walkable: x > 0 && y > 0 && x < size - 1 && y < size - 1 }))), objects: [], stairs: [] };
@@ -93,6 +94,31 @@ test("Buildings are seeded, non-overlapping, and reveal only while entered", () 
   assert.equal(getBuildingGlyph(home, home.interior[0], home.interior[0]), ".");
   assert.equal(getBuildingGlyph(home, home.interior[0], home.approach), "^");
   assert.equal(getBuildingGlyph(home, home.walls[0], home.door), "#");
+});
+
+test("concealed roof predicate follows the Building presentation state", () => {
+  const home = createHomeAt({ x: 10, y: 20 });
+  const roofCell = home.interior[0];
+  assert.equal(isConcealedBuildingRoof([home], roofCell, home.approach), true);
+  assert.equal(isConcealedBuildingRoof([home], roofCell, home.door), false);
+  assert.equal(isConcealedBuildingRoof([home], roofCell, roofCell), false);
+  assert.equal(isConcealedBuildingRoof([home], home.walls[0], home.approach), false);
+});
+
+test("an open Home Door transmits light while its exterior roof remains ambient-only", () => {
+  const home = createHomeAt({ x: 10, y: 20 });
+  const roofCell = home.interior.find((cell) => cell.x === home.door.x && cell.y === home.door.y - 1);
+  const source = home.approach;
+  const terrain = Array.from({ length: 40 }, () => Array.from({ length: 40 }, () => ({ walkable: true })));
+  const ambient = 0.1;
+  const sourceFactor = getSceneLightingFactor(roofCell, [], source, {
+    ambient,
+    playerProfile: { radius: 6, maximum: 1, falloffExponent: 1 },
+  }, terrain);
+
+  assert.ok(sourceFactor > ambient);
+  assert.equal(getBuildingPresentationLightingFactor([home], roofCell, home.approach, ambient, sourceFactor), ambient);
+  assert.equal(getBuildingPresentationLightingFactor([home], roofCell, home.door, ambient, sourceFactor), sourceFactor);
 });
 
 test("a reserved static cell rejects a Home instead of creating a partial footprint", () => {

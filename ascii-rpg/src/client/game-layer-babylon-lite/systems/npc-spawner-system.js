@@ -4,7 +4,8 @@ import { AStarUtility } from "../utilities/a-star-utility.js";
 export const NPC_SPAWNER_GLYPH = "N";
 export const NPC_SPAWNER_COUNTS = Object.freeze({ Low: 4, Med: 8, High: 12 });
 export const NPC_SPAWNER_COUNT = NPC_SPAWNER_COUNTS.Med;
-const DIRECTIONS = Object.freeze([{ x: 0, y: -1 }, { x: 1, y: -1 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: 1 }, { x: -1, y: 1 }, { x: -1, y: 0 }, { x: -1, y: -1 }]);
+const MIN_PATROL_ENDPOINT_DISTANCE = 10;
+const MAX_PATROL_ENDPOINT_DISTANCE = 15;
 const key = (cell) => `${cell.x},${cell.y}`;
 
 function candidates(world) {
@@ -43,20 +44,32 @@ export function selectNpcSpawnerCells(world, { realm, count = NPC_SPAWNER_COUNT,
 
 export function createNpcSpawnerSystem({ timeSystem, occupancy, spawnNpc, worldFor = () => null, isWalkable, isStaticOccupied = () => false, randomFor = () => Math.random, onChange = () => {} } = {}) {
   let sequence = 1;
-  const hasPatrolRoute = (cell, realm) => {
-    const world = worldFor(realm);
-    if (!world) return true;
-    const field = AStarUtility.createDistanceField(world, cell, { isBlocked: (candidate) => isStaticOccupied(candidate, realm), maxDistance: 20 });
-    for (let y = Math.max(0, cell.y - 20); y <= Math.min(world.rows - 1, cell.y + 20); y += 1) for (let x = Math.max(0, cell.x - 20); x <= Math.min(world.columns - 1, cell.x + 20); x += 1) {
-      if ([15, 20].includes(field.getDistance({ x, y }))) return true;
+  const patrolEndpoints = (spawner) => {
+    const world = worldFor(spawner.realm);
+    if (!world) return [];
+    const field = AStarUtility.createDistanceField(world, spawner.cell, {
+      isBlocked: (candidate) => isStaticOccupied(candidate, spawner.realm),
+      maxDistance: MAX_PATROL_ENDPOINT_DISTANCE,
+    });
+    const endpoints = [];
+    for (let y = Math.max(0, spawner.cell.y - MAX_PATROL_ENDPOINT_DISTANCE); y <= Math.min(world.rows - 1, spawner.cell.y + MAX_PATROL_ENDPOINT_DISTANCE); y += 1) {
+      for (let x = Math.max(0, spawner.cell.x - MAX_PATROL_ENDPOINT_DISTANCE); x <= Math.min(world.columns - 1, spawner.cell.x + MAX_PATROL_ENDPOINT_DISTANCE); x += 1) {
+        const cell = { x, y };
+        const distance = field.getDistance(cell);
+        if (distance >= MIN_PATROL_ENDPOINT_DISTANCE
+          && distance <= MAX_PATROL_ENDPOINT_DISTANCE
+          && isWalkable(cell, spawner.realm)
+          && !isStaticOccupied(cell, spawner.realm)
+          && !occupancy.isOccupied(cell)) endpoints.push(cell);
+      }
     }
-    return false;
+    return endpoints;
   };
   const attempt = (spawner, time) => {
-    const cells = DIRECTIONS.map((d) => ({ x: spawner.cell.x + d.x, y: spawner.cell.y + d.y })).filter((cell) => isWalkable(cell, spawner.realm) && !isStaticOccupied(cell, spawner.realm) && !occupancy.isOccupied(cell) && hasPatrolRoute(cell, spawner.realm));
+    const cells = patrolEndpoints(spawner);
     const cell = cells.length ? cells[Math.min(cells.length - 1, Math.floor(randomFor(spawner, time)() * cells.length))] : null;
     if (!cell) return false;
-    const npc = spawnNpc({ id: `npc-${sequence}`, spawnerId: spawner.id, realm: spawner.realm, cell, bornAtTime: time });
+    const npc = spawnNpc({ id: `npc-${sequence}`, spawnerId: spawner.id, realm: spawner.realm, cell, home: cell, patrolAnchor: spawner.cell, bornAtTime: time });
     if (npc) { sequence += 1; onChange(); return true; }
     return false;
   };

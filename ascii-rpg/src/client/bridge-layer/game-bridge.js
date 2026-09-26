@@ -119,6 +119,7 @@ export function sendDialogSnapshot(snapshot) {
   dialogSnapshot = snapshot ? Object.freeze({
     ...snapshot,
     anchor: snapshot.anchor ? Object.freeze({ ...snapshot.anchor }) : null,
+    exclusions: Object.freeze((snapshot.exclusions ?? []).map((rect) => Object.freeze({ ...rect }))),
     choices: Object.freeze((snapshot.choices ?? []).map((choice) => Object.freeze({ ...choice }))),
   }) : null;
   for (const listener of dialogListeners) listener(dialogSnapshot);
