@@ -20,5 +20,5 @@
 ## 4. Integrated verification
 
 - [x] 4.1 Run the revised focused mouse-navigation, input-controller, player-grid, combat, mountain, bomb, and character-contact Node tests, then run `npm.cmd test` and `npm.cmd run build` from the repository root.
-- [ ] 4.2 Manually verify with an explicit `randomSeed` that white targets travel, green enemies and Overground mountains route to cardinal adjacency and use normal repeated actions, unavailable Underground walls remain red, both mouse buttons use their expected cadences, and keyboard/arrow/swipe interactions match the same outcomes.
+- [x] 4.2 Manually verify with an explicit `randomSeed` that white targets travel, green enemies and Overground mountains route to cardinal adjacency and use normal repeated actions, unavailable Underground walls remain red, both mouse buttons use their expected cadences, and keyboard/arrow/swipe interactions match the same outcomes.
 - [x] 4.3 Run `openspec validate add-mouse-action --strict` and retain unrelated worktree changes.
