@@ -22,7 +22,7 @@ test("torch snapshots retain identity until their realm's sources change", () =>
   system.addObject({ type: "torch", cell: { x: 2, y: 2 }, realm: world });
   const lights = system.getLightingSources(world);
   assert.equal(system.getLightingSources(world), lights);
-  system.addObject({ type: "heart", cell: { x: 3, y: 3 }, realm: world });
+  system.addObject({ type: "health", cell: { x: 3, y: 3 }, realm: world });
   system.addObject({ type: "torch", cell: { x: 4, y: 4 }, realm: other });
   assert.equal(system.getLightingSources(world), lights);
   system.addObject({ type: "torch", cell: { x: 5, y: 5 }, realm: world });
@@ -35,7 +35,7 @@ test("torch snapshots retain identity until their realm's sources change", () =>
 test("the object catalog is palette-backed and declares pickup and level-spawn ownership", () => {
   assert.equal(validateObjectPalette(objectData.objects, paletteData.entries), true);
   assert.deepEqual(objectData.objects.map((object) => [object.type, object.IsPickup, object.IsLevelSpawned]), [
-    ["welcome-sign", false, true], ["gold", true, false], ["heart", true, true], ["chest", false, true], ["torch", false, true], ["trap", false, true], ["stairs", false, true],
+    ["welcome-sign", false, true], ["gold", true, true], ["health", true, true], ["chest", false, true], ["torch", false, true], ["trap", false, true], ["stairs", false, true],
     ["key", true, false], ["fence", false, false], ["door", false, false], ["CampFire", false, true],
   ]);
   assert.equal(objectData.objects.find((object) => object.type === "torch").glyph, "🕯️");
@@ -99,17 +99,17 @@ test("chest placement stays within its configured player-start radius", () => {
 
 test("pickups disappear after collision while persistent objects remain", () => {
   const system = createObjectSpawnerSystem({ catalog: [
-    { type: "heart", name: "Heart", glyph: "♥", IsPickup: true, IsLevelSpawned: true, logText: "Collected +2 Health from Heart" },
+    { type: "health", name: "Health", glyph: "health-potion", IsPickup: true, IsLevelSpawned: true, logText: "Collected +2 Health from Health" },
     { type: "trap", name: "Trap", glyph: "☠", IsPickup: false, IsLevelSpawned: true, logText: "Lost -25 Health from Trap" },
   ] });
   let health = 10;
   const world = createWorld();
-  system.addObject({ id: "heart-1", type: "heart", cell: { x: 2, y: 2 }, realm: world, effect: () => { health += 2; } });
+  system.addObject({ id: "health-1", type: "health", cell: { x: 2, y: 2 }, realm: world, effect: () => { health += 2; } });
   system.addObject({ id: "trap-1", type: "trap", cell: { x: 3, y: 3 }, realm: world, effect: () => { health -= 25; } });
-  world.characters[2][2] = "♥";
+  world.characters[2][2] = "health-potion";
   world.characters[3][3] = "☠";
-  assert.equal(system.collideAtCell({ x: 2, y: 2 }, { world }).logText, "Collected +2 Health from Heart");
-  assert.equal(system.getActiveObjects().some((object) => object.id === "heart-1"), false);
+  assert.equal(system.collideAtCell({ x: 2, y: 2 }, { world }).logText, "Collected +2 Health from Health");
+  assert.equal(system.getActiveObjects().some((object) => object.id === "health-1"), false);
   assert.equal(world.characters[2][2], null);
   assert.equal(system.collideAtCell({ x: 3, y: 3 }, { world }).logText, "Lost -25 Health from Trap");
   assert.equal(system.getActiveObjects().some((object) => object.id === "trap-1"), true);
@@ -117,7 +117,7 @@ test("pickups disappear after collision while persistent objects remain", () => 
   assert.equal(health, -13);
 });
 
-test("closed doors require a key and open without moving the player", () => {
+test("locked doors require a key and open without moving the player", () => {
   const world = createWorld();
   world.terrain[5][5].walkable = false;
   world.terrain[5][5].blocksLight = true;
@@ -128,7 +128,8 @@ test("closed doors require a key and open without moving the player", () => {
   const system = createObjectSpawnerSystem({ eventSystem, catalog: [
     { type: "door", name: "Door", glyph: "█", openGlyph: "□", IsPickup: false, IsLevelSpawned: false },
   ] });
-  system.addObject({ id: "door-1", type: "door", cell: { x: 5, y: 5 }, realm: world });
+  const door = system.addObject({ id: "door-1", type: "door", cell: { x: 5, y: 5 }, realm: world });
+  assert.equal(door.state, "locked");
   const messages = [];
 
   const locked = system.interactAtCell({ x: 5, y: 5 }, { world, keyCount: 0, log: (message) => messages.push(message) });
@@ -143,6 +144,7 @@ test("closed doors require a key and open without moving the player", () => {
     log: (message) => messages.push(message),
   });
   assert.equal(unlocked.opened, true);
+  assert.equal(door.state, "open");
   assert.equal(world.terrain[5][5].walkable, true);
   assert.equal(world.terrain[5][5].blocksLight, false);
   assert.equal(world.characters[5][5], "□");
@@ -150,6 +152,19 @@ test("closed doors require a key and open without moving the player", () => {
   assert.deepEqual(events.map(({ type, objectId }) => ({ type, objectId })), [
     { type: "door-unlocked", objectId: "door-1" },
   ]);
+});
+
+test("closed doors remain blocked without consuming a key", () => {
+  const world = createWorld();
+  const system = createObjectSpawnerSystem({ catalog: [
+    { type: "door", name: "Door", glyph: "█", openGlyph: "□", IsPickup: false, IsLevelSpawned: false },
+  ] });
+  const door = system.addObject({ id: "closed-door", type: "door", state: "closed", cell: { x: 5, y: 5 }, realm: world });
+  let spent = 0;
+  const interaction = system.interactAtCell({ x: 5, y: 5 }, { world, keyCount: 1, spendKey: () => { spent += 1; return true; } });
+  assert.equal(interaction.opened, false);
+  assert.equal(door.state, "closed");
+  assert.equal(spent, 0);
 });
 
 test("a cardinal chest bump spawns a Heart even without pre-generated Hearts", () => {

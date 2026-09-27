@@ -188,6 +188,13 @@
   image-rendering: pixelated;
 }
 
+.character_key_icon {
+  width: 1em;
+  height: 1em;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
 .character_resource[data-resource] {
   flex-direction: column;
   gap: 0.1rem;

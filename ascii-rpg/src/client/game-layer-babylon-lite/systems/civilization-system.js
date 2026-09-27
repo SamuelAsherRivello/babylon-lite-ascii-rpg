@@ -6,8 +6,11 @@ export const CLOSED_HORIZONTAL_DOOR_GLYPH = "█";
 export const OPEN_HORIZONTAL_DOOR_GLYPH = "□";
 export const FRONT_DOOR_CLOSED_ART = "civilization-door:front-closed";
 export const FRONT_DOOR_OPEN_ART = "civilization-door:front-open";
+export const FRONT_DOOR_LOCKED_ART = "civilization-door:front-locked";
 export const SIDE_DOOR_CLOSED_ART = "civilization-door:side-closed";
 export const SIDE_DOOR_OPEN_ART = "civilization-door:side-open";
+export const SIDE_DOOR_LOCKED_ART = "civilization-door:side-locked";
+export const GOLD_KEY_ART = "gold-key";
 export const KEY_GLYPH = "⚿";
 export const PLAYER_GLYPH = "👤";
 export const CIVILIZATION_SCREEN_COLUMNS = 64;
@@ -198,9 +201,22 @@ export function getCivilizationGlyph(type, orientation, open = false) {
   return open ? OPEN_VERTICAL_DOOR_GLYPH : CLOSED_VERTICAL_DOOR_GLYPH;
 }
 
-export function getCivilizationDoorArt(orientation, open = false) {
-  if (orientation === "horizontal") return open ? FRONT_DOOR_OPEN_ART : FRONT_DOOR_CLOSED_ART;
-  return open ? SIDE_DOOR_OPEN_ART : SIDE_DOOR_CLOSED_ART;
+export function getCivilizationDoorArt(orientation, state = "locked") {
+  const normalizedState = state === true || state === "open" ? "open" : state === "closed" ? "closed" : "locked";
+  if (orientation === "horizontal") {
+    if (normalizedState === "open") return FRONT_DOOR_OPEN_ART;
+    return normalizedState === "closed" ? FRONT_DOOR_CLOSED_ART : FRONT_DOOR_LOCKED_ART;
+  }
+  if (normalizedState === "open") return SIDE_DOOR_OPEN_ART;
+  return normalizedState === "closed" ? SIDE_DOOR_CLOSED_ART : SIDE_DOOR_LOCKED_ART;
+}
+
+export function getCivilizationDoorArtLayers(orientation, state = "locked") {
+  const normalizedState = state === true || state === "open" ? "open" : state === "closed" ? "closed" : "locked";
+  return {
+    door: getCivilizationDoorArt(orientation, normalizedState),
+    overlay: normalizedState === "locked" ? GOLD_KEY_ART : null,
+  };
 }
 
 export function getCivilizationDirections() {

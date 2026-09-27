@@ -109,9 +109,25 @@
       "enabled": true
     },
     {
+      "id": "object-gold",
+      "title": "Gold Distribution",
+      "order": 8,
+      "density": "Med",
+      "owner": "objects",
+      "realms": [
+        "Overground"
+      ],
+      "requires": [
+        "player-position"
+      ],
+      "objectType": "gold",
+      "seedNamespace": "gold:placement",
+      "enabled": true
+    },
+    {
       "id": "object-chest",
       "title": "Chest Distribution",
-      "order": 8,
+      "order": 9,
       "density": "Med",
       "owner": "objects",
       "realms": [
@@ -128,7 +144,7 @@
     {
       "id": "object-trap",
       "title": "Trap Distribution",
-      "order": 9,
+      "order": 10,
       "density": "High",
       "owner": "objects",
       "realms": [
@@ -145,7 +161,7 @@
     {
       "id": "object-torch",
       "title": "Torch Distribution",
-      "order": 10,
+      "order": 11,
       "density": "Med",
       "owner": "objects",
       "realms": [
@@ -162,7 +178,7 @@
     {
       "id": "npc-spawner",
       "title": "NPC",
-      "order": 11,
+      "order": 12,
       "density": "Med",
       "owner": "dynamic",
       "realms": [
@@ -177,7 +193,7 @@
     {
       "id": "object-CampFire",
       "title": "Camp Fire Distribution",
-      "order": 12,
+      "order": 13,
       "density": "Med",
       "owner": "objects",
       "realms": [
@@ -193,7 +209,7 @@
     {
       "id": "civilization-stairs",
       "title": "Stairs",
-      "order": 13,
+      "order": 14,
       "density": "Med",
       "owner": "civilization",
       "realms": [
@@ -211,7 +227,7 @@
     {
       "id": "civilization-doors",
       "title": "Doors",
-      "order": 14,
+      "order": 15,
       "density": "Med",
       "owner": "civilization",
       "realms": [
@@ -226,7 +242,7 @@
     {
       "id": "civilization-homes",
       "title": "Homes",
-      "order": 15,
+      "order": 16,
       "density": "Med",
       "owner": "civilization",
       "realms": [
@@ -241,7 +257,7 @@
     {
       "id": "civilization-signs",
       "title": "Welcome Signs",
-      "order": 16,
+      "order": 17,
       "density": "Med",
       "owner": "civilization",
       "realms": [
@@ -258,7 +274,7 @@
     {
       "id": "enemy-spawner",
       "title": "Enemy Spawner Distribution",
-      "order": 17,
+      "order": 18,
       "density": "Med",
       "owner": "dynamic",
       "realms": [

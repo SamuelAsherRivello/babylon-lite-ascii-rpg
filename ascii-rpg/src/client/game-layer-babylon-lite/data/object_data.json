@@ -17,10 +17,11 @@
       "name": "Gold",
       "glyph": "💰",
       "IsPickup": true,
-      "IsLevelSpawned": false,
+      "IsLevelSpawned": true,
       "consequence": { "id": "gold", "amount": 1 },
       "logText": "Collected +1 Gold from Gold",
-      "distribution": { "distanceTargets": [10, 30, 100] }
+      "distribution": { "minCount": 10, "maxCount": 14, "minimumDistance": 3, "distanceTargets": [10, 30, 100] },
+      "generation": { "passId": "object-gold", "realms": ["Overground"], "seedNamespace": "gold:placement" }
     },
     {
       "type": "health",

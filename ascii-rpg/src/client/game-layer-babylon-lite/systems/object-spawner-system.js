@@ -10,6 +10,10 @@ function freezeObject(object) {
   return Object.freeze({ ...object, cell: Object.freeze({ ...object.cell }) });
 }
 
+// Image-backed objects intentionally have no text-palette entry. Their glyph
+// value is the renderer's stable static-art key, not displayable text.
+const IMAGE_BACKED_GLYPHS = new Set(["health-potion"]);
+
 function validateCatalog(catalog) {
   if (!Array.isArray(catalog)) throw new TypeError("Object catalog must be an array.");
   const types = new Set();
@@ -124,12 +128,13 @@ export function createObjectSpawnerSystem({ catalog = [], eventSystem = null } =
     eventSystem?.publish?.(frozen);
   };
 
-  const addObject = ({ id, type, cell, glyph = null, openGlyph = null, orientation = null, buildingId = null, effect = () => {}, realm = null } = {}) => {
+  const addObject = ({ id, type, cell, glyph = null, openGlyph = null, orientation = null, buildingId = null, state = null, open = false, effect = () => {}, realm = null } = {}) => {
     const definition = definitions.get(type);
     if (!definition) throw new RangeError(`Unknown object type: ${type}.`);
     if (!cell || !Number.isInteger(cell.x) || !Number.isInteger(cell.y)) throw new TypeError("An object needs an integer cell.");
     const objectId = id ?? `${type}-${++nextId}`;
     if (objects.has(objectId)) throw new TypeError(`Duplicate object id: ${objectId}.`);
+    const doorState = type === "door" ? (open || state === "open" || definition.state === "open" ? "open" : state === "closed" || definition.state === "closed" ? "closed" : "locked") : null;
     const object = {
       id: objectId,
       type,
@@ -140,7 +145,8 @@ export function createObjectSpawnerSystem({ catalog = [], eventSystem = null } =
       alternateOpenGlyph: definition.alternateOpenGlyph ?? null,
       orientation,
       buildingId,
-      open: false,
+      state: doorState,
+      open: doorState === "open",
       IsPickup: definition.IsPickup,
       IsLevelSpawned: definition.IsLevelSpawned,
       cell: { x: cell.x, y: cell.y },
@@ -259,11 +265,15 @@ export function createObjectSpawnerSystem({ catalog = [], eventSystem = null } =
       return { handled: true, opened: true, object, reward };
     }
     if (object.type !== "door") return null;
+    const doorState = object.state ?? (object.open ? "open" : "locked");
+    if (doorState === "open") return null;
+    if (doorState === "closed") return { handled: true, opened: false, object };
     if (keyCount <= 0 || !spendKey()) {
       log("The door is locked.");
       return { handled: true, opened: false, object };
     }
     object.open = true;
+    object.state = "open";
     object.glyph = object.openGlyph ?? object.glyph;
     if (world?.terrain?.[cell.y]?.[cell.x]) {
       world.terrain[cell.y][cell.x].walkable = true;
@@ -330,7 +340,7 @@ export function validateObjectPalette(catalog, palette = []) {
   const glyphs = new Set(palette.map((entry) => entry.glyph));
   for (const entry of validateCatalog(catalog)) {
     for (const glyph of [entry.glyph, entry.openGlyph, entry.alternateGlyph, entry.alternateOpenGlyph].filter(Boolean)) {
-      if (!glyphs.has(glyph)) throw new Error(`Object glyph is missing from the palette: ${glyph}`);
+      if (!glyphs.has(glyph) && !IMAGE_BACKED_GLYPHS.has(glyph)) throw new Error(`Object glyph is missing from the palette: ${glyph}`);
     }
   }
   return true;

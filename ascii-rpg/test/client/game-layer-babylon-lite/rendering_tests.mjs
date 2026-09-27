@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { rasterizeTerrainArt } from "../../../src/client/game-layer-babylon-lite/underground-terrain-art.js";
+import { getStaticPropArtAspectRatio, rasterizeStaticPropArt, rasterizeTerrainArt } from "../../../src/client/game-layer-babylon-lite/underground-terrain-art.js";
+import { FRONT_DOOR_CLOSED_ART, FRONT_DOOR_LOCKED_ART, FRONT_DOOR_OPEN_ART, SIDE_DOOR_CLOSED_ART, SIDE_DOOR_LOCKED_ART, SIDE_DOOR_OPEN_ART } from "../../../src/client/game-layer-babylon-lite/systems/civilization-system.js";
 import { expandTerrainDirtyCells, getWallComposition, getWallMask } from "../../../src/client/game-layer-babylon-lite/underground-wall-autotile.js";
 import { BLUE_WATER_TERRAIN_FRAMES, compositeTerrainPixels, GOLD_COIN_ANIMATION_FRAME_DURATION, getGoldCoinAnimationFrame, getTerrainArtBounds, getTerrainArtKey, getWaterAnimationFrame, parseTerrainArtKey, resolveUndergroundTerrainFrame, UNDERGROUND_TERRAIN_FRAMES, WATER_ANIMATION_FRAME_DURATION } from "../../../src/client/game-layer-babylon-lite/underground-terrain-art.js";
 import { createWorldViewComposition, collectWorldViewGlyphs } from "../../../src/client/game-layer-babylon-lite/world-view.js";
@@ -149,6 +150,40 @@ test("gold uses each frame of the animated coin strip without changing its gamep
   assert.equal(getTerrainArtKey(world, { x: 0, y: 0 }, "💰", 0, 0), "gold-coin:0");
   assert.equal(getTerrainArtKey(world, { x: 0, y: 0 }, "💰", 0, 3), "gold-coin:3");
   assert.equal(world.terrain[0][0].glyph, "•");
+});
+
+test("locked door art composes the gold key over front and side closed doors", () => {
+  const previous = globalThis.document;
+  const calls = [];
+  globalThis.document = { createElement: () => ({ getContext: () => ({
+    drawImage: (...args) => calls.push(args),
+    getImageData: () => ({ data: new Uint8ClampedArray(4 * 16 * 24) }),
+  }) }) };
+  try {
+    const images = {
+      frontDoorClosed: { name: "front-closed" }, frontDoorOpen: { name: "front-open" },
+      sideDoorClosed: { name: "side-closed" }, sideDoorOpen: { name: "side-open" }, goldenKey: { name: "gold-key" },
+    };
+    assert.equal(getStaticPropArtAspectRatio(FRONT_DOOR_LOCKED_ART), 1.5);
+    assert.equal(getStaticPropArtAspectRatio(SIDE_DOOR_LOCKED_ART), 1);
+    rasterizeStaticPropArt(FRONT_DOOR_LOCKED_ART, images, 16);
+    assert.deepEqual(calls, [
+      [images.frontDoorClosed, 0, 0, 16, 24],
+      [images.goldenKey, 4.5, 1.92, 7, 7],
+    ]);
+    calls.length = 0;
+    rasterizeStaticPropArt(SIDE_DOOR_LOCKED_ART, images, 16);
+    assert.deepEqual(calls, [
+      [images.sideDoorClosed, 0, 0, 16, 16],
+      [images.goldenKey, 4.5, 1.28, 7, 7],
+    ]);
+    calls.length = 0;
+    for (const key of [FRONT_DOOR_CLOSED_ART, FRONT_DOOR_OPEN_ART, SIDE_DOOR_CLOSED_ART, SIDE_DOOR_OPEN_ART]) rasterizeStaticPropArt(key, images, 16);
+    assert.equal(calls.some((args) => args[0] === images.goldenKey), false);
+  } finally {
+    if (previous === undefined) delete globalThis.document;
+    else globalThis.document = previous;
+  }
 });
 
 test("terrain rasterization selects matching wall and floor frames from the new sheet", () => {

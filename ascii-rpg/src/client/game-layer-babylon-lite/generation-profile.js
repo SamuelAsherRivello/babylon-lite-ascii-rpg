@@ -20,6 +20,7 @@ export function resolveGenerationProfile(generationSettings = { passes: [] }) {
     minWalkableMultiplier: densityMultiplier("walkability", { Low: 0.7, Med: 1, High: 2 }),
     objectCountMultipliers: Object.freeze({
       health: densityMultiplier("object-health", { Low: 0.25, Med: 1, High: 3 }),
+      gold: densityMultiplier("object-gold", { Low: 0.25, Med: 1, High: 3 }),
       trap: densityMultiplier("object-trap", { Low: 0.25, Med: 1, High: 3 }),
       CampFire: densityMultiplier("object-CampFire", { Low: 0.25, Med: 0.5, High: 1 }),
     }),

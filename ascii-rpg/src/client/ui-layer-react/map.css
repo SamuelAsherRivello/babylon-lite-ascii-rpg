@@ -6,6 +6,29 @@
   background: #000;
 }
 
+.world_renderer_status {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  width: min(34rem, calc(100% - 3rem));
+  box-sizing: border-box;
+  padding: 1rem 1.25rem;
+  border: 1px solid #a54;
+  background: #1a0e0a;
+  color: #ffe3cc;
+  font: 16px/1.4 system-ui, sans-serif;
+  text-align: center;
+  transform: translate(-50%, -50%);
+}
+
+.world_renderer_status h1 {
+  margin: 0 0 .5rem;
+  font-size: 1.1rem;
+}
+
+.world_renderer_status p {
+  margin: 0;
+}
+
 #pfx_overlay {
   position: absolute;
   inset: 0;

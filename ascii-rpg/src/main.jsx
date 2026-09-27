@@ -10,6 +10,21 @@ import { PERFORMANCE_SCENARIOS, performanceMonitor } from "./client/game-layer-b
 import "./client/ui-layer-react/styles.css";
 
 const gameLayer = document.getElementById("game_layer");
+function showWorldRendererUnavailable(error) {
+  const status = document.createElement("section");
+  status.className = "world_renderer_status";
+  status.setAttribute("role", "alert");
+  const title = document.createElement("h1");
+  title.textContent = "World renderer unavailable";
+  const detail = document.createElement("p");
+  detail.textContent = navigator.gpu
+    ? `The world could not start: ${error?.message || "Unknown startup error"}`
+    : "This game needs WebGPU. Use an up-to-date browser with hardware acceleration enabled, then reload.";
+  status.append(title, detail);
+  gameLayer.replaceChildren(status);
+  gameLayer.dataset.gameStatus = "unavailable";
+  console.error(error);
+}
 const performanceMode = new URL(window.location.href).searchParams.get("performance");
 if (performanceMode === "startup" || performanceMode === "all") {
   performanceMonitor.start({ scenario: PERFORMANCE_SCENARIOS.STARTUP, durationMs: 120000 });
@@ -25,9 +40,9 @@ void Promise.all([paletteReady, fontReady, generationSettingsReady])
       report: getPerformanceReport,
       reset: resetPerformanceSession,
     });
-    if (new URL(window.location.href).searchParams.get("testHarness") === "chest-and-heart") {
+    if (new URL(window.location.href).searchParams.get("testHarness") === "chest-and-health") {
       window.asciiRpgTest = Object.freeze({
-        snapshot: () => controller.getChestAndHeartTestSnapshot(),
+        snapshot: () => controller.getChestAndHealthTestSnapshot(),
       });
     }
     if (performanceMode === "idle" || performanceMode === "movement" || performanceMode === "sprint") {
@@ -78,8 +93,7 @@ void Promise.all([paletteReady, fontReady, generationSettingsReady])
   })
   .catch((error) => {
     if (error.name === "AbortError") return;
-    gameLayer.dataset.gameStatus = "unavailable";
-    console.error(error);
+    showWorldRendererUnavailable(error);
   });
 
 createRoot(document.getElementById("ui_layer")).render(

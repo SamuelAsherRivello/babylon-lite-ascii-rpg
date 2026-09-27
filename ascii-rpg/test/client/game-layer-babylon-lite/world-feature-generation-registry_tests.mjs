@@ -4,13 +4,14 @@ import test from "node:test";
 import objectData from "../../../src/client/game-layer-babylon-lite/data/object_data.json" with { type: "json" };
 import { GENERATION_FEATURES, GENERATION_SEMANTIC_CARDS, resolveGenerationPlan, validateGenerationRegistry } from "../../../src/client/game-layer-babylon-lite/world-feature-generation-registry.js";
 
-test("registry exposes the sixteen ordered features through nine semantic cards", () => {
+test("registry exposes the seventeen ordered features through nine semantic cards", () => {
   assert.equal(validateGenerationRegistry(), true);
-  assert.deepEqual(GENERATION_FEATURES.map((feature) => feature.order), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]);
+  assert.deepEqual(GENERATION_FEATURES.map((feature) => feature.order), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]);
   assert.equal(GENERATION_SEMANTIC_CARDS.length, 9);
   assert.deepEqual(GENERATION_SEMANTIC_CARDS.find((card) => card.id === "object-distribution").featureIds.includes("npc-spawner"), false);
   assert.deepEqual(GENERATION_SEMANTIC_CARDS.find((card) => card.id === "character-distribution").featureIds, ["enemy-spawner", "npc-spawner"]);
   assert.ok(GENERATION_SEMANTIC_CARDS.find((card) => card.id === "object-distribution").featureIds.includes("object-chest"));
+  assert.ok(GENERATION_SEMANTIC_CARDS.find((card) => card.id === "object-distribution").featureIds.includes("object-gold"));
   assert.deepEqual(GENERATION_SEMANTIC_CARDS.find((card) => card.id === "civilization-placement").featureIds, ["civilization-stairs", "civilization-doors", "civilization-homes", "civilization-signs"]);
   assert.equal(GENERATION_FEATURES.find((feature) => feature.id === "civilization-stairs").pairedRealms, true);
   assert.deepEqual(GENERATION_FEATURES.find((feature) => feature.id === "civilization-doors").realms, ["Underground"]);
@@ -18,9 +19,9 @@ test("registry exposes the sixteen ordered features through nine semantic cards"
 });
 
 test("registry rejects missing generated-object registrations and prerequisite cycles", () => {
-  const missingObject = objectData.objects.map((object) => object.type === "heart" ? { ...object, generation: undefined } : object);
-  assert.throws(() => validateGenerationRegistry(GENERATION_FEATURES, missingObject), /Missing generated object declaration: heart/);
-  const cyclic = GENERATION_FEATURES.map((feature) => feature.id === "object-heart" ? { ...feature, requires: ["object-trap"] } : feature.id === "object-trap" ? { ...feature, requires: ["object-heart"] } : feature);
+  const missingObject = objectData.objects.map((object) => object.type === "health" ? { ...object, generation: undefined } : object);
+  assert.throws(() => validateGenerationRegistry(GENERATION_FEATURES, missingObject), /Missing generated object declaration: health/);
+  const cyclic = GENERATION_FEATURES.map((feature) => feature.id === "object-health" ? { ...feature, requires: ["object-trap"] } : feature.id === "object-trap" ? { ...feature, requires: ["object-health"] } : feature);
   assert.throws(() => validateGenerationRegistry(cyclic), /Cyclic generation prerequisite/);
 });
 

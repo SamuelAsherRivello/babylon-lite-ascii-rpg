@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   createCivilizationGroups,
   getCivilizationDoorArt,
+  getCivilizationDoorArtLayers,
   findCivilizationCandidates,
   getCivilizationGlyph,
   isCardinalDirection,
@@ -87,10 +88,18 @@ test("uses the selected glyph pairs and cardinal interaction directions", () => 
   assert.equal(getCivilizationGlyph("door", "horizontal"), "█");
   assert.equal(getCivilizationGlyph("door", "horizontal", true), "□");
   assert.equal(getCivilizationGlyph("key", "horizontal"), "⚿");
-  assert.equal(getCivilizationDoorArt("horizontal"), "civilization-door:front-closed");
+  assert.equal(getCivilizationDoorArt("horizontal"), "civilization-door:front-locked");
   assert.equal(getCivilizationDoorArt("horizontal", true), "civilization-door:front-open");
-  assert.equal(getCivilizationDoorArt("vertical"), "civilization-door:side-closed");
+  assert.equal(getCivilizationDoorArt("horizontal", "closed"), "civilization-door:front-closed");
+  assert.equal(getCivilizationDoorArt("vertical"), "civilization-door:side-locked");
   assert.equal(getCivilizationDoorArt("vertical", true), "civilization-door:side-open");
+  assert.equal(getCivilizationDoorArt("vertical", "closed"), "civilization-door:side-closed");
+  assert.deepEqual(getCivilizationDoorArtLayers("horizontal"), {
+    door: "civilization-door:front-locked", overlay: "gold-key",
+  });
+  assert.deepEqual(getCivilizationDoorArtLayers("vertical", "closed"), {
+    door: "civilization-door:side-closed", overlay: null,
+  });
   assert.equal(isCardinalDirection({ x: 1, y: 0 }), true);
   assert.equal(isCardinalDirection({ x: 1, y: 1 }), false);
 });

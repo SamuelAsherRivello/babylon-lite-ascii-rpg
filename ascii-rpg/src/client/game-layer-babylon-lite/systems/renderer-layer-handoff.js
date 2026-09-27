@@ -12,8 +12,12 @@ export function attachReplacementRendererLayer({
   addLayer,
   removeLayer,
 }) {
+  // A stale scheduled render can run while its session is being disposed.
+  // Babylon Lite rejects layer mutation on a disposed renderer (#527); leave
+  // its already-detached presentation untouched in that case.
+  if (!renderer || renderer._disposed) return currentLayer;
   const nextLayer = createLayer(nextAtlas, { capacity });
-  if (renderer) addLayer(renderer, nextLayer);
-  if (renderer && currentLayer) removeLayer(renderer, currentLayer);
+  addLayer(renderer, nextLayer);
+  if (currentLayer) removeLayer(renderer, currentLayer);
   return nextLayer;
 }

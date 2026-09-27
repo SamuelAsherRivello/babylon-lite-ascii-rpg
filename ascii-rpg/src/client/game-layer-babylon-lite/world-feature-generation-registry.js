@@ -9,6 +9,7 @@ export const GENERATION_DENSITY_DETAILS = Object.freeze({
   water: Object.freeze({ Low: "5% lake chance", Med: "60% lake chance", High: "100% lake chance, nine lakes" }),
   walkability: Object.freeze({ Low: "70% connected-area target", Med: "Current connected-area target", High: "200% connected-area target, fewer walls" }),
   "object-health": Object.freeze({ Low: "Quarter health count", Med: "Current health count", High: "Triple health count" }),
+  "object-gold": Object.freeze({ Low: "Quarter gold count", Med: "Current gold count", High: "Triple gold count" }),
   "object-chest": Object.freeze({ Low: "1 chest per realm", Med: "2 chests per realm", High: "3 chests per realm" }),
   "object-trap": Object.freeze({ Low: "Quarter trap count", Med: "Current trap count", High: "Triple trap count" }),
   "object-torch": Object.freeze({ Low: "Quarter torch count", Med: "Current torch count", High: "Triple torch count" }),
@@ -29,6 +30,7 @@ export const GENERATION_PASS_DESCRIPTIONS = Object.freeze({
   walkability: "Controls the minimum connected playable area and open pathways",
   "player-position": "Uses the centered player start",
   "object-health": "Controls health pickup placement density",
+  "object-gold": "Controls Overground gold pickup placement density",
   "object-chest": "Controls treasure chest placement within 50 cells of each realm start",
   "object-trap": "Controls trap placement density",
   "object-torch": "Controls torch placement density",
@@ -43,7 +45,7 @@ export const GENERATION_PASS_DESCRIPTIONS = Object.freeze({
 
 export const GENERATION_PASS_REALMS = Object.freeze({
   ground: "All", "overground-walls": "Overworld", "underground-caves": "Underworld", water: "All", walkability: "All", "player-position": "All",
-  "object-health": "All", "object-chest": "All", "object-trap": "All", "object-torch": "All", "object-CampFire": "Underworld",
+  "object-health": "All", "object-gold": "Overworld", "object-chest": "All", "object-trap": "All", "object-torch": "All", "object-CampFire": "Underworld",
   "npc-spawner": "Overworld", "civilization-stairs": "All", "civilization-doors": "Underworld", "civilization-homes": "Overworld", "civilization-signs": "All", "enemy-spawner": "Underworld",
 });
 const declarations = new Map([
@@ -54,6 +56,7 @@ const declarations = new Map([
   ["walkability", { owner: "terrain", realms: ["Overground", "Underground"], required: true, seedNamespace: "walkability" }],
   ["player-position", { owner: "player", realms: ["Overground", "Underground"], configurable: false, required: true, requires: ["walkability"], seedNamespace: "player-position" }],
   ["object-health", { owner: "objects", realms: ["Overground", "Underground"], requires: ["player-position"], objectType: "health", seedNamespace: "health:placement" }],
+  ["object-gold", { owner: "objects", realms: ["Overground"], requires: ["player-position"], objectType: "gold", seedNamespace: "gold:placement" }],
   ["object-chest", { owner: "objects", realms: ["Overground", "Underground"], requires: ["player-position"], objectType: "chest", seedNamespace: "chest:placement" }],
   ["object-trap", { owner: "objects", realms: ["Overground", "Underground"], requires: ["player-position"], objectType: "trap", seedNamespace: "trap:placement" }],
   ["object-torch", { owner: "objects", realms: ["Overground", "Underground"], requires: ["player-position"], objectType: "torch", seedNamespace: "torch:placement" }],
@@ -74,7 +77,7 @@ export const GENERATION_FEATURES = Object.freeze(bundledSettings.passes.map((pas
 
 export const GENERATION_SEMANTIC_CARDS = Object.freeze([
   ...GENERATION_FEATURES.filter((feature) => feature.order <= 6).map((feature) => Object.freeze({ id: feature.id, title: feature.title, featureIds: Object.freeze([feature.id]) })),
-  Object.freeze({ id: "object-distribution", title: "Object Distribution", featureIds: Object.freeze(["object-health", "object-chest", "object-trap", "object-torch", "object-CampFire"]) }),
+  Object.freeze({ id: "object-distribution", title: "Object Distribution", featureIds: Object.freeze(["object-health", "object-gold", "object-chest", "object-trap", "object-torch", "object-CampFire"]) }),
   Object.freeze({ id: "civilization-placement", title: "Civilization Placement", featureIds: Object.freeze(["civilization-stairs", "civilization-doors", "civilization-homes", "civilization-signs"]) }),
   Object.freeze({ id: "character-distribution", title: "Character Distribution", featureIds: Object.freeze(["enemy-spawner", "npc-spawner"]) }),
 ]);

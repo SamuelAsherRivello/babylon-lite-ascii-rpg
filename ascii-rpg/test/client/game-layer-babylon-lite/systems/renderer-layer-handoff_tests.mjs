@@ -30,3 +30,18 @@ test("attaches the replacement renderer layer before removing the current layer"
     ["remove", "renderer", "current"],
   ]);
 });
+
+test("does not mutate a disposed renderer from a stale scheduled render", () => {
+  const currentLayer = { id: "current" };
+  const result = attachReplacementRendererLayer({
+    renderer: { _disposed: true },
+    currentLayer,
+    nextAtlas: { id: "atlas" },
+    capacity: 32,
+    createLayer() { throw new Error("A disposed renderer must not create a replacement layer."); },
+    addLayer() { throw new Error("A disposed renderer must not accept a replacement layer."); },
+    removeLayer() { throw new Error("A disposed renderer must not remove a layer."); },
+  });
+
+  assert.equal(result, currentLayer);
+});

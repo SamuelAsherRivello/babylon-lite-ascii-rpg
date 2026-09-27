@@ -117,7 +117,7 @@ import { createDeathPresentation } from "./systems/death-presentation.js";
 import { createStaminaSystem } from "./systems/stamina-system.js";
 import { createExperienceSystem } from "./systems/experience-system.js";
 import { calculatePlayerDamageTaken, createCombatStatsSystem } from "./systems/combat-stats-system.js";
-import { createCivilizationGroups, getCivilizationDoorArt, isCardinalDirection } from "./systems/civilization-system.js";
+import { createCivilizationGroups, getCivilizationDoorArt, GOLD_KEY_ART, isCardinalDirection } from "./systems/civilization-system.js";
 import { createOverworldBuildings, getBuildingPresentationLightingFactor, getIndexedBuildingGlyph, getBuildingPresentationDirtyCells, HOME_ROOF_GLYPH, isConcealedBuildingRoof } from "./systems/building-system.js";
 import { createDynamicOccupancy, getDynamicVisibleGlyph } from "./systems/dynamic-occupancy.js";
 import { createEnemySystem } from "./systems/enemy-system.js";
@@ -412,6 +412,8 @@ async function createGameSessionImplementation(container, initialPalette, initia
   let sideDoorClosedImage;
   let sideDoorOpenImage;
   let goldCoinImage;
+  let healthPotionImage;
+  let goldenKeyImage;
   let minimapGlyphCache;
   let gpuLightAtlas;
   let gpuLightLayer;
@@ -535,6 +537,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
   const checkpointListeners = new Set();
   const reachedCampFireIds = new Set();
   let questManager = null;
+  const requestedQuestPickupSteps = new Set();
   let objectSpawnerSystem = null;
   let enemySystem = null;
   let enemySpawnerSystem = null;
@@ -702,9 +705,10 @@ async function createGameSessionImplementation(container, initialPalette, initia
       ? targetWorld.terrain?.[cell.y]?.[cell.x]?.glyph
       : record?.glyph ?? bombSystem?.getGlyphAt(targetWorld?.realmName, cell) ?? getExteriorBuildingOverlayGlyph(targetWorld, cell) ?? targetWorld?.characters?.[cell.y]?.[cell.x] ?? getBuildingOverlayGlyph(targetWorld, cell) ?? getVisibleGlyph(targetWorld, cell);
     const doorArt = record?.type === "door" && (record.orientation || record.buildingId)
-      ? getCivilizationDoorArt(record.orientation ?? "horizontal", record.open)
+      ? getCivilizationDoorArt(record.orientation ?? "horizontal", record.state ?? (record.open ? "open" : "locked"))
       : null;
-    return getTerrainArtKey(targetWorld, cell, doorArt ?? getOffsetGlyphKey(getFacingGlyphKey(glyph, record?.facing), paletteOffsets.get(glyph)), waterAnimationFrame, goldCoinAnimationFrame);
+    const keyArt = record?.type === "key" ? GOLD_KEY_ART : null;
+    return getTerrainArtKey(targetWorld, cell, doorArt ?? keyArt ?? getOffsetGlyphKey(getFacingGlyphKey(glyph, record?.facing), paletteOffsets.get(glyph)), waterAnimationFrame, goldCoinAnimationFrame);
   };
   const setPlayerFacingFromDirection = (direction) => {
     if (direction.x === 0) return;
@@ -1267,7 +1271,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
         random: createRandom(`${previewWorld.options.seed}:${previewSeedNamespace("civilization-doors")}`),
         chance: Math.min(0.9, (import.meta.env.DEV ? 0.5 : 0.1) * profile.civilizationChanceMultiplier),
       }).flatMap((group) => [
-        { ...group.door, kind: "civilization-door", primary: true, glyph: "█", color: "#d6a55a" },
+        { ...group.door, kind: "civilization-door", orientation: group.orientation, primary: true, glyph: "█", color: "#d6a55a" },
         ...group.keys.map((cell) => ({ ...cell, kind: "civilization-key", primary: false, glyph: "⚿", color: "#ffd166" })),
       ])
       : [];
@@ -1275,17 +1279,19 @@ async function createGameSessionImplementation(container, initialPalette, initia
       ? createOverworldBuildings(previewWorld, {
         random: createRandom(`${previewWorld.options.seed}:${previewSeedNamespace("civilization-homes")}`),
         chance: Math.min(0.9, (import.meta.env.DEV ? 0.5 : 0.1) * profile.homeChanceMultiplier),
-      }).map((building) => ({ ...building.origin, chestCell: building.chestCell, kind: "home", glyph: "^", color: "#d6a55a" }))
+      }).map((building) => ({ ...building.origin, chestCell: building.chestCell, door: building.door, key: building.key, kind: "home", glyph: "^", color: "#d6a55a" }))
       : [];
     const houseChestMarkers = homeMarkers.map((building) => ({ ...building.chestCell, kind: "chest", glyph: CLOSED_CHEST_GLYPH, color: "#ffff00" }));
-    const heartCount = previewFeatureEnabled("object-heart") ? Math.max(0, Math.round(getObjectDistributionCount("heart", previewWorld.options.seed) * profile.objectCountMultipliers.heart)) : 0;
-    const heartCells = selectObjectCells(previewWorld, previewWorld.playerStart, heartCount, createRandom(`${previewWorld.options.seed}:${previewSeedNamespace("object-heart")}`), { minimumDistance: 3, reserved: new Set() });
+    const healthCount = previewFeatureEnabled("object-health") ? Math.max(0, Math.round(getObjectDistributionCount("health", previewWorld.options.seed) * profile.objectCountMultipliers.health)) : 0;
+    const healthCells = selectObjectCells(previewWorld, previewWorld.playerStart, healthCount, createRandom(`${previewWorld.options.seed}:${previewSeedNamespace("object-health")}`), { minimumDistance: 3, reserved: new Set() });
+    const goldCount = previewRealm === "Overground" && previewFeatureEnabled("object-gold") ? Math.max(0, Math.round(getObjectDistributionCount("gold", previewWorld.options.seed) * profile.objectCountMultipliers.gold)) : 0;
+    const goldCells = selectObjectCells(previewWorld, previewWorld.playerStart, goldCount, createRandom(`${previewWorld.options.seed}:${previewSeedNamespace("object-gold")}`), { minimumDistance: 3, reserved: new Set(healthCells.map((cell) => `${cell.x},${cell.y}`)) });
     const trapCount = previewFeatureEnabled("object-trap") ? Math.max(0, Math.round(getObjectDistributionCount("trap", previewWorld.options.seed) * profile.objectCountMultipliers.trap)) : 0;
-    const trapCells = selectObjectCells(previewWorld, previewWorld.playerStart, trapCount, createRandom(`${previewWorld.options.seed}:${previewSeedNamespace("object-trap")}`), { minimumDistance: 3, reserved: new Set(heartCells.map((cell) => `${cell.x},${cell.y}`)) });
+    const trapCells = selectObjectCells(previewWorld, previewWorld.playerStart, trapCount, createRandom(`${previewWorld.options.seed}:${previewSeedNamespace("object-trap")}`), { minimumDistance: 3, reserved: new Set([...healthCells, ...goldCells].map((cell) => `${cell.x},${cell.y}`)) });
     const chestCells = selectObjectCells(previewWorld, previewWorld.playerStart, previewFeatureEnabled("object-chest") ? profile.chestCount : 0, createRandom(`${previewWorld.options.seed}:${previewSeedNamespace("object-chest")}`), {
       minimumDistance: 3,
       maximumDistance: 50,
-      reserved: new Set([...heartCells, ...trapCells].map((cell) => `${cell.x},${cell.y}`)),
+      reserved: new Set([...healthCells, ...goldCells, ...trapCells].map((cell) => `${cell.x},${cell.y}`)),
     });
     const CampFireCount = previewRealm === "Underground" && previewFeatureEnabled("object-CampFire")
       ? Math.max(0, Math.round(getObjectDistributionCount("CampFire", previewWorld.options.seed) * profile.objectCountMultipliers.CampFire))
@@ -1294,18 +1300,23 @@ async function createGameSessionImplementation(container, initialPalette, initia
       CampFireCount,
       createRandom(`${previewWorld.options.seed}:${previewSeedNamespace("object-CampFire")}`), {
         minimumDistance: 3,
-        reserved: new Set([...heartCells, ...trapCells].map((cell) => `${cell.x},${cell.y}`)),
+        reserved: new Set([...healthCells, ...trapCells].map((cell) => `${cell.x},${cell.y}`)),
       });
     const proceduralSettingsMarkers = [
       ...enemySpawnerMarkers,
       ...npcSpawnerMarkers,
       ...civilizationMarkers,
       ...homeMarkers,
+      ...homeMarkers.flatMap((home) => [
+        { ...home.door, kind: "home-door", glyph: "█", color: "#d6a55a" },
+        { ...home.key, kind: "home-key", glyph: "⚿", color: "#ffd166" },
+      ]),
       ...houseChestMarkers,
       ...(previewFeatureEnabled("civilization-stairs") ? previewWorld.stairs ?? [] : []).map((cell) => ({ ...cell, kind: "stairs", glyph: STAIR_GLYPH, color: "#f5f5f5" })),
-      ...heartCells.map((cell) => ({ ...cell, kind: "heart", glyph: "♥", color: "#ff4f6d" })),
+      ...healthCells.map((cell) => ({ ...cell, kind: "health", glyph: "health-potion", color: "#ffffff" })),
+      ...goldCells.map((cell) => ({ ...cell, kind: "gold", glyph: GOLD_GLYPH, color: "#ffd166" })),
       ...chestCells.map((cell) => ({ ...cell, kind: "chest", glyph: CLOSED_CHEST_GLYPH, color: "#ffff00" })),
-      ...trapCells.map((cell) => ({ ...cell, kind: "trap", glyph: "☠", color: "#ffd166" })),
+      ...trapCells.map((cell) => ({ ...cell, kind: "trap", glyph: "", color: "#ffd166" })),
       ...CampFireCells.map((cell) => ({ ...cell, kind: "CampFire", glyph: CAMP_FIRE_GLYPH, color: "#ff6b35" })),
       ...(previewFeatureEnabled("object-torch") ? previewWorld.torches ?? [] : []).map((cell) => ({ ...cell, kind: "torch", glyph: "🕯", color: "#ffe066" })),
     ];
@@ -1380,6 +1391,52 @@ async function createGameSessionImplementation(container, initialPalette, initia
               context.fillStyle = "#e63946";
               context.fillRect(centerX - markerSize / 2, centerY - markerSize / 2, markerSize, markerSize);
               context.strokeRect(centerX - markerSize / 2, centerY - markerSize / 2, markerSize, markerSize);
+            }
+            continue;
+          }
+          if (marker.kind === "health") {
+            if (healthPotionImage) {
+              context.imageSmoothingEnabled = false;
+              context.drawImage(
+                healthPotionImage,
+                centerX - objectGlyphSize / 2,
+                centerY - objectGlyphSize / 2,
+                objectGlyphSize,
+                objectGlyphSize,
+              );
+            }
+            continue;
+          }
+          if (["civilization-key", "home-key"].includes(marker.kind)) {
+            if (goldenKeyImage) {
+              context.imageSmoothingEnabled = false;
+              context.drawImage(goldenKeyImage, centerX - objectGlyphSize / 2, centerY - objectGlyphSize / 2, objectGlyphSize, objectGlyphSize);
+            }
+            continue;
+          }
+          if (["civilization-door", "home-door"].includes(marker.kind)) {
+            const frontDoor = marker.kind === "home-door" || marker.orientation === "horizontal";
+            const doorImage = frontDoor ? frontDoorClosedImage : sideDoorClosedImage;
+            if (doorImage && goldenKeyImage) {
+              const doorHeight = frontDoor ? markerSize * 1.5 : markerSize;
+              context.imageSmoothingEnabled = false;
+              context.drawImage(doorImage, centerX - markerSize / 2, centerY - doorHeight / 2, markerSize, doorHeight);
+              const keySize = markerSize * 0.42;
+              context.drawImage(goldenKeyImage, centerX - keySize / 2, centerY - doorHeight * 0.42, keySize, keySize);
+            }
+            continue;
+          }
+          if (marker.kind === "trap") {
+            if (trapArtworkReady || (trapArtwork.complete && trapArtwork.naturalWidth > 0)) {
+              context.imageSmoothingEnabled = false;
+              context.drawImage(
+                trapArtwork,
+                0, 0, 32, 32,
+                centerX - objectGlyphSize / 2,
+                centerY - objectGlyphSize / 2,
+                objectGlyphSize,
+                objectGlyphSize,
+              );
             }
             continue;
           }
@@ -2455,11 +2512,29 @@ async function createGameSessionImplementation(container, initialPalette, initia
       objects: activeObjects, realm: activeRealm,
       region, fog: fogOfWar, world,
     });
-    for (const record of records) animatedTrapCellKeys.add(`${record.cell.x},${record.cell.y}`);
+    const recordsByCell = new Map(records.map((record) => [`${record.cell.x},${record.cell.y}`, record]));
+    // The character layer can retain a trap glyph during world activation or
+    // after a legacy save is hydrated before the object registry is rebuilt.
+    // Treat that visual marker as a trap presentation record too, so no white
+    // glyph can leak through without its animated replacement.
+    for (let localY = 0; localY < region.rows; localY += 1) {
+      for (let localX = 0; localX < region.columns; localX += 1) {
+        const cell = { x: region.x + localX, y: region.y + localY };
+        const cellKey = `${cell.x},${cell.y}`;
+        if (getClientVisibleGlyph(world, cell) !== TRAP_GLYPH || getFogVisibility(fogOfWar, world, cell) <= 0) continue;
+        trapGlyphSuppressionKeys.add(cellKey);
+        if (!recordsByCell.has(cellKey)) recordsByCell.set(cellKey, Object.freeze({
+          id: `trap-cell-${cellKey}`,
+          cell: Object.freeze(cell),
+        }));
+      }
+    }
+    const presentationRecords = [...recordsByCell.values()];
+    for (const record of presentationRecords) animatedTrapCellKeys.add(`${record.cell.x},${record.cell.y}`);
     // Trap cells never fall back to the legacy glyph. If the strip is still
     // loading or failed to load, keep the logical cell presentation clear and
     // simply render no overlay until the artwork is available.
-    trapAnimator.reconcile(trapArtworkReady ? records : [], now);
+    trapAnimator.reconcile(trapArtworkReady ? presentationRecords : [], now);
   };
 
   const renderEnemyOverlayFrames = (entries) => {
@@ -2582,7 +2657,8 @@ async function createGameSessionImplementation(container, initialPalette, initia
     // The hero test owns the player visual. Paint the underlying terrain here
     // so the legacy player glyph cannot appear beneath the sprite overlay.
     const isAnimatedTorch = animatedTorchCellKeys.has(`${cell.x},${cell.y}`);
-    const isAnimatedTrap = trapGlyphSuppressionKeys.has(`${cell.x},${cell.y}`);
+    const isAnimatedTrap = trapGlyphSuppressionKeys.has(`${cell.x},${cell.y}`)
+      || getClientVisibleGlyph(world, cell) === TRAP_GLYPH;
     const isAnimatedEnemy = animatedEnemyCellKeys.has(`${cell.x},${cell.y}`);
     const isAnimatedNpc = animatedNpcCellKeys.has(`${cell.x},${cell.y}`);
     const glyph = isPlayerCell || isAnimatedTorch || isAnimatedTrap || isAnimatedEnemy || isAnimatedNpc
@@ -3007,7 +3083,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
       log: (message) => logSystem.log({ message }),
       playerCell,
       random: createRandom(`${world.options.seed}:${attemptedCell.x},${attemptedCell.y}:chest-reward`),
-      createChestRewardEffect: (type) => type === "heart" ? applyHeartEffect : () => {},
+      createChestRewardEffect: (type) => type === "health" ? applyHealthEffect : () => {},
       openDialog: ({ object, cell }) => {
         if (object.type === "welcome-sign") return openDialog({
           id: "welcome-sign",
@@ -3476,12 +3552,18 @@ async function createGameSessionImplementation(container, initialPalette, initia
     goldCoinImage = await loadRasterImage(
       `${import.meta.env.BASE_URL}assets/images/Dungeons-and-Pixels-v1.4/Items/Animated/gold_coin.png`, { width: 128, height: 32 },
     );
+    healthPotionImage = await loadRasterImage(
+      `${import.meta.env.BASE_URL}assets/images/Dungeons-and-Pixels-v1.4/Items/Static/health_potion.png`, { width: 32, height: 32 },
+    );
+    goldenKeyImage = await loadRasterImage(
+      `${import.meta.env.BASE_URL}assets/images/Dungeons-and-Pixels-v1.4/Items/Static/golden_key.png`, { width: 32, height: 32 },
+    );
     undergroundTerrainImage = {
       dirt: terrainSheet, wall: terrainSheet, water: terrainSheet, cobweb1: cobweb1Image,
       silverChestClosed: silverChestClosedImage, silverChestOpen: silverChestOpenImage,
       frontDoorClosed: frontDoorClosedImage, frontDoorOpen: frontDoorOpenImage,
       sideDoorClosed: sideDoorClosedImage, sideDoorOpen: sideDoorOpenImage,
-      goldCoin: goldCoinImage,
+      goldCoin: goldCoinImage, healthPotion: healthPotionImage, goldenKey: goldenKeyImage,
     };
     engine = await createEngine(canvas, { maxDevicePixelRatio: 1, msaaSamples: 1 });
     const lifecycleToken = rendererLifecycle.begin();
@@ -3617,6 +3699,11 @@ async function createGameSessionImplementation(container, initialPalette, initia
       id: "player", type: "player", glyph: PLAYER_GLYPH, facing: playerFacing,
       realm: activeRealm, cell: playerCell,
     });
+    // The first render must include the area around the player. Previously it
+    // painted an all-fog layer and depended on a later scheduled repaint to
+    // replace it, which could leave the world blank while the UI was ready.
+    refreshStartingDiscovery();
+    refreshDiscovery({ immediate: true });
     resolveViewForPlayer({ initial: true });
     const initialPlayableRender = renderWorld();
     metrics.firstVisibleRenderMs = initialPlayableRender.renderMs;
@@ -3641,10 +3728,10 @@ async function createGameSessionImplementation(container, initialPalette, initia
       realm.characters[object.cell.y][object.cell.x] = object.type === "trap" ? null : object.glyph;
       return object;
     };
-    const applyHeartEffect = () => {
+    const applyHealthEffect = () => {
       if (playerLifecycle.isDead()) return;
       applyPlayerHealthDelta(2);
-      logSystem.log({ message: "Collected +2 Health from Heart" });
+      logSystem.log({ message: "Collected +2 Health from Health" });
     };
     const saveCheckpoint = (realmName, cell) => {
       checkpoint = Object.freeze({ realm: realmName, cell: Object.freeze({ ...cell }), revision: ++checkpointRevision });
@@ -3673,7 +3760,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
         world: realm,
         start: realm.playerStart,
         catalog: objectData.objects,
-        features: realmPlan.filter((feature) => ["heart", "chest", "trap"].includes(feature.objectType)),
+        features: realmPlan.filter((feature) => ["health", "gold", "chest", "trap"].includes(feature.objectType)),
         realm: realmName,
         countFor: (feature) => feature.objectType === "chest" ? chestCount : randomObjectCount(feature.objectType, realm.options.seed),
         randomFor: (feature) => createRandom(`${realm.options.seed}:${feature.seedNamespace}`),
@@ -3682,7 +3769,11 @@ async function createGameSessionImplementation(container, initialPalette, initia
         id: `${realmName.toLowerCase()}-${definition.type}-${index + 1}`,
         type: definition.type,
         cell,
-        effect: definition.type === "heart" ? applyHeartEffect : definition.type === "trap" ? () => {
+        effect: definition.type === "health" ? applyHealthEffect : definition.type === "gold" ? () => {
+          characterGold += 1;
+          notifyGold();
+          logSystem.log({ message: "Collected +1 Gold from Gold" });
+        } : definition.type === "trap" ? () => {
           if (playerLifecycle.isDead()) return;
           // The game-layer Trap consequence delegates to playerLifecycle.applyHealthDelta(-25).
           applyPlayerHealthDelta(-25);
@@ -3726,7 +3817,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
           realm.terrain[building.door.y][building.door.x].walkable = false;
           realm.terrain[building.door.y][building.door.x].blocksLight = true;
           addObjectToRealm(realm, {
-            id: `${building.id}-door`, type: "door", cell: building.door, glyph: "█", openGlyph: "□", buildingId: building.id, effect: () => {},
+            id: `${building.id}-door`, type: "door", cell: building.door, glyph: "█", openGlyph: "□", orientation: "horizontal", buildingId: building.id, state: "locked", effect: () => {},
           });
           addObjectToRealm(realm, {
             id: `${building.id}-key`, type: "key", cell: building.key, buildingId: building.id,
@@ -3759,6 +3850,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
                 glyph: closedDoorGlyph,
                 openGlyph: openDoorGlyph,
                 orientation: group.orientation,
+                state: "locked",
                 effect: () => {},
               });
             } else {
@@ -3807,18 +3899,28 @@ async function createGameSessionImplementation(container, initialPalette, initia
       }
     }
     questManager = createQuestManager(questData.quests, getQuestValues(), {
-      requestPickup: ({ type, distances }) => {
+      requestPickup: ({ type, distances, questId, stepId }) => {
         if (type !== "gold") return;
+        const requestKey = `${questId ?? "quest"}:${stepId ?? type}`;
+        // A quest can be selected again while its step is already active. The
+        // original pickups still represent that step; registering them twice
+        // both duplicates the objective and collides with object IDs.
+        if (requestedQuestPickupSteps.has(requestKey)) return;
         const goldObjects = objectSpawnerSystem.requestPickupObjects({
           type, world, start: world.playerStart, distances,
           random: createRandom(`${world.options.seed}:quest:collect-gold`),
-          realm: world, idPrefix: `${activeRealm.toLowerCase()}-gold`,
+          // Level-spawned gold already owns the realm-wide `*-gold-*` ID
+          // namespace. Quest rewards are registered after it, so they need a
+          // separate stable namespace instead of attempting to re-add
+          // `overground-gold-1`.
+          realm: world, idPrefix: `${activeRealm.toLowerCase()}-quest-gold`,
           effect: () => {
             characterGold += 1;
             notifyGold();
             logSystem.log({ message: "Collected +1 Gold from Gold" });
           },
         });
+        requestedQuestPickupSteps.add(requestKey);
         world.objects.push(...goldObjects);
         for (const object of goldObjects) world.questPickupIds.add(object.id);
         for (const object of goldObjects) world.characters[object.cell.y][object.cell.x] = object.glyph;
@@ -4137,7 +4239,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
     notifyGold();
     notifyKeys();
     refreshStartingDiscovery();
-    refreshDiscovery();
+    refreshDiscovery({ immediate: true });
     if (!initialPlayableRenderComplete) resolveViewForPlayer({ initial: true });
     const firstRender = renderWorld();
     renderMinimap();
@@ -4409,7 +4511,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
     // This intentionally exposes only a serializable read model.  The seeded
     // browser acceptance check uses it to select a generated chest, while the
     // interaction itself still travels through real keyboard input.
-    getChestAndHeartTestSnapshot() {
+    getChestAndHealthTestSnapshot() {
       return Object.freeze({
         realm: activeRealm,
         playerCell: playerCell ? Object.freeze({ ...playerCell }) : null,

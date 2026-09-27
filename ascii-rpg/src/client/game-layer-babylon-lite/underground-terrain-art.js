@@ -1,7 +1,7 @@
 import { getFacingGlyph, getGlyphOffsetsFromKey, rasterizeGlyph } from "./glyph-visual-cache.js";
 import { getWallComposition, getWallBlobMask } from "./underground-wall-autotile.js";
 import { CLOSED_CHEST_GLYPH, ENEMY_SPAWNER_GLYPH, GOLD_GLYPH, OPEN_CHEST_GLYPH } from "./systems/world-system.js";
-import { FRONT_DOOR_CLOSED_ART, FRONT_DOOR_OPEN_ART, SIDE_DOOR_CLOSED_ART, SIDE_DOOR_OPEN_ART } from "./systems/civilization-system.js";
+import { FRONT_DOOR_CLOSED_ART, FRONT_DOOR_LOCKED_ART, FRONT_DOOR_OPEN_ART, GOLD_KEY_ART, SIDE_DOOR_CLOSED_ART, SIDE_DOOR_LOCKED_ART, SIDE_DOOR_OPEN_ART } from "./systems/civilization-system.js";
 
 // Project-local source sheets; Tiled IDs are zero-based and never map IDs.
 export const UNDERGROUND_TERRAIN_SHEETS = Object.freeze({
@@ -109,8 +109,11 @@ function getStaticPropSource(glyph, images) {
     case OPEN_CHEST_GLYPH: return images.silverChestOpen ? { image: images.silverChestOpen } : null;
     case FRONT_DOOR_CLOSED_ART: return images.frontDoorClosed ? { image: images.frontDoorClosed } : null;
     case FRONT_DOOR_OPEN_ART: return images.frontDoorOpen ? { image: images.frontDoorOpen } : null;
+    case FRONT_DOOR_LOCKED_ART: return images.frontDoorClosed ? { image: images.frontDoorClosed, overlay: images.goldenKey } : null;
     case SIDE_DOOR_CLOSED_ART: return images.sideDoorClosed ? { image: images.sideDoorClosed } : null;
     case SIDE_DOOR_OPEN_ART: return images.sideDoorOpen ? { image: images.sideDoorOpen } : null;
+    case SIDE_DOOR_LOCKED_ART: return images.sideDoorClosed ? { image: images.sideDoorClosed, overlay: images.goldenKey } : null;
+    case GOLD_KEY_ART: return images.goldenKey ? { image: images.goldenKey } : null;
     default: return null;
   }
 }
@@ -129,7 +132,15 @@ function getStaticPropSourceForFrame(glyph, images) {
 export function getStaticPropArtAspectRatio(key) {
   const visual = parseTerrainArtKey(key);
   const glyph = visual?.overlay ?? key;
-  return [OPEN_CHEST_GLYPH, FRONT_DOOR_CLOSED_ART, FRONT_DOOR_OPEN_ART].includes(getFacingGlyph(glyph)) ? 1.5 : 1;
+  return [OPEN_CHEST_GLYPH, FRONT_DOOR_CLOSED_ART, FRONT_DOOR_LOCKED_ART, FRONT_DOOR_OPEN_ART].includes(getFacingGlyph(glyph)) ? 1.5 : 1;
+}
+
+function drawStaticPropSource(context, source, width, height) {
+  if (source.width) context.drawImage(source.image, source.x, source.y, source.width, source.height, 0, 0, width, height);
+  else context.drawImage(source.image, 0, 0, width, height);
+  if (!source.overlay) return;
+  const overlaySize = Math.max(1, Math.round(width * 0.42));
+  context.drawImage(source.overlay, (width - overlaySize) / 2, Math.max(0, height * 0.08), overlaySize, overlaySize);
 }
 
 export function rasterizeStaticPropArt(key, images, size) {
@@ -142,8 +153,7 @@ export function rasterizeStaticPropArt(key, images, size) {
   const context = canvas.getContext("2d", { willReadFrequently: true });
   if (!context) throw new Error("Static prop art needs a 2D canvas context.");
   context.imageSmoothingEnabled = false;
-  if (source.width) context.drawImage(source.image, source.x, source.y, source.width, source.height, 0, 0, size, height);
-  else context.drawImage(source.image, 0, 0, size, height);
+  drawStaticPropSource(context, source, size, height);
   return { name: key, width: size, height, pixels: context.getImageData(0, 0, size, height).data };
 }
 
@@ -182,8 +192,7 @@ export function rasterizeTerrainArt(key, images, family, size, paletteColors) {
     }
   }
   if (propSource) {
-    if (propSource.width) context.drawImage(propSource.image, propSource.x, propSource.y, propSource.width, propSource.height, 0, 0, size, propHeight);
-    else context.drawImage(propSource.image, 0, 0, size, propHeight);
+    drawStaticPropSource(context, propSource, size, propHeight);
     return {
       name: key, width: size, height: propHeight, composite: true, terrainArt: true,
       pixels: context.getImageData(0, 0, size, propHeight).data,

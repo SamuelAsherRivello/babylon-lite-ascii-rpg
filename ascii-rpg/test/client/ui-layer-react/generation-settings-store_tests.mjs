@@ -15,13 +15,14 @@ test("generation settings retain the ordered catalog and default malformed densi
     ],
   });
 
-  assert.deepEqual(settings.passes.map((pass) => pass.order), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]);
+  assert.deepEqual(settings.passes.map((pass) => pass.order), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]);
   assert.equal(settings.passes.find((pass) => pass.id === "water").density, "High");
   assert.equal(settings.passes.find((pass) => pass.id === "overground-walls").density, "High");
   assert.equal(settings.passes.find((pass) => pass.id === "underground-caves").density, "High");
   assert.equal(settings.passes.find((pass) => pass.id === "enemy-spawner").density, "Med");
   assert.equal(settings.passes.find((pass) => pass.id === "npc-spawner").density, "Med");
   assert.equal(settings.passes.find((pass) => pass.id === "object-CampFire").density, "Med");
+  assert.equal(settings.passes.find((pass) => pass.id === "object-gold").density, "Med");
   assert.equal(settings.passes.find((pass) => pass.id === "object-chest").density, "Med");
   assert.equal(settings.passes.find((pass) => pass.id === "civilization-stairs").density, "Med");
   assert.equal(settings.passes.find((pass) => pass.id === "civilization-homes").density, "Med");
@@ -227,6 +228,10 @@ test("keeps Object and Character Distribution in their separate procedural cards
     passes: [{ id: "object-CampFire", density }],
   }).objectCountMultipliers.CampFire);
   assert.deepEqual(CampFireCounts, [0.25, 0.5, 1]);
+  const goldCounts = ["Low", "Med", "High"].map((density) => resolveGenerationProfile({
+    passes: [{ id: "object-gold", density }],
+  }).objectCountMultipliers.gold);
+  assert.deepEqual(goldCounts, [0.25, 1, 3]);
 });
 
 test("applies Doors density to civilization placement", () => {
@@ -252,11 +257,11 @@ test("maps Chest Low, Med, and High settings to one, two, and three chests", () 
   assert.deepEqual(chestCounts, [1, 2, 3]);
 });
 
-test("keeps the paired Stairs profile independent from Hearts", () => {
-  const profile = (heart, stairs) => resolveGenerationProfile({
-    passes: [{ id: "object-heart", density: heart }, { id: "civilization-stairs", density: stairs }],
+test("keeps the paired Stairs profile independent from Health", () => {
+  const profile = (health, stairs) => resolveGenerationProfile({
+    passes: [{ id: "object-health", density: health }, { id: "civilization-stairs", density: stairs }],
   });
   assert.deepEqual(["Low", "Med", "High"].map((density) => profile("High", density).stairsCountMultiplier), [0.25, 1, 3]);
   assert.equal(profile("Low", "High").stairsCountMultiplier, 3);
-  assert.equal(profile("Low", "High").objectCountMultipliers.heart, 0.25);
+  assert.equal(profile("Low", "High").objectCountMultipliers.health, 0.25);
 });

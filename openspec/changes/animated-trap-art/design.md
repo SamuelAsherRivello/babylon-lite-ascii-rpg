@@ -25,6 +25,7 @@ See proposal.md for motivation and the procedural-level-generation delta for the
 - Advance all visible Trap overlays from one `requestAnimationFrame` schedule and derive the same frame index from elapsed time. This produces a deterministic synchronized loop, avoids per-Trap timers, and permits the loop to stop when no eligible overlays remain. A 120 ms frame duration is the initial implementation value, selected to keep the seven-frame cycle legible without adding an exposed setting.
 - During cell presentation, suppress the legacy glyph for every eligible active Trap cell regardless of asset load state. Render an overlay only while the strip is available; off-region and fogged cells remain unpresented.
 - Anchor each 32×32 image bottom-center to the same rendered cell geometry used by the hero overlay, allowing it to extend above its 16×16 logical footprint without altering gameplay coordinates.
+- Render the generation-settings preview Trap marker from frame 0 of the same strip as a one-time canvas image; preview rendering does not create an animation scheduler or per-frame work.
 
 ## Risks / Trade-offs
 
