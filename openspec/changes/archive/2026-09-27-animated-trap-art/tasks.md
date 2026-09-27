@@ -14,5 +14,5 @@
 
 ## 3. Integration verification
 
-- [ ] 3.1 Run `npm.cmd test`, `npm.cmd run build`, and `openspec validate animated-trap-art --type change --strict` from the repository root; verify all commands pass.
-- [ ] 3.2 Manually verify the playable game with an explicit `randomSeed` in both realms: active visible traps animate indefinitely, fogged/offscreen traps do not display overlays, and entering a visible Trap retains the current damage and persistence behavior.
+- [x] 3.1 Run `npm.cmd test`, `npm.cmd run build`, and `openspec validate animated-trap-art --type change --strict` from the repository root; verify all commands pass.
+- [x] 3.2 Manually verify the playable game with an explicit `randomSeed` in both realms: active visible traps animate indefinitely, fogged/offscreen traps do not display overlays, and entering a visible Trap retains the current damage and persistence behavior.
