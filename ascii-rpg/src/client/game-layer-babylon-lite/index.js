@@ -3720,9 +3720,11 @@ async function createGameSessionImplementation(container, initialPalette, initia
           for (const cell of building.walls) {
             realm.terrain[cell.y][cell.x].naturalWalkable = realm.terrain[cell.y][cell.x].walkable;
             realm.terrain[cell.y][cell.x].walkable = false;
+            realm.terrain[cell.y][cell.x].blocksLight = true;
           }
           realm.terrain[building.door.y][building.door.x].naturalWalkable = realm.terrain[building.door.y][building.door.x].walkable;
           realm.terrain[building.door.y][building.door.x].walkable = false;
+          realm.terrain[building.door.y][building.door.x].blocksLight = true;
           addObjectToRealm(realm, {
             id: `${building.id}-door`, type: "door", cell: building.door, glyph: "█", openGlyph: "□", buildingId: building.id, effect: () => {},
           });
@@ -3748,6 +3750,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
           for (const cell of group.cells) {
             realm.terrain[cell.y][cell.x].naturalWalkable = realm.terrain[cell.y][cell.x].walkable;
             realm.terrain[cell.y][cell.x].walkable = false;
+            realm.terrain[cell.y][cell.x].blocksLight = true;
             if (cell.x === group.door.x && cell.y === group.door.y) {
               addObjectToRealm(realm, {
                 id: `${groupPrefix}-door`,

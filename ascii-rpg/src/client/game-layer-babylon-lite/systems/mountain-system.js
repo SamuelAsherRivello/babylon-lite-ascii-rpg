@@ -31,6 +31,7 @@ export function damageMountainTarget(target, amount) {
     terrain.glyph = FLOOR_GLYPH;
     terrain.color = REALM_PROFILES.Overground.groundColor;
     terrain.walkable = true;
+    terrain.blocksLight = false;
     delete terrain.health;
     delete terrain.maxHealth;
   }

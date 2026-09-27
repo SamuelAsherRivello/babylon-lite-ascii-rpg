@@ -120,6 +120,7 @@ test("pickups disappear after collision while persistent objects remain", () => 
 test("closed doors require a key and open without moving the player", () => {
   const world = createWorld();
   world.terrain[5][5].walkable = false;
+  world.terrain[5][5].blocksLight = true;
   world.characters[5][5] = "█";
   const eventSystem = createGameplayEventSystem();
   const events = [];
@@ -143,6 +144,7 @@ test("closed doors require a key and open without moving the player", () => {
   });
   assert.equal(unlocked.opened, true);
   assert.equal(world.terrain[5][5].walkable, true);
+  assert.equal(world.terrain[5][5].blocksLight, false);
   assert.equal(world.characters[5][5], "□");
   assert.deepEqual(messages, ["The door is locked.", "A key was spent.", "The door unlocked."]);
   assert.deepEqual(events.map(({ type, objectId }) => ({ type, objectId })), [

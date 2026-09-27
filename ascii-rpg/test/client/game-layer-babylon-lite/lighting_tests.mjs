@@ -29,7 +29,7 @@ test("explicit terrain invalidation refreshes stationary torch and player shadow
   const cache = createSceneLightingFieldCache();
   const before = cache.get(world, region, lights, lights[0]);
   const lit = before.getFactor({ x: 3, y: 2 });
-  world.terrain[2][1].walkable = false;
+  world.terrain[2][1].blocksLight = true;
   cache.invalidate();
   const after = cache.get(world, region, lights, lights[0]);
   assert.ok(after.getFactor({ x: 3, y: 2 }) < lit);
@@ -94,13 +94,17 @@ test("a blocked cell lights up but casts a straight shadow behind it", () => {
   assert.equal(getSceneLightingFactor({ x: 4, y: 2 }, [torch], null, darkScene, terrain), 0);
 });
 
-test("canonical water blocks source light", () => {
+test("canonical water transmits source light while remaining non-walkable", () => {
   const terrain = makeTerrain();
-  terrain[2][3] = { walkable: false, kind: "water" };
-  assert.equal(
-    getSceneLightingFactor({ x: 4, y: 2 }, [{ x: 1, y: 2 }], null, darkScene, terrain),
-    0,
-  );
+  terrain[2][3] = { walkable: false, blocksLight: false, kind: "water" };
+  assert.ok(getSceneLightingFactor({ x: 4, y: 2 }, [{ x: 1, y: 2 }], null, darkScene, terrain) > 0);
+  assert.equal(hasClearLightPath({ x: 1, y: 2 }, { x: 4, y: 2 }, terrain), true);
+});
+
+test("non-walkable transparent terrain does not close a diagonal corner", () => {
+  const terrain = makeTerrain();
+  terrain[1][2] = { walkable: false, blocksLight: false, kind: "water" };
+  assert.ok(getSceneLightingFactor({ x: 3, y: 3 }, [{ x: 1, y: 1 }], null, darkScene, terrain) > 0);
 });
 
 test("light does not slip through a closed diagonal corner", () => {

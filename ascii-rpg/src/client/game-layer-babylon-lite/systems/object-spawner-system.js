@@ -265,7 +265,10 @@ export function createObjectSpawnerSystem({ catalog = [], eventSystem = null } =
     }
     object.open = true;
     object.glyph = object.openGlyph ?? object.glyph;
-    if (world?.terrain?.[cell.y]?.[cell.x]) world.terrain[cell.y][cell.x].walkable = true;
+    if (world?.terrain?.[cell.y]?.[cell.x]) {
+      world.terrain[cell.y][cell.x].walkable = true;
+      world.terrain[cell.y][cell.x].blocksLight = false;
+    }
     if (world?.characters?.[cell.y]) world.characters[cell.y][cell.x] = object.glyph;
     log("A key was spent.");
     log("The door unlocked.");

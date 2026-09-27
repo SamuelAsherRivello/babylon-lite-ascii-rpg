@@ -187,6 +187,7 @@ function createTerrainCells(terrainKinds, walkability) {
       depth: kind === "water" ? "water" : null,
       glyph,
       walkable: walkability[y][x],
+      blocksLight: kind === "wall",
       color: TERRAIN_COLORS[kind],
       alpha: 1,
     };
@@ -513,7 +514,7 @@ export async function createWorldCooperative({
         glyph: {
           wall: WALL_GLYPH, ground: FLOOR_GLYPH, water: WATER_GLYPH,
         }[kind],
-        walkable: walkability[y][x], color: TERRAIN_COLORS[kind], alpha: 1,
+        walkable: walkability[y][x], blocksLight: kind === "wall", color: TERRAIN_COLORS[kind], alpha: 1,
       };
     }, checkpoint);
     markPhase("terrain");

@@ -64,7 +64,8 @@ export function getShadowProfile(label) {
 }
 
 function blocksLight(terrain, x, y) {
-  return terrain[y]?.[x]?.walkable !== true;
+  const cell = terrain[y]?.[x];
+  return typeof cell?.blocksLight === "boolean" ? cell.blocksLight : cell?.walkable !== true;
 }
 
 function getLightPathBlockerCountAt(sourceX, sourceY, targetX, targetY, terrain) {

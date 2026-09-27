@@ -133,7 +133,7 @@ test("runs ordered generation passes and creates uniform deterministic blocked w
   assert.deepEqual(first.waterCells, second.waterCells);
   assert.deepEqual(first.waterLakes, second.waterLakes);
   assert.ok(water.length > 0);
-  assert.ok(water.every((cell) => cell.depth === "water" && cell.kind === "water" && cell.walkable === false));
+  assert.ok(water.every((cell) => cell.depth === "water" && cell.kind === "water" && cell.walkable === false && cell.blocksLight === false));
   assert.ok(water.length / nonWalls.length >= 0.05);
   assert.ok(water.length / nonWalls.length <= 0.5);
   assert.ok(first.waterLakes.length >= 1);
