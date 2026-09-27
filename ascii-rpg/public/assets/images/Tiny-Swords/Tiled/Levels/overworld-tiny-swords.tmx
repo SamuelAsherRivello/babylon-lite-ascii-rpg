@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.11" tiledversion="1.12.2" orientation="orthogonal" renderorder="right-down" width="12" height="8" tilewidth="64" tileheight="64" infinite="0" nextlayerid="6" nextobjectid="1">
+ <tileset firstgid="1" source="../Tilesets/Shadow.tsj"/>
+ <tileset firstgid="10" source="../Tilesets/Tilemap_Elevation.tsj"/>
+ <tileset firstgid="42" source="../Tilesets/Tilemap_Flat.tsj"/>
+ <tileset firstgid="82" source="../Tilesets/Tilemap_color1.tsj"/>
+ <tileset firstgid="136" source="../Tilesets/Tilemap_color2.tsj"/>
+ <tileset firstgid="190" source="../Tilesets/Tilemap_color3.tsj"/>
+ <tileset firstgid="244" source="../Tilesets/Tilemap_color4.tsj"/>
+ <tileset firstgid="298" source="../Tilesets/Tilemap_color5.tsj"/>
+ <tileset firstgid="352" source="../Tilesets/Water_Background_color.tsj"/>
+ <tileset firstgid="353" source="../Tilesets/Water_Foam.tsj"/>
+ <layer id="1" name="Grass" width="12" height="8" locked="1">
+  <data encoding="csv">
+254,254,254,254,254,254,254,254,254,254,254,254,
+254,254,254,254,254,254,254,254,254,254,254,254,
+254,254,254,254,254,254,254,254,254,254,254,254,
+254,254,254,254,254,254,254,254,254,254,254,254,
+254,254,254,254,254,254,254,254,254,254,254,254,
+254,254,254,254,254,254,254,254,254,254,254,254,
+254,254,254,254,254,254,254,254,254,254,254,254,
+254,254,254,254,254,254,254,254,254,254,254,254
+</data>
+ </layer>
+ <layer id="5" name="Mountain" width="12" height="8">
+  <data encoding="csv">
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,29,0,0,0,0,0,0,0,0,0,0,
+0,33,0,0,0,0,0,13,0,0,0,0,
+0,0,0,26,28,0,10,15,12,0,0,0,
+0,0,0,22,24,0,22,14,15,28,0,0,
+0,0,0,0,0,0,26,19,20,24,0,0,
+0,0,0,0,0,0,22,23,24,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0
+</data>
+ </layer>
+ <layer id="2" name="do-not-use" width="12" height="8" visible="0">
+  <data encoding="csv">
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,171,0,0,0,0,0,0,0,0,0,0,
+0,180,0,0,0,0,0,144,0,0,0,0,
+0,0,0,168,170,0,168,146,143,0,0,0,
+0,0,0,177,179,0,177,146,146,170,0,0,
+0,0,0,0,0,0,168,160,161,179,0,0,
+0,0,0,0,0,0,177,178,179,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0
+</data>
+ </layer>
+ <layer id="3" name="do-not-use" width="12" height="8" visible="0" locked="1">
+  <data encoding="csv">
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0
+</data>
+ </layer>
+ <layer id="4" name="do-not-use" width="12" height="8" visible="0" locked="1">
+  <data encoding="csv">
+42,43,43,43,43,43,43,43,43,43,43,44,
+52,53,53,53,53,53,53,53,53,53,53,54,
+52,53,53,53,53,53,53,53,53,53,53,54,
+52,53,53,53,53,53,53,53,53,53,53,54,
+52,53,53,53,53,53,53,0,0,53,53,54,
+52,53,53,53,53,53,53,53,53,53,53,54,
+52,53,53,53,53,53,53,53,53,53,53,54,
+62,63,63,63,63,63,63,63,63,63,63,64
+</data>
+ </layer>
+</map>

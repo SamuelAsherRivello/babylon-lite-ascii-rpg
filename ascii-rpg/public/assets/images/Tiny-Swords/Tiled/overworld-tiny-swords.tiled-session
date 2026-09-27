@@ -1,0 +1,43 @@
+{
+    "activeFile": "",
+    "expandedProjectPaths": [
+    ],
+    "file.lastUsedOpenFilter": "All Files (*)",
+    "fileStates": {
+        "Tilesets/Shadow.tsj": {
+            "scaleInDock": 1
+        },
+        "Tilesets/Tilemap_Elevation.tsj": {
+            "scaleInDock": 1
+        },
+        "Tilesets/Tilemap_Flat.tsj": {
+            "scaleInDock": 1
+        },
+        "Tilesets/Tilemap_color1.tsj": {
+            "scaleInDock": 0.5
+        },
+        "Tilesets/Tilemap_color2.tsj": {
+            "scaleInDock": 1
+        },
+        "Tilesets/Tilemap_color3.tsj": {
+            "scaleInDock": 1
+        },
+        "Tilesets/Tilemap_color4.tsj": {
+            "scaleInDock": 0.75
+        },
+        "Tilesets/Tilemap_color5.tsj": {
+            "scaleInDock": 1
+        },
+        "Tilesets/Water_Background_color.tsj": {
+            "scaleInDock": 1
+        },
+        "Tilesets/Water_Foam.tsj": {
+            "scaleInDock": 1
+        }
+    },
+    "openFiles": [
+    ],
+    "project": "overworld-tiny-swords.tiled-project",
+    "recentFiles": [
+    ]
+}

@@ -1,0 +1,19 @@
+{
+  "tiledversion": "1.10.2",
+  "version": "1.10",
+  "name": "Tilemap_Elevation",
+  "tilewidth": 64,
+  "tileheight": 64,
+  "tilecount": 32,
+  "columns": 4,
+  "margin": 0,
+  "spacing": 0,
+  "image": "../../Terrain/Tilesets/Tilemap_Elevation.png",
+  "imagewidth": 256,
+  "imageheight": 512,
+  "grid": {
+    "orientation": "orthogonal",
+    "width": 64,
+    "height": 64
+  }
+}

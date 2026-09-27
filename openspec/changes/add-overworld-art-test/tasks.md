@@ -37,3 +37,6 @@
   Two upward steps and one leftward step moved the player across grass; the
   clock advanced from 00001 to 00004 and discovery increased from 3% to 4%.
 - Strict OpenSpec validation passed. Source PNGs and generation inputs are unchanged.
+- Revised the trial to one tightly bounded 212 by 212 dirt tile from the grass
+  and dirt sheet. The map now paints only that tile in the upper-left cell;
+  all other cells and authoring layers remain empty.

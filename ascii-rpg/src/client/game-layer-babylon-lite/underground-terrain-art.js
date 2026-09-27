@@ -2,7 +2,7 @@ import { WATER_PROFILE, GOLD_COIN_PROFILE } from "./animation-profiles.js";
 import { resolveAnimation } from "./tile-animation.js";
 import { getFacingGlyph, getGlyphOffsetsFromKey, rasterizeGlyph } from "./glyph-visual-cache.js";
 import { getWallComposition, getWallBlobMask } from "./underground-wall-autotile.js";
-import { OVERWORLD_GRASS_FRAME, resolveOverworldTerrainFrame } from "./overworld-terrain-art.js";
+import { getOverworldMountainFrame, getOverworldMountainMask, OVERWORLD_GRASS_FRAME, resolveOverworldMountainFrame, resolveOverworldTerrainFrame } from "./overworld-terrain-art.js";
 import { CLOSED_CHEST_GLYPH, ENEMY_SPAWNER_GLYPH, GOLD_GLYPH, OPEN_CHEST_GLYPH, TRAP_GLYPH } from "./systems/world-system.js";
 import { FRONT_DOOR_CLOSED_ART, FRONT_DOOR_LOCKED_ART, FRONT_DOOR_OPEN_ART, GOLD_KEY_ART, SIDE_DOOR_CLOSED_ART, SIDE_DOOR_LOCKED_ART, SIDE_DOOR_OPEN_ART } from "./systems/civilization-system.js";
 
@@ -61,7 +61,7 @@ export function resolveUndergroundTerrainFrame(world, cell, waterFrame = 0) {
 
 export function getTerrainArtKey(world, cell, glyphKey, waterFrame = 0, goldCoinFrame = 0) {
   const animatedGlyphKey = getAnimatedOverlayGlyph(glyphKey, goldCoinFrame);
-  const frame = resolveOverworldTerrainFrame(world, cell) ?? resolveUndergroundTerrainFrame(world, cell, waterFrame);
+  const frame = resolveOverworldTerrainFrame(world, cell) ?? resolveOverworldMountainFrame(world, cell) ?? resolveUndergroundTerrainFrame(world, cell, waterFrame);
   if (!frame) return animatedGlyphKey;
   const terrain = world.terrain[cell.y][cell.x];
   // Only the terrain's own glyph disappears. Facing and offsets on overlays
@@ -69,13 +69,14 @@ export function getTerrainArtKey(world, cell, glyphKey, waterFrame = 0, goldCoin
   const overlay = getFacingGlyph(animatedGlyphKey) === terrain.glyph ? null : animatedGlyphKey;
   return KEY_PREFIX + JSON.stringify(terrain.kind === "wall"
     ? [terrain.kind, overlay, getWallBlobMask(world, cell)]
+    : terrain.kind === "mountain" ? [terrain.kind, overlay, getOverworldMountainMask(world, cell)]
     : terrain.kind === "water" ? [terrain.kind, overlay, waterFrame] : [terrain.kind, overlay]);
 }
 
 export function parseTerrainArtKey(key) {
   if (typeof key !== "string" || !key.startsWith(KEY_PREFIX)) return null;
   const [kind, overlay, variant] = JSON.parse(key.slice(KEY_PREFIX.length));
-  return { frame: kind === "grass" ? OVERWORLD_GRASS_FRAME : kind === "water" ? BLUE_WATER_TERRAIN_FRAMES[variant] : UNDERGROUND_TERRAIN_FRAMES[kind], overlay,
+  return { frame: kind === "grass" ? OVERWORLD_GRASS_FRAME : kind === "mountain" ? getOverworldMountainFrame(variant) : kind === "water" ? BLUE_WATER_TERRAIN_FRAMES[variant] : UNDERGROUND_TERRAIN_FRAMES[kind], overlay,
     ...(kind === "wall" && variant !== undefined ? { mask: variant } : {}),
     ...(kind === "water" ? { animationFrame: variant } : {}) };
 }
@@ -171,12 +172,19 @@ export function rasterizeStaticPropArt(key, images, size) {
 export function compositeTerrainPixels(terrainPixels, overlayRaster = null, color = [1, 1, 1]) {
   const pixels = new Uint8ClampedArray(terrainPixels);
   for (let i = 0; i < pixels.length; i += 4) {
-    const alpha = overlayRaster ? overlayRaster.pixels[i + 3] / 255 : 0;
-    for (let channel = 0; channel < 3; channel += 1) {
-      pixels[i + channel] = Math.round(pixels[i + channel] * (1 - alpha)
-        + (overlayRaster?.pixels[i + channel] ?? 0) * color[channel] * alpha);
+    const terrainAlpha = pixels[i + 3] / 255;
+    const overlayAlpha = overlayRaster ? (overlayRaster.pixels[i + 3] / 255) : 0;
+    const outputAlpha = overlayAlpha + terrainAlpha * (1 - overlayAlpha);
+    if (outputAlpha <= 0) {
+      pixels[i] = 0; pixels[i + 1] = 0; pixels[i + 2] = 0; pixels[i + 3] = 0;
+      continue;
     }
-    pixels[i + 3] = 255;
+    for (let channel = 0; channel < 3; channel += 1) {
+      const base = pixels[i + channel] * terrainAlpha * (1 - overlayAlpha);
+      const overlay = (overlayRaster?.pixels[i + channel] ?? 0) * color[channel] * overlayAlpha;
+      pixels[i + channel] = Math.round((base + overlay) / outputAlpha);
+    }
+    pixels[i + 3] = Math.round(outputAlpha * 255);
   }
   return pixels;
 }
@@ -194,6 +202,10 @@ export function rasterizeTerrainArt(key, images, family, size, paletteColors) {
   context.imageSmoothingEnabled = false;
   const { x, y, width, height } = visual.frame;
   const terrainTop = propHeight - size;
+  if (visual.frame.source === "overworldMountain" && images.overworldGrass) {
+    context.drawImage(images.overworldGrass, OVERWORLD_GRASS_FRAME.x, OVERWORLD_GRASS_FRAME.y,
+      OVERWORLD_GRASS_FRAME.width, OVERWORLD_GRASS_FRAME.height, 0, terrainTop, size, size);
+  }
   if (visual.mask === undefined) context.drawImage(images[visual.frame.source], x, y, width, height, 0, terrainTop, size, size);
   if (visual.mask !== undefined) {
     for (const [sx, sy, sw, sh, dx, dy] of getWallComposition(visual.mask)) {

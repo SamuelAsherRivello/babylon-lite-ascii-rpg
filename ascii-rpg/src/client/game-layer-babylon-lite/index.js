@@ -71,9 +71,9 @@ import {
   normalizePlayerMarkers,
 } from "./world-state-facade.js";
 import { createTimeSystem } from "./systems/time-system.js";
-import { FACING_LEFT, FACING_RIGHT, createGlyphRasterCanvas, createGlyphVisualCache, getFacingGlyph, getFacingGlyphKey, getGlyphOffsetsFromKey, getGlyphOffsetKey, getOffsetGlyphKey, rasterizeGlyph, rasterizeSolidGlyph } from "./glyph-visual-cache.js";
+import { FACING_LEFT, FACING_RIGHT, createGlyphRasterCanvas, createGlyphVisualCache, getFacingGlyph, getFacingGlyphKey, getGlyphOffsetsFromKey, getGlyphOffsetKey, getOffsetGlyphKey, rasterizeGlyph } from "./glyph-visual-cache.js";
 import { drawStaticPropPreview, GOLD_COIN_ANIMATION_FRAME_DURATION, getGoldCoinAnimationFrame, getStaticPropArtAspectRatio, getTerrainArtBounds, getTerrainArtKey, getWaterAnimationFrame, loadRasterImage, loadUndergroundTerrainImage, parseTerrainArtKey, rasterizeStaticPropArt, rasterizeTerrainArt, WATER_ANIMATION_FRAME_DURATION } from "./underground-terrain-art.js";
-import { OVERWORLD_GRASS_SHEET } from "./overworld-terrain-art.js";
+import { OVERWORLD_GRASS_SHEET, OVERWORLD_MOUNTAIN_SHEET } from "./overworld-terrain-art.js";
 import { expandTerrainDirtyCells } from "./underground-wall-autotile.js";
 import { getVisibleRegion, getVisibleSlot, shouldUpdateVisibleSprite } from "./visible-region.js";
 import { collectVisibleTorchRecords, createVisibleTorchAnimator } from "./torch-presentation.js";
@@ -154,8 +154,6 @@ import { getWorldSizeDimensions } from "../world-size-settings.js";
 import { advanceParticleInstance, createParticleInstance, getParticleEffect } from "./particle-effects.js";
 
 const GLYPHS = PROJECT_MAP_GLYPHS;
-const FOG_BACKING_GLYPH = "\u0000fog-backing";
-const FOG_BACKING_COLOR = Object.freeze([0.06, 0.06, 0.06, 1]);
 // Match default emoji presentation or an explicit emoji variation selector.
 // This makes a newly added emoji automatically use the world-view footprint
 // below, while text-presentation symbols such as ♥ and ☠ retain normal sizing.
@@ -678,6 +676,9 @@ async function createGameSessionImplementation(container, initialPalette, initia
     return glyph === HOME_ROOF_GLYPH ? glyph : null;
   };
   const getClientVisibleGlyph = (targetWorld, cell) => {
+    const object = targetWorld?.objects?.find((candidate) => candidate.active !== false
+      && candidate.cell?.x === cell.x && candidate.cell?.y === cell.y);
+    if (object?.foggable && object.fogged) return targetWorld?.terrain?.[cell.y]?.[cell.x]?.glyph ?? null;
     const dynamicGlyph = getDynamicVisibleGlyph(getOccupancyForWorld(targetWorld), targetWorld, cell, () => null);
     return dynamicGlyph ?? bombSystem?.getGlyphAt(targetWorld?.realmName, cell) ?? getExteriorBuildingOverlayGlyph(targetWorld, cell) ?? targetWorld?.characters?.[cell.y]?.[cell.x] ?? getBuildingOverlayGlyph(targetWorld, cell) ?? getVisibleGlyph(targetWorld, cell);
   };
@@ -695,7 +696,9 @@ async function createGameSessionImplementation(container, initialPalette, initia
     // it, rather than the stair/player record, so both cache lookup and draw
     // use the same frame after a realm handoff.
     const isAnimatedNpc = targetWorld === world && animatedNpcCellKeys.has(`${cell.x},${cell.y}`);
-    const glyph = isPlayerCell || isAnimatedNpc
+    const glyph = record?.foggable && record.fogged
+      ? targetWorld.terrain?.[cell.y]?.[cell.x]?.glyph
+      : isPlayerCell || isAnimatedNpc
       ? targetWorld.terrain?.[cell.y]?.[cell.x]?.glyph
       : record?.glyph ?? bombSystem?.getGlyphAt(targetWorld?.realmName, cell) ?? getExteriorBuildingOverlayGlyph(targetWorld, cell) ?? targetWorld?.characters?.[cell.y]?.[cell.x] ?? getBuildingOverlayGlyph(targetWorld, cell) ?? getVisibleGlyph(targetWorld, cell);
     const doorArt = record?.type === "door" && (record.orientation || record.buildingId)
@@ -1380,7 +1383,13 @@ async function createGameSessionImplementation(container, initialPalette, initia
           if (marker.kind === "enemy-spawner") {
             if (cobweb1Image) {
               context.imageSmoothingEnabled = false;
-              context.drawImage(cobweb1Image, centerX - markerSize / 2, centerY - markerSize / 2, markerSize, markerSize);
+              context.drawImage(
+                cobweb1Image,
+                centerX - objectGlyphSize / 2,
+                centerY - objectGlyphSize / 2,
+                objectGlyphSize,
+                objectGlyphSize,
+              );
             } else {
               context.fillStyle = "#e63946";
               context.fillRect(centerX - markerSize / 2, centerY - markerSize / 2, markerSize, markerSize);
@@ -1853,7 +1862,11 @@ async function createGameSessionImplementation(container, initialPalette, initia
     if (["enemy", "enemy-spawner"].includes(target.kind) && hasItem("sword")) return "sword";
     if (target.kind === "mountain" && hasItem("pickaxe")) return "pickaxe";
     if (target.kind === "door" && characterKeys > 0) return "keys";
-    if (["chest", "npc", "welcome-sign", "CampFire"].includes(target.kind)) return "body";
+    // Pickups and stairs occupy their destination cells, so mouse navigation
+    // must treat them as actionable targets and route to a neighboring cell
+    // before taking the final movement step. The normal collision/transition
+    // resolver still handles the final step once the player arrives.
+    if (["health", "gold", "stairs", "chest", "npc", "welcome-sign", "CampFire"].includes(target.kind)) return "body";
     return null;
   };
 
@@ -1947,9 +1960,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
     fontId,
     fontFamily: getFontOption(fontId).family,
     glyphLimit: (GLYPHS.length + 3) * 3 + 46 * 3,
-    rasterize: (glyph, family, size) => glyph === FOG_BACKING_GLYPH
-      ? rasterizeSolidGlyph(size)
-      : rasterizeStaticPropArt(glyph, undergroundTerrainImage, size)
+    rasterize: (glyph, family, size) => rasterizeStaticPropArt(glyph, undergroundTerrainImage, size)
         ?? rasterizeTerrainArt(glyph, undergroundTerrainImage, family, size, paletteColors)
         ?? rasterizeGlyph(glyph, family, size, "#ffffff", getGlyphOffsetsFromKey(glyph)),
   });
@@ -1963,9 +1974,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
     // such as the player and gold, making that backing larger than markers.
     // Keep the game-view composite cache separate; minimap-derived views only
     // need the glyph's transparent raster, with its palette scale and offset.
-    rasterize: (glyph, family, size) => glyph === FOG_BACKING_GLYPH
-      ? rasterizeSolidGlyph(size)
-      : rasterizeStaticPropArt(glyph, undergroundTerrainImage, size)
+    rasterize: (glyph, family, size) => rasterizeStaticPropArt(glyph, undergroundTerrainImage, size)
         ?? rasterizeTerrainArt(glyph, undergroundTerrainImage, family, size, paletteColors)
         ?? rasterizeGlyph(glyph, family, size, "#ffffff", getGlyphOffsetsFromKey(glyph)),
   });
@@ -2302,32 +2311,6 @@ async function createGameSessionImplementation(container, initialPalette, initia
     spriteStates[slot].visible = false;
   };
 
-  const renderFogBackingCell = (region, x, y, frames) => {
-    const slot = y * region.columns + x;
-    const frame = frames.get(FOG_BACKING_GLYPH);
-    if (frame === undefined) throw new Error("Missing cached fog backing frame.");
-    const previous = spriteStates[slot];
-    if (!shouldUpdateVisibleSprite(previous, FOG_BACKING_GLYPH, frame, FOG_BACKING_COLOR, 1, 0, FOG_BACKING_GLYPH)) {
-      metrics.skippedCells += 1;
-      return;
-    }
-    const spriteBounds = getRenderedCellSpriteBounds({ x, y }, viewport, world);
-    const props = {
-      positionPx: [spriteBounds.center.x, spriteBounds.center.y],
-      sizePx: [spriteBounds.size.width, spriteBounds.size.height],
-      frame,
-      color: FOG_BACKING_COLOR,
-      visible: true,
-    };
-    if (spriteIndexes[slot] === undefined) spriteIndexes[slot] = addSprite2DIndex(layer, props);
-    else updateSprite2DIndex(layer, spriteIndexes[slot], props);
-    spriteStates[slot] = {
-      glyph: FOG_BACKING_GLYPH, visualGlyph: FOG_BACKING_GLYPH, frame, color: FOG_BACKING_COLOR,
-      baseColor: FOG_BACKING_COLOR, lightingFactor: 1, fogVisibility: 0, visible: true,
-    };
-    metrics.submittedCells += 1;
-  };
-
   const updateCharacterDepth = () => {
     const records = [...characterOverlay.children].flatMap((element) => {
       const y = Number.parseInt(element.dataset.characterY ?? "", 10);
@@ -2625,7 +2608,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
     updateCharacterDepth();
   };
 
-  const renderCell = (region, x, y, frames, lightField, glyphOverride = null, visibility = 100) => {
+  const renderCell = (region, x, y, frames, lightField, glyphOverride = null, visibility = 100, visualOverride = null) => {
     const slot = y * region.columns + x;
     const cell = { x: region.x + x, y: region.y + y };
     const isPlayerCell = playerCell?.x === cell.x && playerCell?.y === cell.y;
@@ -2639,9 +2622,9 @@ async function createGameSessionImplementation(container, initialPalette, initia
     const glyph = isPlayerCell || isAnimatedTorch || isAnimatedTrap || isAnimatedEnemy || isAnimatedNpc
       ? world.terrain[cell.y][cell.x].glyph
       : (glyphOverride ?? getClientVisibleGlyph(world, cell));
-    const visualGlyph = isPlayerCell || isAnimatedTorch || isAnimatedTrap || isAnimatedEnemy || isAnimatedNpc
+    const visualGlyph = visualOverride ?? (isPlayerCell || isAnimatedTorch || isAnimatedTrap || isAnimatedEnemy || isAnimatedNpc
       ? getTerrainArtKey(world, cell, getOffsetGlyphKey(getFacingGlyphKey(glyph), paletteOffsets.get(glyph)), waterAnimationFrame, goldCoinAnimationFrame)
-      : getClientVisibleGlyphKey(world, cell);
+      : getClientVisibleGlyphKey(world, cell));
     const terrainArt = parseTerrainArtKey(visualGlyph) !== null;
     const frame = frames.get(visualGlyph);
     if (frame === undefined) throw new Error(`Missing cached glyph frame: ${visualGlyph}`);
@@ -2667,9 +2650,12 @@ async function createGameSessionImplementation(container, initialPalette, initia
       return;
     }
     const fogOpacity = visibility / 100;
-    const litColor = terrainArt ? [1, 1, 1, 1] : applyLightingToColor(baseColor, lightingFactor);
-    // PNG terrain bypasses per-cell lighting; only fog changes its opacity.
-    const color = [...litColor.slice(0, 3), (terrainArt ? 1 : litColor[3]) * fogOpacity];
+    // PNG terrain keeps its source alpha, but still participates in the same
+    // light field and fog opacity as glyph-backed terrain. The raster itself is
+    // transparent, so this does not reintroduce a solid fog backing cell.
+    const lightingBase = terrainArt ? [1, 1, 1, 1] : baseColor;
+    const litColor = applyLightingToColor(lightingBase, lightingFactor);
+    const color = [...litColor.slice(0, 3), litColor[3] * fogOpacity];
     // At displayed zoom 1 the nominal cell is 0.64px wide. Preserve the
     // nominal grid positions, but give each glyph a small screen-space
     // footprint so the explored area at the farthest zoom remains inspectable
@@ -2702,6 +2688,10 @@ async function createGameSessionImplementation(container, initialPalette, initia
     const region = getVisibleRegion(viewport, world, viewOrigin);
     viewOrigin = { x: region.x, y: region.y };
     const lightField = lightingFieldCache.get(world, region, objectSpawnerSystem?.getLightingSources(world) ?? world.torches, playerCell, lighting);
+    objectSpawnerSystem?.revealFoggedObjects({
+      realm: world,
+      isVisible: (cell) => getFogVisibility(fogOfWar, world, cell) > 0,
+    });
     reconcileTorchOverlays(region, performance.now());
     reconcileTrapOverlays(region, performance.now());
     reconcileEnemyOverlays(region, performance.now());
@@ -2725,17 +2715,32 @@ async function createGameSessionImplementation(container, initialPalette, initia
       },
       getGlyph: getClientVisibleGlyphKey,
     });
+    const warmGlyphs = collectWorldViewGlyphs(composition);
+    for (let localY = 0; localY < region.rows; localY += 1) {
+      for (let localX = 0; localX < region.columns; localX += 1) {
+        const cell = { x: region.x + localX, y: region.y + localY };
+        const terrain = world.terrain?.[cell.y]?.[cell.x];
+        if (terrain) warmGlyphs.add(getTerrainArtKey(world, cell, terrain.glyph, waterAnimationFrame, goldCoinAnimationFrame));
+      }
+    }
     const visual = glyphCache.ensure(
       zoom,
       viewport.gridWidth,
-      new Set([...collectWorldViewGlyphs(composition), FOG_BACKING_GLYPH]),
+      warmGlyphs,
     );
     metrics.glyphWarmupMs += visual.warmupMs;
     if (visual.atlas !== atlas) rebuildLayer(visual.atlas);
     renderWorldViewComposition(composition, {
       drawCell: ({ localX, localY, slot, glyph, discovered, visibility }) => {
         if (!discovered) {
-          renderFogBackingCell(region, localX, localY, visual.frames);
+          const cell = { x: region.x + localX, y: region.y + localY };
+          const terrain = world.terrain?.[cell.y]?.[cell.x];
+          if (terrain) {
+            const terrainKey = getTerrainArtKey(world, cell, terrain.glyph, waterAnimationFrame, goldCoinAnimationFrame);
+            renderCell(region, localX, localY, visual.frames, lightField, terrain.glyph, visibility, terrainKey);
+            return;
+          }
+          hideGameCell(slot);
           return;
         }
         renderCell(region, localX, localY, visual.frames, lightField, getClientVisibleGlyph(world, {
@@ -3543,7 +3548,10 @@ async function createGameSessionImplementation(container, initialPalette, initia
     }
     undergroundTerrainImage = {
       overworldGrass: await loadRasterImage(
-        `${import.meta.env.BASE_URL}assets/images/Nature-and-Outdoor/1. Grass and dirt.png`, OVERWORLD_GRASS_SHEET,
+        `${import.meta.env.BASE_URL}assets/images/Tiny-Swords/Terrain/Tilesets/Tilemap_color1.png`, OVERWORLD_GRASS_SHEET,
+      ),
+      overworldMountain: await loadRasterImage(
+        `${import.meta.env.BASE_URL}assets/images/Tiny-Swords/Terrain/Tilesets/Tilemap_Elevation.png`, OVERWORLD_MOUNTAIN_SHEET,
       ),
       trap: trapArtwork,
       dirt: terrainSheet, wall: terrainSheet, water: terrainSheet, cobweb1: cobweb1Image,

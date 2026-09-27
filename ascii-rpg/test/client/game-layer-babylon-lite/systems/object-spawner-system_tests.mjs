@@ -117,6 +117,20 @@ test("pickups disappear after collision while persistent objects remain", () => 
   assert.equal(health, -13);
 });
 
+test("foggable objects start fogged and reveal when their cell is visible", () => {
+  const world = createWorld();
+  const system = createObjectSpawnerSystem({ catalog: [
+    { type: "trap", name: "Trap", glyph: "☠", foggable: true, IsPickup: false, IsLevelSpawned: true },
+  ] });
+  const trap = system.addObject({ id: "trap-1", type: "trap", cell: { x: 3, y: 3 }, realm: world });
+  assert.equal(trap.foggable, true);
+  assert.equal(trap.fogged, true);
+  assert.equal(system.revealFoggedObjects({ realm: world, isVisible: () => false }), 0);
+  assert.equal(system.getActiveObjects(world)[0].fogged, true);
+  assert.equal(system.revealFoggedObjects({ realm: world, isVisible: () => true }), 1);
+  assert.equal(system.getActiveObjects(world)[0].fogged, false);
+});
+
 test("locked doors require a key and open without moving the player", () => {
   const world = createWorld();
   world.terrain[5][5].walkable = false;
@@ -156,6 +170,8 @@ test("locked doors require a key and open without moving the player", () => {
 
 test("closed doors remain blocked without consuming a key", () => {
   const world = createWorld();
+  world.terrain[5][5].walkable = true;
+  world.terrain[5][5].blocksLight = false;
   const system = createObjectSpawnerSystem({ catalog: [
     { type: "door", name: "Door", glyph: "█", openGlyph: "□", IsPickup: false, IsLevelSpawned: false },
   ] });
@@ -164,7 +180,22 @@ test("closed doors remain blocked without consuming a key", () => {
   const interaction = system.interactAtCell({ x: 5, y: 5 }, { world, keyCount: 1, spendKey: () => { spent += 1; return true; } });
   assert.equal(interaction.opened, false);
   assert.equal(door.state, "closed");
+  assert.equal(world.terrain[5][5].walkable, false);
+  assert.equal(world.terrain[5][5].blocksLight, true);
   assert.equal(spent, 0);
+});
+
+test("open doors are walkable and transmit light from their initial state", () => {
+  const world = createWorld();
+  world.terrain[5][5].walkable = false;
+  world.terrain[5][5].blocksLight = true;
+  const system = createObjectSpawnerSystem({ catalog: [
+    { type: "door", name: "Door", glyph: "█", openGlyph: "□", IsPickup: false, IsLevelSpawned: false },
+  ] });
+  const door = system.addObject({ id: "open-door", type: "door", state: "open", cell: { x: 5, y: 5 }, realm: world });
+  assert.equal(door.state, "open");
+  assert.equal(world.terrain[5][5].walkable, true);
+  assert.equal(world.terrain[5][5].blocksLight, false);
 });
 
 test("a cardinal chest bump spawns a Heart even without pre-generated Hearts", () => {

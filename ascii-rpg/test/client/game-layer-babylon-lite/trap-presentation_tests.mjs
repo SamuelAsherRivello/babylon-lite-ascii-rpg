@@ -13,6 +13,7 @@ test("visible Trap records are realm, fog, and viewport bounded", () => {
     world, fog, realm: "Overground", region: { x: 0, y: 0, columns: 2, rows: 2 },
     objects: [
       { id: "visible", type: "trap", active: true, realm: "Overground", cell: { x: 0, y: 0 } },
+      { id: "still-fogged", type: "trap", active: true, realm: "Overground", fogged: true, cell: { x: 0, y: 1 } },
       { id: "runtime-snapshot", type: "trap", active: true, cell: { x: 0, y: 1 } },
       { id: "fogged", type: "trap", active: true, realm: "Overground", cell: { x: 1, y: 0 } },
       { id: "offscreen", type: "trap", active: true, realm: "Overground", cell: { x: 3, y: 0 } },

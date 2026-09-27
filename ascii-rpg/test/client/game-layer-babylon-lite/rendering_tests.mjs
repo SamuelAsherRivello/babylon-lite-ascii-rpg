@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { OVERWORLD_GRASS_FRAME } from "../../../src/client/game-layer-babylon-lite/overworld-terrain-art.js";
+import { getOverworldMountainFrame, OVERWORLD_GRASS_FRAME } from "../../../src/client/game-layer-babylon-lite/overworld-terrain-art.js";
 
 test("walkable Overground grass uses its art without mutating terrain or overlay identity", () => {
   const cell = { x: 0, y: 0 };
@@ -33,10 +33,20 @@ test("grass raster samples the documented interior region at the destination cel
   try {
     const grass = {};
     const raster = rasterizeTerrainArt('terrain-art:["grass",null]', { overworldGrass: grass }, "monospace", 16, new Map());
-    assert.deepEqual(calls, [[grass, 80, 116, 192, 192, 0, 0, 16, 16]]);
+    assert.deepEqual(calls, [[grass, OVERWORLD_GRASS_FRAME.x, OVERWORLD_GRASS_FRAME.y, OVERWORLD_GRASS_FRAME.width, OVERWORLD_GRASS_FRAME.height, 0, 0, 16, 16]]);
     assert.equal(raster.terrainArt, true);
     assert.equal(raster.width, 16);
   } finally { globalThis.document = previous; }
+});
+
+test("Overground mountain art autotiles from the authored mountain layer semantics", () => {
+  const world = { realm: "Overground", rows: 2, columns: 2, terrain: [
+    [{ kind: "mountain", glyph: "▲", walkable: false }, { kind: "mountain", glyph: "▲", walkable: false }],
+    [{ kind: "ground", glyph: "•", walkable: true }, { kind: "ground", glyph: "•", walkable: true }],
+  ] };
+  assert.deepEqual(parseTerrainArtKey(getTerrainArtKey(world, { x: 0, y: 0 }, "▲")).frame, getOverworldMountainFrame(11));
+  assert.equal(getTerrainArtKey(world, { x: 0, y: 0 }, "▲").startsWith("terrain-art:"), true);
+  assert.equal(world.terrain[0][0].walkable, false);
 });
 import { drawStaticPropPreview, getStaticPropArtAspectRatio, rasterizeStaticPropArt, rasterizeTerrainArt } from "../../../src/client/game-layer-babylon-lite/underground-terrain-art.js";
 import { FRONT_DOOR_CLOSED_ART, FRONT_DOOR_LOCKED_ART, FRONT_DOOR_OPEN_ART, SIDE_DOOR_CLOSED_ART, SIDE_DOOR_LOCKED_ART, SIDE_DOOR_OPEN_ART } from "../../../src/client/game-layer-babylon-lite/systems/civilization-system.js";
@@ -302,12 +312,13 @@ test("animated water preserves actor, object, and particle overlays while fog cu
   cache.dispose();
 });
 
-test("terrain pixels remain opaque and overlay tint composes above, without changing sources", () => {
+test("terrain pixels preserve source transparency and overlay tint composes above, without changing sources", () => {
   const terrain = new Uint8ClampedArray([40, 60, 80, 255, 80, 100, 120, 255]);
   const overlay = { pixels: new Uint8ClampedArray([200, 100, 50, 255, 200, 100, 50, 0]) };
   assert.deepEqual([...compositeTerrainPixels(terrain)], [...terrain]);
   assert.deepEqual([...compositeTerrainPixels(terrain, overlay, [0.5, 1, 1])], [100, 100, 50, 255, 80, 100, 120, 255]);
   assert.deepEqual([...terrain], [40, 60, 80, 255, 80, 100, 120, 255]);
+  assert.deepEqual([...compositeTerrainPixels(new Uint8ClampedArray([40, 60, 80, 0]))], [0, 0, 0, 0]);
 });
 
 test("PNG terrain edges meet without overlap at fractional zooms", () => {

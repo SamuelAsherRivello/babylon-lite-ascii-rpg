@@ -9,6 +9,7 @@ export const TRAP_FRAME_DURATION_MS = TRAP_PROFILE.durations[0];
 export function collectVisibleTrapRecords({ objects = [], realm, region, fog, world } = {}) {
   if (!region || !world || !fog) return [];
   return objects.filter((object) => object?.active && object.type === "trap"
+    && object.fogged !== true
     && (object.realm === undefined || object.realm === realm))
     .filter((object) => getVisibleSlot(region, object.cell) !== -1 && getFogVisibility(fog, world, object.cell) > 0)
     .map((object) => Object.freeze({ id: object.id, cell: Object.freeze({ ...object.cell }) }));

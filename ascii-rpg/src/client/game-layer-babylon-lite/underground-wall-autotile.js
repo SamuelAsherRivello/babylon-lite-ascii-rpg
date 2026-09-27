@@ -57,7 +57,12 @@ export function getWallComposition(rawMask) {
 }
 
 export function expandTerrainDirtyCells(world, cells) {
-  if ((world?.realm ?? world?.realmName) !== "Underground" || !cells.length) return cells;
+  const realm = world?.realm ?? world?.realmName;
+  const mountainChange = realm === "Overground" && cells.some(({ x, y }) => [
+    world.terrain?.[y]?.[x], world.terrain?.[y - 1]?.[x], world.terrain?.[y]?.[x + 1],
+    world.terrain?.[y + 1]?.[x], world.terrain?.[y]?.[x - 1],
+  ].some((terrain) => terrain?.kind === "mountain"));
+  if (realm !== "Underground" && !mountainChange || !cells.length) return cells;
   const rows = world.rows ?? world.terrain.length;
   const columns = world.columns ?? world.terrain[0]?.length ?? 0;
   const expanded = new Map();

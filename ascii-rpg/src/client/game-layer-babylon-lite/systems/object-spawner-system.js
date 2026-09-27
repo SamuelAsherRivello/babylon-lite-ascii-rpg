@@ -128,7 +128,7 @@ export function createObjectSpawnerSystem({ catalog = [], eventSystem = null } =
     eventSystem?.publish?.(frozen);
   };
 
-  const addObject = ({ id, type, cell, glyph = null, openGlyph = null, orientation = null, buildingId = null, state = null, open = false, effect = () => {}, realm = null } = {}) => {
+  const addObject = ({ id, type, cell, glyph = null, openGlyph = null, orientation = null, buildingId = null, state = null, open = false, fogged = null, effect = () => {}, realm = null } = {}) => {
     const definition = definitions.get(type);
     if (!definition) throw new RangeError(`Unknown object type: ${type}.`);
     if (!cell || !Number.isInteger(cell.x) || !Number.isInteger(cell.y)) throw new TypeError("An object needs an integer cell.");
@@ -149,6 +149,8 @@ export function createObjectSpawnerSystem({ catalog = [], eventSystem = null } =
       open: doorState === "open",
       IsPickup: definition.IsPickup,
       IsLevelSpawned: definition.IsLevelSpawned,
+      foggable: definition.foggable === true,
+      fogged: fogged ?? definition.foggable === true,
       cell: { x: cell.x, y: cell.y },
       active: true,
       definition,
@@ -156,6 +158,10 @@ export function createObjectSpawnerSystem({ catalog = [], eventSystem = null } =
       realm,
     };
     objects.set(objectId, object);
+    if (type === "door" && realm?.terrain?.[cell.y]?.[cell.x]) {
+      realm.terrain[cell.y][cell.x].walkable = doorState === "open";
+      realm.terrain[cell.y][cell.x].blocksLight = doorState !== "open";
+    }
     if (type === "torch") { lightingSources.delete(realm); lightingSources.delete(null); }
     return object;
   };
@@ -201,6 +207,17 @@ export function createObjectSpawnerSystem({ catalog = [], eventSystem = null } =
     && sameCell(candidate.cell, cell))
     ?? context.world?.objects?.find((candidate) => candidate?.active !== false && sameCell(candidate.cell, cell))
     ?? null;
+
+  const revealFoggedObjects = ({ realm = null, isVisible = () => false } = {}) => {
+    let revealed = 0;
+    for (const object of objects.values()) {
+      if (!object.active || !object.foggable || !object.fogged || (realm && object.realm !== realm)) continue;
+      if (!isVisible(object.cell, object)) continue;
+      object.fogged = false;
+      revealed += 1;
+    }
+    return revealed;
+  };
 
   const interactAtCell = (cell, {
     world = null,
@@ -322,6 +339,7 @@ export function createObjectSpawnerSystem({ catalog = [], eventSystem = null } =
     requestPickupObjects,
     collideAtCell,
     getActiveObjectAtCell,
+    revealFoggedObjects,
     interactAtCell,
     getCatalog() { return Object.freeze([...definitions.values()]); },
     getObjects() { return Object.freeze([...objects.values()].map(({ effect, definition, realm, ...object }) => freezeObject(object))); },

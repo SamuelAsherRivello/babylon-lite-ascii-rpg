@@ -66,6 +66,27 @@ test("mouse navigation resolves an actionable target through a reachable cardina
   assert.equal(plan.distance, 3);
 });
 
+test("mouse navigation supports pickup and stairs targets through the same action route", () => {
+  const map = world(7, 3);
+  const target = { x: 5, y: 1 };
+  const plan = resolveMouseAutoNavigationPlan({
+    world: map,
+    playerCell: { x: 1, y: 1 },
+    pointerCell: target,
+    isTravelCell: (cell) => cell.x !== target.x || cell.y !== target.y,
+    isActionableCell: (cell) => cell.x === target.x && cell.y === target.y,
+    isBlocked: (cell) => cell.x === target.x && cell.y === target.y,
+  });
+  assert.equal(plan.kind, "action");
+  assert.deepEqual(plan.approachCell, { x: 4, y: 1 });
+  assert.deepEqual(getMouseAutoNavigationNextCell({
+    world: map,
+    playerCell: { x: 1, y: 1 },
+    targetCell: plan.approachCell,
+    isBlocked: () => false,
+  }), { x: 2, y: 1 });
+});
+
 test("mouse navigation refuses an actionable target without a cardinal approach route", () => {
   const map = world(5, 5);
   const target = { x: 2, y: 2 };

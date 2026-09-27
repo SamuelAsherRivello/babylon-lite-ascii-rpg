@@ -1,5 +1,60 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<tileset version="1.10" tiledversion="1.11.2" name="10. Extras and decor" tilewidth="1535" tileheight="1024" tilecount="1" columns="0">
+<tileset version="1.10" tiledversion="1.12.2" name="10. Extras and decor" tilewidth="220" tileheight="200" tilecount="56" columns="0">
  <grid orientation="orthogonal" width="1" height="1"/>
- <tile id="0"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="0" x="190" y="120" width="170" height="200"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="1" x="1230" y="120" width="140" height="200"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="2" x="30" y="130" width="140" height="190"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="3" x="1380" y="140" width="130" height="180"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="4" x="670" y="160" width="190" height="150"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="5" x="1030" y="180" width="190" height="130"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="6" x="850" y="190" width="180" height="130"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="7" x="40" y="300" width="160" height="180"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="8" x="360" y="320" width="140" height="150"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="9" x="520" y="320" width="130" height="150"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="10" x="660" y="320" width="180" height="150"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="11" x="1010" y="330" width="160" height="140"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="12" x="1170" y="330" width="140" height="140"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="13" x="1300" y="330" width="220" height="170"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="14" x="220" y="340" width="120" height="130"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="15" x="840" y="340" width="170" height="130"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="16" x="180" y="460" width="140" height="180"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="17" x="330" y="460" width="150" height="170"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="18" x="40" y="470" width="130" height="160"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="19" x="480" y="470" width="140" height="160"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="20" x="1160" y="470" width="170" height="180"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="21" x="640" y="480" width="160" height="150"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="22" x="990" y="480" width="170" height="160"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="23" x="790" y="500" width="200" height="130"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="24" x="1340" y="510" width="160" height="130"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="25" x="220" y="620" width="210" height="170"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="26" x="1010" y="630" width="130" height="150"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="27" x="20" y="640" width="210" height="130"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="28" x="830" y="650" width="160" height="130"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="29" x="1150" y="650" width="150" height="130"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="30" x="410" y="660" width="180" height="120"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="31" x="660" y="660" width="170" height="110"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="32" x="1300" y="660" width="110" height="120"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="33" x="1400" y="660" width="100" height="120"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="34" x="560" y="680" width="100" height="90"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="35" x="510" y="760" width="180" height="150"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="36" x="30" y="770" width="150" height="140"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="37" x="190" y="770" width="160" height="140"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="38" x="840" y="770" width="220" height="140"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="39" x="1050" y="770" width="140" height="140"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="40" x="1200" y="770" width="150" height="140"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="41" x="350" y="790" width="170" height="110"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="42" x="1350" y="790" width="150" height="120"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="43" x="680" y="800" width="160" height="110"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="44" x="670" y="890" width="140" height="120"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="45" x="30" y="900" width="140" height="110"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="46" x="400" y="900" width="150" height="110"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="47" x="550" y="900" width="110" height="110"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="48" x="820" y="900" width="100" height="110"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="49" x="1090" y="900" width="140" height="110"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="50" x="160" y="910" width="130" height="100"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="51" x="930" y="910" width="110" height="100"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="52" x="1000" y="910" width="90" height="80"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="53" x="280" y="920" width="130" height="90"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="54" x="1230" y="920" width="140" height="90"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
+ <tile id="55" x="1370" y="930" width="90" height="80"><image source="../10. Extras and decor.png" width="1535" height="1024"/></tile>
 </tileset>

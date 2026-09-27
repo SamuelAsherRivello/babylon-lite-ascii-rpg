@@ -1,29 +1,9 @@
 # Outdoor art trial
 
-Open `Nature-and-Outdoor.tiled-project`, then `overworld-art-test.tmx` in
-Tiled 1.9 or newer. All ten external image-collection tilesets reference the
-original PNGs in place. Tile 0 in each tileset displays the full source sheet
-for inspection; these full-sheet tiles are not painted into the test map.
+Open `Nature-and-Outdoor.tiled-project`, then `overworld-art-test.tmx` in Tiled 1.9 or newer. The `1. Grass and dirt` tileset exposes all 28 pieces from the supplied PNG: 18 square environment tiles and 10 centered props/objects.
 
-`1. Grass and dirt.png` is 1672 by 941 pixels. The other nine numbered PNGs
-are each 1535 by 1024 pixels. Unlike the dungeon's 384 by 288 source with its
-32-pixel grid, these are illustrated presentation sheets with headers and
-irregular spacing. They do not share that grid.
+`1. Grass and dirt.png` is 1672 by 941 pixels. The other nine numbered PNGs are each 1535 by 1024 pixels. These presentation sheets have title bands, transparent spacing, and irregular item sizes, so they are intentionally not declared as the dungeon's 32 by 32 grid.
 
-The grass/dirt tileset additionally defines two 192 by 192 image subrectangles:
+Every tile uses a 212 by 212 source grid. Environment tiles are cropped tightly to their square artwork; props and objects are centered inside the same grid area. The dirt tile remains the exact 212 by 212 source rectangle at `(69,346)` that was used in the one-tile trial. The source PNG is not cropped, resampled, copied, or rewritten.
 
-| Local tile ID | Region | X | Y | Width | Height |
-| --- | --- | --- | --- | --- | --- |
-| 1 | Grass interior | 80 | 116 | 192 | 192 |
-| 2 | Dirt interior | 80 | 356 | 192 | 192 |
-
-These interior bounds exclude the first swatches' beveled borders and sheet
-labels. The original PNGs are not cropped, resampled, copied, or rewritten.
-Tiled supports these regions through its tile `x`, `y`, `width`, and `height`
-attributes: https://doc.mapeditor.org/en/stable/reference/tmx-map-format/#tile
-
-The finite 12 by 8 map uses 192-pixel cells. Dirt contains grass with a short
-dirt path; Water, Rocks, Vegetation, and Details are empty, in that order.
-The runtime scales the same grass region to its existing cell size and applies
-it only to walkable `grass` terrain in the `Overground` realm. It never reads
-this Tiled project or map. Terrain identity and generation remain authoritative.
+The finite map keeps its existing layer order and runtime isolation. It paints exactly one dirt tile in the upper-left cell of the visible Floor layer; every other layer and cell is empty. The browser renderer never reads this Tiled project or map.

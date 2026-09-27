@@ -1,0 +1,19 @@
+{
+  "tiledversion": "1.10.2",
+  "version": "1.10",
+  "name": "Tilemap_Flat",
+  "tilewidth": 64,
+  "tileheight": 64,
+  "tilecount": 40,
+  "columns": 10,
+  "margin": 0,
+  "spacing": 0,
+  "image": "../../Terrain/Tilesets/Tilemap_Flat.png",
+  "imagewidth": 640,
+  "imageheight": 256,
+  "grid": {
+    "orientation": "orthogonal",
+    "width": 64,
+    "height": 64
+  }
+}

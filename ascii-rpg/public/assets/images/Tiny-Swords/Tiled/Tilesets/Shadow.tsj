@@ -1,0 +1,19 @@
+{
+  "tiledversion": "1.10.2",
+  "version": "1.10",
+  "name": "Shadow",
+  "tilewidth": 64,
+  "tileheight": 64,
+  "tilecount": 9,
+  "columns": 3,
+  "margin": 0,
+  "spacing": 0,
+  "image": "../../Terrain/Tilesets/Shadow.png",
+  "imagewidth": 192,
+  "imageheight": 192,
+  "grid": {
+    "orientation": "orthogonal",
+    "width": 64,
+    "height": 64
+  }
+}
