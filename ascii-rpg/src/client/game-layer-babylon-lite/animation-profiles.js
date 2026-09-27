@@ -49,6 +49,17 @@ export const PARTICLE_PROFILES = Object.freeze([
 ].map(([name, folder, prefix, count, duration, size]) => Object.freeze({ name, folder, prefix,
   animation: sequence(`particle.${name}`, (index) => `${base}assets/pfx/${encodeURIComponent(folder)}/${prefix}_${index + 1}.png`, count, duration, false, size, size, "particle") })));
 
+// The three-frame overlap preserves the existing FirePlume/SmokePoff composition.
+const fire = profiles["particle.FirePlume"];
+const smoke = profiles["particle.SmokePoff"];
+const smokeStart = fire.durations.slice(0, -3).reduce((sum, duration) => sum + duration, 0);
+export const BOMB_EXPLOSION_PROFILE = Object.freeze({
+  id: "particle.BombExplosion", name: "BombExplosion", adapter: "particle-compound", loop: false, timeDomain: "realTime",
+  effects: Object.freeze(["FirePlume", "SmokePoff"]), crossfadeFrames: Object.freeze([3]),
+  startOffsets: Object.freeze([0, smokeStart]), duration: smokeStart + smoke.totalDuration,
+});
+profiles[BOMB_EXPLOSION_PROFILE.id] = BOMB_EXPLOSION_PROFILE;
+
 function motion(id, duration, adapter) {
   const profile = Object.freeze({ id, duration, loop: false, timeDomain: "realTime", adapter });
   profiles[id] = profile;

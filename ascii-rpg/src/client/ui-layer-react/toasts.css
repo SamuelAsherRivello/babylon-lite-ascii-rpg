@@ -25,7 +25,7 @@
 }
 
 .toast_entering {
-  animation: toast_descend 250ms ease-out both;
+  animation: toast_descend var(--toast-enter-duration, 250ms) ease-out both;
 }
 
 .toast_visible {
@@ -33,7 +33,7 @@
 }
 
 .toast_exiting {
-  animation: toast_ascend 250ms ease-in both;
+  animation: toast_ascend var(--toast-exit-duration, 250ms) ease-in both;
 }
 
 @keyframes toast_descend {

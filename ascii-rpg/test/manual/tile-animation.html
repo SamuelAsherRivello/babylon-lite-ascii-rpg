@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tile animation manual check</title>
+  </head>
+  <body>
+    <div id="game_layer"></div>
+    <div id="ui_layer"></div>
+    <aside style="position:fixed;top:8px;left:35%;z-index:100;background:#111;color:white;padding:8px;pointer-events:none">
+      <div>Tick-time fixture (move in the game to advance)</div>
+      <span id="tick_tile" style="display:inline-block;width:32px;height:32px;image-rendering:pixelated"></span>
+      <output id="tick_status"></output>
+      <div>Real-time Torch adapter fixture</div>
+      <span id="torch_tile" style="display:inline-block;width:32px;height:32px;image-rendering:pixelated"></span>
+      <output id="torch_status"></output>
+    </aside>
+    <script type="module" src="../../src/main.jsx"></script>
+    <script type="module">
+      import { getTimeSnapshot } from "../../src/client/bridge-layer/game-bridge.js";
+      import { WATER_PROFILE, TORCH_PROFILE } from "../../src/client/game-layer-babylon-lite/animation-profiles.js";
+      import { createAnimatedTile, getAnimationSnapshot, getTileBackgroundStyle, resolveAnimation } from "../../src/client/game-layer-babylon-lite/tile-animation.js";
+      import { createVisibleTorchAnimator } from "../../src/client/game-layer-babylon-lite/torch-presentation.js";
+      // This fixture reads the real game's published tick. It cannot advance it.
+      const clock = { getTime: getTimeSnapshot };
+      const animation = createAnimatedTile({ ...WATER_PROFILE, timeDomain: "tickTime", durations: [1, 1, 1, 1] });
+      const tileElement = document.getElementById("tick_tile");
+      const status = document.getElementById("tick_status");
+      function draw(realTimeMs) {
+        const snapshot = getAnimationSnapshot(clock, realTimeMs);
+        const { tile, frameIndex } = resolveAnimation(animation, snapshot, 1);
+        tileElement.style.backgroundImage = `url("${tile.source}")`;
+        tileElement.style.backgroundPosition = `-${tile.x}px -${tile.y}px`;
+        status.value = `World tick ${snapshot.tickTime}; frame ${frameIndex}; real time ${Math.floor(realTimeMs / 1000)}s`;
+        requestAnimationFrame(draw);
+      }
+      requestAnimationFrame(draw);
+      // Exercise the real visible-set adapter even when the seed has no nearby torch.
+      const torchElement = document.getElementById("torch_tile");
+      const torchStatus = document.getElementById("torch_status");
+      const torch = createVisibleTorchAnimator({ render(entries) {
+        if (!entries.length) return;
+        const tile = TORCH_PROFILE.frames[entries[0].frame];
+        Object.assign(torchElement.style, getTileBackgroundStyle(tile));
+        torchStatus.value = `Frame ${entries[0].frame}`;
+      } });
+      torch.reconcile([{ id: "manual-torch", cell: { x: 0, y: 0 } }]);
+      window.addEventListener("pagehide", () => torch.dispose(), { once: true });
+    </script>
+  </body>
+</html>

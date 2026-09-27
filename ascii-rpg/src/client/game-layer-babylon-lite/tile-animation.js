@@ -18,13 +18,13 @@ export function createAnimatedTile({ frames, durations, loop, timeDomain }) {
   if (typeof loop !== "boolean" || !["realTime", "tickTime"].includes(timeDomain)) {
     throw new TypeError("Animation requires explicit loop and timeDomain values.");
   }
-  if (!durations.every((duration) => Number.isFinite(duration) && duration > 0
+  if (![...durations].every((duration) => Number.isFinite(duration) && duration > 0
     && (timeDomain !== "tickTime" || Number.isInteger(duration)))) {
     throw new RangeError("Frame durations must be positive (integer ticks for tickTime).");
   }
   const totalDuration = durations.reduce((sum, duration) => sum + duration, 0);
   if (!Number.isFinite(totalDuration)) throw new RangeError("Animation duration must be finite.");
-  return Object.freeze({ frames: Object.freeze(frames.map(createTile)), durations: Object.freeze([...durations]), loop, timeDomain, totalDuration });
+  return Object.freeze({ frames: Object.freeze(Array.from(frames, createTile)), durations: Object.freeze([...durations]), loop, timeDomain, totalDuration });
 }
 
 export function resolveAnimation(animation, { realTimeMs, tickTime }, startedAt = 0) {
@@ -47,6 +47,16 @@ export function resolveAnimation(animation, { realTimeMs, tickTime }, startedAt 
 // Reads the existing authoritative value; never subscribes, schedules, or advances time.
 export function getAnimationSnapshot(timeSystem, realTimeMs) {
   return Object.freeze({ realTimeMs, tickTime: timeSystem.getTime() });
+}
+
+// CSS source-rectangle adapter; placement and destination size stay with the owner.
+export function getTileBackgroundStyle(tile) {
+  const position = (offset, sourceSize, size) => sourceSize === size ? 0 : 100 * offset / (sourceSize - size);
+  return {
+    backgroundImage: `url("${tile.source}")`,
+    backgroundSize: `${100 * tile.sourceWidth / tile.width}% ${100 * tile.sourceHeight / tile.height}%`,
+    backgroundPosition: `${position(tile.x, tile.sourceWidth, tile.width)}% ${position(tile.y, tile.sourceHeight, tile.height)}%`,
+  };
 }
 
 // Continuous-value adapter for fades/masks. Zero-duration UI phases finish immediately.

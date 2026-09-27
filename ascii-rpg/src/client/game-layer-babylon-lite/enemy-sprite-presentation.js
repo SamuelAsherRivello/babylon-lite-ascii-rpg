@@ -1,14 +1,10 @@
+import { SPIDER_PROFILES } from "./animation-profiles.js";
+import { resolveAnimation } from "./tile-animation.js";
 import { getFogVisibility } from "./systems/fog-of-war-system.js";
 import { getVisibleSlot } from "./visible-region.js";
 
-export const SPIDER_ANIMATION_FRAMES = Object.freeze({
-  idle: Object.freeze([0, 1, 2, 3, 4]),
-  move: Object.freeze([0, 1, 2, 3]),
-  attack: Object.freeze([0, 1, 2]),
-  death: Object.freeze([0, 1, 2, 3, 4, 5, 6]),
-});
-
-export const SPIDER_ANIMATION_DURATIONS = Object.freeze({ idle: 180, move: 100, attack: 120, death: 150 });
+export const SPIDER_ANIMATION_FRAMES = Object.freeze(Object.fromEntries(Object.entries(SPIDER_PROFILES).map(([state, profile]) => [state, Object.freeze(profile.frames.map((_, index) => index))])));
+export const SPIDER_ANIMATION_DURATIONS = Object.freeze(Object.fromEntries(Object.entries(SPIDER_PROFILES).map(([state, profile]) => [state, profile.durations[0]])));
 
 const TRANSIENT_STATES = new Set(["move", "attack"]);
 
@@ -23,8 +19,8 @@ function visible(record, { realm, region, fog, world }) {
 }
 
 export function getSpiderFramePath(assetBase, state, frame) {
-  const directory = state === "move" ? "Move" : state[0].toUpperCase() + state.slice(1);
-  return `${assetBase}/${directory}/${String(frame).padStart(2, "0")}.png`;
+  const tile = SPIDER_PROFILES[state]?.frames[frame];
+  return tile ? assetBase + "/" + tile.source.split("/Spider/Frames/")[1] : null;
 }
 
 export function createEnemySpritePresentation({
@@ -40,18 +36,15 @@ export function createEnemySpritePresentation({
   let disposed = false;
 
   const normalize = (entry, at) => {
-    const frames = SPIDER_ANIMATION_FRAMES[entry.state] ?? SPIDER_ANIMATION_FRAMES.idle;
-    const duration = SPIDER_ANIMATION_DURATIONS[entry.state] ?? SPIDER_ANIMATION_DURATIONS.idle;
-    const elapsed = Math.max(0, at - entry.startedAt);
-    if (TRANSIENT_STATES.has(entry.state) && elapsed >= frames.length * duration) {
+    const profile = SPIDER_PROFILES[entry.state] ?? SPIDER_PROFILES.idle;
+    const resolved = resolveAnimation(profile, { realTimeMs: at }, entry.startedAt);
+    if (TRANSIENT_STATES.has(entry.state) && resolved.complete) {
       entry.state = "idle";
       entry.startedAt = at;
       return normalize(entry, at);
     }
-    const frame = entry.state === "death"
-      ? Math.min(frames.length - 1, Math.floor(elapsed / duration))
-      : Math.floor(elapsed / duration) % frames.length;
-    return Object.freeze({ ...entry, cell: freezeCell(entry.cell), frame });
+    const frame = resolved.frameIndex;
+    return Object.freeze({ ...entry, cell: freezeCell(entry.cell), frame, tile: resolved.tile });
   };
 
   const snapshot = (at) => visibleEntries.map((entry) => normalize(entry, at));

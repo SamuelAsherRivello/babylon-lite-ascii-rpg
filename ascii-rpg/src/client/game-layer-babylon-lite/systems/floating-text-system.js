@@ -1,3 +1,5 @@
+import { MOTION_PROFILES } from "../animation-profiles.js";
+import { resolveMotion } from "../tile-animation.js";
 export const FLOATING_TEXT_FADE_IN_MS = 100;
 export const FLOATING_TEXT_HOLD_MS = 500;
 export const FLOATING_TEXT_FADE_OUT_MS = 100;
@@ -33,17 +35,17 @@ export function createFloatingTextSystem({
   const getState = (id, now) => {
     const record = records.get(id);
     if (!record) return null;
-    const elapsed = Math.max(0, now - record.createdAt);
-    if (elapsed >= totalMs) {
+    const motion = resolveMotion(MOTION_PROFILES.floatingText, now, record.createdAt, totalMs);
+    const elapsed = motion.elapsed;
+    if (motion.complete) {
       records.delete(id);
       return null;
     }
-    let alpha = fadeInMs === 0 ? 1 : clamp(elapsed / fadeInMs, 0, 1);
+    let alpha = resolveMotion(MOTION_PROFILES.floatingText, now, record.createdAt, fadeInMs).progress;
     if (elapsed > fadeInMs + holdMs) {
-      const fadeElapsed = elapsed - fadeInMs - holdMs;
-      alpha = fadeOutMs === 0 ? 0 : clamp(1 - fadeElapsed / fadeOutMs, 0, 1);
+      alpha = 1 - resolveMotion(MOTION_PROFILES.floatingText, now, record.createdAt + fadeInMs + holdMs, fadeOutMs).progress;
     }
-    const progress = totalMs === 0 ? 1 : clamp(elapsed / totalMs, 0, 1);
+    const progress = motion.progress;
     return Object.freeze({
       ...record,
       alpha,

@@ -1,8 +1,10 @@
+import { TRAP_PROFILE } from "./animation-profiles.js";
+import { createAnimatedTile, resolveAnimation } from "./tile-animation.js";
 import { getFogVisibility } from "./systems/fog-of-war-system.js";
 import { getVisibleSlot } from "./visible-region.js";
 
-export const TRAP_FRAME_COUNT = 7;
-export const TRAP_FRAME_DURATION_MS = 120;
+export const TRAP_FRAME_COUNT = TRAP_PROFILE.frames.length;
+export const TRAP_FRAME_DURATION_MS = TRAP_PROFILE.durations[0];
 
 export function collectVisibleTrapRecords({ objects = [], realm, region, fog, world } = {}) {
   if (!region || !world || !fog) return [];
@@ -30,14 +32,16 @@ export function createVisibleTrapAnimator({
   cancelFrame = (handle) => window.cancelAnimationFrame(handle),
   render = () => {},
 } = {}) {
+  const animation = frameDurationMs === TRAP_FRAME_DURATION_MS ? TRAP_PROFILE
+    : createAnimatedTile({ ...TRAP_PROFILE, durations: TRAP_PROFILE.frames.map(() => frameDurationMs) });
   let entries = new Map();
   let frameHandle = null;
   let disposed = false;
   const startedAt = now();
-  const snapshot = (at) => [...entries.values()].map((entry) => Object.freeze({
-    ...entry,
-    frame: Math.floor(Math.max(0, at - startedAt) / frameDurationMs) % TRAP_FRAME_COUNT,
-  }));
+  const snapshot = (at) => {
+    const { frameIndex } = resolveAnimation(animation, { realTimeMs: at }, startedAt);
+    return [...entries.values()].map((entry) => Object.freeze({ ...entry, frame: frameIndex }));
+  };
   const draw = (at) => render(snapshot(at));
   const schedule = () => {
     if (disposed || entries.size === 0 || frameHandle !== null) return;

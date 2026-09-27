@@ -1,3 +1,5 @@
+import { MOTION_PROFILES } from "../animation-profiles.js";
+import { resolveMotion } from "../tile-animation.js";
 export const TRANSITION_PHASES = Object.freeze({
   IDLE: "idle",
   CLOSING: "closing",
@@ -5,7 +7,7 @@ export const TRANSITION_PHASES = Object.freeze({
   OPENING: "opening",
 });
 
-export const DEFAULT_TRANSITION_DURATION_MS = 2000;
+export const DEFAULT_TRANSITION_DURATION_MS = MOTION_PROFILES.realmMask.duration;
 
 const clampProgress = (value) => Math.min(1, Math.max(0, value));
 
@@ -51,8 +53,7 @@ export function createTransitionSystem({
   function step(timestamp) {
     if (!active) return;
     const current = active;
-    const elapsed = Math.max(0, timestamp - current.phaseStartedAt);
-    const progress = clampProgress(elapsed / current.phaseDuration);
+    const { progress } = resolveMotion(MOTION_PROFILES.realmMask, timestamp, current.phaseStartedAt, current.phaseDuration);
 
     if (current.phase === TRANSITION_PHASES.CLOSING) {
       update(TRANSITION_PHASES.CLOSING, progress, timestamp);

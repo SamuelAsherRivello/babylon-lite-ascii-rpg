@@ -1,3 +1,5 @@
+import { HERO_PROFILES, TORCH_PROFILE, TRAP_PROFILE } from "./animation-profiles.js";
+import { getAnimationSnapshot, getTileBackgroundStyle, resolveAnimation } from "./tile-animation.js";
 import { isGenerationDiagnosticsEnabled } from "../generation-mode.js";
 import { startSprintDiagnostic } from "./sprint-diagnostic.js";
 import {
@@ -76,7 +78,7 @@ import { expandTerrainDirtyCells } from "./underground-wall-autotile.js";
 import { getVisibleRegion, getVisibleSlot, shouldUpdateVisibleSprite } from "./visible-region.js";
 import { collectVisibleTorchRecords, createVisibleTorchAnimator } from "./torch-presentation.js";
 import { collectVisibleTrapRecords, createVisibleTrapAnimator, getAnimatedTrapOverlayPlacement } from "./trap-presentation.js";
-import { createEnemySpritePresentation, getSpiderFramePath } from "./enemy-sprite-presentation.js";
+import { createEnemySpritePresentation } from "./enemy-sprite-presentation.js";
 import { getCharacterDepthOrder } from "./character-depth-order.js";
 import { getVisibleNpcPresentationRecords } from "./npc-presentation.js";
 import { collectWorldViewGlyphs, createWorldViewComposition, renderWorldViewComposition, renderWorldViewCompositionCooperatively } from "./world-view.js";
@@ -353,26 +355,16 @@ async function createGameSessionImplementation(container, initialPalette, initia
   heroOverlay.setAttribute("aria-hidden", "true");
   characterOverlay.append(heroOverlay);
 
-  const heroAnimationFrames = Object.freeze({
-    idle: Object.freeze([0, 1, 2, 3]),
-    run: Object.freeze([0, 1, 2, 3, 4, 5]),
-    attack: Object.freeze([0, 1, 2, 3]),
-    death: Object.freeze([0, 1, 2, 3, 4, 5]),
-  });
-  const heroAnimationDurations = Object.freeze({ idle: 180, run: 100, attack: 120, death: 150 });
-  const heroAssetBase = `${import.meta.env.BASE_URL}assets/images/Dungeons-and-Pixels-v1.4/Characters/Hero_Warrior/Frames`;
   let heroAnimation = "idle";
   let heroAnimationFrame = 0;
   let heroAnimationStartedAt = performance.now();
   let heroAnimationRaf = null;
   let heroCorpse = false;
-  const torchAssetUrl = `${import.meta.env.BASE_URL}assets/images/Dungeons-and-Pixels-v1.4/Props/Animated/torch_strip.png`;
   const animatedTorchCellKeys = new Set();
   const torchAnimator = createVisibleTorchAnimator({
     render: (entries) => renderTorchOverlayFrames(entries),
   });
-  const trapAssetUrl = `${import.meta.env.BASE_URL}assets/images/Dungeons-and-Pixels-v1.4/Props/Animated/trap1_strip.png`;
-  const spiderAssetBase = `${import.meta.env.BASE_URL}assets/images/Dungeons-and-Pixels-v1.4/Enemies/Spider/Frames`;
+  const trapAssetUrl = TRAP_PROFILE.frames[0].source;
   let trapArtworkReady = false;
   let waterAnimationFrame = 0;
   let goldCoinAnimationFrame = 0;
@@ -2350,7 +2342,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
   };
 
   const setHeroAnimation = (next, { restart = true } = {}) => {
-    const state = heroCorpse ? "death" : heroAnimationFrames[next] ? next : "idle";
+    const state = heroCorpse ? "death" : HERO_PROFILES[next] ? next : "idle";
     if (!restart && state === heroAnimation) return;
     heroAnimation = state;
     heroAnimationFrame = 0;
@@ -2370,20 +2362,15 @@ async function createGameSessionImplementation(container, initialPalette, initia
     const visible = localX >= 0 && localY >= 0 && localX < viewport.columns && localY < viewport.rows;
     heroOverlay.hidden = !visible;
     if (!visible) return;
-    const frames = heroAnimationFrames[heroAnimation];
-    const duration = heroAnimationDurations[heroAnimation];
-    const elapsed = Math.max(0, now - heroAnimationStartedAt);
-    if (heroAnimation === "attack" && elapsed >= frames.length * duration) {
+    const profile = HERO_PROFILES[heroAnimation];
+    const resolved = resolveAnimation(profile, getAnimationSnapshot(timeSystem, now), heroAnimationStartedAt);
+    if (heroAnimation === "attack" && resolved.complete) {
       setHeroAnimation("idle");
       return renderHeroOverlay(now);
     }
-    const nextFrame = heroAnimation === "death"
-      ? Math.min(frames.length - 1, Math.floor(elapsed / duration))
-      : Math.floor(elapsed / duration) % frames.length;
+    const nextFrame = resolved.frameIndex;
     heroAnimationFrame = nextFrame;
-    const framePath = heroAnimation === "death"
-      ? `${heroAssetBase}/Death/${String(nextFrame).padStart(2, "0")}.png`
-      : `${heroAssetBase}/${heroAnimation === "run" ? "Run" : heroAnimation[0].toUpperCase() + heroAnimation.slice(1)}/Side/${String(nextFrame).padStart(2, "0")}.png`;
+    const framePath = resolved.tile.source;
     if (heroOverlay.src !== new URL(framePath, window.location.href).href) heroOverlay.src = framePath;
     const canvasBounds = canvas.getBoundingClientRect();
     const containerBounds = container.getBoundingClientRect();
@@ -2402,8 +2389,8 @@ async function createGameSessionImplementation(container, initialPalette, initia
     heroOverlay.dataset.characterY = String(playerCell.y);
     heroOverlay.style.display = "block";
     updateCharacterDepth();
-    if (heroAnimation === "death" && nextFrame === frames.length - 1) deathPresentation.completeAnimation();
-    if (heroAnimation !== "death" || elapsed < (frames.length - 1) * duration) {
+    if (heroAnimation === "death" && nextFrame === profile.frames.length - 1) deathPresentation.completeAnimation();
+    if (heroAnimation !== "death" || nextFrame < profile.frames.length - 1) {
       heroAnimationRaf = window.requestAnimationFrame((timestamp) => {
         heroAnimationRaf = null;
         renderHeroOverlay(timestamp);
@@ -2422,8 +2409,6 @@ async function createGameSessionImplementation(container, initialPalette, initia
         element = document.createElement("div");
         element.className = "torch_sprite_overlay__torch";
         element.dataset.torchId = entry.id;
-        element.style.backgroundImage = `url("${torchAssetUrl}")`;
-        element.style.backgroundSize = "300% 100%";
         torchOverlay.append(element);
       }
       const center = getRenderedCellCenter({
@@ -2434,7 +2419,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
       element.style.top = `${canvasBounds.top - containerBounds.top + center.y - viewport.gridHeight / 2}px`;
       element.style.width = `${viewport.gridWidth}px`;
       element.style.height = `${viewport.gridHeight}px`;
-      element.style.backgroundPosition = `${entry.frame * 50}% 0`;
+      Object.assign(element.style, getTileBackgroundStyle(TORCH_PROFILE.frames[entry.frame]));
     }
     for (const element of [...torchOverlay.children]) {
       if (!activeIds.has(element.dataset.torchId)) element.remove();
@@ -2466,8 +2451,6 @@ async function createGameSessionImplementation(container, initialPalette, initia
         element = document.createElement("div");
         element.className = "trap_sprite_overlay__trap";
         element.dataset.trapId = entry.id;
-        element.style.backgroundImage = `url("${trapAssetUrl}")`;
-        element.style.backgroundSize = "700% 100%";
         trapOverlay.append(element);
       }
       const placement = getAnimatedTrapOverlayPlacement(
@@ -2482,7 +2465,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
       element.style.top = `${placement.top}px`;
       element.style.width = `${placement.width}px`;
       element.style.height = `${placement.height}px`;
-      element.style.backgroundPosition = `${entry.frame * (100 / 6)}% 0`;
+      Object.assign(element.style, getTileBackgroundStyle(TRAP_PROFILE.frames[entry.frame]));
     }
     for (const element of [...trapOverlay.children]) {
       if (!activeIds.has(element.dataset.trapId)) element.remove();
@@ -2550,7 +2533,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
       }, viewport, world);
       const width = viewport.gridWidth;
       const height = viewport.gridHeight;
-      element.src = getSpiderFramePath(spiderAssetBase, entry.state, entry.frame);
+      element.src = entry.tile.source;
       element.style.left = `${canvasBounds.left - containerBounds.left + center.x - width / 2}px`;
       element.style.top = `${canvasBounds.top - containerBounds.top + center.y - height / 2}px`;
       element.style.width = `${width}px`;

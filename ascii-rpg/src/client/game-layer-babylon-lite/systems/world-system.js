@@ -9,6 +9,7 @@ export const NPC_SPAWNER_GLYPH = "N";
 export const TORCH_GLYPH = "🕯️";
 export const CAMP_FIRE_GLYPH = "🔥";
 export const GOLD_GLYPH = "💰";
+export const HEALTH_GLYPH = "♥";
 export const TRAP_GLYPH = "☠";
 export const CLOSED_CHEST_GLYPH = "📦";
 export const OPEN_CHEST_GLYPH = "🗃️";
@@ -38,6 +39,7 @@ export const PROJECT_MAP_GLYPHS = Object.freeze([
   CAMP_FIRE_GLYPH,
   STAIR_GLYPH,
   GOLD_GLYPH,
+  HEALTH_GLYPH,
   WATER_GLYPH,
   TRAP_GLYPH,
   CLOSED_CHEST_GLYPH,

@@ -1,6 +1,8 @@
-export const HEALTH_BAR_FADE_MS = 100;
+import { MOTION_PROFILES } from "../animation-profiles.js";
+import { resolveMotion } from "../tile-animation.js";
+export const HEALTH_BAR_FADE_MS = MOTION_PROFILES.healthFade.duration;
 export const HEALTH_BAR_HOLD_MS = 1_000;
-export const HEALTH_BAR_DELTA_MS = 300;
+export const HEALTH_BAR_DELTA_MS = MOTION_PROFILES.healthDelta.duration;
 
 function clamp(value, minimum, maximum) {
   return Math.max(minimum, Math.min(maximum, value));
@@ -17,12 +19,12 @@ export function createHealthBarSystem({
   const getState = (id, now) => {
     const record = records.get(id);
     if (!record) return null;
-    const sinceFirstDamage = Math.max(0, now - record.firstDamageAt);
-    const sinceLatestDamage = Math.max(0, now - record.latestDamageAt);
-    let alpha = fadeInMs === 0 ? 1 : clamp(sinceFirstDamage / fadeInMs, 0, 1);
+    const fadeIn = resolveMotion(MOTION_PROFILES.healthFade, now, record.firstDamageAt, fadeInMs);
+    const delta = resolveMotion(MOTION_PROFILES.healthDelta, now, record.latestDamageAt, deltaMs);
+    const sinceLatestDamage = delta.elapsed;
+    let alpha = fadeIn.progress;
     if (sinceLatestDamage > holdMs) {
-      const fadeElapsed = sinceLatestDamage - holdMs;
-      alpha = fadeOutMs === 0 ? 0 : clamp(1 - fadeElapsed / fadeOutMs, 0, 1);
+      alpha = 1 - resolveMotion(MOTION_PROFILES.healthFade, now, record.latestDamageAt + holdMs, fadeOutMs).progress;
     }
     if (alpha <= 0 && sinceLatestDamage >= holdMs + fadeOutMs) {
       records.delete(id);
@@ -31,7 +33,7 @@ export function createHealthBarSystem({
     const maximum = Math.max(1, record.maxHealth);
     const fillRatio = clamp(record.health / maximum, 0, 1);
     const previousRatio = clamp(record.previousHealth / maximum, 0, 1);
-    const deltaVisible = sinceLatestDamage < deltaMs;
+    const deltaVisible = !delta.complete;
     return Object.freeze({
       id: record.id,
       type: record.type,

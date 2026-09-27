@@ -1,8 +1,10 @@
+import { TORCH_PROFILE } from "./animation-profiles.js";
+import { createAnimatedTile, resolveAnimation } from "./tile-animation.js";
 import { getFogVisibility } from "./systems/fog-of-war-system.js";
 import { getVisibleSlot } from "./visible-region.js";
 
-export const TORCH_FRAME_COUNT = 3;
-export const TORCH_FRAME_DURATION_MS = 160;
+export const TORCH_FRAME_COUNT = TORCH_PROFILE.frames.length;
+export const TORCH_FRAME_DURATION_MS = TORCH_PROFILE.durations[0];
 
 export function collectVisibleTorchRecords({ objects = [], realm, region, fog, torches = [], world } = {}) {
   if (!region || !world || !fog) return [];
@@ -27,16 +29,17 @@ export function createVisibleTorchAnimator({
   cancelFrame = (handle) => window.cancelAnimationFrame(handle),
   render = () => {},
 } = {}) {
+  const animation = frameDurationMs === TORCH_FRAME_DURATION_MS ? TORCH_PROFILE
+    : createAnimatedTile({ ...TORCH_PROFILE, durations: TORCH_PROFILE.frames.map(() => frameDurationMs) });
   let entries = new Map();
   let startedAt = now();
   let frameHandle = null;
   let disposed = false;
 
-  const elapsedAt = (at) => Math.max(0, at - startedAt);
-  const snapshot = (at) => [...entries.values()].map((entry) => Object.freeze({
-    ...entry,
-    frame: Math.floor(elapsedAt(at) / frameDurationMs) % TORCH_FRAME_COUNT,
-  }));
+  const snapshot = (at) => {
+    const { frameIndex } = resolveAnimation(animation, { realTimeMs: at }, startedAt);
+    return [...entries.values()].map((entry) => Object.freeze({ ...entry, frame: frameIndex }));
+  };
   const draw = (at) => render(snapshot(at));
   const schedule = () => {
     if (disposed || entries.size === 0 || frameHandle !== null) return;

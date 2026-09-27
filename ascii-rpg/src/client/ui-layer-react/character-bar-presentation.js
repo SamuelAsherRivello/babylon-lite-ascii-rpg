@@ -1,5 +1,8 @@
+import { MOTION_PROFILES } from "../game-layer-babylon-lite/animation-profiles.js";
+
+// React owns the delta hold/retirement; it uses the catalog cadence without a game-layer timer.
 export const CHARACTER_BAR_PERCENT_MAX = 100;
-export const CHARACTER_BAR_DELTA_DURATION_MS = 300;
+export const CHARACTER_BAR_DELTA_DURATION_MS = MOTION_PROFILES.characterDelta.duration;
 
 function clampPercent(value) {
   const numeric = Number(value);

@@ -18,6 +18,7 @@ function ToastViewport({ toast }) {
       aria-live="polite"
       className={`toast toast_${toast.phase}`}
       role="status"
+      style={{ "--toast-enter-duration": `${TOAST_ENTER_DURATION_MS}ms`, "--toast-exit-duration": `${TOAST_EXIT_DURATION_MS}ms` }}
     >
       {toast.active.message}
     </div>

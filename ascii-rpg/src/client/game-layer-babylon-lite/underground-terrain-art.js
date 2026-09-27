@@ -1,3 +1,5 @@
+import { WATER_PROFILE, GOLD_COIN_PROFILE } from "./animation-profiles.js";
+import { resolveAnimation } from "./tile-animation.js";
 import { getFacingGlyph, getGlyphOffsetsFromKey, rasterizeGlyph } from "./glyph-visual-cache.js";
 import { getWallComposition, getWallBlobMask } from "./underground-wall-autotile.js";
 import { OVERWORLD_GRASS_FRAME, resolveOverworldTerrainFrame } from "./overworld-terrain-art.js";
@@ -14,15 +16,11 @@ export const UNDERGROUND_TERRAIN_FRAMES = Object.freeze({
   wall: Object.freeze({ source: "wall", x: 224, y: 64, width: 32, height: 32 }),
   dirt: Object.freeze({ source: "dirt", x: 32, y: 32, width: 32, height: 32 }),
 });
-export const WATER_ANIMATION_FRAME_DURATION = 400;
-export const GOLD_COIN_ANIMATION_FRAME_DURATION = 160;
-export const GOLD_COIN_FRAME_COUNT = 4;
-export const BLUE_WATER_TERRAIN_FRAMES = Object.freeze([
-  Object.freeze({ source: "water", x: 224, y: 192, width: 32, height: 32 }),
-  Object.freeze({ source: "water", x: 256, y: 192, width: 32, height: 32 }),
-  Object.freeze({ source: "water", x: 288, y: 192, width: 32, height: 32 }),
-  Object.freeze({ source: "water", x: 320, y: 192, width: 32, height: 32 }),
-]);
+export const WATER_ANIMATION_FRAME_DURATION = WATER_PROFILE.durations[0];
+export const GOLD_COIN_ANIMATION_FRAME_DURATION = GOLD_COIN_PROFILE.durations[0];
+export const GOLD_COIN_FRAME_COUNT = GOLD_COIN_PROFILE.frames.length;
+export const BLUE_WATER_TERRAIN_FRAMES = Object.freeze(WATER_PROFILE.frames.map(({ x, y, width, height }) =>
+  Object.freeze({ source: "water", x, y, width, height })));
 const KEY_PREFIX = "terrain-art:";
 
 // Adjacent terrain tiles share exactly the same rounded edge. Glyph footprints
@@ -37,11 +35,11 @@ export function getTerrainArtBounds(cell, viewport, offset = { x: 0, y: 0 }) {
 }
 
 export function getWaterAnimationFrame(now = 0) {
-  return Math.floor(Math.max(0, now) / WATER_ANIMATION_FRAME_DURATION) % BLUE_WATER_TERRAIN_FRAMES.length;
+  return resolveAnimation(WATER_PROFILE, { realTimeMs: now }).frameIndex;
 }
 
 export function getGoldCoinAnimationFrame(now = 0) {
-  return Math.floor(Math.max(0, now) / GOLD_COIN_ANIMATION_FRAME_DURATION) % GOLD_COIN_FRAME_COUNT;
+  return resolveAnimation(GOLD_COIN_PROFILE, { realTimeMs: now }).frameIndex;
 }
 
 function getGoldCoinFrame(glyph) {
@@ -123,7 +121,8 @@ function getStaticPropSource(glyph, images) {
 function getStaticPropSourceForFrame(glyph, images) {
   const goldCoinFrame = getGoldCoinFrame(glyph);
   if (goldCoinFrame !== null) {
-    return images.goldCoin ? { image: images.goldCoin, x: goldCoinFrame * 32, y: 0, width: 32, height: 32 } : null;
+    const { x, y, width, height } = GOLD_COIN_PROFILE.frames[goldCoinFrame];
+    return images.goldCoin ? { image: images.goldCoin, x, y, width, height } : null;
   }
   return getStaticPropSource(glyph, images);
 }

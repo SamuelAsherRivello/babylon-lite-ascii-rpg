@@ -1,6 +1,8 @@
-export const TOAST_ENTER_DURATION_MS = 250;
+import { MOTION_PROFILES } from "../game-layer-babylon-lite/animation-profiles.js";
+
+export const TOAST_ENTER_DURATION_MS = MOTION_PROFILES.toastEnter.duration;
 export const TOAST_VISIBLE_DURATION_MS = 3_000;
-export const TOAST_EXIT_DURATION_MS = 250;
+export const TOAST_EXIT_DURATION_MS = MOTION_PROFILES.toastExit.duration;
 
 export function createToastState() {
   return { active: null, nextId: 1, phase: "idle", queue: [] };
