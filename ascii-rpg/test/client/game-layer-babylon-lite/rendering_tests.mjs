@@ -1,6 +1,44 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { getStaticPropArtAspectRatio, rasterizeStaticPropArt, rasterizeTerrainArt } from "../../../src/client/game-layer-babylon-lite/underground-terrain-art.js";
+import { OVERWORLD_GRASS_FRAME } from "../../../src/client/game-layer-babylon-lite/overworld-terrain-art.js";
+
+test("walkable Overground grass uses its art without mutating terrain or overlay identity", () => {
+  const cell = { x: 0, y: 0 };
+  const world = { realm: "Overground", rows: 1, columns: 1,
+    terrain: [[{ kind: "grass", glyph: "•", walkable: true }]] };
+  const before = structuredClone(world);
+  assert.deepEqual(parseTerrainArtKey(getTerrainArtKey(world, cell, "•")), { frame: OVERWORLD_GRASS_FRAME, overlay: null });
+  for (const overlay of ["@", "♣", "health-potion", FRONT_DOOR_CLOSED_ART, "offset:custom"]) {
+    assert.equal(parseTerrainArtKey(getTerrainArtKey(world, cell, overlay)).overlay, overlay);
+  }
+  for (const visibility of [0, 35, 100]) {
+    const view = createWorldViewComposition({ world, source: { x: 0, y: 0, width: 1, height: 1 },
+      getVisibility: () => visibility, getGlyph: (target, point) => getTerrainArtKey(target, point, "•") });
+    assert.equal(view.cells[0].visibility, visibility);
+    assert.equal(view.cells[0].glyph, visibility ? getTerrainArtKey(world, cell, "•") : null);
+  }
+  assert.deepEqual(world, before);
+  assert.equal(getTerrainArtKey({ ...world, realm: "Underground" }, cell, "•"), "•");
+  world.terrain[0][0].walkable = false;
+  assert.equal(getTerrainArtKey(world, cell, "•"), "•");
+});
+
+test("grass raster samples the documented interior region at the destination cell size", () => {
+  const previous = globalThis.document;
+  const calls = [];
+  globalThis.document = { createElement: () => ({ getContext: () => ({
+    drawImage: (...args) => calls.push(args),
+    getImageData: () => ({ data: new Uint8ClampedArray(16 * 16 * 4) }),
+  }) }) };
+  try {
+    const grass = {};
+    const raster = rasterizeTerrainArt('terrain-art:["grass",null]', { overworldGrass: grass }, "monospace", 16, new Map());
+    assert.deepEqual(calls, [[grass, 80, 116, 192, 192, 0, 0, 16, 16]]);
+    assert.equal(raster.terrainArt, true);
+    assert.equal(raster.width, 16);
+  } finally { globalThis.document = previous; }
+});
+import { drawStaticPropPreview, getStaticPropArtAspectRatio, rasterizeStaticPropArt, rasterizeTerrainArt } from "../../../src/client/game-layer-babylon-lite/underground-terrain-art.js";
 import { FRONT_DOOR_CLOSED_ART, FRONT_DOOR_LOCKED_ART, FRONT_DOOR_OPEN_ART, SIDE_DOOR_CLOSED_ART, SIDE_DOOR_LOCKED_ART, SIDE_DOOR_OPEN_ART } from "../../../src/client/game-layer-babylon-lite/systems/civilization-system.js";
 import { expandTerrainDirtyCells, getWallComposition, getWallMask } from "../../../src/client/game-layer-babylon-lite/underground-wall-autotile.js";
 import { BLUE_WATER_TERRAIN_FRAMES, compositeTerrainPixels, GOLD_COIN_ANIMATION_FRAME_DURATION, getGoldCoinAnimationFrame, getTerrainArtBounds, getTerrainArtKey, getWaterAnimationFrame, parseTerrainArtKey, resolveUndergroundTerrainFrame, UNDERGROUND_TERRAIN_FRAMES, WATER_ANIMATION_FRAME_DURATION } from "../../../src/client/game-layer-babylon-lite/underground-terrain-art.js";
@@ -152,7 +190,7 @@ test("gold uses each frame of the animated coin strip without changing its gamep
   assert.equal(world.terrain[0][0].glyph, "•");
 });
 
-test("locked door art composes the gold key over front and side closed doors", () => {
+test("locked door art composes the gold padlock over front and side closed doors", () => {
   const previous = globalThis.document;
   const calls = [];
   globalThis.document = { createElement: () => ({ getContext: () => ({
@@ -162,24 +200,24 @@ test("locked door art composes the gold key over front and side closed doors", (
   try {
     const images = {
       frontDoorClosed: { name: "front-closed" }, frontDoorOpen: { name: "front-open" },
-      sideDoorClosed: { name: "side-closed" }, sideDoorOpen: { name: "side-open" }, goldenKey: { name: "gold-key" },
+      sideDoorClosed: { name: "side-closed" }, sideDoorOpen: { name: "side-open" }, goldenKey: { name: "gold-key" }, goldenLock: { name: "gold-lock" },
     };
     assert.equal(getStaticPropArtAspectRatio(FRONT_DOOR_LOCKED_ART), 1.5);
     assert.equal(getStaticPropArtAspectRatio(SIDE_DOOR_LOCKED_ART), 1);
     rasterizeStaticPropArt(FRONT_DOOR_LOCKED_ART, images, 16);
     assert.deepEqual(calls, [
       [images.frontDoorClosed, 0, 0, 16, 24],
-      [images.goldenKey, 4.5, 1.92, 7, 7],
+      [images.goldenLock, 4.5, 1.92, 7, 7],
     ]);
     calls.length = 0;
     rasterizeStaticPropArt(SIDE_DOOR_LOCKED_ART, images, 16);
     assert.deepEqual(calls, [
       [images.sideDoorClosed, 0, 0, 16, 16],
-      [images.goldenKey, 4.5, 1.28, 7, 7],
+      [images.goldenLock, 4.5, 1.28, 7, 7],
     ]);
     calls.length = 0;
     for (const key of [FRONT_DOOR_CLOSED_ART, FRONT_DOOR_OPEN_ART, SIDE_DOOR_CLOSED_ART, SIDE_DOOR_OPEN_ART]) rasterizeStaticPropArt(key, images, 16);
-    assert.equal(calls.some((args) => args[0] === images.goldenKey), false);
+    assert.equal(calls.some((args) => args[0] === images.goldenLock), false);
   } finally {
     if (previous === undefined) delete globalThis.document;
     else globalThis.document = previous;
@@ -559,4 +597,45 @@ test("diagnostic half-zoom stays world-bounded and cache cost tracks glyphs rath
   assert.equal(skipped, 65320);
   assert.equal(shouldUpdateVisibleSprite(states[0], "P", 1, color), true);
   cache.dispose();
+});
+
+test("Trap artwork replaces the skull in shared map and terrain renderers", () => {
+  const previous = globalThis.document;
+  const calls = [];
+  globalThis.document = { createElement: () => ({ getContext: () => ({
+    drawImage: (...args) => calls.push(args),
+    getImageData: () => ({ data: new Uint8ClampedArray(32 * 32 * 4) }),
+  }) }) };
+  try {
+    const trap = {}, dirt = {};
+    const raster = rasterizeStaticPropArt("☠", { trap }, 32);
+    assert.equal(raster.width, 32);
+    assert.deepEqual(calls, [[trap, 0, 0, 32, 32, 0, 0, 32, 32]]);
+    calls.length = 0;
+    rasterizeTerrainArt('terrain-art:["dirt","☠"]', { trap, dirt }, "monospace", 32, new Map());
+    assert.equal(calls.length, 2);
+    assert.deepEqual(calls[1], [trap, 0, 0, 32, 32, 0, 0, 32, 32]);
+  } finally {
+    if (previous === undefined) delete globalThis.document;
+    else globalThis.document = previous;
+  }
+});
+
+
+test("preview uses the same padlocked door composition and distinct collectible Key", () => {
+  const images = Object.freeze({
+    frontDoorClosed: {}, sideDoorClosed: {}, goldenLock: {}, goldenKey: {},
+  });
+  const calls = [];
+  const context = { drawImage: (...args) => calls.push(args) };
+  for (const [key, door, height] of [[FRONT_DOOR_LOCKED_ART, images.frontDoorClosed, 24], [SIDE_DOOR_LOCKED_ART, images.sideDoorClosed, 16]]) {
+    calls.length = 0;
+    assert.equal(drawStaticPropPreview(context, key, images, 50, 50, 16), true);
+    assert.deepEqual(calls, [[door, 42, 50 - height / 2, 16, height],
+      [images.goldenLock, 46.5, 50 - height / 2 + height * 0.08, 7, 7]]);
+    assert.equal(context.imageSmoothingEnabled, false);
+  }
+  calls.length = 0;
+  drawStaticPropPreview(context, "gold-key", images, 50, 50, 16);
+  assert.deepEqual(calls, [[images.goldenKey, 42, 42, 16, 16]]);
 });

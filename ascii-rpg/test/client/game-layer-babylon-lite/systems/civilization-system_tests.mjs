@@ -95,7 +95,7 @@ test("uses the selected glyph pairs and cardinal interaction directions", () => 
   assert.equal(getCivilizationDoorArt("vertical", true), "civilization-door:side-open");
   assert.equal(getCivilizationDoorArt("vertical", "closed"), "civilization-door:side-closed");
   assert.deepEqual(getCivilizationDoorArtLayers("horizontal"), {
-    door: "civilization-door:front-locked", overlay: "gold-key",
+    door: "civilization-door:front-locked", overlay: "gold-lock",
   });
   assert.deepEqual(getCivilizationDoorArtLayers("vertical", "closed"), {
     door: "civilization-door:side-closed", overlay: null,

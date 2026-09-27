@@ -4,7 +4,7 @@
 
 ### Requirement: Civilization glyphs have stable visual identities
 
-Civilization rendering SHALL use `─` for horizontal fences and `│` for vertical fences. A horizontal fence Door SHALL use front Door art and a vertical fence Door SHALL use side Door art. Each Door SHALL have locked, closed, and open presentation states; locked Doors SHALL additionally display a gold-key overlay, while closed Doors SHALL not. Keys SHALL use supplied gold-key artwork. Logical glyphs SHALL continue to resolve through the active editable palette before rendering.
+Civilization rendering SHALL use `─` for horizontal fences and `│` for vertical fences. A horizontal fence Door SHALL use front Door art and a vertical fence Door SHALL use side Door art. Each Door SHALL have locked, closed, and open presentation states; locked Doors SHALL additionally display a gold-padlock overlay, while closed Doors SHALL not. Keys SHALL use supplied gold-key artwork. Logical glyphs SHALL continue to resolve through the active editable palette before rendering.
 
 #### Scenario: Oriented civilization Door art renders
 - **WHEN** a generated horizontal or vertical fence Door is visible

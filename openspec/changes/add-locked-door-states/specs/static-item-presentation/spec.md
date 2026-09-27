@@ -16,8 +16,8 @@ Every player-visible Key SHALL use `golden_key.png` in the live world, procedura
 
 ### Requirement: Locked Doors use a composed presentation
 
-A locked Door SHALL render orientation-specific closed Door artwork plus a separate gold-key overlay. A closed Door SHALL render its closed artwork without that overlay, and an open Door SHALL render open artwork.
+A locked Door SHALL render orientation-specific closed Door artwork plus a separate gold-padlock overlay. A closed Door SHALL render its closed artwork without that overlay, and an open Door SHALL render open artwork.
 
 #### Scenario: Door state is visually distinguishable
 - **WHEN** locked, closed, and open variants of one Door orientation are visible
-- **THEN** only the locked variant SHALL show a gold key over closed Door art, and the open variant SHALL use open Door art
+- **THEN** only the locked variant SHALL show a gold padlock over closed Door art, and the open variant SHALL use open Door art

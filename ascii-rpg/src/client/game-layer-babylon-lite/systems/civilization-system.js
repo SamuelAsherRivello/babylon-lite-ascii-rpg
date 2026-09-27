@@ -11,6 +11,7 @@ export const SIDE_DOOR_CLOSED_ART = "civilization-door:side-closed";
 export const SIDE_DOOR_OPEN_ART = "civilization-door:side-open";
 export const SIDE_DOOR_LOCKED_ART = "civilization-door:side-locked";
 export const GOLD_KEY_ART = "gold-key";
+export const GOLD_LOCK_ART = "gold-lock";
 export const KEY_GLYPH = "⚿";
 export const PLAYER_GLYPH = "👤";
 export const CIVILIZATION_SCREEN_COLUMNS = 64;
@@ -215,7 +216,7 @@ export function getCivilizationDoorArtLayers(orientation, state = "locked") {
   const normalizedState = state === true || state === "open" ? "open" : state === "closed" ? "closed" : "locked";
   return {
     door: getCivilizationDoorArt(orientation, normalizedState),
-    overlay: normalizedState === "locked" ? GOLD_KEY_ART : null,
+    overlay: normalizedState === "locked" ? GOLD_LOCK_ART : null,
   };
 }
 

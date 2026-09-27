@@ -70,7 +70,8 @@ import {
 } from "./world-state-facade.js";
 import { createTimeSystem } from "./systems/time-system.js";
 import { FACING_LEFT, FACING_RIGHT, createGlyphRasterCanvas, createGlyphVisualCache, getFacingGlyph, getFacingGlyphKey, getGlyphOffsetsFromKey, getGlyphOffsetKey, getOffsetGlyphKey, rasterizeGlyph, rasterizeSolidGlyph } from "./glyph-visual-cache.js";
-import { GOLD_COIN_ANIMATION_FRAME_DURATION, getGoldCoinAnimationFrame, getStaticPropArtAspectRatio, getTerrainArtBounds, getTerrainArtKey, getWaterAnimationFrame, loadRasterImage, loadUndergroundTerrainImage, parseTerrainArtKey, rasterizeStaticPropArt, rasterizeTerrainArt, WATER_ANIMATION_FRAME_DURATION } from "./underground-terrain-art.js";
+import { drawStaticPropPreview, GOLD_COIN_ANIMATION_FRAME_DURATION, getGoldCoinAnimationFrame, getStaticPropArtAspectRatio, getTerrainArtBounds, getTerrainArtKey, getWaterAnimationFrame, loadRasterImage, loadUndergroundTerrainImage, parseTerrainArtKey, rasterizeStaticPropArt, rasterizeTerrainArt, WATER_ANIMATION_FRAME_DURATION } from "./underground-terrain-art.js";
+import { OVERWORLD_GRASS_SHEET } from "./overworld-terrain-art.js";
 import { expandTerrainDirtyCells } from "./underground-wall-autotile.js";
 import { getVisibleRegion, getVisibleSlot, shouldUpdateVisibleSprite } from "./visible-region.js";
 import { collectVisibleTorchRecords, createVisibleTorchAnimator } from "./torch-presentation.js";
@@ -414,6 +415,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
   let goldCoinImage;
   let healthPotionImage;
   let goldenKeyImage;
+  let goldenLockImage;
   let minimapGlyphCache;
   let gpuLightAtlas;
   let gpuLightLayer;
@@ -1408,22 +1410,12 @@ async function createGameSessionImplementation(container, initialPalette, initia
             continue;
           }
           if (["civilization-key", "home-key"].includes(marker.kind)) {
-            if (goldenKeyImage) {
-              context.imageSmoothingEnabled = false;
-              context.drawImage(goldenKeyImage, centerX - objectGlyphSize / 2, centerY - objectGlyphSize / 2, objectGlyphSize, objectGlyphSize);
-            }
+            drawStaticPropPreview(context, GOLD_KEY_ART, undergroundTerrainImage, centerX, centerY, objectGlyphSize);
             continue;
           }
           if (["civilization-door", "home-door"].includes(marker.kind)) {
-            const frontDoor = marker.kind === "home-door" || marker.orientation === "horizontal";
-            const doorImage = frontDoor ? frontDoorClosedImage : sideDoorClosedImage;
-            if (doorImage && goldenKeyImage) {
-              const doorHeight = frontDoor ? markerSize * 1.5 : markerSize;
-              context.imageSmoothingEnabled = false;
-              context.drawImage(doorImage, centerX - markerSize / 2, centerY - doorHeight / 2, markerSize, doorHeight);
-              const keySize = markerSize * 0.42;
-              context.drawImage(goldenKeyImage, centerX - keySize / 2, centerY - doorHeight * 0.42, keySize, keySize);
-            }
+            const orientation = marker.kind === "home-door" ? "horizontal" : marker.orientation;
+            drawStaticPropPreview(context, getCivilizationDoorArt(orientation, "locked"), undergroundTerrainImage, centerX, centerY, markerSize);
             continue;
           }
           if (marker.kind === "trap") {
@@ -3558,12 +3550,24 @@ async function createGameSessionImplementation(container, initialPalette, initia
     goldenKeyImage = await loadRasterImage(
       `${import.meta.env.BASE_URL}assets/images/Dungeons-and-Pixels-v1.4/Items/Static/golden_key.png`, { width: 32, height: 32 },
     );
+    goldenLockImage = await loadRasterImage(
+      `${import.meta.env.BASE_URL}assets/images/Dungeons-and-Pixels-v1.4/Items/Static/golden_lock.png`, { width: 32, height: 32 },
+    );
+    // Decode before creating either atlas so map views never cache a skull fallback.
+    await trapArtwork.decode();
+    if (trapArtwork.naturalWidth !== 224 || trapArtwork.naturalHeight !== 32) {
+      throw new Error("Unexpected Trap strip dimensions.");
+    }
     undergroundTerrainImage = {
+      overworldGrass: await loadRasterImage(
+        `${import.meta.env.BASE_URL}assets/images/Nature-and-Outdoor/1. Grass and dirt.png`, OVERWORLD_GRASS_SHEET,
+      ),
+      trap: trapArtwork,
       dirt: terrainSheet, wall: terrainSheet, water: terrainSheet, cobweb1: cobweb1Image,
       silverChestClosed: silverChestClosedImage, silverChestOpen: silverChestOpenImage,
       frontDoorClosed: frontDoorClosedImage, frontDoorOpen: frontDoorOpenImage,
       sideDoorClosed: sideDoorClosedImage, sideDoorOpen: sideDoorOpenImage,
-      goldCoin: goldCoinImage, healthPotion: healthPotionImage, goldenKey: goldenKeyImage,
+      goldCoin: goldCoinImage, healthPotion: healthPotionImage, goldenKey: goldenKeyImage, goldenLock: goldenLockImage,
     };
     engine = await createEngine(canvas, { maxDevicePixelRatio: 1, msaaSamples: 1 });
     const lifecycleToken = rendererLifecycle.begin();
@@ -3722,10 +3726,9 @@ async function createGameSessionImplementation(container, initialPalette, initia
     const addObjectToRealm = (realm, definition) => {
       const object = objectSpawnerSystem.addObject({ ...definition, realm });
       realm.objects.push(object);
-      // Trap art owns its visual presentation. Keep the logical object and
-      // collision contract, but never seed the legacy glyph into the canvas
-      // character layer where it could leak through before overlay reconcile.
-      realm.characters[object.cell.y][object.cell.x] = object.type === "trap" ? null : object.glyph;
+      // Shared map renderers resolve the logical glyph to artwork; the live
+      // world suppresses this static frame while its animated overlay is visible.
+      realm.characters[object.cell.y][object.cell.x] = object.glyph;
       return object;
     };
     const applyHealthEffect = () => {

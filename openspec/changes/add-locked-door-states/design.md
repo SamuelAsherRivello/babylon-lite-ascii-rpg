@@ -14,7 +14,7 @@ settings-map preview, and the React character panel.
 - Give every Door an explicit `locked`, `closed`, or `open` state while keeping
   orientation independent of state.
 - Compose a locked Door from two independent graphics: its closed Door art and
-  the supplied gold-key art.
+  the supplied gold-padlock art.
 - Reuse one gold-key asset selection across live canvas rendering, preview
   canvas rendering, and the HUD.
 - Preserve deterministic seeded placement and the existing key-count bridge.
@@ -44,12 +44,12 @@ matches the requested present gameplay without creating an unused transition.
 
 ### Use image composition for lock and key presentation
 
-The static-item rendering layer will rasterize the Door and gold key as
-separate layers, bottom-aligning the Door and positioning the key visibly on
+The static-item rendering layer will rasterize the Door and gold padlock as
+separate layers, bottom-aligning the Door and positioning the padlock visibly on
 top. The same composition contract will be used by the settings preview; the
 HUD will use the gold key as its resource icon. Baking a lock into duplicate
 Door images was rejected because it would duplicate orientation/state assets
-and prevent a separate key-on-door graphic.
+and prevent a separate padlock-on-door graphic.
 
 ### Keep logical glyph and palette compatibility
 

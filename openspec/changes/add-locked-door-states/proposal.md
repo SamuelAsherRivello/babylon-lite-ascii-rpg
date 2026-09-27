@@ -16,7 +16,7 @@ preview, world, and HUD.
 - Preserve horizontal and vertical Door orientation for fence layouts, and use
   the front closed/open Door art for Home entrances.
 - Render a locked Door as its closed orientation-specific Door plus a separate
-  `golden_key.png` overlay. Render a closed Door without that overlay and an
+  `golden_lock.png` overlay. Render a closed Door without that overlay and an
   open Door with its matching open art.
 - On a cardinal player action against a locked Door, spend one carried key and
   transition it directly to `open`; without a key it stays locked and blocks
@@ -31,7 +31,7 @@ preview, world, and HUD.
 ### New Capabilities
 
 - `static-item-presentation`: renders supplied gold-key art and composed
-  locked-Door key overlays consistently across world, preview, and HUD views.
+  locked-Door padlock overlays consistently across world, preview, and HUD views.
 
 ### Modified Capabilities
 

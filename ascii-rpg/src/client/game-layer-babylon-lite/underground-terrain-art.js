@@ -1,6 +1,7 @@
 import { getFacingGlyph, getGlyphOffsetsFromKey, rasterizeGlyph } from "./glyph-visual-cache.js";
 import { getWallComposition, getWallBlobMask } from "./underground-wall-autotile.js";
-import { CLOSED_CHEST_GLYPH, ENEMY_SPAWNER_GLYPH, GOLD_GLYPH, OPEN_CHEST_GLYPH } from "./systems/world-system.js";
+import { OVERWORLD_GRASS_FRAME, resolveOverworldTerrainFrame } from "./overworld-terrain-art.js";
+import { CLOSED_CHEST_GLYPH, ENEMY_SPAWNER_GLYPH, GOLD_GLYPH, OPEN_CHEST_GLYPH, TRAP_GLYPH } from "./systems/world-system.js";
 import { FRONT_DOOR_CLOSED_ART, FRONT_DOOR_LOCKED_ART, FRONT_DOOR_OPEN_ART, GOLD_KEY_ART, SIDE_DOOR_CLOSED_ART, SIDE_DOOR_LOCKED_ART, SIDE_DOOR_OPEN_ART } from "./systems/civilization-system.js";
 
 // Project-local source sheets; Tiled IDs are zero-based and never map IDs.
@@ -62,7 +63,7 @@ export function resolveUndergroundTerrainFrame(world, cell, waterFrame = 0) {
 
 export function getTerrainArtKey(world, cell, glyphKey, waterFrame = 0, goldCoinFrame = 0) {
   const animatedGlyphKey = getAnimatedOverlayGlyph(glyphKey, goldCoinFrame);
-  const frame = resolveUndergroundTerrainFrame(world, cell, waterFrame);
+  const frame = resolveOverworldTerrainFrame(world, cell) ?? resolveUndergroundTerrainFrame(world, cell, waterFrame);
   if (!frame) return animatedGlyphKey;
   const terrain = world.terrain[cell.y][cell.x];
   // Only the terrain's own glyph disappears. Facing and offsets on overlays
@@ -76,7 +77,7 @@ export function getTerrainArtKey(world, cell, glyphKey, waterFrame = 0, goldCoin
 export function parseTerrainArtKey(key) {
   if (typeof key !== "string" || !key.startsWith(KEY_PREFIX)) return null;
   const [kind, overlay, variant] = JSON.parse(key.slice(KEY_PREFIX.length));
-  return { frame: kind === "water" ? BLUE_WATER_TERRAIN_FRAMES[variant] : UNDERGROUND_TERRAIN_FRAMES[kind], overlay,
+  return { frame: kind === "grass" ? OVERWORLD_GRASS_FRAME : kind === "water" ? BLUE_WATER_TERRAIN_FRAMES[variant] : UNDERGROUND_TERRAIN_FRAMES[kind], overlay,
     ...(kind === "wall" && variant !== undefined ? { mask: variant } : {}),
     ...(kind === "water" ? { animationFrame: variant } : {}) };
 }
@@ -104,15 +105,16 @@ export async function loadRasterImage(url, { width, height }) {
 
 function getStaticPropSource(glyph, images) {
   switch (getFacingGlyph(glyph)) {
+    case TRAP_GLYPH: return images.trap ? { image: images.trap, x: 0, y: 0, width: 32, height: 32 } : null;
     case "health-potion": return images.healthPotion ? { image: images.healthPotion } : null;
     case CLOSED_CHEST_GLYPH: return images.silverChestClosed ? { image: images.silverChestClosed } : null;
     case OPEN_CHEST_GLYPH: return images.silverChestOpen ? { image: images.silverChestOpen } : null;
     case FRONT_DOOR_CLOSED_ART: return images.frontDoorClosed ? { image: images.frontDoorClosed } : null;
     case FRONT_DOOR_OPEN_ART: return images.frontDoorOpen ? { image: images.frontDoorOpen } : null;
-    case FRONT_DOOR_LOCKED_ART: return images.frontDoorClosed ? { image: images.frontDoorClosed, overlay: images.goldenKey } : null;
+    case FRONT_DOOR_LOCKED_ART: return images.frontDoorClosed ? { image: images.frontDoorClosed, overlay: images.goldenLock } : null;
     case SIDE_DOOR_CLOSED_ART: return images.sideDoorClosed ? { image: images.sideDoorClosed } : null;
     case SIDE_DOOR_OPEN_ART: return images.sideDoorOpen ? { image: images.sideDoorOpen } : null;
-    case SIDE_DOOR_LOCKED_ART: return images.sideDoorClosed ? { image: images.sideDoorClosed, overlay: images.goldenKey } : null;
+    case SIDE_DOOR_LOCKED_ART: return images.sideDoorClosed ? { image: images.sideDoorClosed, overlay: images.goldenLock } : null;
     case GOLD_KEY_ART: return images.goldenKey ? { image: images.goldenKey } : null;
     default: return null;
   }
@@ -135,12 +137,22 @@ export function getStaticPropArtAspectRatio(key) {
   return [OPEN_CHEST_GLYPH, FRONT_DOOR_CLOSED_ART, FRONT_DOOR_LOCKED_ART, FRONT_DOOR_OPEN_ART].includes(getFacingGlyph(glyph)) ? 1.5 : 1;
 }
 
-function drawStaticPropSource(context, source, width, height) {
-  if (source.width) context.drawImage(source.image, source.x, source.y, source.width, source.height, 0, 0, width, height);
-  else context.drawImage(source.image, 0, 0, width, height);
+function drawStaticPropSource(context, source, width, height, x = 0, y = 0) {
+  if (source.width) context.drawImage(source.image, source.x, source.y, source.width, source.height, x, y, width, height);
+  else context.drawImage(source.image, x, y, width, height);
   if (!source.overlay) return;
   const overlaySize = Math.max(1, Math.round(width * 0.42));
-  context.drawImage(source.overlay, (width - overlaySize) / 2, Math.max(0, height * 0.08), overlaySize, overlaySize);
+  context.drawImage(source.overlay, x + (width - overlaySize) / 2, y + Math.max(0, height * 0.08), overlaySize, overlaySize);
+}
+
+export function drawStaticPropPreview(context, key, images, centerX, centerY, size) {
+  if (!images) return false;
+  const source = getStaticPropSourceForFrame(key, images);
+  if (!source) return false;
+  const height = size * getStaticPropArtAspectRatio(key);
+  context.imageSmoothingEnabled = false;
+  drawStaticPropSource(context, source, size, height, centerX - size / 2, centerY - height / 2);
+  return true;
 }
 
 export function rasterizeStaticPropArt(key, images, size) {
