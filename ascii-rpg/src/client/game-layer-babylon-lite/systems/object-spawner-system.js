@@ -244,10 +244,10 @@ export function createObjectSpawnerSystem({ catalog = [], eventSystem = null } =
         ? addObject({ type: rewardType, cell: rewardCell, realm: world, effect: createChestRewardEffect(rewardType) })
         : null;
       if (reward && rewardCell && world) {
-        // The system map makes the Heart collectible; the active realm arrays
+        // The system map makes the Health collectible; the active realm arrays
         // make it authoritative for world views and minimap/map consumers.
         // Initialize both collections defensively because chest rewards can be
-        // the first pickup created in a realm with Heart generation disabled.
+        // the first pickup created in a realm with Health generation disabled.
         world.objects = Array.isArray(world.objects) ? world.objects : [];
         world.pickups = Array.isArray(world.pickups) ? world.pickups : world.objects;
         if (!world.objects.includes(reward)) world.objects.push(reward);

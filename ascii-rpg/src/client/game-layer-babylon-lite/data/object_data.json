@@ -23,15 +23,15 @@
       "distribution": { "distanceTargets": [10, 30, 100] }
     },
     {
-      "type": "heart",
-      "name": "Heart",
-      "glyph": "♥",
+      "type": "health",
+      "name": "Health",
+      "glyph": "health-potion",
       "IsPickup": true,
       "IsLevelSpawned": true,
       "consequence": { "id": "health", "amount": 2 },
-      "logText": "Collected +2 Health from Heart",
+      "logText": "Collected +2 Health from Health",
       "distribution": { "minCount": 10, "maxCount": 14, "minimumDistance": 3 },
-      "generation": { "passId": "object-heart", "realms": ["Overground", "Underground"], "seedNamespace": "heart:placement" }
+      "generation": { "passId": "object-health", "realms": ["Overground", "Underground"], "seedNamespace": "health:placement" }
     },
     {
       "type": "chest",
@@ -43,7 +43,7 @@
       "consequence": { "id": "chest-reward" },
       "logText": null,
       "distribution": { "minimumDistance": 3, "maximumDistance": 50 },
-      "rewards": [{ "type": "heart", "weight": 100 }],
+      "rewards": [{ "type": "health", "weight": 100 }],
       "generation": { "passId": "object-chest", "realms": ["Overground", "Underground"], "seedNamespace": "chest:placement" }
     },
     {

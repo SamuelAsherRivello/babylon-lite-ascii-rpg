@@ -9,7 +9,6 @@ export const NPC_SPAWNER_GLYPH = "N";
 export const TORCH_GLYPH = "🕯️";
 export const CAMP_FIRE_GLYPH = "🔥";
 export const GOLD_GLYPH = "💰";
-export const HEALTH_GLYPH = "♥";
 export const TRAP_GLYPH = "☠";
 export const CLOSED_CHEST_GLYPH = "📦";
 export const OPEN_CHEST_GLYPH = "🗃️";
@@ -40,7 +39,6 @@ export const PROJECT_MAP_GLYPHS = Object.freeze([
   STAIR_GLYPH,
   GOLD_GLYPH,
   WATER_GLYPH,
-  HEALTH_GLYPH,
   TRAP_GLYPH,
   CLOSED_CHEST_GLYPH,
   OPEN_CHEST_GLYPH,
@@ -211,6 +209,7 @@ export function createWorld({
   seed,
   playerStartMode = "center",
   caveEnabled = true,
+  rectilinear = false,
   waterEnabled = true,
 } = {}) {
   assertDimensions(rows, columns);
@@ -227,7 +226,7 @@ export function createWorld({
 
   for (let attempt = 0; attempt < MAX_GENERATION_ATTEMPTS; attempt += 1) {
     const ground = createGroundPass(rows, columns);
-    const walls = createCavePass({ rows, columns, wallFillPercent, smoothingIterations, random, ground, caveEnabled });
+    const walls = createCavePass({ rows, columns, wallFillPercent, smoothingIterations, random, ground, caveEnabled, rectilinear });
     const caveRegion = getLargestRegion(walls, rows, columns);
     if (caveRegion.length < minimumWalkableCells) continue;
 
@@ -404,6 +403,7 @@ export async function createWorldCooperative({
   torchCount = 3,
   seed,
   caveEnabled = true,
+  rectilinear = false,
   waterEnabled = true,
 } = {}, scheduling = {}) {
   assertDimensions(rows, columns);
@@ -436,6 +436,12 @@ export async function createWorldCooperative({
         if (pause) await pause;
       }
       [walls, nextWalls] = [nextWalls, walls];
+    }
+    if (caveEnabled && rectilinear) {
+      for (const _ of rectilinearWallRows(walls, rows, columns)) {
+        const pause = checkpoint();
+        if (pause) await pause;
+      }
     }
     markPhase("cave");
     const caveRegion = await getLargestRegionCooperative(walls, rows, columns, (cell) => walls[cell.y][cell.x], checkpoint);
@@ -625,6 +631,7 @@ export async function createWorldRealms({ rows, columns, torchCount = 3, stairCo
       waterLakeCount,
       playerStartMode,
       caveEnabled: caveEnabledByRealm?.[name] !== false,
+      rectilinear: name === "Underground",
       waterEnabled,
     }, realmScheduling);
     realms[name] = applyRealmProfile(realm, name);
@@ -646,6 +653,7 @@ import {
   createGroundPass,
   isBorderCell,
   smoothGrid,
+  rectilinearWallRows,
 } from "../generation-layers/grid-generation-layer.js";
 import { createWalkabilityPass } from "../generation-layers/walkability-generation-layer.js";
 import { createWaterPass as createWaterPassLayer } from "../generation-layers/water-generation-layer.js";

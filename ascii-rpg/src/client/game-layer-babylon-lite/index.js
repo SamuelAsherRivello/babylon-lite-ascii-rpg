@@ -56,7 +56,6 @@ import {
   PROJECT_MAP_GLYPHS,
   PLAYER_GLYPH,
   GOLD_GLYPH,
-  HEALTH_GLYPH,
   TRAP_GLYPH,
   CLOSED_CHEST_GLYPH,
   WALL_GLYPH,
@@ -1906,7 +1905,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
   const createGameGlyphCache = () => createGlyphVisualCache(engine, {
     fontId,
     fontFamily: getFontOption(fontId).family,
-    glyphLimit: (GLYPHS.length + 3) * 3 + 15 * 3,
+    glyphLimit: (GLYPHS.length + 3) * 3 + 46 * 3,
     rasterize: (glyph, family, size) => glyph === FOG_BACKING_GLYPH
       ? rasterizeSolidGlyph(size)
       : rasterizeStaticPropArt(glyph, undergroundTerrainImage, size)
@@ -1917,7 +1916,7 @@ async function createGameSessionImplementation(container, initialPalette, initia
   const createMinimapGlyphCache = () => createGlyphVisualCache(engine, {
     fontId,
     fontFamily: getFontOption(fontId).family,
-    glyphLimit: (GLYPHS.length + 3) * 3 + 15 * 3,
+    glyphLimit: (GLYPHS.length + 3) * 3 + 46 * 3,
     // World-view canvases already paint each cell's terrain/background.  A
     // composite glyph adds a second, full-cell opaque backing behind emoji
     // such as the player and gold, making that backing larger than markers.

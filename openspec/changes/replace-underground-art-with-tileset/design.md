@@ -14,8 +14,8 @@ Babylon Lite sprite-atlas/layer rendering for Tiled-authored assets.
 
 **Goals:**
 
-- Add a visual-only Underground terrain skin with no change to generated world
-  data or game rules.
+- Add an Underground terrain skin and, in the latest phase-two revision,
+  rectilinear wall placement. Keep terrain semantics and game rules unchanged.
 - Stage work so a human evaluates the simple one-to-one treatment before
   autotiling adds visual complexity.
 - Reuse the established bounded world-view, fog, lighting, atlas, and sprite
@@ -32,7 +32,46 @@ Babylon Lite sprite-atlas/layer rendering for Tiled-authored assets.
 
 ## Decisions
 
-### Current phase-two decision: composed 16-tile walls (2026-09-26)
+### Current revision: rectilinear generation and example-derived rules
+
+The user requested less organic Underground walls and supplied
+`Tiled_Examples/wall_combinations01.tmx`, then invoked apply for this revision.
+Phase three remains plan-only. Earlier sections below record the previous trials.
+
+After cave smoothing, before connected-region selection, snap Underground to
+3x3 blocks aligned at interior coordinate (1,1). A block remains wall only if
+all its cells were walls; otherwise open it completely. This deliberately
+removes small protrusions and preserves existing passages instead of sealing
+them by majority rounding. Border cells remain blocked; partial edge blocks
+stay in bounds. Cave-disabled worlds skip this operation. Cooperative generation
+yields between block rows; synchronous generation uses the same helper. No
+additional random draws or Overground terrain changes are introduced. Later
+water/connectivity passes still run normally and may modify those boundaries.
+The trade-off is fewer walls/more open floor, especially at low densities.
+
+Rendering uses N=1, E=2, S=4, W=8, NE=16, SE=32, SW=64, NW=128.
+Gate each diagonal on both adjoining cardinals; 256 neighborhoods normalize to
+47 patterns. Borders connect outward. Fog/actors/viewports do not select art.
+Canonical mask-to-zero-based-frame mappings observed in the example are:
+`0:31, 19:30, 38:6, 55:18, 76:8, 110:7, 127:53, 137:32, 155:31,
+175:23, 191:5, 205:20, 239:48, 255:19`.
+The example uses alternatives for masks 19 and 55; choose 30 and 18 consistently.
+Do not claim exact reproduction of every hand-authored cell or infer randomness.
+
+For the other 33 patterns, compose four 16px quadrants from source frames:
+outside corners 6/8/30/32, top/bottom 7/31, left/right 18/20, center 19,
+inside corners NW=53, NE=48, SW=5, SE=23. No transformations or floor overlap.
+These are complete recipes, not proof that every composed seam is artist-authored.
+The diagnostic contact sheet exposes all 47 forms for human review. Dark centers
+are part of this source family's artwork, independently of undiscovered fog.
+
+The shared wall key now includes the normalized eight-neighbor mask. Existing
+eight-neighbor dirty expansion and view culling remain. Atlas reserve increases
+from 15 to 46 additional wall variants times three typical presentations; the
+phase-three layer-separation plan remains necessary for broad art scaling.
+Source sheets, floor tile 13, and accepted lighting/fog behavior stay unchanged.
+
+### Historical phase-two decision: composed 16-tile walls (2026-09-26)
 
 The user authorized proceeding with the new art and explicitly composing needed
 pieces. This supersedes the earlier stop on incomplete unmodified tile families.
@@ -274,6 +313,6 @@ human approval.
 2. Verify and obtain phase-one human approval.
 3. Qualify the available art, record the selected tier and limitations, then
    implement that mapping; verify and obtain phase-two human approval.
-4. If either review rejects the treatment, remove only the new art
-   presentation and assets; the generated world and gameplay state remain
-   compatible because they were never changed.
+4. If review rejects the treatment, revise the scoped renderer/generation
+   changes without deleting vendor assets. The latest revision changes new
+   Underground layouts, so an art-only reversal does not restore older layouts.

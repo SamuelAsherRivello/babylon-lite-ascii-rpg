@@ -37,11 +37,29 @@ export function createGroundPass(rows, columns) {
   return createGrid(rows, columns, (x, y) => (isBorderCell(x, y, rows, columns) ? "wall" : "ground"));
 }
 
-export function createCavePass({ rows, columns, wallFillPercent, smoothingIterations, random, ground, caveEnabled = true }) {
+// Snap the smoothed occupancy to 3x3 architectural blocks before connectivity
+// selection. No extra random draws: Overground's existing sequence is untouched.
+export function* rectilinearWallRows(walls, rows, columns) {
+  for (let by = 1; by < rows - 1; by += 3) {
+    for (let bx = 1; bx < columns - 1; bx += 3) {
+      const bottom = Math.min(by + 3, rows - 1), right = Math.min(bx + 3, columns - 1);
+      let count = 0;
+      for (let y = by; y < bottom; y++) for (let x = bx; x < right; x++) count += Number(walls[y][x]);
+      // Never seal an existing passage: a block containing any floor opens as
+      // a whole. This removes small rocky protrusions instead of trapping rooms.
+      const filled = count === (bottom - by) * (right - bx);
+      for (let y = by; y < bottom; y++) for (let x = bx; x < right; x++) walls[y][x] = filled;
+    }
+    yield by;
+  }
+}
+
+export function createCavePass({ rows, columns, wallFillPercent, smoothingIterations, random, ground, caveEnabled = true, rectilinear = false }) {
   if (!caveEnabled) return createGrid(rows, columns, (x, y) => ground[y][x] === "wall");
   let walls = createGrid(rows, columns, (x, y) => ground[y][x] === "wall" || random() * 100 < wallFillPercent);
   for (let iteration = 0; iteration < smoothingIterations; iteration += 1) {
     walls = smoothGrid(walls, rows, columns);
   }
+  if (rectilinear) for (const _ of rectilinearWallRows(walls, rows, columns)) { /* bounded block rows */ }
   return walls;
 }

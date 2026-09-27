@@ -22,6 +22,10 @@
 - [x] 4.2 Implement the pure 16-cardinal resolver; verify coverage, repeatability, borders, viewport-independent neighbors, and neighbor refresh. Document diagonal-corner limits.
 - [x] 4.3 Integrate composed rasters with bounded visible/dirty-region rendering and atlas reuse. Combined focused suites: 62 passed.
 - [ ] 4.4 Verify the selected tier with `npm.cmd run build` and a manual fixed-seed browser session containing centers, edges, corners, 2x2 clusters, and isolated walls; confirm gameplay behavior remains unchanged and include the selected tier's limitations in the handoff.
+- [x] 4.5 Replace organic Underground silhouettes with deterministic rectilinear blocks before connectivity selection; preserve borders, cave disablement, Overground generation, and sync/cooperative agreement.
+- [x] 4.6 Derive canonical source-frame rules from wall_combinations01.tmx, document ambiguous mappings, and compose missing quadrant forms. Cover all 47 normalized patterns with bounded source/destination tests and a visual contact sheet.
+- [x] 4.7 Integrate diagonal-aware keys and bounded atlas capacity; verify focused generation/rendering suites and build. Rebaseline intentionally changed Underground and shared stair fixture output.
+- [x] 4.8 Manually review the revised fixed-seed playable walls, movement/blocking and minimap updates; present the remaining density/shape and composed-art choices for human review. The broader acceptance matrix in 4.4 remains open.
 
 ## 5. Phase 2 human acceptance gate
 

@@ -1,5 +1,36 @@
 # Phase-two verification — 2026-09-26
 
+## Latest revision: architectural walls
+
+The earlier 16-tile notes below are historical. The revised implementation uses
+3x3 rectilinear Underground blocks plus 47 gated-diagonal recipes derived from
+wall_combinations01.tmx: 14 canonical whole-frame choices and 33 composed forms.
+The source example is not itself a full 47-tile set, and two demonstrated
+neighborhoods have stylistic alternatives resolved deterministically.
+
+Verification: 72 focused rendering/generation/map tests passed; the main suite
+passed all 495 tests, including the five new wall tests in its default command.
+Build and strict OpenSpec validation passed. The new tests cover all 256 raw
+neighborhoods/47 normalized masks, exact source mapping provenance, recipe
+bounds/coverage, diagonal and border behavior, conservative rectangular blocks,
+disabled caves, sync/cooperative parity, and unchanged Overground terrain.
+Generation fixture hashes intentionally changed with Underground and paired
+stairs; existing stair validity/repeatability tests pass.
+
+Live fixed-seed preview: walked from spawn toward a wall, confirmed blocked
+movement (five down inputs advanced only four ticks at the edge), walked around
+its side and front, and checked the updated minimap at two scales. Screenshot:
+`C:/Users/srive/.codex/visualizations/2026/09/26/01a0dd58-b385-7cd2-8a58-a7ac3623ade5/underground-rectilinear.png`.
+The same preview URL below serves the revised build. The contact-sheet script
+now displays all 47 recipes and the same structural fixtures.
+
+Trade-offs for human review: opening mixed blocks preserves passages but reduces
+wall density; later water/connectivity operations can alter block boundaries.
+Dark interiors are also part of the source art, not necessarily undiscovered fog.
+Full stair/overlay live regression and every rare shape in actual gameplay are
+still pending; diagnostic fixtures are not substitutes for those checks.
+Phase three remains a plan, not an implemented migration.
+
 ## Implemented result
 
 Sixteen cardinal wall patterns are composed from the new dungeon sheet. Floor

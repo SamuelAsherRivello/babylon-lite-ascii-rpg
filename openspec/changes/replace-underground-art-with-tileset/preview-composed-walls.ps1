@@ -5,15 +5,16 @@ $repo = (Resolve-Path (Join-Path $PSScriptRoot '../../..')).Path
 Push-Location $repo
 try {
   # Use the runtime recipe, not a second hand-maintained coordinate table.
-  $recipes = node --input-type=module -e "import { getWallComposition } from './ascii-rpg/src/client/game-layer-babylon-lite/underground-wall-autotile.js'; console.log(JSON.stringify(Array.from({length:16},(_,i)=>getWallComposition(i))))" | ConvertFrom-Json
+  $recipes = node --input-type=module -e "import { getWallComposition } from './ascii-rpg/src/client/game-layer-babylon-lite/underground-wall-autotile.js'; console.log(JSON.stringify(Array.from({length:256},(_,i)=>getWallComposition(i))))" | ConvertFrom-Json
+  $masks = node --input-type=module -e "import { normalizeWallMask } from './ascii-rpg/src/client/game-layer-babylon-lite/underground-wall-autotile.js'; console.log(JSON.stringify([...new Set(Array.from({length:256},(_,i)=>normalizeWallMask(i)))]))" | ConvertFrom-Json
 } finally { Pop-Location }
 $source = [System.Drawing.Bitmap]::FromFile((Join-Path $repo 'ascii-rpg/public/assets/images/Dungeons-and-Pixels-v1.4/Tilesets/Tileset_Dungeon.png'))
-$canvas = [System.Drawing.Bitmap]::new(1024,920)
+$canvas = [System.Drawing.Bitmap]::new(1024,1320)
 $g = [System.Drawing.Graphics]::FromImage($canvas)
 $font = [System.Drawing.Font]::new('Consolas', 12)
 function Paint-Tile($mask, $x, $y, $scale, $plain=$false) {
   $pieces = $recipes[$mask]
-  if ($plain) { $pieces = ,$pieces[0] }
+  if ($plain) { $pieces = ,@(224,64,32,32,0,0) }
   foreach ($piece in $pieces) {
     $g.DrawImage($source,[System.Drawing.Rectangle]::new($x+$piece[4]*$scale,$y+$piece[5]*$scale,$piece[2]*$scale,$piece[3]*$scale),$piece[0],$piece[1],$piece[2],$piece[3],[System.Drawing.GraphicsUnit]::Pixel)
   }
@@ -22,9 +23,10 @@ try {
   $g.Clear([System.Drawing.Color]::FromArgb(24,26,32))
   $g.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::NearestNeighbor
   $g.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::Half
-  $g.DrawString('16 patterns: connected neighbors N=1 E=2 S=4 W=8', $font,[System.Drawing.Brushes]::White,10,5)
-  for ($mask=0; $mask -lt 16; $mask++) {
-    $x=10+($mask%8)*125; $y=30+[Math]::Floor($mask/8)*93
+  $g.DrawString('47 patterns: authored frames + composed missing quarters', $font,[System.Drawing.Brushes]::White,10,5)
+  for ($index=0; $index -lt $masks.Count; $index++) {
+    $mask=$masks[$index]
+    $x=10+($index%8)*125; $y=30+[Math]::Floor($index/8)*93
     Paint-Tile $mask $x $y 2
     $g.DrawString("mask $mask",$font,[System.Drawing.Brushes]::White,$x,$y+65)
   }
@@ -39,15 +41,15 @@ try {
     @{name='Diagonal contact'; rows=@('10','01')},
     @{name='World border'; rows=@('1111','1110','1000','1000'); border=$true}
   )
-  $g.DrawString('Each fixture: phase 1 left / composed phase 2 right', $font,[System.Drawing.Brushes]::White,10,222)
+  $g.DrawString('Each fixture: phase 1 left / example-derived phase 2 right', $font,[System.Drawing.Brushes]::White,10,612)
   for ($i=0; $i -lt $fixtures.Count; $i++) {
-    $f=$fixtures[$i]; $ox=10+($i%3)*340; $oy=255+[Math]::Floor($i/3)*218
+    $f=$fixtures[$i]; $ox=10+($i%3)*340; $oy=645+[Math]::Floor($i/3)*218
     $g.DrawString($f.name,$font,[System.Drawing.Brushes]::White,$ox,$oy)
     for ($y=0; $y -lt $f.rows.Count; $y++) {
       for ($x=0; $x -lt $f.rows[0].Length; $x++) {
         if ($f.rows[$y][$x] -ne '1') { continue }
         $mask=0
-        foreach ($n in @(@(0,-1,1),@(1,0,2),@(0,1,4),@(-1,0,8))) {
+        foreach ($n in @(@(0,-1,1),@(1,0,2),@(0,1,4),@(-1,0,8),@(1,-1,16),@(1,1,32),@(-1,1,64),@(-1,-1,128))) {
           $nx=$x+$n[0]; $ny=$y+$n[1]
           $outside=$nx -lt 0 -or $ny -lt 0 -or $nx -ge $f.rows[0].Length -or $ny -ge $f.rows.Count
           if (($outside -and $f.border) -or (!$outside -and $f.rows[$ny][$nx] -eq '1')) { $mask=$mask -bor $n[2] }

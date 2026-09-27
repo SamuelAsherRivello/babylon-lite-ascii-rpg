@@ -6,8 +6,12 @@ The Underground realm currently conveys its walkable dirt and blocked cave walls
 
 ## What Changes
 
-Current authorized scope: phase two composes a complete **16-tile** wall family
-from the new pack's brick face and directional strips. Floor stays fixed tile 13.
+Current authorized revision: phase two makes Underground wall generation
+rectilinear and derives diagonal-aware wall rules from `wall_combinations01.tmx`.
+Fourteen normalized neighborhoods have canonical source-frame mappings; missing
+forms are composed from the same family's untransformed quadrants. All 47
+normalized patterns have recipes, but visual acceptance remains a human gate.
+Floor stays fixed tile 13; Overground mountain generation remains organic.
 Phase-one continuation is approved; phase-two human acceptance remains required.
 Phase three delivers an art-refactor and composition-scaling **plan only**.
 See [phase-three-art-plan.md](phase-three-art-plan.md).
@@ -20,7 +24,8 @@ the source-specific descriptions below record the initial implementation.
 - Add an Underground-only terrain-art presentation that substitutes a selected `walls_floor.png` frame for each visible logical `wall` and `dirt` terrain cell. The mapping is presentation-only: `wall` remains blocked and `dirt` remains walkable.
 - Implement phase 1 as **1-tile** replacement: one fixed graphic per terrain type (one wall frame plus one floor frame), with no neighbor-based selection. Water, props, actors, pickups, stairs, fog, collision, pathfinding, world generation, and their authoritative glyph identities remain unchanged.
 - Require a human visual and gameplay review after phase 1 before any neighbor-aware variants are introduced.
-- Use the now-authorized composition of existing source pieces to supply all **16-tile** cardinal patterns. This does not claim 47-tile diagonal inner-corner fidelity. The earlier unmodified-frame audit remains historical evidence, not a blocker on the newly authorized composition.
+- Supersede the strip-only 16-tile experiment with example-derived eight-neighbor rules and composed missing forms. Do not describe the example itself as a complete ready-made 47-tile set.
+- Straighten newly generated Underground wall masses before connectivity checks. Existing movement/collision rules remain unchanged, but new seeded Underground layouts and paired stair placements may differ from the earlier generator.
 - Require a second human visual and gameplay review after phase 2 before the change is considered complete.
 - Use the project-local `public/assets/images/Dungeons-and-Pixels-v1.4/Tilesets/Tileset_Dungeon.png` as runtime source and its Tiled examples as references. Preserve every supplied folder. Use Babylon Lite sprite atlas/layer APIs, without loading static maps or adding a TMX parser.
 
@@ -38,5 +43,5 @@ the source-specific descriptions below record the initial implementation.
 
 - Affected rendering code: the Babylon Lite game layer's atlas, sprite-layer, visible-cell submission, and world-view composition paths.
 - Affected assets: the already copied, user-rights-confirmed dungeon pack; composition recipes do not modify its original images.
-- No gameplay or world-data schema change, dependency addition, Tiled map loader, static-level migration, or renderer replacement.
+- No world-data schema change, dependency addition, Tiled map loader, static-level migration, or renderer replacement. The authorized Underground generation change affects wall placement, not the meaning of wall/floor terrain.
 - Verification combines focused Node checks, `npm.cmd run build`, and manual fixed-seed browser review at the two required human checkpoints; no Playwright files are added.

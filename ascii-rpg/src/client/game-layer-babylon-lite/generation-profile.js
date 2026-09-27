@@ -19,14 +19,14 @@ export function resolveGenerationProfile(generationSettings = { passes: [] }) {
     waterLakeCount: enabledFor("water") && densityFor("water") === "High" ? 9 : undefined,
     minWalkableMultiplier: densityMultiplier("walkability", { Low: 0.7, Med: 1, High: 2 }),
     objectCountMultipliers: Object.freeze({
-      heart: densityMultiplier("object-heart", { Low: 0.25, Med: 1, High: 3 }),
+      health: densityMultiplier("object-health", { Low: 0.25, Med: 1, High: 3 }),
       trap: densityMultiplier("object-trap", { Low: 0.25, Med: 1, High: 3 }),
       CampFire: densityMultiplier("object-CampFire", { Low: 0.25, Med: 0.5, High: 1 }),
     }),
     chestCount: densityMultiplier("object-chest", { Low: 1, Med: 2, High: 3 }),
     torchCountMultiplier: densityMultiplier("object-torch", { Low: 0.25, Med: 1, High: 3 }),
-    // These values intentionally start as a one-time copy of Heart's current
-    // profile. Stairs use their own setting id and never read Heart settings.
+    // These values intentionally start as a one-time copy of Health's current
+    // profile. Stairs use their own setting id and never read Health settings.
     stairsCountMultiplier: densityMultiplier("civilization-stairs", { Low: 0.25, Med: 1, High: 3 }),
     CampFireDensity: densityFor("object-CampFire"),
     civilizationChanceMultiplier: densityMultiplier("civilization-doors", { Low: 0.25, Med: 1, High: 2 }),

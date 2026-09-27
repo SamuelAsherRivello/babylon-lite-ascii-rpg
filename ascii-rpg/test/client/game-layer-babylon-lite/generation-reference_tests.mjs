@@ -7,9 +7,11 @@ import { generationFixture } from '../../performance/generation-fixtures.js';
 // these hashes together with the fixture seed so accidental world-generation
 // changes fail loudly instead of silently changing performance baselines.
 const references = {
-  'optimization-open': ['d0a328b57f09d36d98c3c1a19d63a1e125bf396af0518d8f0bfd6641080785ea', '8b2e8c6af10bd873418b139cfe3575fb7dc219e89ae629a83b8caff39e33d284'],
-  'optimization-water': ['7ef798455a08f7c8adf8fbfdf7c9695dcd0d3a9bff8184d08526e8ac27f90d99', 'a69b4f147717c0cec4d8575f6c58ffc6537cbdb925fbe40a6b4ba066a4f590cf'],
-  'optimization-obstructed': ['c93a950315926a32905c6052f6b5034a53c02d5e895b419f068c135e2e6ed458', '716a8a87a8cef472693842f17cc72bdf3cc637185540f3242de0ebe74b434977'],
+  // Rectilinear Underground changes its terrain and shared stair candidates.
+  // Overground terrain generation itself is separately checked as unchanged.
+  'optimization-open': ['9702c65875404b371ba9822282d951bfe93e631db0d5ac85c5e723810213acf6', '3538a2f94567b562ba3c89f60708fa1934a9be9ddfd3578e75688f9610cd1133'],
+  'optimization-water': ['e1a881d08618cc1d33f4d0da6dc5d0bc61f01bc947940cfc3181dfb16249004e', '9aec885ba0bf11f300626ec4b31dded691d45e35cceac66f32de898c918bc0ff'],
+  'optimization-obstructed': ['efe9d799fac8e8e6a793c6aebec0795a5e8a72a75a55a60b5d6a5ea456379c87', '12a53a9f43b8047939363b8b35b00e7fb5733f1b5567a3fbcf4be997db506354'],
 };
 for (const [seed, expected] of Object.entries(references)) test(`positive-count layers and patrol retain reference output: ${seed}`, async () => {
   const { output } = await generationFixture(seed, 128);

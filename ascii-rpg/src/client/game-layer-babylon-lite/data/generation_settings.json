@@ -92,8 +92,8 @@
       "enabled": true
     },
     {
-      "id": "object-heart",
-      "title": "Heart Distribution",
+      "id": "object-health",
+      "title": "Health Distribution",
       "order": 7,
       "density": "Med",
       "owner": "objects",
@@ -104,8 +104,8 @@
       "requires": [
         "player-position"
       ],
-      "objectType": "heart",
-      "seedNamespace": "heart:placement",
+      "objectType": "health",
+      "seedNamespace": "health:placement",
       "enabled": true
     },
     {

@@ -44,7 +44,8 @@ layer order, and optional explicitly audited transforms. Validate every mask;
 generate a contact sheet and seam fixtures from the same runtime recipe.
 Never rotate directionally lit art without visual qualification.
 
-For this experiment, sixteen lazy cached recipes are sufficient. For many
+The revised experiment has 47 lazy cached recipes (14 canonical whole-frame
+choices plus 33 quadrant compositions). For many
 families, prefer build-time baking into versioned atlases and runtime UV lookup.
 Use source-content plus recipe-version hashes for reproducibility/invalidation.
 Runtime composition remains an option for truly dynamic skins, done once per
@@ -53,8 +54,9 @@ each world coordinate, fog value, light value, or overlay combination.
 
 Sixteen 32x32 RGBA frames cost 64 KiB raw; 47 cost about 188 KiB, excluding
 padding, mipmaps, decoded sources, and GPU duplication. Zoom-specific copies and
-overlay combinations dominate quickly. Profile current caches (135 reserved
-slots and up to ten retained zoom caches) before extending them. Prefer a shared
+overlay combinations dominate quickly. Profile current caches (the wall reserve
+is now 46 extra variants times three typical presentations, with up to ten
+retained zoom caches) before extending them. Prefer a shared
 native-resolution atlas with nearest-neighbor sampling where the renderer permits;
 otherwise use byte-budgeted LRU caches. Split atlas pages at device texture limits.
 
@@ -64,10 +66,11 @@ explicitly. Never scan or rasterize the whole world because one wall changed.
 Track cold/warm generation time, rasterizations, atlas bytes/pages, cache misses,
 visible sprite count, and frame time in game, minimap, and expanded map views.
 
-47-tile fidelity is a later art decision: author or qualify consistent diagonal
-inner corners, possibly through quarter composition, then cover all normalized
-patterns. Five source pieces do not inherently mean five-tile fidelity; our five
-pieces produce sixteen cardinal outputs. More masks cannot repair unsuitable art.
+The latest phase-two revision now covers all 47 normalized patterns using example
+frames and quadrant composition. Broader migration must still visually qualify
+each family's seams: pattern coverage alone does not establish art quality.
+Five source pieces do not inherently mean five-tile fidelity; the earlier five
+strips produced sixteen cardinal outputs. More masks cannot repair unsuitable art.
 
 ## Proposed migration order and gates
 

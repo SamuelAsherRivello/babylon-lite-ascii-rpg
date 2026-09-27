@@ -40,7 +40,7 @@ test("all 16 wall masks are complete, deterministic, logical, and viewport indep
     assert.equal(parseTerrainArtKey(key).mask, mask);
     keys.add(key);
     const pieces = getWallComposition(mask);
-    assert.equal(pieces.length, 5 - [1, 2, 4, 8].filter((bit) => mask & bit).length);
+    assert.ok(pieces.length === 1 || pieces.length === 4);
     for (const [sx, sy, w, h, dx, dy] of pieces) {
       assert.ok(sx >= 0 && sy >= 0 && sx + w <= 384 && sy + h <= 288);
       assert.ok(dx >= 0 && dy >= 0 && dx + w <= 32 && dy + h <= 32);
@@ -49,14 +49,13 @@ test("all 16 wall masks are complete, deterministic, logical, and viewport indep
       getVisibility: () => 100, getGlyph: (target, point) => getTerrainArtKey(target, point, "▒") });
     assert.equal(composition.cells[0].glyph, key);
     assert.deepEqual(world, before);
-    // Diagonal wall/fog/occupancy changes must not change this cardinal tier.
-    world.terrain[0][0] = { kind: "wall" };
+    // Fog and occupancy never select art; diagonals are tested separately.
     world.fog = { hidden: true };
     world.occupants = [{ cell }];
     assert.equal(getTerrainArtKey(world, cell, "▒"), key);
   }
   assert.equal(keys.size, 16);
-  assert.throws(() => getWallComposition(16), RangeError);
+  assert.throws(() => getWallComposition(256), RangeError);
 });
 
 test("wall borders connect outward and edits refresh adjacent visible wall keys", () => {
@@ -125,7 +124,7 @@ test("terrain art selection includes synchronized blue water and does not mutate
   assert.deepEqual(parseTerrainArtKey(waterFrame0), { frame: BLUE_WATER_TERRAIN_FRAMES[0], overlay: null, animationFrame: 0 });
   const key = getTerrainArtKey(world, cell, "▒");
   assert.equal(getTerrainArtKey(world, cell, "▒"), key);
-  assert.deepEqual(parseTerrainArtKey(key), { frame: UNDERGROUND_TERRAIN_FRAMES.wall, overlay: null, mask: 13 });
+  assert.deepEqual(parseTerrainArtKey(key), { frame: UNDERGROUND_TERRAIN_FRAMES.wall, overlay: null, mask: 205 });
   assert.deepEqual(world, before);
   assert.deepEqual(cell, { x: 0, y: 0 });
   for (const frame of Object.values(UNDERGROUND_TERRAIN_FRAMES)) {

@@ -1,5 +1,5 @@
 import { getFacingGlyph, getGlyphOffsetsFromKey, rasterizeGlyph } from "./glyph-visual-cache.js";
-import { getWallComposition, getWallMask } from "./underground-wall-autotile.js";
+import { getWallComposition, getWallBlobMask } from "./underground-wall-autotile.js";
 import { CLOSED_CHEST_GLYPH, ENEMY_SPAWNER_GLYPH, GOLD_GLYPH, OPEN_CHEST_GLYPH } from "./systems/world-system.js";
 import { FRONT_DOOR_CLOSED_ART, FRONT_DOOR_OPEN_ART, SIDE_DOOR_CLOSED_ART, SIDE_DOOR_OPEN_ART } from "./systems/civilization-system.js";
 
@@ -69,7 +69,7 @@ export function getTerrainArtKey(world, cell, glyphKey, waterFrame = 0, goldCoin
   // remain part of the cache identity, independent of world coordinates.
   const overlay = getFacingGlyph(animatedGlyphKey) === terrain.glyph ? null : animatedGlyphKey;
   return KEY_PREFIX + JSON.stringify(terrain.kind === "wall"
-    ? [terrain.kind, overlay, getWallMask(world, cell)]
+    ? [terrain.kind, overlay, getWallBlobMask(world, cell)]
     : terrain.kind === "water" ? [terrain.kind, overlay, waterFrame] : [terrain.kind, overlay]);
 }
 
@@ -104,6 +104,7 @@ export async function loadRasterImage(url, { width, height }) {
 
 function getStaticPropSource(glyph, images) {
   switch (getFacingGlyph(glyph)) {
+    case "health-potion": return images.healthPotion ? { image: images.healthPotion } : null;
     case CLOSED_CHEST_GLYPH: return images.silverChestClosed ? { image: images.silverChestClosed } : null;
     case OPEN_CHEST_GLYPH: return images.silverChestOpen ? { image: images.silverChestOpen } : null;
     case FRONT_DOOR_CLOSED_ART: return images.frontDoorClosed ? { image: images.frontDoorClosed } : null;
@@ -172,11 +173,11 @@ export function rasterizeTerrainArt(key, images, family, size, paletteColors) {
   context.imageSmoothingEnabled = false;
   const { x, y, width, height } = visual.frame;
   const terrainTop = propHeight - size;
-  context.drawImage(images[visual.frame.source], x, y, width, height, 0, terrainTop, size, size);
+  if (visual.mask === undefined) context.drawImage(images[visual.frame.source], x, y, width, height, 0, terrainTop, size, size);
   if (visual.mask !== undefined) {
-    for (const [sx, sy, sw, sh, dx, dy] of getWallComposition(visual.mask).slice(1)) {
+    for (const [sx, sy, sw, sh, dx, dy] of getWallComposition(visual.mask)) {
       const left = Math.round(dx * size / 32), top = terrainTop + Math.round(dy * size / 32);
-      const right = Math.round((dx + sw) * size / 32), bottom = Math.round((dy + sh) * size / 32);
+      const right = Math.round((dx + sw) * size / 32), bottom = terrainTop + Math.round((dy + sh) * size / 32);
       context.drawImage(images.wall, sx, sy, sw, sh, left, top, right - left, bottom - top);
     }
   }

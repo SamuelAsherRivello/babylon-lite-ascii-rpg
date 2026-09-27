@@ -2,8 +2,8 @@
 
 ## Purpose
 
-Provides pixel-art terrain presentation for the procedural Underground realm
-without changing its authoritative generated-world or gameplay semantics.
+Provides pixel-art terrain presentation and rectilinear wall generation for the
+procedural Underground realm while retaining logical terrain/gameplay semantics.
 
 ## ADDED Requirements
 
@@ -41,27 +41,28 @@ The implementation SHALL stop after phase-one verification and obtain explicit h
 - **THEN** phase two is not started until a human explicitly accepts or revises the phase-one result
 
 ### Requirement: Phase-two deterministic wall autotiling
-After phase-one human acceptance, phase two SHALL use the authorized composed
-16-tile cardinal family from the project-local Dungeons and Pixels sheet.
-Qualification SHALL document source rectangles, composition order, all sixteen
-patterns, and visual seam checks, not rely on total sheet size. Original source
+After phase-one human acceptance, phase two SHALL use eight-neighbor rules
+derived from wall_combinations01.tmx and compose missing forms from the same
+source family. Qualification SHALL document canonical frames, composed
+quadrants, all 47 normalized patterns, ambiguities, and visual seam checks,
+not rely on total sheet size. Original source
 images and folders SHALL remain unchanged. Floor SHALL retain fixed tile 13.
 Composition SHALL remain within each wall cell. Selection SHALL be
 deterministic for identical terrain input and SHALL not alter the logical
 terrain grid or gameplay semantics.
 
-#### Scenario: Art supports only the cardinal tier
-- **WHEN** the supplied art passes the 16-tile pattern and seam checks but lacks required 47-tile corner forms
-- **THEN** phase two uses 16-tile selection and documents its diagonal-corner limitation for human review
+#### Scenario: Example lacks a ready-made form
+- **WHEN** a normalized neighborhood has no canonical complete source frame
+- **THEN** the renderer uses the documented directional quadrant composition without transforming the lighting direction or drawing outside the cell
 
 #### Scenario: Neither tier qualifies
 - **WHEN** the art audit cannot establish a complete compatible 16-tile or 47-tile family
 - **THEN** missing forms are reported and phase two is not marked complete unless explicitly authorized composition supplies and verifies a complete family
 
-#### Scenario: Composed cardinal family
-- **WHEN** an Underground wall resolves any cardinal mask from 0 through 15
-- **THEN** its visual uses the documented brick base and only its exposed directional edge strips
-- **AND** identical cardinal masks produce identical artwork regardless of fog, occupants, diagonals, or viewport position
+#### Scenario: Example-derived corner family
+- **WHEN** an Underground wall resolves any of the 47 gated-diagonal patterns
+- **THEN** its visual uses the documented canonical frame or complete quadrant recipe
+- **AND** identical normalized neighborhoods produce identical artwork regardless of fog, occupants, or viewport position
 - **AND** changed terrain invalidates the affected cell and its eight neighbors before bounded visible rendering
 
 #### Scenario: A wall edge differs from a wall center
@@ -82,6 +83,24 @@ The implementation SHALL stop after phase-two verification and obtain explicit h
 #### Scenario: Phase two awaits human acceptance
 - **WHEN** phase-two checks and the fixed-seed browser review are complete
 - **THEN** the change remains incomplete until a human explicitly accepts or revises the autotiled result
+
+### Requirement: Rectilinear Underground wall generation
+Newly generated Underground walls SHALL form axis-aligned blocks with longer
+straight runs instead of frequent single-cell diagonal steps. The straightening
+pass SHALL preserve blocked world borders and not close existing floor passages.
+It SHALL run before connected-region selection and skip disabled cave generation.
+Overground terrain generation SHALL remain unchanged. Same seeds and settings
+SHALL reproduce the revised layouts, but earlier Underground layouts need not
+be preserved. Existing walkability, valid-start and paired-stair checks SHALL apply.
+
+#### Scenario: Underground formation is straightened
+- **WHEN** Underground cave generation runs
+- **THEN** the straightening pass resolves each interior 3x3 block uniformly, opening blocks containing floor and retaining completely blocked blocks
+- **AND** synchronous and cooperative generation agree
+
+#### Scenario: Other generation remains isolated
+- **WHEN** Overground generation runs or Underground cave generation is disabled
+- **THEN** the rectilinear operation does not modify that terrain pass
 
 ### Requirement: Phase-three art refactor planning
 Phase three SHALL deliver a plan covering all world-art categories, glyph fallback,
