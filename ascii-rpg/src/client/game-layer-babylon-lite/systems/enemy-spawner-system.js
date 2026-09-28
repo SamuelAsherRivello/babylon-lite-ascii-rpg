@@ -3,6 +3,7 @@ import { ENEMY_SPAWNER_GLYPH } from "./world-system.js";
 export { ENEMY_SPAWNER_GLYPH };
 export const ENEMY_SPAWNER_HEALTH = 100;
 export const ENEMY_SPAWN_INTERVAL = 100;
+export const MAX_ENEMIES_PER_SPAWNER = 3;
 export const MAX_NORMAL_ENEMY_SPAWNERS = 16;
 
 const NEIGHBOR_DIRECTIONS = Object.freeze([
@@ -129,28 +130,39 @@ export function createEnemySpawnerSystem({
 
   const attemptSpawn = (spawner, event) => {
     if (event.time < spawner.bornAtTime || (event.time - 1) % ENEMY_SPAWN_INTERVAL !== 0) return false;
-    const candidates = NEIGHBOR_DIRECTIONS.map((direction) => ({
-      x: spawner.cell.x + direction.x,
-      y: spawner.cell.y + direction.y,
-    })).filter((cell) => isWalkable(cell, spawner.realm)
-      && !isStaticOccupied(cell, spawner.realm)
-      && !occupancy.isOccupied(cell));
-    if (candidates.length === 0) return false;
+    const random = randomFor(spawner, event.time);
+    const livingOwned = () => occupancy.getAll("enemy")
+      .filter((enemy) => enemy?.spawnerId === spawner.id && enemy.health > 0).length;
+    const living = livingOwned();
+    const remaining = MAX_ENEMIES_PER_SPAWNER - living;
+    if (remaining <= 0) return false;
+    const requested = living === 0
+      ? 1 + Math.floor(random() * MAX_ENEMIES_PER_SPAWNER)
+      : Math.floor(random() * (remaining + 1));
+    let spawnedCount = 0;
+    for (let attempt = 0; attempt < requested && living + spawnedCount < MAX_ENEMIES_PER_SPAWNER; attempt += 1) {
+      const candidates = NEIGHBOR_DIRECTIONS.map((direction) => ({
+        x: spawner.cell.x + direction.x,
+        y: spawner.cell.y + direction.y,
+      })).filter((cell) => isWalkable(cell, spawner.realm)
+        && !isStaticOccupied(cell, spawner.realm)
+        && !occupancy.isOccupied(cell));
+      if (candidates.length === 0) break;
 
-    const [cell] = shuffle(candidates, randomFor(spawner, event.time));
-    const spawned = spawnEnemy({
-      id: `enemy-${nextEnemySequence}`,
-      spawnerId: spawner.id,
-      realm: spawner.realm,
-      cell,
-      bornAtTime: event.time,
-    });
-    if (spawned) {
+      const [cell] = shuffle(candidates, random);
+      const spawned = spawnEnemy({
+        id: `enemy-${nextEnemySequence}`,
+        spawnerId: spawner.id,
+        realm: spawner.realm,
+        cell,
+        bornAtTime: event.time,
+      });
+      if (!spawned) continue;
       nextEnemySequence += 1;
+      spawnedCount += 1;
       onChange();
-      return true;
     }
-    return false;
+    return spawnedCount > 0;
   };
 
   const addSpawner = ({ id, realm, cell, bornAtTime = timeSystem.getTime() }) => {

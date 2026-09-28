@@ -45,7 +45,7 @@ export const GENERATION_PASS_DESCRIPTIONS = Object.freeze({
 
 export const GENERATION_PASS_REALMS = Object.freeze({
   ground: "All", "overground-walls": "Overworld", "underground-caves": "Underworld", water: "All", walkability: "All", "player-position": "All",
-  "object-health": "All", "object-gold": "Overworld", "object-chest": "All", "object-trap": "All", "object-torch": "All", "object-CampFire": "Underworld",
+  "object-health": "All", "object-gold": "Overworld", "object-chest": "All", "object-trap": "Underworld", "object-torch": "All", "object-CampFire": "Underworld",
   "npc-spawner": "Overworld", "civilization-stairs": "All", "civilization-doors": "Underworld", "civilization-homes": "Overworld", "civilization-signs": "All", "enemy-spawner": "Underworld",
 });
 const declarations = new Map([
@@ -58,7 +58,7 @@ const declarations = new Map([
   ["object-health", { owner: "objects", realms: ["Overground", "Underground"], requires: ["player-position"], objectType: "health", seedNamespace: "health:placement" }],
   ["object-gold", { owner: "objects", realms: ["Overground"], requires: ["player-position"], objectType: "gold", seedNamespace: "gold:placement" }],
   ["object-chest", { owner: "objects", realms: ["Overground", "Underground"], requires: ["player-position"], objectType: "chest", seedNamespace: "chest:placement" }],
-  ["object-trap", { owner: "objects", realms: ["Overground", "Underground"], requires: ["player-position"], objectType: "trap", seedNamespace: "trap:placement" }],
+  ["object-trap", { owner: "objects", realms: ["Underground"], requires: ["player-position"], objectType: "trap", seedNamespace: "trap:placement" }],
   ["object-torch", { owner: "objects", realms: ["Overground", "Underground"], requires: ["player-position"], objectType: "torch", seedNamespace: "torch:placement" }],
   ["npc-spawner", { owner: "dynamic", realms: ["Overground"], requires: ["player-position"], seedNamespace: "npc-spawner:placement" }],
   ["object-CampFire", { owner: "objects", realms: ["Underground"], requires: ["civilization-doors"], objectType: "CampFire", seedNamespace: "CampFire:placement" }],

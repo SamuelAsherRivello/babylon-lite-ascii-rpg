@@ -4,6 +4,7 @@ import { createDynamicOccupancy } from "../../../../src/client/game-layer-babylo
 import {
   createEnemySpawnerSystem,
   ENEMY_SPAWNER_GLYPH,
+  MAX_ENEMIES_PER_SPAWNER,
   selectEnemySpawnerCells,
 } from "../../../../src/client/game-layer-babylon-lite/systems/enemy-spawner-system.js";
 import { createEnemySystem } from "../../../../src/client/game-layer-babylon-lite/systems/enemy-system.js";
@@ -94,7 +95,13 @@ function createHarness({ validCells = null, random = () => 0 } = {}) {
     randomFor: () => random,
     spawnEnemy: (request) => {
       spawned.push(request);
-      return true;
+      return occupancy.claim({
+        ...request,
+        type: "enemy",
+        glyph: "🕷️",
+        health: 40,
+        maxHealth: 40,
+      });
     },
     log: (message) => logs.push(message),
     onDamage: (entity, at) => damageEvents.push({ entity, at }),
@@ -102,18 +109,48 @@ function createHarness({ validCells = null, random = () => 0 } = {}) {
   return { timeSystem, occupancy, spawned, logs, damageEvents, system };
 }
 
-test("spawns at time 1 and every 100 units without deferred backlog", () => {
-  const harness = createHarness();
+test("spawns an initial random burst and stops at the per-spawner maximum", () => {
+  const harness = createHarness({ random: () => 0.999 });
   harness.system.addSpawner({ id: "spawner-1", realm: "Underground", cell: { x: 5, y: 5 }, bornAtTime: 1 });
 
   harness.timeSystem.dispatchCurrent();
-  assert.deepEqual(harness.spawned.map(({ bornAtTime }) => bornAtTime), [1]);
+  assert.equal(harness.spawned.length, MAX_ENEMIES_PER_SPAWNER);
+  assert.equal(harness.occupancy.getAll("enemy").length, MAX_ENEMIES_PER_SPAWNER);
   harness.timeSystem.advance(99);
-  assert.equal(harness.spawned.length, 1);
+  assert.equal(harness.spawned.length, MAX_ENEMIES_PER_SPAWNER);
   harness.timeSystem.advance();
-  assert.deepEqual(harness.spawned.map(({ bornAtTime }) => bornAtTime), [1, 101]);
+  assert.equal(harness.spawned.length, MAX_ENEMIES_PER_SPAWNER);
   harness.timeSystem.advance(100);
-  assert.deepEqual(harness.spawned.map(({ bornAtTime }) => bornAtTime), [1, 101, 201]);
+  assert.equal(harness.spawned.length, MAX_ENEMIES_PER_SPAWNER);
+});
+
+test("uses only the remaining capacity for a recurring burst", () => {
+  const harness = createHarness({ random: () => 0.999 });
+  harness.occupancy.claim({ id: "enemy-existing-1", type: "enemy", spawnerId: "spawner-1", health: 40, cell: { x: 4, y: 4 } });
+  harness.occupancy.claim({ id: "enemy-existing-2", type: "enemy", spawnerId: "spawner-1", health: 40, cell: { x: 4, y: 5 } });
+  harness.system.addSpawner({ id: "spawner-1", realm: "Underground", cell: { x: 5, y: 5 }, bornAtTime: 1 });
+
+  harness.timeSystem.dispatchCurrent();
+
+  assert.equal(harness.spawned.length, 1);
+  assert.equal(harness.occupancy.getAll("enemy").filter((enemy) => enemy.spawnerId === "spawner-1" && enemy.health > 0).length, 3);
+});
+
+test("dead owned enemies free capacity while other spawners remain independent", () => {
+  const harness = createHarness({ random: () => 0.999 });
+  for (let index = 1; index <= 3; index += 1) {
+    harness.occupancy.claim({ id: `enemy-dead-${index}`, type: "enemy", spawnerId: "spawner-1", health: 0, cell: { x: index, y: 1 } });
+  }
+  for (let index = 1; index <= 3; index += 1) {
+    harness.occupancy.claim({ id: `enemy-full-${index}`, type: "enemy", spawnerId: "spawner-2", health: 40, cell: { x: index, y: 2 } });
+  }
+  harness.system.addSpawner({ id: "spawner-1", realm: "Underground", cell: { x: 5, y: 5 }, bornAtTime: 1 });
+  harness.system.addSpawner({ id: "spawner-2", realm: "Underground", cell: { x: 10, y: 10 }, bornAtTime: 1 });
+
+  harness.timeSystem.dispatchCurrent();
+
+  assert.equal(harness.spawned.length, MAX_ENEMIES_PER_SPAWNER);
+  assert.deepEqual(harness.spawned.map(({ spawnerId }) => spawnerId), ["spawner-1", "spawner-1", "spawner-1"]);
 });
 
 test("uses the sole valid neighboring cell and skips an all-blocked attempt", () => {
@@ -176,7 +213,7 @@ test("keeps earlier enemies independently registered across multiple spawn caden
     occupancy,
     spawnEnemy: (request) => enemySystem.addEnemy(request),
     isWalkable: () => true,
-    randomFor: () => () => 0,
+    randomFor: () => () => 0.999,
   });
   spawnerSystem.addSpawner({ id: "spawner-1", realm: "Underground", cell: { x: 5, y: 5 } });
 
@@ -184,6 +221,6 @@ test("keeps earlier enemies independently registered across multiple spawn caden
   timeSystem.advance(200);
 
   const enemies = occupancy.getAll("enemy");
-  assert.equal(enemies.length, 3);
-  assert.deepEqual(enemies.map((enemy) => enemySystem.getAge(enemy.id, 201)), [200, 100, 0]);
+  assert.equal(enemies.length, MAX_ENEMIES_PER_SPAWNER);
+  assert.deepEqual(enemies.map((enemy) => enemySystem.getAge(enemy.id, 201)), [200, 200, 200]);
 });

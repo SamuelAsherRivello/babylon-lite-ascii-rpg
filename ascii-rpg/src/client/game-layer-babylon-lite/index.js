@@ -1283,7 +1283,9 @@ async function createGameSessionImplementation(container, initialPalette, initia
     const healthCells = selectObjectCells(previewWorld, previewWorld.playerStart, healthCount, createRandom(`${previewWorld.options.seed}:${previewSeedNamespace("object-health")}`), { minimumDistance: 3, reserved: new Set() });
     const goldCount = previewRealm === "Overground" && previewFeatureEnabled("object-gold") ? Math.max(0, Math.round(getObjectDistributionCount("gold", previewWorld.options.seed) * profile.objectCountMultipliers.gold)) : 0;
     const goldCells = selectObjectCells(previewWorld, previewWorld.playerStart, goldCount, createRandom(`${previewWorld.options.seed}:${previewSeedNamespace("object-gold")}`), { minimumDistance: 3, reserved: new Set(healthCells.map((cell) => `${cell.x},${cell.y}`)) });
-    const trapCount = previewFeatureEnabled("object-trap") ? Math.max(0, Math.round(getObjectDistributionCount("trap", previewWorld.options.seed) * profile.objectCountMultipliers.trap)) : 0;
+    const trapCount = previewRealm === "Underground" && previewFeatureEnabled("object-trap")
+      ? Math.max(0, Math.round(getObjectDistributionCount("trap", previewWorld.options.seed) * profile.objectCountMultipliers.trap))
+      : 0;
     const trapCells = selectObjectCells(previewWorld, previewWorld.playerStart, trapCount, createRandom(`${previewWorld.options.seed}:${previewSeedNamespace("object-trap")}`), { minimumDistance: 3, reserved: new Set([...healthCells, ...goldCells].map((cell) => `${cell.x},${cell.y}`)) });
     const chestCells = selectObjectCells(previewWorld, previewWorld.playerStart, previewFeatureEnabled("object-chest") ? profile.chestCount : 0, createRandom(`${previewWorld.options.seed}:${previewSeedNamespace("object-chest")}`), {
       minimumDistance: 3,

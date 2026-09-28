@@ -245,10 +245,11 @@ export function createEnemySystem({
     }
   };
 
-  const addEnemy = ({ id, realm, cell, bornAtTime = timeSystem.getTime() }) => {
+  const addEnemy = ({ id, spawnerId = null, realm, cell, bornAtTime = timeSystem.getTime() }) => {
     const enemy = occupancy.claim({
       id,
       type: "enemy",
+      spawnerId,
       glyph: ENEMY_GLYPH,
       facing: DEFAULT_ENEMY_FACING,
       realm,

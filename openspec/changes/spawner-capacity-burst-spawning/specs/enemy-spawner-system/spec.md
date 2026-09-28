@@ -10,9 +10,17 @@ Each spawner SHALL render as a palette-driven red `S`, be born at its creation t
 - **WHEN** a living spawner processes world time `1` with no living enemies that it owns
 - **THEN** it SHALL randomly attempt to create one, two, or three enemies and SHALL never create more than three
 
+#### Scenario: Initial spawn occurs at time one
+- **WHEN** a living spawner processes world time `1`
+- **THEN** it SHALL make its initial bounded spawn decision at that time
+
 #### Scenario: Recurring spawn decision uses the per-spawner population
 - **WHEN** a living spawner processes a scheduled time exactly 100 world-time units after its prior decision
 - **THEN** it SHALL inspect its owned living enemies and randomly attempt to create no more than the remaining capacity
+
+#### Scenario: Repeating spawn cadence
+- **WHEN** a living spawner processes a time 100 world-time units after its prior decision
+- **THEN** it SHALL make one bounded burst decision and SHALL make no spawn decision on intervening ticks
 
 #### Scenario: Full spawner creates nothing
 - **WHEN** a living spawner has three owned living enemies at a scheduled spawn decision
@@ -30,11 +38,18 @@ A spawner SHALL select each requested enemy from the eight cells surrounding its
 - **WHEN** a spawner has one living owned enemy and its random decision requests two additional enemies
 - **THEN** it SHALL attempt at most two additional spawns and SHALL finish with no more than three living owned enemies
 
+#### Scenario: Enemy uses a free neighboring cell
+- **WHEN** at least one of a living spawner's eight neighboring cells is valid during a scheduled burst
+- **THEN** each successful enemy birth SHALL use a deterministic valid neighboring cell
+
 #### Scenario: Blocked burst does not backlog
 - **WHEN** a burst request cannot find a valid neighboring cell for one or more requested enemies
 - **THEN** it SHALL create only the enemies that fit in currently valid cells and SHALL not retry the missed amount outside the next scheduled decision
 
+#### Scenario: Blocked spawn is skipped
+- **WHEN** every neighboring cell is invalid or occupied during a scheduled burst
+- **THEN** no enemy SHALL be created and the next decision SHALL remain on the ordinary 100-unit cadence
+
 #### Scenario: Other spawners have independent capacity
 - **WHEN** one spawner has reached three living owned enemies while another spawner has remaining capacity
 - **THEN** the full spawner SHALL remain quiet and the other spawner SHALL continue making its own independent spawn decisions
-

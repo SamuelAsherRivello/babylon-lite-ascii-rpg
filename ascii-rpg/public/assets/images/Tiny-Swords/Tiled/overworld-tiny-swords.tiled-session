@@ -1,17 +1,25 @@
 {
-    "activeFile": "",
+    "activeFile": "Levels/overworld-tiny-swords.tmx",
     "expandedProjectPaths": [
     ],
     "file.lastUsedOpenFilter": "All Files (*)",
     "fileStates": {
+        "Levels/overworld-tiny-swords.tmx": {
+            "scale": 0.5,
+            "selectedLayer": 1,
+            "viewCenter": {
+                "x": 409,
+                "y": 288
+            }
+        },
         "Tilesets/Shadow.tsj": {
             "scaleInDock": 1
         },
         "Tilesets/Tilemap_Elevation.tsj": {
-            "scaleInDock": 1
+            "scaleInDock": 0.5
         },
         "Tilesets/Tilemap_Flat.tsj": {
-            "scaleInDock": 1
+            "scaleInDock": 0.75
         },
         "Tilesets/Tilemap_color1.tsj": {
             "scaleInDock": 0.5
@@ -36,8 +44,10 @@
         }
     },
     "openFiles": [
+        "Levels/overworld-tiny-swords.tmx"
     ],
     "project": "overworld-tiny-swords.tiled-project",
     "recentFiles": [
+        "Levels/overworld-tiny-swords.tmx"
     ]
 }

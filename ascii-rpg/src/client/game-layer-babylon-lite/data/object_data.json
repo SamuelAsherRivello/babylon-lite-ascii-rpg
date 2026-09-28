@@ -68,7 +68,7 @@
       "consequence": { "id": "health", "amount": -25 },
       "logText": "Lost -25 Health from Trap",
       "distribution": { "minCount": 10, "maxCount": 14, "minimumDistance": 3 },
-      "generation": { "passId": "object-trap", "realms": ["Overground", "Underground"], "seedNamespace": "trap:placement" }
+      "generation": { "passId": "object-trap", "realms": ["Underground"], "seedNamespace": "trap:placement" }
     },
     {
       "type": "stairs",
